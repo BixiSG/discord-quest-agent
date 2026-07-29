@@ -1,0 +1,39 @@
+name: Bug report
+description: Something is broken or a Discord update changed the internals
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: make sure you are on the latest release, and that Discord was
+        started **by the agent** (Start Menu -> Discord Quest Agent).
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics output
+      description: >
+        Run the "Quest Agent Diagnostics" Start Menu shortcut and paste the whole output.
+        It contains no tokens or message content, but it does list your quest names.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      placeholder: The title-bar button never appears, and no quests progress.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: false
+  - type: input
+    id: discord
+    attributes:
+      label: Discord branch
+      placeholder: Stable / PTB / Canary
+    validations:
+      required: false

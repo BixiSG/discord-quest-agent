@@ -1,0 +1,10 @@
+# local runtime artefacts
+config.json
+*.log
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
