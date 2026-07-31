@@ -61,7 +61,8 @@ The badge tells you what's going on without opening anything:
 Click it for the panel in the screenshot above: four counters across the top, then one row
 per quest with the game's own artwork, the orb reward, a progress bar and the time left.
 Rows are grouped into *Ready to claim*, *Running now*, *Queued* and *Skipped* (with a
-reason). Drag the header to move it, hit the refresh icon to force a scan.
+reason). Drag the header to move it, hit the refresh icon to force a scan. Clicking any
+quest row jumps straight to Discover -> Quests, where claiming happens.
 
 "Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
 a live orb balance, so it isn't your wallet.

@@ -22,7 +22,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 8;
+    const AGENT_VERSION = 9;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -73,6 +73,7 @@
     window.__questAgent = { version: AGENT_VERSION, status: "starting", installedAt: Date.now() };
 
     let ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api;
+    let NavTransitionTo; // optional: quest rows navigate to the Quests page; agent works without it
     let missing = ["not attempted"];
     for (let attempt = 1; attempt <= 40; attempt++) {
         try {
@@ -93,6 +94,30 @@
             GuildChannelStore = find(x => x?.exports?.Ay?.getSFWDefaultChannel)?.exports?.Ay;
             FluxDispatcher = find(x => x?.exports?.h?.__proto__?.flushWaitQueue)?.exports?.h;
             api = find(x => x?.exports?.Bo?.get)?.exports?.Bo;
+
+            // Optional module: Discord's transitionTo is a standalone export with
+            // a mangled name (pX as of 1.0.9249), but its body logs the literal
+            // string "transitionTo - Transitioning to", which survives
+            // minification - so match the function by that instead of by name.
+            // Never added to `missing`: if Discord breaks it, quest rows just
+            // stop navigating and everything else keeps working.
+            if (NavTransitionTo == null) {
+                try {
+                    outer:
+                    for (const m of Object.values(wpRequire.c)) {
+                        const exp = m?.exports;
+                        if (exp == null || typeof exp !== "object") continue;
+                        for (const k of Object.keys(exp)) {
+                            let v;
+                            try { v = exp[k]; } catch (e) { continue; } // some getters throw
+                            if (typeof v === "function" && String(v).includes("transitionTo - Transitioning to")) {
+                                NavTransitionTo = v;
+                                break outer;
+                            }
+                        }
+                    }
+                } catch (e) { /* optional - see above */ }
+            }
 
             missing = Object.entries({ ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api })
                 .filter(([, v]) => v == null).map(([k]) => k);
@@ -480,7 +505,7 @@
  letter-spacing:.6px;text-transform:uppercase;color:var(--text-muted,#949ba4)}
 #qb-panel .qb-count{background:var(--background-tertiary,#1e1f22);border-radius:8px;padding:1px 6px;margin-left:6px;
  font-size:10px;letter-spacing:0;color:var(--text-normal,#dbdee1)}
-#qb-panel .qb-row{display:flex;gap:9px;padding:7px 12px;transition:background .1s}
+#qb-panel .qb-row{display:flex;gap:9px;padding:7px 12px;transition:background .1s;cursor:pointer}
 #qb-panel .qb-row:hover{background:var(--background-modifier-hover,rgba(255,255,255,.035))}
 #qb-panel .qb-tile{width:28px;height:28px;border-radius:7px;flex:none;object-fit:cover;margin-top:1px;
  background:var(--background-tertiary,#1e1f22)}
@@ -531,7 +556,7 @@
             ? `<img class="qb-tile" src="${esc(r.tile)}" alt="" loading="lazy"
                  onerror="this.outerHTML='<div class=&quot;qb-tile qb-tile-fb&quot;></div>'">`
             : `<div class="qb-tile qb-tile-fb">${svg(meta.icon, "", 15)}</div>`;
-        return `<div class="qb-row" data-qid="${esc(r.id)}">
+        return `<div class="qb-row" data-qid="${esc(r.id)}" title="Open the Quests page">
             ${tile}
             <div class="qb-main">
               <div class="qb-r1">
@@ -614,6 +639,26 @@
 
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+    /** Navigate the client to the Quests page (where Claim lives).
+     *  /quest-home is the current route; /discovery/quests was its older home,
+     *  kept as a fallback in case Discord moves it back under Discover. The
+     *  client redirects unknown routes home, so a dead route is harmless -
+     *  checked via pathname after a beat. */
+    function openQuestsPage() {
+        if (!NavTransitionTo) {
+            console.warn("[QuestAgent] transitionTo not hooked - can't open the Quests page.");
+            return false;
+        }
+        try {
+            NavTransitionTo("/quest-home");
+            setTimeout(() => {
+                if (!location.pathname.startsWith("/quest-home")) NavTransitionTo("/discovery/quests");
+            }, 400);
+            return true;
+        }
+        catch (e) { console.warn("[QuestAgent] Failed to open the Quests page:", e); return false; }
+    }
+
     function buildPanel() {
         ensureStyle();
         const p = document.createElement("div");
@@ -638,6 +683,12 @@
         else { p.style.top = "40px"; p.style.right = "12px"; }
 
         p.querySelector(".qb-x").onclick = () => togglePanel(false);
+        // Rows are rebuilt via innerHTML whenever the quest set changes, so the
+        // click handler is delegated instead of attached per row. Any row jumps
+        // to the Quests page - that's where every quest (and Claim) lives.
+        p.querySelector(".qb-body").addEventListener("click", e => {
+            if (e.target.closest(".qb-row") && openQuestsPage()) togglePanel(false);
+        });
         const scanBtn = p.querySelector("#qb-scan");
         scanBtn.onclick = () => {
             scanBtn.classList.add("qb-spin");
@@ -789,7 +840,8 @@
 
     window.__questAgent = {
         version: AGENT_VERSION, installedAt: Date.now(), state, scan, stop, config: CONFIG,
-        ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI }
+        nav: !!NavTransitionTo, // false = quest rows won't navigate (finder broke)
+        ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage }
     };
     console.log(`%c[QuestAgent] Agent v${AGENT_VERSION} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     scan();
