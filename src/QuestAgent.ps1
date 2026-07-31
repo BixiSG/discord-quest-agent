@@ -96,9 +96,9 @@ $cdpBase = "http://127.0.0.1:$Port"
 
 # ---- Discord discovery ------------------------------------------------------
 $Branches = @(
-    [pscustomobject]@{ Name = "Stable"; Dir = "$env:LOCALAPPDATA\Discord";      Proc = "Discord" }
-    [pscustomobject]@{ Name = "Ptb";    Dir = "$env:LOCALAPPDATA\DiscordPTB";   Proc = "DiscordPTB" }
-    [pscustomobject]@{ Name = "Canary"; Dir = "$env:LOCALAPPDATA\DiscordCanary";Proc = "DiscordCanary" }
+    [pscustomobject]@{ Name = "Stable"; Dir = "$env:LOCALAPPDATA\Discord";      Proc = "Discord";       Data = "$env:APPDATA\discord" }
+    [pscustomobject]@{ Name = "Ptb";    Dir = "$env:LOCALAPPDATA\DiscordPTB";   Proc = "DiscordPTB";    Data = "$env:APPDATA\discordptb" }
+    [pscustomobject]@{ Name = "Canary"; Dir = "$env:LOCALAPPDATA\DiscordCanary";Proc = "DiscordCanary"; Data = "$env:APPDATA\discordcanary" }
 )
 
 function Resolve-Branch {
@@ -114,15 +114,87 @@ function Resolve-Branch {
     return @($installed)[0]
 }
 
+# Files Electron cannot boot without. Discord's host updater builds the new
+# app-<version> folder incrementally - Discord.exe and a couple of .pak files
+# land first, resources\, locales\, modules\ and the runtime blobs come later.
+# So "Discord.exe exists" does NOT mean the folder is runnable, and an update
+# that gets interrupted leaves a permanently unusable app-<version> behind.
+# Launching one of those is an instant crash on start, which is exactly what
+# this list is here to prevent.
+$CoreBuildFiles = @("resources.pak", "icudtl.dat", "v8_context_snapshot.bin", "snapshot_blob.bin", "ffmpeg.dll")
+
+function Test-DiscordAppComplete {
+    param([string]$AppDir, [string]$ProcName)
+    if (-not (Test-Path (Join-Path $AppDir "$ProcName.exe"))) { return $false }
+    if (-not (Test-Path (Join-Path $AppDir "resources"))) { return $false }
+    foreach ($f in $CoreBuildFiles) {
+        if (-not (Test-Path (Join-Path $AppDir $f))) { return $false }
+    }
+    return $true
+}
+
+# Newest first. The name filter keeps a stray app-<something> from throwing in
+# the [version] cast and taking the whole sort down with it.
+function Get-DiscordAppDirs {
+    param($BranchInfo)
+    return @(Get-ChildItem -Path $BranchInfo.Dir -Filter "app-*" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^app-\d+(\.\d+)*$' } |
+        Sort-Object { [version]($_.Name -replace '^app-', '') } -Descending)
+}
+
 function Get-DiscordExe {
     param($BranchInfo)
-    $app = Get-ChildItem -Path $BranchInfo.Dir -Filter "app-*" -Directory -ErrorAction SilentlyContinue |
-        Sort-Object { [version]($_.Name -replace '^app-', '') } -Descending | Select-Object -First 1
-    if ($app) {
-        $exe = Join-Path $app.FullName "$($BranchInfo.Proc).exe"
-        if (Test-Path $exe) { return $exe }
+    foreach ($app in Get-DiscordAppDirs $BranchInfo) {
+        if (Test-DiscordAppComplete -AppDir $app.FullName -ProcName $BranchInfo.Proc) {
+            return (Join-Path $app.FullName "$($BranchInfo.Proc).exe")
+        }
+        Write-Log "Skipping $($app.Name): incomplete build (interrupted Discord update)." "DarkGray"
     }
     return $null
+}
+
+# Discord's own shortcut runs Update.exe, which resolves the active version from
+# installer.db. Going through it means we can never pick the wrong app folder,
+# and it keeps working across future updates.
+function Get-DiscordUpdateExe {
+    param($BranchInfo)
+    $u = Join-Path $BranchInfo.Dir "Update.exe"
+    if (Test-Path $u) { return $u }
+    return $null
+}
+
+# True while Discord's updater is downloading or applying a build. Force-killing
+# the client during that window is what corrupts an app-<version> folder in the
+# first place, so we back off instead.
+function Test-DiscordUpdating {
+    param($BranchInfo)
+    $log = Join-Path $BranchInfo.Data "logs\Discord_updater_rCURRENT.log"
+    if (Test-Path $log) {
+        try {
+            if (((Get-Date) - (Get-Item $log).LastWriteTime).TotalSeconds -lt 90) { return $true }
+        } catch { }
+    }
+    $incoming = Join-Path $BranchInfo.Dir "download\incoming"
+    if (Test-Path $incoming) {
+        if (@(Get-ChildItem -Path $incoming -Force -ErrorAction SilentlyContinue).Count -gt 0) { return $true }
+    }
+    return $false
+}
+
+# Ask Discord to close before reaching for Stop-Process, so it gets the chance
+# to finish whatever it was writing.
+function Stop-Discord {
+    param($BranchInfo)
+    $procs = @(Get-Process -Name $BranchInfo.Proc -ErrorAction SilentlyContinue)
+    if (-not $procs.Count) { return }
+    foreach ($p in $procs) { try { [void]$p.CloseMainWindow() } catch { } }
+    for ($i = 0; $i -lt 16; $i++) {
+        Start-Sleep -Milliseconds 500
+        if (-not @(Get-Process -Name $BranchInfo.Proc -ErrorAction SilentlyContinue).Count) { return }
+    }
+    Write-Log "Discord did not close on request; forcing it." "DarkGray"
+    Get-Process -Name $BranchInfo.Proc -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 2
 }
 
 function Test-CdpUp {
@@ -275,7 +347,16 @@ function Invoke-Diagnose {
     Write-Host "OS           : $([Environment]::OSVersion.VersionString)"
     Write-Host "Install root : $Root"
     Write-Host "Branch       : $(if ($b) { $b.Name } else { 'not found' })"
-    Write-Host "Discord exe  : $(if ($b) { Get-DiscordExe $b } else { 'n/a' })"
+    Write-Host "Discord exe  : $(if ($b) { $(Get-DiscordExe $b) } else { 'n/a' })"
+    if ($b) {
+        # An interrupted Discord update leaves a newer-but-unusable app-<version>
+        # on disk. Naming it here turns a baffling crash-on-start into one line.
+        foreach ($app in Get-DiscordAppDirs $b) {
+            $ok = Test-DiscordAppComplete -AppDir $app.FullName -ProcName $b.Proc
+            Write-Host ("Build        : {0} - {1}" -f $app.Name, $(if ($ok) { "complete" } else { "INCOMPLETE (interrupted update, ignored)" }))
+        }
+        Write-Host "Updating now : $(Test-DiscordUpdating $b)"
+    }
     Write-Host "Discord procs: $((Get-Process -Name Discord*, DiscordPTB, DiscordCanary -ErrorAction SilentlyContinue | Measure-Object).Count)"
     Write-Host "Debug port   : $Port (reachable: $(Test-CdpUp))"
     Write-Host "Config       :"
@@ -318,27 +399,56 @@ $branchInfo = Resolve-Branch
 Write-Log "Discord branch: $($branchInfo.Name)"
 
 function Start-DiscordWithPort {
+    # Never restart Discord out from under its own updater - that is how a
+    # half-written app-<version> folder gets left on disk.
+    if (Test-DiscordUpdating $branchInfo) {
+        Write-Log "Discord is updating - leaving it alone, will retry shortly." "Yellow"
+        return $false
+    }
+    $updater = Get-DiscordUpdateExe $branchInfo
     $exe = Get-DiscordExe $branchInfo
-    if (-not $exe) { throw "Could not find $($branchInfo.Proc).exe under $($branchInfo.Dir)." }
-    Get-Process -Name $branchInfo.Proc -ErrorAction SilentlyContinue | Stop-Process -Force
-    Start-Sleep -Seconds 3
-    Start-Process -FilePath $exe -ArgumentList "--remote-debugging-port=$Port"
-    Write-Log "Relaunched Discord with the debugging port." "Yellow"
+    if (-not $updater -and -not $exe) {
+        Write-Log "No usable $($branchInfo.Proc).exe under $($branchInfo.Dir) - every build there is incomplete." "Red"
+        return $false
+    }
+    Stop-Discord $branchInfo
+    if ($updater) {
+        # Squirrel's own launch path: it picks the active version itself, so a
+        # staged or interrupted build can never be started by mistake.
+        Start-Process -FilePath $updater -ArgumentList @(
+            "--processStart", "$($branchInfo.Proc).exe",
+            "--process-start-args", "--remote-debugging-port=$Port"
+        )
+        Write-Log "Relaunched Discord (via Update.exe) with the debugging port." "Yellow"
+    } else {
+        Start-Process -FilePath $exe -ArgumentList "--remote-debugging-port=$Port"
+        Write-Log "Relaunched Discord with the debugging port." "Yellow"
+    }
+    return $true
 }
 
 if (-not (Test-CdpUp)) {
-    $running = Get-Process -Name $branchInfo.Proc -ErrorAction SilentlyContinue
+    $running = @(Get-Process -Name $branchInfo.Proc -ErrorAction SilentlyContinue)
+    $mayLaunch = $true
     if ($AttachOnly) {
         Write-Log "Attach-only: waiting for a debuggable Discord..." "Cyan"
-    } elseif ($running -and -not $cfg.restartDiscord) {
+        $mayLaunch = $false
+    } elseif ($running.Count -and -not $cfg.restartDiscord) {
         Write-Log "Discord is running without the debugging port and restartDiscord is false. Nothing to do." "Yellow"
         exit 0
-    } else {
-        Start-DiscordWithPort
     }
+    $launched = $false
+    if ($mayLaunch) { $launched = Start-DiscordWithPort }
     $deadline = (Get-Date).AddMinutes(10)
+    $nextTry = (Get-Date).AddSeconds(30)
     while (-not (Test-CdpUp)) {
         if ((Get-Date) -gt $deadline) { Write-Log "Debug port never came up; giving up." "Yellow"; exit 0 }
+        # A launch skipped because Discord was mid-update gets retried until the
+        # updater finishes.
+        if ($mayLaunch -and -not $launched -and (Get-Date) -gt $nextTry) {
+            $launched = Start-DiscordWithPort
+            $nextTry = (Get-Date).AddSeconds(30)
+        }
         Start-Sleep -Seconds 3
     }
 }
@@ -380,8 +490,12 @@ while ($true) {
     if (-not $cfg.restartDiscord -or $AttachOnly) { continue }
     if ($null -eq $missingSince) { $missingSince = Get-Date; continue }
     if (((Get-Date) - $missingSince).TotalSeconds -ge 40) {
-        Write-Log "Discord is running without the debugging port (likely auto-updated)." "Yellow"
-        Start-DiscordWithPort
+        if (Test-DiscordUpdating $branchInfo) {
+            Write-Log "Discord is updating - waiting for it to finish before restarting it." "DarkGray"
+        } else {
+            Write-Log "Discord is running without the debugging port (likely auto-updated)." "Yellow"
+            [void](Start-DiscordWithPort)
+        }
         $missingSince = $null
     }
 }

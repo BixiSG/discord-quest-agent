@@ -127,6 +127,13 @@ the output into an issue. It lists versions, config and agent state, no tokens o
 **No button in the title bar.** Discord wasn't started by the agent, so there's no debugging
 port. Start it from the Start Menu shortcut.
 
+**Discord crashes the instant it starts.** An interrupted Discord update leaves a
+newer-but-unfinished `app-<version>` folder on disk: the exe is there, the rest of the
+client isn't. Up to v1.0.2 the agent picked whichever folder had the highest version
+number, so it kept launching a client that couldn't boot. Since v1.0.3 it starts Discord
+through Discord's own `Update.exe` and ignores incomplete builds - diagnostics lists every
+build and flags the bad ones. Discord repairs the folder itself on its next update.
+
 **"Quest agent needs updating" notification.** Discord changed its internals. Check for a
 newer release; if there isn't one, open an issue with the diagnostics output.
 
