@@ -69,7 +69,7 @@ a live orb balance, so it isn't your wallet.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.0.4 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
