@@ -56,20 +56,52 @@ The badge tells you what's going on without opening anything:
 | --- | --- |
 | 🟢 Green, with a count | That many rewards are sitting there waiting to be claimed |
 | 🟡 Amber, with a spinning ring | That many quests are still being worked on |
+| ⚪ Grey, with a pause glyph | You paused everything |
 | ⚫ Nothing | Idle, nothing to do |
 
 Click it for the panel in the screenshot above: four counters across the top, then one row
 per quest with the game's own artwork, the orb reward, a progress bar and the time left.
-Rows are grouped into *Ready to claim*, *Running now*, *Queued* and *Skipped* (with a
-reason). Drag the header to move it, hit the refresh icon to force a scan. Clicking any
-quest row jumps straight to Discover -> Quests, where claiming happens.
+Rows are grouped into *Ready to claim*, *Running*, *Queued*, *Available* (only when
+auto-accept is off) and *Skipped* (with a reason). Drag the header to move it, press Esc to
+close it. Clicking a quest row jumps straight to the Quests page, where claiming happens.
+
+### Controls
+
+Hover a row for its buttons:
+
+| Row is... | Buttons |
+| --- | --- |
+| Running | **Pause** / **Resume** the task, **Stop** (cancels it and skips the quest) |
+| Queued | **Run now** (takes over the one game/stream slot from whatever is using it; that one goes back to the queue), **Skip** |
+| Available | **Accept and run**, **Skip** |
+| Skipped by you | **Put back in the queue** |
+| Failed too often | **Try again** |
+
+The header has **Pause everything** (every running quest pauses, nothing new starts; the
+same button resumes), **Scan now** and **Settings**. While a play/stream quest is paused the
+spoofed game is taken down, so Discord stops sending heartbeats for it until you resume.
+
+### Settings
+
+<p align="center">
+  <img src="docs/settings.png" width="380" alt="The settings view: toggles for auto-accept, notifications and each quest type, a rescan interval picker, and maintenance buttons">
+</p>
+
+The gear opens Discord-style toggles for **Auto-accept quests**, **Notifications** and each
+**quest type** (video, mobile video, play, stream, activity), a **rescan interval** picker
+and two maintenance buttons (retry failed quests, clear the skip list). Switching a type
+off stops any running quest of that type and parks it under *Skipped* as "quest type is
+off"; switching it back on picks them up again.
+
+Settings and the skip list survive Discord restarts: they're stored inside the client,
+per Discord install. `config.json` supplies the defaults, the HUD's choices win over it.
 
 "Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
 a live orb balance, so it isn't your wallet.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.0.4 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.1.0 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
@@ -82,8 +114,16 @@ Discord restarts once so it can come up with the debugging port.
 You need Windows 10/11, the Discord desktop app (Stable, PTB or Canary, auto-detected) and
 Windows PowerShell 5.1, which is already on your machine.
 
-To remove it, run `Uninstall.bat` from the install folder. It stops the agent, deletes the
-shortcuts and the folder. Discord is untouched, so there's nothing to undo there.
+To remove it, use **Uninstall Quest Agent** in the Start Menu (or run `Uninstall.bat` from
+the install folder). It stops the agent, tells the copy living inside Discord to shut down,
+restarts Discord once without the debugging port, deletes the shortcuts and the folder, and
+tells you if anything couldn't be removed. Nothing is left running and nothing brings it
+back at the next login. Add `-KeepDiscord` to skip the Discord restart (the agent then stays
+in memory until you restart Discord yourself) or `-KeepConfig` to keep `config.json`.
+
+The uninstaller also lists any *other* startup item on your PC that starts Discord with a
+debugging port or runs a quest agent (another tool, an older script). It doesn't touch
+those; if it names one, that's what would bring an agent back, so remove it yourself.
 
 ## How it works
 
@@ -109,6 +149,9 @@ client already uses.
 | `maxTaskAttempts` | `3` | Give up on a quest after this many failed runs |
 | `hud` | `true` | Show the button and panel |
 | `notify` | `true` | OS notification when a reward is claimable |
+
+`autoEnroll`, `scanIntervalMs` and `notify` are only defaults: whatever you set in the HUD's
+Settings view overrides them and is remembered inside Discord.
 
 ## 🔒 Security
 
@@ -146,6 +189,19 @@ need at least one other person in the voice channel.
 
 **Antivirus complains.** PowerShell that opens a debugging port and injects JavaScript looks
 odd to a scanner. The source is all here; read it and decide for yourself.
+
+**It came back after uninstalling.** Something else on the PC is starting Discord with a
+debugging port and injecting an agent: an older script, another tool, a leftover Startup
+shortcut. The uninstaller prints a list of such items; remove the one it names. This tool
+itself leaves no startup entry, scheduled task or registry key behind.
+
+**Internet feels slower while it runs.** Not the agent: its own traffic is a few small JSON
+requests (one enroll per quest, a progress ping every 7 s for video quests, a heartbeat
+every 20 s for activity quests, one version check at start), and everything else is
+localhost. The heavy hitters nearby are a real Go Live stream, which stream quests require
+you to run for ~15 minutes, and Discord downloading an update after a restart. Task Manager
+-> App history (or Settings -> Network -> Data usage) shows which process actually used the
+bandwidth.
 
 Handled task types: `WATCH_VIDEO`, `WATCH_VIDEO_ON_MOBILE`, `PLAY_ON_DESKTOP`,
 `STREAM_ON_DESKTOP`, `PLAY_ACTIVITY`. Mobile-video quests complete fine from the desktop
