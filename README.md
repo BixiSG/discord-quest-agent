@@ -87,11 +87,17 @@ spoofed game is taken down, so Discord stops sending heartbeats for it until you
   <img src="docs/settings.png" width="380" alt="The settings view: toggles for auto-accept, notifications and each quest type, a rescan interval picker, and maintenance buttons">
 </p>
 
-The gear opens Discord-style toggles for **Auto-accept quests**, **Notifications** and each
-**quest type** (video, mobile video, play, stream, activity), a **rescan interval** picker
-and two maintenance buttons (retry failed quests, clear the skip list). Switching a type
-off stops any running quest of that type and parks it under *Skipped* as "quest type is
-off"; switching it back on picks them up again.
+The gear opens Discord-style toggles for **Auto-accept quests**, two kinds of
+**notification**, each **quest type** (video, mobile video, play, stream, activity), an
+**appearance** switch (Discord dark, the default, or light), a **rescan interval** picker
+and maintenance buttons (send a test notification, retry failed quests, clear the skip
+list). Switching a type off stops any running quest of that type and parks it under
+*Skipped* as "quest type is off"; switching it back on picks them up again.
+
+Notifications when a reward is ready come two ways, each with its own toggle: a **desktop
+notification** (Windows toast plus taskbar flash) and an **in-app toast** at the top of the
+Discord window. The in-app one uses Discord's own toast system when the agent can find it,
+and a look-alike drawn by the agent otherwise, so it works either way.
 
 Settings and the skip list survive Discord restarts: they're stored inside the client,
 per Discord install. `config.json` supplies the defaults, the HUD's choices win over it.
@@ -101,7 +107,7 @@ a live orb balance, so it isn't your wallet.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.1.0 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.1.1 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
@@ -148,10 +154,12 @@ client already uses.
 | `scanIntervalMs` | `120000` | How often to look for new quests (paused while idle) |
 | `maxTaskAttempts` | `3` | Give up on a quest after this many failed runs |
 | `hud` | `true` | Show the button and panel |
-| `notify` | `true` | OS notification when a reward is claimable |
+| `notify` | `true` | Desktop notification when a reward is claimable |
+| `toast` | `true` | In-app toast when a reward is claimable |
+| `theme` | `"dark"` | Panel look: `dark` (Discord dark) or `light` |
 
-`autoEnroll`, `scanIntervalMs` and `notify` are only defaults: whatever you set in the HUD's
-Settings view overrides them and is remembered inside Discord.
+`autoEnroll`, `scanIntervalMs`, `notify`, `toast` and `theme` are only defaults: whatever
+you set in the HUD's Settings view overrides them and is remembered inside Discord.
 
 ## 🔒 Security
 
@@ -168,8 +176,14 @@ If you're not actively using the agent, start Discord from its own shortcut inst
 Run the **Quest Agent Diagnostics** shortcut (or `Start-QuestAgent.bat -Diagnose`) and paste
 the output into an issue. It lists versions, config and agent state, no tokens or messages.
 
-**No button in the title bar.** Discord wasn't started by the agent, so there's no debugging
-port. Start it from the Start Menu shortcut.
+**No button in the title bar.** Usually Discord wasn't started by the agent, so there's no
+debugging port; start it from the Start Menu shortcut. If quests are still completing
+(notifications arrive, progress moves), the agent is running but couldn't find a slot in
+the title bar. The button no longer depends on the English "Inbox" label, so non-English
+clients get it too; and if Discord's title bar has no usable slot at all, the agent puts a
+small round floating button below the title bar instead, after 20 seconds. Diagnostics
+prints `hudButtonMode` (titlebar / floating / none) and `titleBarSlots`; include them in an
+issue.
 
 **Discord crashes the instant it starts.** An interrupted Discord update leaves a
 newer-but-unfinished `app-<version>` folder on disk: the exe is there, the rest of the

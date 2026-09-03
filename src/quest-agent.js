@@ -25,7 +25,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 10;
+    const AGENT_VERSION = 11;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -52,7 +52,9 @@
         scanIntervalMs: 120000, // rescan for new quests every 2 min
         maxTaskAttempts: 3,     // give up on a quest after this many failed runs
         hud: true,              // show the toolbar button + panel
-        notify: true            // OS notification when a reward is claimable
+        notify: true,           // OS notification when a reward is claimable
+        toast: true,            // in-app toast when a reward is claimable
+        theme: "dark"           // panel look: "dark" (Discord dark) or "light"
     }, (typeof window.__questAgentConfig === "object" && window.__questAgentConfig) || {});
     // ---------------------------------------------------------------------
 
@@ -63,18 +65,36 @@
 
     // ---- Notifications (defined early so the failure path can use them) --
     let SETTINGS = null; // assigned once storage is up; CONFIG stands in until then
-    function notifyRaw(title, body) {
-        if ((SETTINGS ? SETTINGS.notify : CONFIG.notify) === false) return;
+    let Toasts = null;   // Discord's own toast module (optional; found during hooking)
+    // kind: "success" | "info" | "error". Two channels, each its own setting:
+    // an OS notification (+ taskbar flash) and an in-app toast.
+    function notifyRaw(title, body, kind) {
+        const os = (SETTINGS ? SETTINGS.notify : CONFIG.notify) !== false;
+        const inApp = (SETTINGS ? SETTINGS.toast : CONFIG.toast) !== false;
+        if (os) {
+            try {
+                if (typeof Notification !== "undefined") {
+                    if (Notification.permission === "granted") new Notification(title, { body });
+                    else Notification.requestPermission().then(p => { if (p === "granted") new Notification(title, { body }); });
+                }
+            } catch (e) { /* ignore */ }
+            try { DiscordNative?.window?.flashFrame?.(true); } catch (e) { /* ignore */ }
+        }
+        if (inApp) showToast(title, body, kind ?? "info");
+    }
+    /** In-app toast: Discord's own toast if the module was found, else ours. */
+    function showToast(title, body, kind) {
         try {
-            if (typeof Notification !== "undefined") {
-                if (Notification.permission === "granted") new Notification(title, { body });
-                else Notification.requestPermission().then(p => { if (p === "granted") new Notification(title, { body }); });
+            if (Toasts) {
+                const type = kind === "success" ? Toasts.ToastType.SUCCESS : kind === "error" ? Toasts.ToastType.FAILURE : Toasts.ToastType.MESSAGE;
+                Toasts.showToast(Toasts.createToast(body ? `${title} \u2014 ${body}` : title, type, { duration: 6000 }));
+                return;
             }
-        } catch (e) { /* ignore */ }
-        try { DiscordNative?.window?.flashFrame?.(true); } catch (e) { /* ignore */ }
+        } catch (e) { /* fall through to our own */ }
+        try { showOwnToast(title, body, kind); } catch (e) { /* HUD not ready */ }
     }
     function notifyClaimable(questName, appName) {
-        notifyRaw("Quest ready to claim \uD83C\uDF89", `${questName} (${appName}) is at 100%. Open Discover \u2192 Quests and click Claim (captcha required).`);
+        notifyRaw("Quest ready to claim \uD83C\uDF89", `${questName} (${appName}) is at 100%. Open Discover \u2192 Quests and click Claim (captcha required).`, "success");
         console.log(`%c[QuestAgent] Ready to claim: ${questName}`, "color:#43b581;font-weight:bold");
     }
 
@@ -133,6 +153,17 @@
                     }
                 } catch (e) { /* optional - see above */ }
             }
+            // Optional module: Discord's toast API (createToast/showToast/ToastType).
+            // Without it, in-app notifications fall back to our own toast.
+            if (Toasts == null) {
+                try {
+                    for (const m of Object.values(wpRequire.c)) {
+                        const exp = m?.exports;
+                        if (exp && typeof exp === "object" && typeof exp.showToast === "function" &&
+                            typeof exp.createToast === "function" && exp.ToastType) { Toasts = exp; break; }
+                    }
+                } catch (e) { /* optional */ }
+            }
 
             missing = Object.entries({ ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api })
                 .filter(([, v]) => v == null).map(([k]) => k);
@@ -183,6 +214,8 @@
     SETTINGS = {
         autoEnroll: CONFIG.autoEnroll !== false,
         notify: CONFIG.notify !== false,
+        toast: CONFIG.toast !== false,
+        theme: CONFIG.theme === "light" ? "light" : "dark",
         scanIntervalMs: Number(CONFIG.scanIntervalMs) || 120000,
         paused: false,
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
@@ -197,6 +230,8 @@
             if (typeof s !== "object" || !s) return;
             if (typeof s.autoEnroll === "boolean") SETTINGS.autoEnroll = s.autoEnroll;
             if (typeof s.notify === "boolean") SETTINGS.notify = s.notify;
+            if (typeof s.toast === "boolean") SETTINGS.toast = s.toast;
+            if (s.theme === "light" || s.theme === "dark") SETTINGS.theme = s.theme;
             if (typeof s.paused === "boolean") SETTINGS.paused = s.paused;
             if (Number.isFinite(s.scanIntervalMs) && s.scanIntervalMs >= 30000) SETTINGS.scanIntervalMs = s.scanIntervalMs;
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
@@ -657,6 +692,11 @@
             switch (key) {
                 case "autoEnroll": SETTINGS.autoEnroll = !!value; saveSettings(); if (value) scan(); else refreshUI(); return true;
                 case "notify": SETTINGS.notify = !!value; saveSettings(); refreshUI(); return true;
+                case "toast": SETTINGS.toast = !!value; saveSettings(); refreshUI(); return true;
+                case "theme": {
+                    if (value !== "light" && value !== "dark") return false;
+                    SETTINGS.theme = value; saveSettings(); refreshUI(); return true;
+                }
                 case "scanIntervalMs": {
                     const ms = Number(value);
                     if (!Number.isFinite(ms) || ms < 30000) return false;
@@ -677,13 +717,18 @@
             state.skipped.clear();
             saveSettings();
             scan();
+        },
+        /** Fire both notification channels (whichever are on) so the user can see what they look like. */
+        testNotification() {
+            notifyRaw("Quest agent test", "This is what a ready-to-claim notification looks like.", "success");
+            return { os: SETTINGS.notify, inApp: SETTINGS.toast, discordToasts: !!Toasts };
         }
     };
 
     // ---- HUD: toolbar button + floating quest panel ----------------------
     // Discord's class names are hashed and change on updates, so the button
     // clones them off the live Inbox button instead of hardcoding them.
-    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null };
+    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null };
 
     // Inline icons keep the panel pure-ASCII (no glyphs to mangle) and crisp.
     const ICON = {
@@ -786,13 +831,16 @@
         if (UI.style?.isConnected) return;
         // Discord's current tokens first, hex fallbacks for older clients.
         const css = `
-#qb-panel{--qb-bg:var(--background-surface-higher,#2b2d31);--qb-bg2:var(--background-base-lower,#1e1f22);
- --qb-bg3:var(--background-surface-highest,#313338);--qb-hover:var(--background-mod-subtle,rgba(255,255,255,.06));
- --qb-hover2:var(--background-mod-normal,rgba(255,255,255,.1));--qb-hover3:var(--background-mod-strong,rgba(255,255,255,.14));
- --qb-text:var(--text-default,#dbdee1);--qb-muted:var(--text-muted,#949ba4);--qb-border:var(--border-subtle,rgba(255,255,255,.08));
- --qb-brand:var(--brand-500,#5865f2);--qb-green:var(--status-positive,#23a55a);--qb-amber:var(--status-warning,#f0b232);
- --qb-red:var(--status-danger,#f23f43);--qb-r:var(--radius-md,12px);--qb-rs:var(--radius-sm,8px);
- position:fixed;z-index:10000;width:400px;max-height:76vh;display:flex;flex-direction:column;
+/* Fixed palettes (Discord's own dark / light values) so the theme setting
+   means the same thing whatever theme the client itself is in. */
+#qb-panel,#qb-toast{--qb-bg:#2b2d31;--qb-bg2:#1e1f22;--qb-bg3:#313338;--qb-hover:rgba(255,255,255,.06);
+ --qb-hover2:rgba(255,255,255,.1);--qb-hover3:rgba(255,255,255,.14);--qb-text:#dbdee1;--qb-muted:#949ba4;
+ --qb-border:rgba(255,255,255,.08);--qb-scroll:#3b3d44;--qb-knob:#fff;--qb-off:#80848e;
+ --qb-brand:#5865f2;--qb-green:#23a55a;--qb-amber:#f0b232;--qb-red:#f23f43;--qb-r:var(--radius-md,12px);--qb-rs:var(--radius-sm,8px)}
+#qb-panel.qb-light,#qb-toast.qb-light{--qb-bg:#ffffff;--qb-bg2:#f2f3f5;--qb-bg3:#e3e5e8;--qb-hover:rgba(0,0,0,.04);
+ --qb-hover2:rgba(0,0,0,.07);--qb-hover3:rgba(0,0,0,.11);--qb-text:#313338;--qb-muted:#5c5e66;--qb-border:rgba(0,0,0,.1);
+ --qb-scroll:#c4c9ce;--qb-off:#c4c9ce;--qb-amber:#c98a12}
+#qb-panel{position:fixed;z-index:10000;width:400px;max-height:76vh;display:flex;flex-direction:column;
  background:var(--qb-bg);color:var(--qb-text);border:1px solid var(--qb-border);border-radius:var(--qb-r);
  box-shadow:var(--shadow-high,0 12px 24px rgba(0,0,0,.45)),0 0 0 1px rgba(0,0,0,.25);
  font-family:var(--font-primary,"gg sans",sans-serif);font-size:13px;line-height:1.3;overflow:hidden;
@@ -832,8 +880,10 @@
 #qb-panel .qb-body{overflow-y:auto;padding:2px 0 6px;scrollbar-width:thin}
 #qb-panel .qb-body::-webkit-scrollbar{width:8px}
 #qb-panel .qb-body::-webkit-scrollbar-track{background:transparent}
-#qb-panel .qb-body::-webkit-scrollbar-thumb{background:var(--scrollbar-thin-thumb,var(--qb-bg2));border-radius:4px;
+#qb-panel .qb-body::-webkit-scrollbar-thumb,#qb-panel .qb-set::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;
  border:2px solid transparent;background-clip:padding-box}
+#qb-panel .qb-set::-webkit-scrollbar{width:8px}
+#qb-panel .qb-set::-webkit-scrollbar-track{background:transparent}
 #qb-panel .qb-sec{display:flex;align-items:center;padding:10px 14px 5px;font-size:10.5px;font-weight:700;
  letter-spacing:.5px;text-transform:uppercase;color:var(--qb-muted)}
 #qb-panel .qb-count{background:var(--qb-bg2);border-radius:8px;padding:1px 6px;margin-left:6px;
@@ -884,11 +934,11 @@
 #qb-panel .qb-ot{flex:1;min-width:0}
 #qb-panel .qb-ot b{display:block;font-weight:500;font-size:13.5px}
 #qb-panel .qb-ot span{display:block;font-size:11px;color:var(--qb-muted);margin-top:1px}
-#qb-panel .qb-sw{width:40px;height:24px;border-radius:14px;background:var(--primary-400,#80848e);position:relative;flex:none;
+#qb-panel .qb-sw{width:40px;height:24px;border-radius:14px;background:var(--qb-off);position:relative;flex:none;
  transition:background .15s}
-#qb-panel .qb-sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;
+#qb-panel .qb-sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--qb-knob);
  transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-#qb-panel .qb-sw svg{position:absolute;z-index:1;top:6px;left:6px;width:12px;height:12px;color:var(--primary-400,#80848e);transition:left .15s}
+#qb-panel .qb-sw svg{position:absolute;z-index:1;top:6px;left:6px;width:12px;height:12px;color:var(--qb-off);transition:left .15s}
 #qb-panel .qb-opt.qb-on .qb-sw{background:var(--qb-green)}
 #qb-panel .qb-opt.qb-on .qb-sw::after{left:19px}
 #qb-panel .qb-opt.qb-on .qb-sw svg{left:22px;color:var(--qb-green)}
@@ -907,6 +957,23 @@
 #qb-panel .qb-foot span{flex:1}
 #qb-panel .qb-foot a{color:var(--qb-brand);cursor:pointer;text-decoration:none}
 #qb-panel .qb-foot a:hover{text-decoration:underline}
+/* our own toast (used when Discord's toast module isn't found) */
+#qb-toast{position:fixed;z-index:10001;top:48px;left:50%;transform:translateX(-50%);max-width:420px;display:flex;gap:10px;
+ align-items:flex-start;padding:10px 14px;background:var(--qb-bg);color:var(--qb-text);border:1px solid var(--qb-border);
+ border-radius:var(--qb-rs);box-shadow:var(--shadow-high,0 12px 24px rgba(0,0,0,.45));font-family:var(--font-primary,"gg sans",sans-serif);
+ font-size:13px;line-height:1.35;animation:qb-toast-in .18s cubic-bezier(.2,.8,.3,1)}
+#qb-toast.qb-out{animation:qb-toast-out .18s ease forwards}
+@keyframes qb-toast-in{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes qb-toast-out{to{opacity:0;transform:translate(-50%,-10px)}}
+#qb-toast .qb-ti{width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+#qb-toast .qb-ti.qb-success{background:var(--qb-green)}#qb-toast .qb-ti.qb-info{background:var(--qb-brand)}#qb-toast .qb-ti.qb-error{background:var(--qb-red)}
+#qb-toast b{display:block;font-weight:600}
+#qb-toast span{color:var(--qb-muted);font-size:12px}
+/* floating fallback button, used only when no title-bar slot could be found */
+#qb-btn.qb-float{position:fixed;top:44px;right:16px;z-index:9999;width:36px;height:36px;border-radius:50%;background:#2b2d31;
+ border:1px solid rgba(255,255,255,.1);box-shadow:0 4px 12px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#dbdee1}
+#qb-btn.qb-float [role=button]{display:flex;cursor:pointer}
+#qb-btn.qb-float:hover{background:#383a40}
 /* title-bar badge */
 #qb-badge{position:absolute;top:-2px;right:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;
  color:#fff;font-size:10px;font-weight:700;line-height:15px;text-align:center;display:flex;align-items:center;justify-content:center;
@@ -925,6 +992,22 @@
     }
 
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    let ownToastTimer = null;
+    function showOwnToast(title, body, kind) {
+        ensureStyle();
+        document.querySelector("#qb-toast")?.remove();
+        if (ownToastTimer) { clearTimeout(ownToastTimer); ownToastTimer = null; }
+        const t = document.createElement("div");
+        t.id = "qb-toast";
+        t.className = SETTINGS?.theme === "light" ? "qb-light" : "";
+        t.setAttribute("role", "status");
+        const icon = kind === "success" ? ICON.check : kind === "error" ? ICON.close : ICON.bell;
+        t.innerHTML = `<span class="qb-ti qb-${esc(kind)}">${svg(icon, "", 15)}</span><div><b>${esc(title)}</b>${body ? `<span>${esc(body)}</span>` : ""}</div>`;
+        t.onclick = () => t.remove();
+        document.body.appendChild(t);
+        ownToastTimer = setTimeout(() => { t.classList.add("qb-out"); setTimeout(() => t.remove(), 200); }, 6000);
+    }
     const tool = (act, title, icon, cls) =>
         `<button class="qb-tool ${cls ?? ""}" data-act="${act}" title="${title}" aria-label="${title}">${svg(icon, "", 14)}</button>`;
 
@@ -1044,7 +1127,12 @@
         box.innerHTML = `
           <div class="qb-sec">Automation</div>
           ${opt("autoEnroll", SETTINGS.autoEnroll, ICON.bolt, "Auto-accept quests", "Enroll in every new quest the agent can do. Off: accept them yourself from the Available group.")}
-          ${opt("notify", SETTINGS.notify, ICON.bell, "Notifications", "OS notification and taskbar flash when a reward is ready to claim.")}
+          <div class="qb-sec">Notifications</div>
+          ${opt("notify", SETTINGS.notify, ICON.bell, "Desktop notification", "Windows notification and taskbar flash when a reward is ready to claim.")}
+          ${opt("toast", SETTINGS.toast, ICON.activity, "In-app toast", Toasts ? "A Discord toast at the top of the window, the same one Discord uses." : "A small toast at the top of the Discord window.")}
+          <div class="qb-btns"><button class="qb-btn" data-cmd="testnotify">${svg(ICON.bell, "", 13)}Send a test notification</button></div>
+          <div class="qb-sec">Appearance</div>
+          <div class="qb-seg">${[["dark", "Discord dark"], ["light", "Light"]].map(([k, l]) => `<button data-theme="${k}" class="${SETTINGS.theme === k ? "qb-on" : ""}">${l}</button>`).join("")}</div>
           <div class="qb-sec">Quest types</div>
           ${SUPPORTED.map(t => opt("type:" + t, SETTINGS.types[t], TASK_META[t].icon, TASK_META[t].title, TASK_META[t].desc)).join("")}
           <div class="qb-sec">${svg(ICON.timer, "", 12)}&nbsp;Look for new quests every</div>
@@ -1067,6 +1155,7 @@
         UI.panel.querySelector(".qb-foot").style.display = quests ? "none" : "";
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", !quests);
         UI.panel.querySelector(".qb-title").textContent = quests ? "Quests" : "Settings";
+        UI.panel.classList.toggle("qb-light", SETTINGS.theme === "light");
 
         if (quests) renderQuests(s);
         else if (UI.sig !== "settings") { renderSettings(); UI.sig = "settings"; }
@@ -1193,10 +1282,13 @@
             if (opt) { flip(opt); return; }
             const seg = e.target.closest("[data-int]");
             if (seg) { ops.setSetting("scanIntervalMs", Number(seg.dataset.int) * 60000); UI.sig = null; renderPanel(); return; }
+            const th = e.target.closest("[data-theme]");
+            if (th) { ops.setSetting("theme", th.dataset.theme); UI.sig = null; renderPanel(); return; }
             const cmd = e.target.closest("[data-cmd]");
             if (cmd) {
                 if (cmd.dataset.cmd === "retry") ops.retryAllFailed();
                 if (cmd.dataset.cmd === "clearskip") ops.clearSkipped();
+                if (cmd.dataset.cmd === "testnotify") { ops.testNotification(); return; }
                 UI.sig = null; renderPanel();
             }
         });
@@ -1295,23 +1387,56 @@
         }
     }
 
-    /** Insert the toolbar button next to Inbox, cloning Discord's own classes. */
-    function installButton() {
-        if (UI.btn?.isConnected) return true;
+    /** Where the button goes. Never keys on aria-label text: Discord translates
+     *  "Inbox", so an English-only lookup finds nothing on every other locale.
+     *  Returns { container, wrapperClass, clickableClass } or null. */
+    function findAnchor() {
+        // 1. The Inbox button itself, when it carries the English label (cheapest, exact).
         const inbox = document.querySelector('[aria-label="Inbox"]');
-        const container = inbox?.closest('[class*="trailing_"]');
-        if (!container) return false;
+        const c1 = inbox?.closest('[class*="trailing_"]');
+        if (c1) return { container: c1, wrapperClass: inbox.closest('[class*="iconWrapper_"]')?.className ?? "", clickableClass: inbox.className };
+        // 2. Any title-bar trailing group that holds icon wrappers (Inbox, Help...), whatever they're called.
+        for (const c of document.querySelectorAll('[class*="trailing_"]')) {
+            const wrap = c.querySelector(':scope > [class*="iconWrapper_"]');
+            const click = wrap?.querySelector('[role="button"]') ?? c.querySelector(':scope > [class*="iconWrapper_"] [class*="clickable"]');
+            if (wrap && click) return { container: c, wrapperClass: wrap.className, clickableClass: click.className };
+        }
+        // 3. Any trailing group with a clickable that isn't a window control.
+        for (const c of document.querySelectorAll('[class*="trailing_"]')) {
+            const click = [...c.querySelectorAll('[role="button"]')].find(b => !b.closest('[class*="winButton"]'));
+            if (click) return { container: c, wrapperClass: "", clickableClass: click.className };
+        }
+        return null;
+    }
+
+    /** Insert the toolbar button next to Inbox, cloning Discord's own classes.
+     *  If no title-bar slot turns up for a while, mount a floating button
+     *  instead so the HUD is always reachable; it moves into the title bar as
+     *  soon as one appears. */
+    function installButton() {
+        if (UI.btn?.isConnected && !UI.btn.classList.contains("qb-float")) return true;
+        const anchor = findAnchor();
+        if (!anchor) {
+            if (UI.btn?.isConnected) return true; // floating one is already up
+            if (UI.firstTry == null) UI.firstTry = Date.now();
+            if (Date.now() - UI.firstTry < 20000) return false;
+            console.warn("[QuestAgent] No title-bar slot found after 20 s - using a floating button. Run diagnostics if this persists.");
+        } else if (UI.btn?.isConnected) {
+            UI.btn.remove(); // was floating; a real slot exists now
+        }
         ensureStyle();
 
         const wrapper = document.createElement("div");
-        // mimic the Inbox button's own wrapper + clickable classes
-        const inboxWrapper = inbox.closest('[class*="iconWrapper_"]');
-        if (inboxWrapper) wrapper.className = inboxWrapper.className;
-        wrapper.style.position = "relative";
         wrapper.id = "qb-btn";
+        if (anchor) {
+            wrapper.className = anchor.wrapperClass; // mimic the Inbox button's own wrapper + clickable classes
+            wrapper.style.position = "relative";
+        } else {
+            wrapper.className = "qb-float";
+        }
 
         const btn = document.createElement("div");
-        btn.className = inbox.className;
+        btn.className = anchor ? anchor.clickableClass : "";
         btn.setAttribute("role", "button");
         btn.setAttribute("aria-label", "Quest agent");
         btn.setAttribute("tabindex", "0");
@@ -1327,8 +1452,10 @@
 
         wrapper.appendChild(btn);
         wrapper.appendChild(ring);
-        container.insertBefore(wrapper, container.firstChild);
+        if (anchor) anchor.container.insertBefore(wrapper, anchor.container.firstChild);
+        else document.body.appendChild(wrapper);
         UI.btn = wrapper;
+        UI.mode = anchor ? "titlebar" : "floating";
         updateBadge();
         return true;
     }
@@ -1338,9 +1465,11 @@
         installButton();
         // Discord re-renders the title bar (channel switches, etc.) and drops our
         // node; re-add it whenever that happens, and keep the badge fresh.
-        UI.observer = new MutationObserver(() => { if (!UI.btn?.isConnected) installButton(); });
+        UI.observer = new MutationObserver(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); });
         UI.observer.observe(document.body, { childList: true, subtree: true });
-        UI.badgeTimer = setInterval(() => { if (!UI.open) updateBadge(); }, 5000);
+        // The observer only fires on DOM changes; a quiet client still gets a
+        // retry (this is also what promotes the floating button after 20 s).
+        UI.badgeTimer = setInterval(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); if (!UI.open) updateBadge(); }, 5000);
     }
 
     function removeUI() {
@@ -1349,7 +1478,8 @@
         if (UI.badgeTimer != null) { clearInterval(UI.badgeTimer); UI.badgeTimer = null; }
         if (UI.keyHandler) { document.removeEventListener("keydown", UI.keyHandler); UI.keyHandler = null; }
         UI.btn?.remove(); UI.panel?.remove(); UI.style?.remove();
-        UI.btn = UI.panel = UI.style = null; UI.open = false;
+        document.querySelector("#qb-toast")?.remove();
+        UI.btn = UI.panel = UI.style = null; UI.open = false; UI.mode = "none";
     }
 
     // ---- Install --------------------------------------------------------
@@ -1378,8 +1508,10 @@
         version: AGENT_VERSION, installedAt: Date.now(), state, scan, stop, config: CONFIG, settings: SETTINGS,
         ...ops,
         nav: !!NavTransitionTo, // false = quest rows won't navigate (finder broke)
+        toasts: !!Toasts,       // false = in-app toasts use our own fallback
         persistent: !!storage,  // false = settings live only for this session
-        ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI }
+        ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
+              toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; } }
     };
     console.log(`%c[QuestAgent] Agent v${AGENT_VERSION} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     if (SETTINGS.paused) console.log("[QuestAgent] Paused (from saved settings). Resume from the HUD.");

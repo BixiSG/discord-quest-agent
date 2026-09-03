@@ -369,6 +369,9 @@ JSON.stringify({
   agent: window.__questAgent ? window.__questAgent.version : null,
   status: window.__questAgent ? (window.__questAgent.error || window.__questAgent.status || 'ok') : null,
   hudButton: !!document.querySelector('#qb-btn'),
+  hudButtonMode: window.__questAgent && window.__questAgent.ui ? window.__questAgent.ui.buttonMode : null,
+  titleBarSlots: document.querySelectorAll('[class*="trailing_"]').length,
+  locale: document.documentElement.lang || navigator.language,
   activeTasks: window.__questAgent && window.__questAgent.state ? window.__questAgent.state.activeTasks : null,
   quests: window.__questAgent && window.__questAgent.ui ? window.__questAgent.ui.snapshot() : null
 })
