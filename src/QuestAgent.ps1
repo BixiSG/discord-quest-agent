@@ -476,6 +476,8 @@ Write-Log "Watching: re-injects after reloads and Discord updates. Exits when Di
 $missingSince = $null
 while ($true) {
     Start-Sleep -Seconds 20
+    # The uninstaller deletes the install folder; don't outlive it.
+    if (-not (Test-Path $AgentJs)) { Write-Log "Install folder is gone (uninstalled) - exiting." "DarkGray"; break }
     if (Test-CdpUp) {
         $missingSince = $null
         try {

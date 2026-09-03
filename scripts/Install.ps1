@@ -70,14 +70,14 @@ if (Test-Path $configPath) {
 
 # ---- Shortcuts --------------------------------------------------------------
 function New-Shortcut {
-    param([string]$Path, [string]$Target, [string]$Arguments, [string]$Description)
+    param([string]$Path, [string]$Target, [string]$Arguments, [string]$Description, [switch]$Visible)
     $shell = New-Object -ComObject WScript.Shell
     $sc = $shell.CreateShortcut($Path)
     $sc.TargetPath = $Target
     $sc.Arguments = $Arguments
     $sc.WorkingDirectory = $InstallDir
     $sc.Description = $Description
-    $sc.WindowStyle = 7   # minimised
+    $sc.WindowStyle = $(if ($Visible) { 1 } else { 7 })   # 7 = minimised
     $sc.Save()
 }
 
@@ -90,6 +90,8 @@ New-Shortcut -Path (Join-Path $StartMenu "Quest Agent Diagnostics.lnk") `
     -Target "powershell.exe" `
     -Arguments ('-NoProfile -ExecutionPolicy Bypass -NoExit -File "{0}\src\QuestAgent.ps1" -Diagnose' -f $InstallDir) `
     -Description "Print a support report"
+New-Shortcut -Path (Join-Path $StartMenu "Uninstall Quest Agent.lnk") `
+    -Target (Join-Path $InstallDir "Uninstall.bat") -Arguments "" -Description "Remove Discord Quest Agent" -Visible
 Say "Added Start Menu shortcuts."
 
 $startupLnk = Join-Path $StartupDir "Discord Quest Agent.lnk"
