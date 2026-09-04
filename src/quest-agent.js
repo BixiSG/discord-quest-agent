@@ -25,7 +25,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 11;
+    const AGENT_VERSION = 12;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -63,6 +63,88 @@
     const isApp = typeof DiscordNative !== "undefined";
     const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+    // ---- Localization -----------------------------------------------------
+    // English lives here (and is the fallback for any missing key). Other
+    // languages are JSON files in src\locales\ (shipped: ru, uk) or in
+    // <install root>\locales\ (yours; survive updates), which the launcher
+    // injects as window.__questAgentLocales. Copy src\locales\TEMPLATE.json to
+    // locales\<code>.json, translate the values, restart the agent.
+    const EN = {
+        "_name": "English",
+        "title.quests": "Quests", "title.settings": "Settings",
+        "status.stopped": "stopped", "status.paused": "paused", "status.working": "working on {n}",
+        "status.workingPaused": "working on {n} ({p} paused)", "status.ready": "{n} ready to claim",
+        "status.waitingSlot": "waiting for a free slot", "status.idle": "idle",
+        "stat.running": "running", "stat.queued": "queued", "stat.claim": "to claim", "stat.orbs": "orbs won",
+        "group.claimable": "Ready to claim", "group.running": "Running", "group.queued": "Queued",
+        "group.available": "Available", "group.skipped": "Skipped",
+        "row.open": "Open the Quests page", "row.paused": "paused", "row.complete": "complete",
+        "row.notAccepted": "not accepted", "row.minLeft": "~{n} min left",
+        "tool.pause": "Pause", "tool.resume": "Resume", "tool.resumeGlobal": "Resume (lifts the global pause)",
+        "tool.stop": "Stop and skip", "tool.run": "Run now", "tool.skip": "Skip", "tool.accept": "Accept and run",
+        "tool.unskip": "Put back in the queue", "tool.retry": "Try again",
+        "head.pauseAll": "Pause everything", "head.resumeAll": "Resume everything", "head.scan": "Scan for quests now",
+        "head.settings": "Settings", "head.close": "Close",
+        "empty.title": "Nothing to do right now.", "empty.sub": "Waiting for Discord to post new quests.",
+        "pending": "{n} orbs waiting - claim them in Discover \u2192 Quests",
+        "set.automation": "Automation", "set.autoEnroll": "Auto-accept quests",
+        "set.autoEnrollDesc": "Enroll in every new quest the agent can do. Off: accept them yourself from the Available group.",
+        "set.notifications": "Notifications", "set.notify": "Desktop notification",
+        "set.notifyDesc": "Windows notification and taskbar flash when a reward is ready to claim.",
+        "set.toast": "In-app toast", "set.toastDescDiscord": "A Discord toast at the top of the window, the same one Discord uses.",
+        "set.toastDescOwn": "A small toast at the top of the Discord window.", "set.testNotify": "Send a test notification",
+        "set.appearance": "Appearance", "set.themeDark": "Discord dark", "set.themeLight": "Light",
+        "set.language": "Language", "set.langAuto": "Auto",
+        "set.types": "Quest types", "set.interval": "Look for new quests every", "set.min": "{n} min",
+        "set.maintenance": "Maintenance", "set.retryFailed": "Retry failed quests", "set.clearSkip": "Clear skip list ({n})",
+        "foot.version": "Discord Quest Agent v{v}", "foot.open": "Open Quests page",
+        "task.WATCH_VIDEO.label": "video", "task.WATCH_VIDEO.title": "Watch a video",
+        "task.WATCH_VIDEO.desc": "Trailer and video quests. Fully automatic.",
+        "task.WATCH_VIDEO_ON_MOBILE.label": "mobile", "task.WATCH_VIDEO_ON_MOBILE.title": "Watch on mobile",
+        "task.WATCH_VIDEO_ON_MOBILE.desc": "Mobile video quests. Completes from the desktop just fine.",
+        "task.PLAY_ON_DESKTOP.label": "play", "task.PLAY_ON_DESKTOP.title": "Play a game",
+        "task.PLAY_ON_DESKTOP.desc": "Pretends the game is running. Nothing gets installed or launched.",
+        "task.STREAM_ON_DESKTOP.label": "stream", "task.STREAM_ON_DESKTOP.title": "Stream a game",
+        "task.STREAM_ON_DESKTOP.desc": "You must Go Live in a voice channel with 1+ other person; the agent fakes which game.",
+        "task.PLAY_ACTIVITY.label": "activity", "task.PLAY_ACTIVITY.title": "Play an activity",
+        "task.PLAY_ACTIVITY.desc": "Heartbeats the activity without opening it.",
+        "reason.user": "skipped by you", "reason.typeOff": "quest type is off", "reason.failed": "failed too often",
+        "reason.enroll": "enroll rejected", "reason.notAutomatable": "not automatable",
+        "reason.needsApp": "needs the desktop app", "reason.noApp": "no game to spoof",
+        "badge.claim": "{n} quest reward(s) ready to claim", "badge.paused": "Quest agent paused",
+        "badge.working": "{n} quest(s) in progress", "badge.idle": "Quest agent (idle)", "btn.label": "Quest agent",
+        "notify.claimTitle": "Quest ready to claim \uD83C\uDF89",
+        "notify.claimBody": "{quest} ({app}) is at 100%. Open Discover \u2192 Quests and click Claim (captcha required).",
+        "notify.updateTitle": "Quest agent needs updating",
+        "notify.updateBody": "Discord's internals changed (likely an update). The module finders in quest-agent.js need re-matching.",
+        "notify.testTitle": "Quest agent test", "notify.testBody": "This is what a ready-to-claim notification looks like."
+    };
+    const LOCALES = { en: EN };
+    try {
+        const extra = window.__questAgentLocales;
+        if (extra && typeof extra === "object") {
+            for (const [code, dict] of Object.entries(extra)) {
+                if (dict && typeof dict === "object" && /^[a-z]{2,3}(-[a-z]{2,4})?$/i.test(code)) LOCALES[code.toLowerCase()] = dict;
+            }
+        }
+    } catch (e) { /* no custom locales */ }
+    const REASON_KEY = { "user": "reason.user", "type off": "reason.typeOff", "failed": "reason.failed", "enroll": "reason.enroll",
+        "not automatable": "reason.notAutomatable", "needs desktop app": "reason.needsApp", "no app id": "reason.noApp" };
+    /** Discord's UI language, reduced to a code we have a dictionary for. */
+    function detectLang() {
+        const raw = String(document.documentElement.lang || navigator.language || "en").toLowerCase();
+        const short = raw.split(/[-_]/)[0];
+        return LOCALES[raw] ? raw : LOCALES[short] ? short : "en";
+    }
+    const currentLang = () => (SETTINGS && SETTINGS.language !== "auto" && LOCALES[SETTINGS.language]) ? SETTINGS.language : detectLang();
+    /** Translate a key; {name} placeholders are filled from params. Missing keys fall back to English, then to the key. */
+    function t(key, params) {
+        const dict = LOCALES[currentLang()] ?? EN;
+        let s = dict[key] ?? EN[key] ?? key;
+        if (params) for (const [k, v] of Object.entries(params)) s = s.split("{" + k + "}").join(String(v));
+        return s;
+    }
+
     // ---- Notifications (defined early so the failure path can use them) --
     let SETTINGS = null; // assigned once storage is up; CONFIG stands in until then
     let Toasts = null;   // Discord's own toast module (optional; found during hooking)
@@ -94,7 +176,7 @@
         try { showOwnToast(title, body, kind); } catch (e) { /* HUD not ready */ }
     }
     function notifyClaimable(questName, appName) {
-        notifyRaw("Quest ready to claim \uD83C\uDF89", `${questName} (${appName}) is at 100%. Open Discover \u2192 Quests and click Claim (captcha required).`, "success");
+        notifyRaw(t("notify.claimTitle"), t("notify.claimBody", { quest: questName, app: appName }), "success");
         console.log(`%c[QuestAgent] Ready to claim: ${questName}`, "color:#43b581;font-weight:bold");
     }
 
@@ -177,7 +259,7 @@
     if (missing.length) {
         window.__questAgent = { version: AGENT_VERSION, error: "missing modules: " + missing.join(", "), installedAt: Date.now() };
         console.error("[QuestAgent] Failed to hook Discord internals:", missing);
-        notifyRaw("Quest agent needs updating", "Discord's internals changed (likely an update). The module finders in quest-agent.js need re-matching.");
+        notifyRaw(t("notify.updateTitle"), t("notify.updateBody"), "error");
         return;
     }
     if (DEV?.stores) {
@@ -216,6 +298,7 @@
         notify: CONFIG.notify !== false,
         toast: CONFIG.toast !== false,
         theme: CONFIG.theme === "light" ? "light" : "dark",
+        language: (typeof CONFIG.language === "string" && LOCALES[CONFIG.language.toLowerCase()]) ? CONFIG.language.toLowerCase() : "auto",
         scanIntervalMs: Number(CONFIG.scanIntervalMs) || 120000,
         paused: false,
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
@@ -232,6 +315,7 @@
             if (typeof s.notify === "boolean") SETTINGS.notify = s.notify;
             if (typeof s.toast === "boolean") SETTINGS.toast = s.toast;
             if (s.theme === "light" || s.theme === "dark") SETTINGS.theme = s.theme;
+            if (s.language === "auto" || (typeof s.language === "string" && LOCALES[s.language])) SETTINGS.language = s.language;
             if (typeof s.paused === "boolean") SETTINGS.paused = s.paused;
             if (Number.isFinite(s.scanIntervalMs) && s.scanIntervalMs >= 30000) SETTINGS.scanIntervalMs = s.scanIntervalMs;
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
@@ -697,6 +781,10 @@
                     if (value !== "light" && value !== "dark") return false;
                     SETTINGS.theme = value; saveSettings(); refreshUI(); return true;
                 }
+                case "language": {
+                    if (value !== "auto" && !LOCALES[value]) return false;
+                    SETTINGS.language = value; saveSettings(); UI.sig = null; refreshUI(); return true;
+                }
                 case "scanIntervalMs": {
                     const ms = Number(value);
                     if (!Number.isFinite(ms) || ms < 30000) return false;
@@ -720,7 +808,7 @@
         },
         /** Fire both notification channels (whichever are on) so the user can see what they look like. */
         testNotification() {
-            notifyRaw("Quest agent test", "This is what a ready-to-claim notification looks like.", "success");
+            notifyRaw(t("notify.testTitle"), t("notify.testBody"), "success");
             return { os: SETTINGS.notify, inApp: SETTINGS.toast, discordToasts: !!Toasts };
         }
     };
@@ -728,7 +816,7 @@
     // ---- HUD: toolbar button + floating quest panel ----------------------
     // Discord's class names are hashed and change on updates, so the button
     // clones them off the live Inbox button instead of hardcoding them.
-    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null };
+    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null };
 
     // Inline icons keep the panel pure-ASCII (no glyphs to mangle) and crisp.
     const ICON = {
@@ -756,22 +844,12 @@
     const svg = (path, cls, size, evenodd) =>
         `<svg class="${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor"${evenodd ? ' fill-rule="evenodd"' : ""} d="${path}"/></svg>`;
 
-    const TASK_META = {
-        WATCH_VIDEO: { label: "video", icon: ICON.video, title: "Watch a video", desc: "Trailer and video quests. Fully automatic." },
-        WATCH_VIDEO_ON_MOBILE: { label: "mobile", icon: ICON.mobile, title: "Watch on mobile", desc: "Mobile video quests. Completes from the desktop just fine." },
-        PLAY_ON_DESKTOP: { label: "play", icon: ICON.desktop, title: "Play a game", desc: "Pretends the game is running. Nothing gets installed or launched." },
-        STREAM_ON_DESKTOP: { label: "stream", icon: ICON.stream, title: "Stream a game", desc: "You must Go Live in a voice channel with 1+ other person; the agent fakes which game." },
-        PLAY_ACTIVITY: { label: "activity", icon: ICON.activity, title: "Play an activity", desc: "Heartbeats the activity without opening it." }
-    };
-    const REASON_TEXT = {
-        "user": "skipped by you",
-        "type off": "quest type is off",
-        "failed": "failed too often",
-        "enroll": "enroll rejected",
-        "not automatable": "not automatable",
-        "needs desktop app": "needs the desktop app",
-        "no app id": "no game to spoof"
-    };
+    const TASK_ICON = { WATCH_VIDEO: ICON.video, WATCH_VIDEO_ON_MOBILE: ICON.mobile, PLAY_ON_DESKTOP: ICON.desktop, STREAM_ON_DESKTOP: ICON.stream, PLAY_ACTIVITY: ICON.activity };
+    /** Icon + translated texts for a task type (unknown types get a generic label). */
+    const taskMeta = task => SUPPORTED.includes(task)
+        ? { icon: TASK_ICON[task], label: t(`task.${task}.label`), title: t(`task.${task}.title`), desc: t(`task.${task}.desc`) }
+        : { icon: ICON.activity, label: String(task ?? "?").toLowerCase().replace(/_/g, " "), title: String(task ?? "?"), desc: "" };
+    const reasonText = why => REASON_KEY[why] ? t(REASON_KEY[why]) : String(why);
 
     const orbsOf = q => {
         const rewards = q.config?.rewardsConfig?.rewards ?? [];
@@ -943,6 +1021,8 @@
 #qb-panel .qb-opt.qb-on .qb-sw::after{left:19px}
 #qb-panel .qb-opt.qb-on .qb-sw svg{left:22px;color:var(--qb-green)}
 #qb-panel .qb-seg{display:flex;gap:4px;padding:4px 14px 8px}
+#qb-panel .qb-seg.qb-wrap{flex-wrap:wrap}
+#qb-panel .qb-seg.qb-wrap button{flex:1 1 30%;padding:0 8px}
 #qb-panel .qb-seg button{flex:1;height:30px;border-radius:var(--qb-rs);background:var(--qb-bg2);color:var(--qb-muted);font-size:12px;
  font-weight:500;border:1px solid transparent;transition:background .1s,color .1s}
 #qb-panel .qb-seg button:hover{color:var(--qb-text);background:var(--qb-hover2)}
@@ -1015,15 +1095,15 @@
     function toolsFor(r, group) {
         switch (group) {
             case "running":
-                return (r.paused ? tool("resume", r.userPaused ? "Resume" : "Resume (lifts the global pause)", ICON.play, "qb-go") : tool("pause", "Pause", ICON.pause)) +
-                    tool("stop", "Stop and skip", ICON.stop, "qb-danger");
+                return (r.paused ? tool("resume", t(r.userPaused ? "tool.resume" : "tool.resumeGlobal"), ICON.play, "qb-go") : tool("pause", t("tool.pause"), ICON.pause)) +
+                    tool("stop", t("tool.stop"), ICON.stop, "qb-danger");
             case "queued":
-                return tool("run", "Run now", ICON.play, "qb-go") + tool("skip", "Skip", ICON.skip, "qb-danger");
+                return tool("run", t("tool.run"), ICON.play, "qb-go") + tool("skip", t("tool.skip"), ICON.skip, "qb-danger");
             case "available":
-                return tool("run", "Accept and run", ICON.plus, "qb-go") + tool("skip", "Skip", ICON.skip, "qb-danger");
+                return tool("run", t("tool.accept"), ICON.plus, "qb-go") + tool("skip", t("tool.skip"), ICON.skip, "qb-danger");
             case "blocked":
-                if (r.why === "user") return tool("unskip", "Put back in the queue", ICON.play, "qb-go");
-                if (r.why === "failed" || r.why === "enroll") return tool("retry", "Try again", ICON.refresh, "qb-go");
+                if (r.why === "user") return tool("unskip", t("tool.unskip"), ICON.play, "qb-go");
+                if (r.why === "failed" || r.why === "enroll") return tool("retry", t("tool.retry"), ICON.refresh, "qb-go");
                 return "";
             default:
                 return "";
@@ -1032,13 +1112,13 @@
 
     /** Static markup for one quest row; dynamic bits are filled by updateRow. */
     function rowHtml(r, group) {
-        const meta = TASK_META[r.task] ?? { label: String(r.task ?? "?").toLowerCase(), icon: ICON.activity };
+        const meta = taskMeta(r.task);
         const tile = r.tile
             ? `<img class="qb-tile" src="${esc(r.tile)}" alt="" loading="lazy"
                  onerror="this.outerHTML='<div class=&quot;qb-tile qb-tile-fb&quot;></div>'">`
             : `<div class="qb-tile qb-tile-fb">${svg(meta.icon, "", 16)}</div>`;
         const tools = toolsFor(r, group);
-        return `<div class="qb-row ${group === "blocked" ? "qb-dim" : ""}" data-qid="${esc(r.id)}" title="Open the Quests page">
+        return `<div class="qb-row ${group === "blocked" ? "qb-dim" : ""}" data-qid="${esc(r.id)}" title="${esc(t("row.open"))}">
             ${tile}
             <div class="qb-main">
               <div class="qb-r1">
@@ -1054,7 +1134,7 @@
 
     /** Update only the values that change, so the DOM isn't rebuilt every tick. */
     function updateRow(el, r, group) {
-        const meta = TASK_META[r.task] ?? { label: String(r.task ?? "?").toLowerCase() };
+        const meta = taskMeta(r.task);
         const fill = el.querySelector(".qb-fill");
         const liveRow = group === "running" && !r.paused;
         fill.style.width = r.pct + "%";
@@ -1067,44 +1147,43 @@
         const rt = el.querySelector(".qb-rt");
         rt.classList.toggle("qb-hold", group === "running" && r.paused);
         rt.textContent =
-            r.why ? (REASON_TEXT[r.why] ?? r.why)
-            : group === "running" && r.paused ? "paused"
-            : r.pct >= 100 ? "complete"
-            : group === "available" ? "not accepted"
-            : mins ? `~${mins} min left` : "";
+            r.why ? reasonText(r.why)
+            : group === "running" && r.paused ? t("row.paused")
+            : r.pct >= 100 ? t("row.complete")
+            : group === "available" ? t("row.notAccepted")
+            : mins ? t("row.minLeft", { n: mins }) : "";
     }
 
     function statusText(s) {
-        if (state.stopped) return "stopped";
-        if (SETTINGS.paused) return "paused";
+        if (state.stopped) return t("status.stopped");
+        if (SETTINGS.paused) return t("status.paused");
         if (s.running.length) {
             const paused = s.running.filter(r => r.paused).length;
-            return `working on ${s.running.length}${paused ? ` (${paused} paused)` : ""}`;
+            return paused ? t("status.workingPaused", { n: s.running.length, p: paused }) : t("status.working", { n: s.running.length });
         }
-        if (s.claimable.length) return `${s.claimable.length} ready to claim`;
-        if (s.queued.length) return "waiting for a free slot";
-        return "idle";
+        if (s.claimable.length) return t("status.ready", { n: s.claimable.length });
+        if (s.queued.length) return t("status.waitingSlot");
+        return t("status.idle");
     }
 
     function renderQuests(s) {
         const body = UI.panel.querySelector(".qb-body");
         const groups = [
-            ["Ready to claim", s.claimable, "claimable"],
-            ["Running", s.running, "running"],
-            ["Queued", s.queued, "queued"],
-            ["Available", s.available, "available"],
-            ["Skipped", s.blocked, "blocked"]
+            [t("group.claimable"), s.claimable, "claimable"],
+            [t("group.running"), s.running, "running"],
+            [t("group.queued"), s.queued, "queued"],
+            [t("group.available"), s.available, "available"],
+            [t("group.skipped"), s.blocked, "blocked"]
         ].filter(g => g[1].length);
 
-        // Rebuild only when the set of rows (or their tool state) changes; otherwise patch in place.
-        const sig = groups.map(([t, rows]) => t + ":" + rows.map(r => r.id + (r.paused ? "p" : "") + (r.why ?? "")).join(",")).join("|");
+        // Rebuild only when the set of rows (or their tool state, or the language) changes; otherwise patch in place.
+        const sig = currentLang() + "|" + groups.map(([, rows, key]) => key + ":" + rows.map(r => r.id + (r.paused ? "p" : "") + (r.why ?? "")).join(",")).join("|");
         if (sig !== UI.sig) {
             body.innerHTML = groups.length
                 ? groups.map(([title, rows, key]) =>
-                    `<div class="qb-sec">${title}<span class="qb-count">${rows.length}</span></div>` +
+                    `<div class="qb-sec">${esc(title)}<span class="qb-count">${rows.length}</span></div>` +
                     rows.map(r => rowHtml(r, key)).join("")).join("")
-                : `<div class="qb-empty">${svg(ICON.orb, "", 26)}<br>Nothing to do right now.<br>
-                     Waiting for Discord to post new quests.</div>`;
+                : `<div class="qb-empty">${svg(ICON.orb, "", 26)}<br>${esc(t("empty.title"))}<br>${esc(t("empty.sub"))}</div>`;
             UI.sig = sig;
         }
         for (const [, rows, key] of groups) {
@@ -1124,24 +1203,29 @@
                <span class="qb-sw">${svg(on ? ICON.check : ICON.close, "", 12)}</span>
              </div>`;
         const mins = Math.round(SETTINGS.scanIntervalMs / 60000);
+        const langs = [["auto", t("set.langAuto")], ...Object.keys(LOCALES).sort().map(c => [c, String(LOCALES[c]._name ?? c.toUpperCase())])];
         box.innerHTML = `
-          <div class="qb-sec">Automation</div>
-          ${opt("autoEnroll", SETTINGS.autoEnroll, ICON.bolt, "Auto-accept quests", "Enroll in every new quest the agent can do. Off: accept them yourself from the Available group.")}
-          <div class="qb-sec">Notifications</div>
-          ${opt("notify", SETTINGS.notify, ICON.bell, "Desktop notification", "Windows notification and taskbar flash when a reward is ready to claim.")}
-          ${opt("toast", SETTINGS.toast, ICON.activity, "In-app toast", Toasts ? "A Discord toast at the top of the window, the same one Discord uses." : "A small toast at the top of the Discord window.")}
-          <div class="qb-btns"><button class="qb-btn" data-cmd="testnotify">${svg(ICON.bell, "", 13)}Send a test notification</button></div>
-          <div class="qb-sec">Appearance</div>
-          <div class="qb-seg">${[["dark", "Discord dark"], ["light", "Light"]].map(([k, l]) => `<button data-theme="${k}" class="${SETTINGS.theme === k ? "qb-on" : ""}">${l}</button>`).join("")}</div>
-          <div class="qb-sec">Quest types</div>
-          ${SUPPORTED.map(t => opt("type:" + t, SETTINGS.types[t], TASK_META[t].icon, TASK_META[t].title, TASK_META[t].desc)).join("")}
-          <div class="qb-sec">${svg(ICON.timer, "", 12)}&nbsp;Look for new quests every</div>
-          <div class="qb-seg">${[1, 2, 5, 10].map(m => `<button data-int="${m}" class="${m === mins ? "qb-on" : ""}">${m} min</button>`).join("")}</div>
-          <div class="qb-sec">Maintenance</div>
+          <div class="qb-sec">${esc(t("set.automation"))}</div>
+          ${opt("autoEnroll", SETTINGS.autoEnroll, ICON.bolt, esc(t("set.autoEnroll")), esc(t("set.autoEnrollDesc")))}
+          <div class="qb-sec">${esc(t("set.notifications"))}</div>
+          ${opt("notify", SETTINGS.notify, ICON.bell, esc(t("set.notify")), esc(t("set.notifyDesc")))}
+          ${opt("toast", SETTINGS.toast, ICON.activity, esc(t("set.toast")), esc(t(Toasts ? "set.toastDescDiscord" : "set.toastDescOwn")))}
+          <div class="qb-btns"><button class="qb-btn" data-cmd="testnotify">${svg(ICON.bell, "", 13)}${esc(t("set.testNotify"))}</button></div>
+          <div class="qb-sec">${esc(t("set.appearance"))}</div>
+          <div class="qb-seg">${[["dark", t("set.themeDark")], ["light", t("set.themeLight")]].map(([k, l]) => `<button data-theme="${k}" class="${SETTINGS.theme === k ? "qb-on" : ""}">${esc(l)}</button>`).join("")}</div>
+          <div class="qb-sec">${esc(t("set.language"))}</div>
+          <div class="qb-seg qb-wrap">${langs.map(([k, l]) => `<button data-lang="${esc(k)}" class="${SETTINGS.language === k ? "qb-on" : ""}">${esc(l)}</button>`).join("")}</div>
+          <div class="qb-sec">${esc(t("set.types"))}</div>
+          ${SUPPORTED.map(k => { const m = taskMeta(k); return opt("type:" + k, SETTINGS.types[k], m.icon, esc(m.title), esc(m.desc)); }).join("")}
+          <div class="qb-sec">${svg(ICON.timer, "", 12)}&nbsp;${esc(t("set.interval"))}</div>
+          <div class="qb-seg">${[1, 2, 5, 10].map(m => `<button data-int="${m}" class="${m === mins ? "qb-on" : ""}">${esc(t("set.min", { n: m }))}</button>`).join("")}</div>
+          <div class="qb-sec">${esc(t("set.maintenance"))}</div>
           <div class="qb-btns">
-            <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}Retry failed quests</button>
-            <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}Clear skip list (${state.skipped.size})</button>
+            <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}${esc(t("set.retryFailed"))}</button>
+            <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}${esc(t("set.clearSkip", { n: state.skipped.size }))}</button>
           </div>`;
+        UI.panel.querySelector(".qb-foot span").textContent = t("foot.version", { v: AGENT_VERSION });
+        UI.panel.querySelector("#qb-openq").textContent = t("foot.open");
     }
 
     function renderPanel() {
@@ -1154,11 +1238,21 @@
         UI.panel.querySelector(".qb-set").style.display = quests ? "none" : "";
         UI.panel.querySelector(".qb-foot").style.display = quests ? "none" : "";
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", !quests);
-        UI.panel.querySelector(".qb-title").textContent = quests ? "Quests" : "Settings";
+        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : "title.settings");
         UI.panel.classList.toggle("qb-light", SETTINGS.theme === "light");
+        if (UI.lang !== currentLang()) { // language changed: re-label the static chrome
+            UI.lang = currentLang();
+            const lab = (sel, key) => { const el = UI.panel.querySelector(sel); if (el) el.textContent = t(key); };
+            lab("#qb-s-run + span", "stat.running"); lab("#qb-s-queue + span", "stat.queued");
+            lab("#qb-s-claim + span", "stat.claim"); lab("#qb-s-orbs + span", "stat.orbs");
+            UI.panel.querySelector("#qb-scan").title = t("head.scan");
+            UI.panel.querySelector("#qb-gear").title = t("head.settings");
+            UI.panel.querySelector(".qb-x").title = t("head.close");
+            UI.panel.setAttribute("aria-label", t("btn.label"));
+        }
 
         if (quests) renderQuests(s);
-        else if (UI.sig !== "settings") { renderSettings(); UI.sig = "settings"; }
+        else if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); }
 
         const setStat = (id, val, cls) => {
             const b = UI.panel.querySelector("#qb-s-" + id);
@@ -1182,12 +1276,12 @@
 
         const pa = UI.panel.querySelector("#qb-pauseall");
         pa.innerHTML = svg(SETTINGS.paused ? ICON.play : ICON.pause, "", 15);
-        pa.title = SETTINGS.paused ? "Resume everything" : "Pause everything";
+        pa.title = t(SETTINGS.paused ? "head.resumeAll" : "head.pauseAll");
         pa.classList.toggle("qb-warn", SETTINGS.paused);
 
         const pend = UI.panel.querySelector("#qb-pending");
         const wantPend = s.orbsPending
-            ? `${svg(ICON.orb, "", 9)} ${s.orbsPending} orbs waiting - claim them in Discover \u2192 Quests`
+            ? `${svg(ICON.orb, "", 9)} ${esc(t("pending", { n: s.orbsPending }))}`
             : "";
         if (pend.innerHTML !== wantPend) pend.innerHTML = wantPend;
     }
@@ -1234,26 +1328,27 @@
         const p = document.createElement("div");
         p.id = "qb-panel";
         p.setAttribute("role", "dialog");
-        p.setAttribute("aria-label", "Quest agent");
+        p.setAttribute("aria-label", t("btn.label"));
+        UI.lang = currentLang();
         p.innerHTML = `
           <div class="qb-head">
-            <span class="qb-dot"></span><span class="qb-title">Quests</span>
+            <span class="qb-dot"></span><span class="qb-title">${esc(t("title.quests"))}</span>
             <span class="qb-status"></span>
-            <button class="qb-act" id="qb-pauseall" title="Pause everything">${svg(ICON.pause, "", 15)}</button>
-            <button class="qb-act" id="qb-scan" title="Scan for quests now">${svg(ICON.refresh, "", 15)}</button>
-            <button class="qb-act" id="qb-gear" title="Settings">${svg(ICON.gear, "", 15, true)}</button>
-            <button class="qb-act qb-x" title="Close">${svg(ICON.close, "", 15)}</button>
+            <button class="qb-act" id="qb-pauseall" title="${esc(t("head.pauseAll"))}">${svg(ICON.pause, "", 15)}</button>
+            <button class="qb-act" id="qb-scan" title="${esc(t("head.scan"))}">${svg(ICON.refresh, "", 15)}</button>
+            <button class="qb-act" id="qb-gear" title="${esc(t("head.settings"))}">${svg(ICON.gear, "", 15, true)}</button>
+            <button class="qb-act qb-x" title="${esc(t("head.close"))}">${svg(ICON.close, "", 15)}</button>
           </div>
           <div class="qb-stats">
-            <div class="qb-stat"><b id="qb-s-run">0</b><span>running</span></div>
-            <div class="qb-stat"><b id="qb-s-queue">0</b><span>queued</span></div>
-            <div class="qb-stat"><b id="qb-s-claim">0</b><span>to claim</span></div>
-            <div class="qb-stat qb-gold"><b id="qb-s-orbs">0</b><span>orbs won</span></div>
+            <div class="qb-stat"><b id="qb-s-run">0</b><span>${esc(t("stat.running"))}</span></div>
+            <div class="qb-stat"><b id="qb-s-queue">0</b><span>${esc(t("stat.queued"))}</span></div>
+            <div class="qb-stat"><b id="qb-s-claim">0</b><span>${esc(t("stat.claim"))}</span></div>
+            <div class="qb-stat qb-gold"><b id="qb-s-orbs">0</b><span>${esc(t("stat.orbs"))}</span></div>
           </div>
           <div class="qb-body"></div>
           <div class="qb-set" style="display:none"></div>
           <div class="qb-pending" id="qb-pending"></div>
-          <div class="qb-foot" style="display:none"><span>Discord Quest Agent v${AGENT_VERSION}</span><a id="qb-openq">Open Quests page</a></div>`;
+          <div class="qb-foot" style="display:none"><span>${esc(t("foot.version", { v: AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
         // Anchor to the top-right corner by default; dragging switches to left/top.
         if (UI.pos) { p.style.top = UI.pos.top + "px"; p.style.left = UI.pos.left + "px"; }
         else { p.style.top = "40px"; p.style.right = "12px"; }
@@ -1284,6 +1379,8 @@
             if (seg) { ops.setSetting("scanIntervalMs", Number(seg.dataset.int) * 60000); UI.sig = null; renderPanel(); return; }
             const th = e.target.closest("[data-theme]");
             if (th) { ops.setSetting("theme", th.dataset.theme); UI.sig = null; renderPanel(); return; }
+            const lg = e.target.closest("[data-lang]");
+            if (lg) { ops.setSetting("language", lg.dataset.lang); UI.sig = null; renderPanel(); return; }
             const cmd = e.target.closest("[data-cmd]");
             if (cmd) {
                 if (cmd.dataset.cmd === "retry") ops.retryAllFailed();
@@ -1370,20 +1467,20 @@
             badge.style.display = ""; ring.style.display = "none";
             badge.textContent = s.claimable.length > 99 ? "99+" : s.claimable.length;
             badge.classList.add("qb-claim");
-            UI.btn.title = `${s.claimable.length} quest reward(s) ready to claim`;
+            UI.btn.title = t("badge.claim", { n: s.claimable.length });
         } else if (SETTINGS.paused && working) {
             badge.style.display = ""; ring.style.display = "none";
             badge.innerHTML = svg(ICON.pause, "", 9);
             badge.classList.add("qb-hold");
-            UI.btn.title = "Quest agent paused";
+            UI.btn.title = t("badge.paused");
         } else if (working) {
             badge.style.display = ""; ring.style.display = "";
             badge.textContent = working > 99 ? "99+" : working;
             badge.classList.add("qb-work");
-            UI.btn.title = `${working} quest(s) in progress`;
+            UI.btn.title = t("badge.working", { n: working });
         } else {
             badge.style.display = "none"; ring.style.display = "none";
-            UI.btn.title = "Quest agent (idle)";
+            UI.btn.title = t("badge.idle");
         }
     }
 
@@ -1438,7 +1535,7 @@
         const btn = document.createElement("div");
         btn.className = anchor ? anchor.clickableClass : "";
         btn.setAttribute("role", "button");
-        btn.setAttribute("aria-label", "Quest agent");
+        btn.setAttribute("aria-label", t("btn.label"));
         btn.setAttribute("tabindex", "0");
         btn.innerHTML = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
             <path fill="currentColor" d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9Zm1 3V4h4v1h-4Zm6.7 5.7-5 5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.79 4.3-4.3a1 1 0 0 1 1.4 1.41Z"/>
@@ -1510,6 +1607,7 @@
         nav: !!NavTransitionTo, // false = quest rows won't navigate (finder broke)
         toasts: !!Toasts,       // false = in-app toasts use our own fallback
         persistent: !!storage,  // false = settings live only for this session
+        locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; } }
     };

@@ -259,7 +259,25 @@ function Get-AgentPayload {
         hud             = [bool]$cfg.hud
         notify          = [bool]$cfg.notify
     } | ConvertTo-Json -Compress
-    return "window.__questAgentConfig = $runtime;`n$js"
+    # HUD languages: src\locales\<code>.json ships with the tool, <root>\locales\
+    # <code>.json is for the user's own (it survives updates and wins on a clash).
+    # Every non-ASCII character is re-encoded as \uXXXX below (ConvertTo-Json on
+    # PS 5.1 leaves them raw), so the payload that crosses into Discord stays
+    # pure ASCII regardless of what the files hold.
+    $locales = [ordered]@{}
+    foreach ($dir in @((Join-Path $PSScriptRoot "locales"), (Join-Path $Root "locales"))) {
+        foreach ($f in @(Get-ChildItem -Path $dir -Filter *.json -ErrorAction SilentlyContinue)) {
+            if ($f.BaseName -cnotmatch '^[a-z]{2,3}(-[a-z]{2,4})?$') { continue }   # skips TEMPLATE.json
+            try { $locales[$f.BaseName] = Get-Content -Raw -Path $f.FullName -Encoding UTF8 | ConvertFrom-Json }
+            catch { Write-Log "Ignoring locale file $($f.Name): $($_.Exception.Message)" "Yellow" }
+        }
+    }
+    $localesJson = "{}"
+    if ($locales.Count) {
+        $localesJson = [regex]::Replace(($locales | ConvertTo-Json -Depth 4 -Compress), '[^\x00-\x7F]',
+            { param($m) '\u{0:x4}' -f [int][char]$m.Value })
+    }
+    return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`n$js"
 }
 
 # Returns: notarget | present | injected | error

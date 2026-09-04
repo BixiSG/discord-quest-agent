@@ -1,5 +1,7 @@
 # Discord Quest Agent
 
+**English** · [Русский](README.ru.md)
+
 Finishes Discord quests on its own and puts a live HUD inside the client.
 
 No Vencord, no plugin, no rebuilding anything, and nothing is patched on disk. It attaches
@@ -105,9 +107,22 @@ per Discord install. `config.json` supplies the defaults, the HUD's choices win 
 "Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
 a live orb balance, so it isn't your wallet.
 
+### Languages
+
+The HUD follows Discord's own language when it has a translation for it, and you can pin
+one in Settings. English is built in; Russian and Ukrainian ship as
+[`src/locales/ru.json`](src/locales/ru.json) and [`src/locales/uk.json`](src/locales/uk.json).
+
+To add yours: copy [`src/locales/TEMPLATE.json`](src/locales/TEMPLATE.json) to
+`locales\<code>.json` inside the install folder (for example
+`%LOCALAPPDATA%\DiscordQuestAgent\locales\de.json`), translate the values, and restart the
+agent. That folder is never touched by updates, and a file there wins over a shipped one
+with the same code. Keys you leave out fall back to English. A pull request with your file
+gets it shipped for everyone.
+
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.1.1 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.2.0 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
@@ -157,9 +172,10 @@ client already uses.
 | `notify` | `true` | Desktop notification when a reward is claimable |
 | `toast` | `true` | In-app toast when a reward is claimable |
 | `theme` | `"dark"` | Panel look: `dark` (Discord dark) or `light` |
+| `language` | `"auto"` | HUD language: `auto` (follow Discord), `en`, `ru`, `uk`, or a code you added |
 
-`autoEnroll`, `scanIntervalMs`, `notify`, `toast` and `theme` are only defaults: whatever
-you set in the HUD's Settings view overrides them and is remembered inside Discord.
+`autoEnroll`, `scanIntervalMs`, `notify`, `toast`, `theme` and `language` are only defaults:
+whatever you set in the HUD's Settings view overrides them and is remembered inside Discord.
 
 ## 🔒 Security
 
@@ -230,6 +246,9 @@ One rule: **keep the scripts pure ASCII.** PowerShell 5.1 reads BOM-less files u
 system ANSI codepage, so a literal non-ASCII character gets mangled before it ever reaches
 Discord. An em dash in the panel turned into three bytes of Cyrillic garbage and cost me an
 afternoon. Use `\uXXXX` escapes in JavaScript, and inline SVG instead of symbol glyphs.
+The locale files are the one exception: they're plain UTF-8 JSON, because the launcher
+reads them as UTF-8 and re-encodes every non-ASCII character as `\uXXXX` before injecting.
+Translations are welcome; see *Languages* above.
 
 ## 📄 License
 
