@@ -78,6 +78,7 @@ Hover a row for its buttons:
 | Available | **Accept and run**, **Skip** |
 | Skipped by you | **Put back in the queue** |
 | Failed too often | **Try again** |
+| Any *Skipped* row | **Dismiss** hides it from the list (Settings > Maintenance brings them back) |
 
 The header has **Pause everything** (every running quest pauses, nothing new starts; the
 same button resumes), **Scan now** and **Settings**. While a play/stream quest is paused the
@@ -111,7 +112,9 @@ The top of Settings has an **About** block. **What's new** opens the changelog
 first, the installed one marked. After a self-update the agent drops a toast once, and the
 gear keeps a dot until you've opened the list, so you know something changed without
 reading the repo. Next to it, **GitHub** opens this project in your browser and **Report a
-problem** opens the issue tracker. The changelog is English-only.
+problem** opens the issue tracker. **Install folder** opens the folder holding
+`Uninstall.bat`, `config.json` and the agent files in Explorer. The changelog is
+English-only.
 
 "Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
 a live orb balance, so it isn't your wallet.
@@ -131,7 +134,7 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.3.0 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.3.1 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 

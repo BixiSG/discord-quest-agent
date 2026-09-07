@@ -260,6 +260,7 @@ function Get-AgentPayload {
         notify          = [bool]$cfg.notify
         toolVersion     = (Get-LocalVersion)
         repo            = [string]$cfg.repo
+        installRoot     = [string]$Root
     } | ConvertTo-Json -Compress
     # CHANGELOG.md (shipped with every update) feeds the HUD's "What's new" view.
     # Passed as one JSON string literal, non-ASCII escaped like the locales.

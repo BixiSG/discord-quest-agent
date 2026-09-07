@@ -28,7 +28,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 13;
+    const AGENT_VERSION = 14;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -65,6 +65,9 @@
     const TOOL_VERSION = (typeof CONFIG.toolVersion === "string" && /^\d+(\.\d+)+$/.test(CONFIG.toolVersion.trim())) ? CONFIG.toolVersion.trim() : null;
     const REPO = (typeof CONFIG.repo === "string" && /^[\w.-]+\/[\w.-]+$/.test(CONFIG.repo)) ? CONFIG.repo : "BixiSG/discord-quest-agent";
     const REPO_URL = "https://github.com/" + REPO;
+    // Install folder (Uninstall.bat, config.json, the agent files), for the
+    // "Install folder" row in Settings. Only the launcher knows it.
+    const INSTALL_ROOT = (typeof CONFIG.installRoot === "string" && /^[A-Za-z]:\\/.test(CONFIG.installRoot)) ? CONFIG.installRoot.replace(/[\\/]+$/, "") : null;
     // ---------------------------------------------------------------------
 
     // ---- Changelog --------------------------------------------------------
@@ -134,6 +137,8 @@
         "title.changelog": "What's new", "log.back": "Back to settings", "log.current": "installed",
         "log.empty": "No changelog found. It arrives with the next update.", "log.full": "Full history on GitHub",
         "notify.updatedTitle": "Quest agent updated to v{v}", "notify.updatedBody": "Settings \u2192 What's new lists the changes.",
+        "tool.dismiss": "Dismiss (hide from this list)", "set.clearHidden": "Show dismissed quests ({n})",
+        "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
         "task.WATCH_VIDEO.label": "video", "task.WATCH_VIDEO.title": "Watch a video",
         "task.WATCH_VIDEO.desc": "Trailer and video quests. Fully automatic.",
         "task.WATCH_VIDEO_ON_MOBILE.label": "mobile", "task.WATCH_VIDEO_ON_MOBILE.title": "Watch on mobile",
@@ -353,6 +358,7 @@
         paused: false,
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
         skipped: [],
+        hidden: [],          // quest ids dismissed from the Skipped group (persisted)
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null // tool version the "updated" toast was shown for
     };
@@ -376,10 +382,12 @@
             if (Number.isFinite(s.scanIntervalMs) && s.scanIntervalMs >= 30000) SETTINGS.scanIntervalMs = s.scanIntervalMs;
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
+            if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
         } catch (e) { console.warn("[QuestAgent] Could not read saved settings:", e); }
     }
     function saveSettings() {
         SETTINGS.skipped = [...state.skipped];
+        SETTINGS.hidden = [...state.hidden];
         if (!storage) return;
         try { storage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) { /* quota / sandbox */ }
     }
@@ -391,6 +399,7 @@
         enrollFailed: new Set(), // quest ids that rejected every enroll location - not retried
         failCounts: new Map(),   // quest id -> failed task runs (capped by CONFIG.maxTaskAttempts)
         skipped: new Set(SETTINGS.skipped), // quest ids the user skipped/stopped (persisted)
+        hidden: new Set(SETTINGS.hidden),   // quest ids dismissed from the Skipped group (persisted)
         tasks: new Map(),        // quest id -> { quest, taskName, ctl, startedAt }
         enrollLocation: null,    // cached working enroll location
         spoofActive: false,      // only one game/stream spoof at a time
@@ -862,6 +871,19 @@
             saveSettings();
             scan();
         },
+        /** Hide a quest from the Skipped group (it still shows under Ready to claim if it completes). */
+        dismissQuest(id) { state.hidden.add(id); saveSettings(); refreshUI(); return true; },
+        clearHidden() { state.hidden.clear(); saveSettings(); refreshUI(); },
+        /** Show the install folder in Explorer, with Uninstall.bat selected. */
+        openInstallFolder() {
+            if (!INSTALL_ROOT) return false;
+            try {
+                const fm = typeof DiscordNative !== "undefined" ? DiscordNative.fileManager : null;
+                if (typeof fm?.showItemInFolder !== "function") return false;
+                fm.showItemInFolder(INSTALL_ROOT + "\\Uninstall.bat");
+                return true;
+            } catch (e) { console.warn("[QuestAgent] Could not open the install folder:", e); return false; }
+        },
         /** Fire both notification channels (whichever are on) so the user can see what they look like. */
         testNotification() {
             notifyRaw(t("notify.testTitle"), t("notify.testBody"), "success");
@@ -917,7 +939,9 @@
         sparkle: "M11 2.5l1.9 5.6 5.6 1.9-5.6 1.9L11 17.5l-1.9-5.6-5.6-1.9 5.6-1.9L11 2.5Zm7.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z",
         github: "M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3Z",
         bug: "M12 3a4 4 0 0 1 4 4v1h2a1 1 0 1 1 0 2h-2v2h3a1 1 0 1 1 0 2h-3v.5a4 4 0 0 1-8 0V14H5a1 1 0 1 1 0-2h3v-2H6a1 1 0 1 1 0-2h2V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v1h4V7a2 2 0 0 0-2-2Z",
-        chev: "M9.3 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L13.6 12 9.3 7.7a1 1 0 0 1 0-1.4Z"
+        chev: "M9.3 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L13.6 12 9.3 7.7a1 1 0 0 1 0-1.4Z",
+        eyeoff: "M2.3 2.3a1 1 0 0 1 1.4 0l18 18a1 1 0 0 1-1.4 1.4l-3.1-3.1A11.2 11.2 0 0 1 12 20C7 20 3 16.5 1 12a12.6 12.6 0 0 1 4.2-5.4L2.3 3.7a1 1 0 0 1 0-1.4ZM12 4c5 0 9 3.5 11 8a12.5 12.5 0 0 1-3.5 4.7l-3-3a4 4 0 0 0-5.2-5.2L8.1 6.2A10.8 10.8 0 0 1 12 4Zm-3.4 7 4.4 4.4A2.5 2.5 0 0 1 8.6 11Z",
+        folder: "M3 5a2 2 0 0 1 2-2h4.6a2 2 0 0 1 1.4.6L12.4 5H19a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 4v9h14V9H5Z"
     };
     const svg = (path, cls, size, evenodd) =>
         `<svg class="${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor"${evenodd ? ' fill-rule="evenodd"' : ""} d="${path}"/></svg>`;
@@ -980,7 +1004,8 @@
             if (q.userStatus?.enrolledAt || SETTINGS.autoEnroll) queued.push(r);
             else available.push(r);
         }
-        return { claimable, running, queued, available, blocked, orbsClaimed, orbsPending };
+        // Dismissed quests leave the Skipped group only; every other group still shows them.
+        return { claimable, running, queued, available, blocked: blocked.filter(r => !state.hidden.has(r.id)), orbsClaimed, orbsPending };
     }
 
     function ensureStyle() {
@@ -1201,10 +1226,11 @@
                 return tool("run", t("tool.run"), ICON.play, "qb-go") + tool("skip", t("tool.skip"), ICON.skip, "qb-danger");
             case "available":
                 return tool("run", t("tool.accept"), ICON.plus, "qb-go") + tool("skip", t("tool.skip"), ICON.skip, "qb-danger");
-            case "blocked":
-                if (r.why === "user") return tool("unskip", t("tool.unskip"), ICON.play, "qb-go");
-                if (r.why === "failed" || r.why === "enroll") return tool("retry", t("tool.retry"), ICON.refresh, "qb-go");
-                return "";
+            case "blocked": {
+                const fix = r.why === "user" ? tool("unskip", t("tool.unskip"), ICON.play, "qb-go")
+                    : (r.why === "failed" || r.why === "enroll") ? tool("retry", t("tool.retry"), ICON.refresh, "qb-go") : "";
+                return fix + tool("dismiss", t("tool.dismiss"), ICON.eyeoff, "qb-danger");
+            }
             default:
                 return "";
         }
@@ -1307,6 +1333,7 @@
         const unread = ops.hasUnreadChangelog();
         const latest = CHANGELOG[0];
         const newsDesc = TOOL_VERSION ? t("set.whatsNewDesc", { v: TOOL_VERSION }) : latest ? t("set.whatsNewDesc", { v: latest.version }) : t("set.whatsNewDescNoVer");
+        const canOpenFolder = !!INSTALL_ROOT && typeof DiscordNative !== "undefined" && typeof DiscordNative.fileManager?.showItemInFolder === "function";
         // Link rows reuse the toggle-row layout; a chevron / external-link mark replaces the switch.
         const link = (cmd, icon, title, desc, mark, extra) =>
             `<div class="qb-opt qb-link" data-cmd="${cmd}" role="link" tabindex="0">
@@ -1317,6 +1344,7 @@
         box.innerHTML = `
           <div class="qb-sec">${esc(t("set.about"))}</div>
           ${link("changelog", ICON.sparkle, esc(t("set.whatsNew")), esc(newsDesc), "chev", unread ? `<span class="qb-pill">${esc(t("set.new"))}</span>` : "")}
+          ${canOpenFolder ? link("folder", ICON.folder, esc(t("set.folder")), `<span title="${esc(t("set.folderDesc"))}">${esc(INSTALL_ROOT)}</span>`, "ext") : ""}
           <div class="qb-btns">
             <button class="qb-btn" data-cmd="github" title="${esc(REPO_URL)}">${svg(ICON.github, "", 13)}${esc(t("set.github"))}</button>
             <button class="qb-btn" data-cmd="report" title="${esc(REPO_URL + "/issues")}">${svg(ICON.bug, "", 13)}${esc(t("set.report"))}</button>
@@ -1339,7 +1367,8 @@
           <div class="qb-btns">
             <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}${esc(t("set.retryFailed"))}</button>
             <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}${esc(t("set.clearSkip", { n: state.skipped.size }))}</button>
-          </div>`;
+          </div>
+          <div class="qb-btns"><button class="qb-btn" data-cmd="clearhidden">${svg(ICON.eyeoff, "", 13)}${esc(t("set.clearHidden", { n: state.hidden.size }))}</button></div>`;
         renderFooter();
     }
 
@@ -1455,6 +1484,8 @@
         switch (cmd) {
             case "retry": ops.retryAllFailed(); break;
             case "clearskip": ops.clearSkipped(); break;
+            case "clearhidden": ops.clearHidden(); break;
+            case "folder": ops.openInstallFolder(); return;
             case "testnotify": ops.testNotification(); return;
             case "changelog": UI.view = "changelog"; break;
             case "back": UI.view = "settings"; break;
@@ -1473,6 +1504,7 @@
             case "stop": case "skip": ops.stopQuest(id); break;
             case "unskip": ops.unskipQuest(id); break;
             case "retry": ops.retryQuest(id); break;
+            case "dismiss": ops.dismissQuest(id); break;
             case "run": ops.runNow(id).then(refreshUI); break;
         }
         refreshUI();
@@ -1765,7 +1797,7 @@
         toasts: !!Toasts,       // false = in-app toasts use our own fallback
         persistent: !!storage,  // false = settings live only for this session
         locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
-        toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG,
+        toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG, installRoot: INSTALL_ROOT,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
               show(view) { UI.view = view === "settings" || view === "changelog" ? view : "quests"; UI.sig = null; togglePanel(true); } }

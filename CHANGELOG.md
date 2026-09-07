@@ -4,6 +4,11 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.3.1 - 2026-09-07
+
+- Skipped quests (not automatable, skipped by you, failed) can be dismissed from the list; Settings > Maintenance brings them back.
+- Settings > About has an Install folder row that opens the folder with Uninstall.bat, config.json and the agent files.
+
 ## 1.3.0 - 2026-09-07
 
 - What's new: the panel shows this changelog under Settings, marks it NEW after an update and drops a toast so you know something changed.
