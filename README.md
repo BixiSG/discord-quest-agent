@@ -104,6 +104,15 @@ and a look-alike drawn by the agent otherwise, so it works either way.
 Settings and the skip list survive Discord restarts: they're stored inside the client,
 per Discord install. `config.json` supplies the defaults, the HUD's choices win over it.
 
+### What's new, and where to report things
+
+The top of Settings has an **About** block. **What's new** opens the changelog
+([`CHANGELOG.md`](CHANGELOG.md), shipped with every update): one block per release, newest
+first, the installed one marked. After a self-update the agent drops a toast once, and the
+gear keeps a dot until you've opened the list, so you know something changed without
+reading the repo. Next to it, **GitHub** opens this project in your browser and **Report a
+problem** opens the issue tracker. The changelog is English-only.
+
 "Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
 a live orb balance, so it isn't your wallet.
 
@@ -122,7 +131,7 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.2.0 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.3.0 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 

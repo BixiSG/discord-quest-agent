@@ -17,7 +17,10 @@
  *   - fails loudly (notification) if a Discord update changes its internals,
  *   - puts a HUD in the title bar: pause/stop/skip/run-now per quest, a global
  *     pause, and settings (quest types, auto-accept, notifications, rescan
- *     interval) that persist across Discord restarts.
+ *     interval) that persist across Discord restarts,
+ *   - shows the changelog (Settings > What's new) after a self-update and links
+ *     to the GitHub project,
+ *   - retires the older QuestBypass prototype if one is still running.
  *
  * Idempotent: re-injecting is a no-op while an agent is already running.
  *
@@ -25,7 +28,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 12;
+    const AGENT_VERSION = 13;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -56,7 +59,34 @@
         toast: true,            // in-app toast when a reward is claimable
         theme: "dark"           // panel look: "dark" (Discord dark) or "light"
     }, (typeof window.__questAgentConfig === "object" && window.__questAgentConfig) || {});
+    // The launcher passes the tool version (VERSION file) and the update repo.
+    // Absent when the script is injected by hand; the HUD then shows the
+    // script build number instead.
+    const TOOL_VERSION = (typeof CONFIG.toolVersion === "string" && /^\d+(\.\d+)+$/.test(CONFIG.toolVersion.trim())) ? CONFIG.toolVersion.trim() : null;
+    const REPO = (typeof CONFIG.repo === "string" && /^[\w.-]+\/[\w.-]+$/.test(CONFIG.repo)) ? CONFIG.repo : "BixiSG/discord-quest-agent";
+    const REPO_URL = "https://github.com/" + REPO;
     // ---------------------------------------------------------------------
+
+    // ---- Changelog --------------------------------------------------------
+    // CHANGELOG.md ships with every update; the launcher injects its text as
+    // window.__questAgentChangelog. Format: "## <version> - <date>" headings,
+    // "- " bullets. Links and emphasis are stripped so the panel stays plain.
+    function parseChangelog(text) {
+        const out = [];
+        let cur = null;
+        for (const raw of String(text ?? "").split(/\r?\n/)) {
+            const h = raw.match(/^##\s+\[?v?(\d+(?:\.\d+)+)\]?(?:\s*[-\u2013:]\s*(\d{4}-\d{2}-\d{2}))?/);
+            if (h) { cur = { version: h[1], date: h[2] ?? null, items: [] }; out.push(cur); continue; }
+            const b = raw.match(/^\s*[-*]\s+(.+)/);
+            if (b && cur) cur.items.push(b[1].replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[`*_]/g, "").trim());
+        }
+        return out.filter(e => e.items.length).slice(0, 25);
+    }
+    let CHANGELOG = [];
+    try {
+        const raw = window.__questAgentChangelog;
+        CHANGELOG = parseChangelog(raw && typeof raw === "object" ? raw.value : raw); // {value} = PS 5.1 pipe quirk
+    } catch (e) { /* no changelog */ }
 
     const SUPPORTED = ["WATCH_VIDEO", "WATCH_VIDEO_ON_MOBILE", "PLAY_ON_DESKTOP", "STREAM_ON_DESKTOP", "PLAY_ACTIVITY"];
     const NEEDS_SPOOF = t => t === "PLAY_ON_DESKTOP" || t === "STREAM_ON_DESKTOP";
@@ -98,6 +128,12 @@
         "set.types": "Quest types", "set.interval": "Look for new quests every", "set.min": "{n} min",
         "set.maintenance": "Maintenance", "set.retryFailed": "Retry failed quests", "set.clearSkip": "Clear skip list ({n})",
         "foot.version": "Discord Quest Agent v{v}", "foot.open": "Open Quests page",
+        "set.about": "About", "set.whatsNew": "What's new", "set.whatsNewDesc": "Changes in v{v} and earlier updates.",
+        "set.whatsNewDescNoVer": "What changed in recent updates.", "set.new": "NEW",
+        "set.github": "GitHub", "set.report": "Report a problem",
+        "title.changelog": "What's new", "log.back": "Back to settings", "log.current": "installed",
+        "log.empty": "No changelog found. It arrives with the next update.", "log.full": "Full history on GitHub",
+        "notify.updatedTitle": "Quest agent updated to v{v}", "notify.updatedBody": "Settings \u2192 What's new lists the changes.",
         "task.WATCH_VIDEO.label": "video", "task.WATCH_VIDEO.title": "Watch a video",
         "task.WATCH_VIDEO.desc": "Trailer and video quests. Fully automatic.",
         "task.WATCH_VIDEO_ON_MOBILE.label": "mobile", "task.WATCH_VIDEO_ON_MOBILE.title": "Watch on mobile",
@@ -188,6 +224,20 @@
     // Claim the global now so the watchdog doesn't inject a second agent while
     // we wait.
     window.__questAgent = { version: AGENT_VERSION, status: "starting", installedAt: Date.now() };
+
+    // Retire the QuestBypass prototype (this tool's predecessor) if its
+    // launcher got to the client first: it uses the same #qb-* ids, so two
+    // panels collide, and two agents would spoof the same quest at once. A stub
+    // is left behind so its watchdog sees "present" and doesn't inject it again.
+    try {
+        const old = window.__questBypass;
+        if (old && typeof old === "object") {
+            if (typeof old.stop === "function") old.stop();
+            for (const id of ["qb-btn", "qb-panel", "qb-style", "qb-toast"]) document.getElementById(id)?.remove();
+            window.__questBypass = { version: old.version, retiredBy: AGENT_VERSION, stop() { } };
+            console.log(`[QuestAgent] Retired the QuestBypass prototype (v${old.version}); one agent from here on.`);
+        }
+    } catch (e) { console.warn("[QuestAgent] Could not retire the QuestBypass prototype:", e); }
 
     let ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api;
     let NavTransitionTo; // optional: quest rows navigate to the Quests page; agent works without it
@@ -302,8 +352,11 @@
         scanIntervalMs: Number(CONFIG.scanIntervalMs) || 120000,
         paused: false,
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
-        skipped: []
+        skipped: [],
+        seenVersion: null,   // tool version whose changelog the user has opened
+        toastedVersion: null // tool version the "updated" toast was shown for
     };
+    let hadSavedSettings = false; // false on a fresh install: no "updated" toast then
     function loadSettings() {
         if (!storage) return;
         try {
@@ -311,6 +364,9 @@
             if (!raw) return;
             const s = JSON.parse(raw);
             if (typeof s !== "object" || !s) return;
+            hadSavedSettings = true;
+            if (typeof s.seenVersion === "string") SETTINGS.seenVersion = s.seenVersion;
+            if (typeof s.toastedVersion === "string") SETTINGS.toastedVersion = s.toastedVersion;
             if (typeof s.autoEnroll === "boolean") SETTINGS.autoEnroll = s.autoEnroll;
             if (typeof s.notify === "boolean") SETTINGS.notify = s.notify;
             if (typeof s.toast === "boolean") SETTINGS.toast = s.toast;
@@ -810,6 +866,24 @@
         testNotification() {
             notifyRaw(t("notify.testTitle"), t("notify.testBody"), "success");
             return { os: SETTINGS.notify, inApp: SETTINGS.toast, discordToasts: !!Toasts };
+        },
+        /** True while the installed version's changelog hasn't been opened yet. */
+        hasUnreadChangelog() {
+            return !!TOOL_VERSION && SETTINGS.seenVersion !== TOOL_VERSION && CHANGELOG.some(e => e.version === TOOL_VERSION);
+        },
+        markChangelogSeen() {
+            if (TOOL_VERSION && SETTINGS.seenVersion !== TOOL_VERSION) { SETTINGS.seenVersion = TOOL_VERSION; saveSettings(); }
+        },
+        /** Open a URL in the system browser. Electron routes window.open for http(s) through shell.openExternal. */
+        openExternal(url) {
+            if (!/^https:\/\//.test(String(url))) return false;
+            try { if (window.open(url, "_blank", "noopener")) return true; } catch (e) { /* try the anchor route */ }
+            try {
+                const a = document.createElement("a");
+                a.href = url; a.target = "_blank"; a.rel = "noreferrer noopener";
+                document.body.appendChild(a); a.click(); a.remove();
+                return true;
+            } catch (e) { console.warn("[QuestAgent] Could not open", url, e); return false; }
         }
     };
 
@@ -839,7 +913,11 @@
         back: "M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 0 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z",
         bell: "M12 2a1.5 1.5 0 0 1 1.5 1.5v.6A6 6 0 0 1 18 10v4l1.7 2.3a1 1 0 0 1-.8 1.7H5.1a1 1 0 0 1-.8-1.7L6 14v-4a6 6 0 0 1 4.5-5.9v-.6A1.5 1.5 0 0 1 12 2Zm-2.5 17h5a2.5 2.5 0 0 1-5 0Z",
         bolt: "M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z",
-        timer: "M9 2a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H9Zm3 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-1 4a1 1 0 1 1 2 0v3.6l2.2 1.3a1 1 0 0 1-1 1.7l-2.7-1.6a1 1 0 0 1-.5-.9V10Z"
+        timer: "M9 2a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H9Zm3 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-1 4a1 1 0 1 1 2 0v3.6l2.2 1.3a1 1 0 0 1-1 1.7l-2.7-1.6a1 1 0 0 1-.5-.9V10Z",
+        sparkle: "M11 2.5l1.9 5.6 5.6 1.9-5.6 1.9L11 17.5l-1.9-5.6-5.6-1.9 5.6-1.9L11 2.5Zm7.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z",
+        github: "M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3Z",
+        bug: "M12 3a4 4 0 0 1 4 4v1h2a1 1 0 1 1 0 2h-2v2h3a1 1 0 1 1 0 2h-3v.5a4 4 0 0 1-8 0V14H5a1 1 0 1 1 0-2h3v-2H6a1 1 0 1 1 0-2h2V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v1h4V7a2 2 0 0 0-2-2Z",
+        chev: "M9.3 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L13.6 12 9.3 7.7a1 1 0 0 1 0-1.4Z"
     };
     const svg = (path, cls, size, evenodd) =>
         `<svg class="${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor"${evenodd ? ' fill-rule="evenodd"' : ""} d="${path}"/></svg>`;
@@ -1037,6 +1115,28 @@
 #qb-panel .qb-foot span{flex:1}
 #qb-panel .qb-foot a{color:var(--qb-brand);cursor:pointer;text-decoration:none}
 #qb-panel .qb-foot a:hover{text-decoration:underline}
+/* "what's new" markers */
+#qb-panel .qb-act{position:relative}
+#qb-panel .qb-nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--qb-brand);
+ box-shadow:0 0 0 2px var(--qb-bg);pointer-events:none}
+#qb-panel .qb-ot .qb-pill{display:inline-block;vertical-align:1px;margin:0 0 0 6px;padding:1px 5px;border-radius:4px;background:var(--qb-brand);
+ color:#fff;font-size:9px;font-weight:700;letter-spacing:.4px;line-height:12px}
+#qb-panel .qb-opt .qb-chev,#qb-panel .qb-opt .qb-ext{color:var(--qb-muted);flex:none}
+/* changelog view */
+#qb-panel .qb-log{overflow-y:auto;padding:0 0 8px;scrollbar-width:thin}
+#qb-panel .qb-log::-webkit-scrollbar{width:8px}
+#qb-panel .qb-log::-webkit-scrollbar-track{background:transparent}
+#qb-panel .qb-log::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+#qb-panel .qb-back{display:flex;align-items:center;gap:4px;width:100%;padding:9px 12px;color:var(--qb-muted);font-size:12px;
+ border-bottom:1px solid var(--qb-border);transition:color .1s,background .1s}
+#qb-panel .qb-back:hover{color:var(--qb-text);background:var(--qb-hover)}
+#qb-panel .qb-ver{display:flex;align-items:center;gap:8px;padding:12px 14px 4px;font-size:13.5px;font-weight:600}
+#qb-panel .qb-ver .qb-date{flex:1;font-size:11px;font-weight:400;color:var(--qb-muted);font-variant-numeric:tabular-nums}
+#qb-panel .qb-ver .qb-cur{font-size:9.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--qb-green);
+ background:rgba(35,165,90,.12);border-radius:4px;padding:1px 5px}
+#qb-panel .qb-ul{margin:0;padding:0 14px 6px;list-style:none}
+#qb-panel .qb-ul li{position:relative;padding:3px 0 3px 14px;font-size:12.5px;line-height:1.4;color:var(--qb-text)}
+#qb-panel .qb-ul li::before{content:"";position:absolute;left:2px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--qb-brand);opacity:.8}
 /* our own toast (used when Discord's toast module isn't found) */
 #qb-toast{position:fixed;z-index:10001;top:48px;left:50%;transform:translateX(-50%);max-width:420px;display:flex;gap:10px;
  align-items:flex-start;padding:10px 14px;background:var(--qb-bg);color:var(--qb-text);border:1px solid var(--qb-border);
@@ -1204,7 +1304,23 @@
              </div>`;
         const mins = Math.round(SETTINGS.scanIntervalMs / 60000);
         const langs = [["auto", t("set.langAuto")], ...Object.keys(LOCALES).sort().map(c => [c, String(LOCALES[c]._name ?? c.toUpperCase())])];
+        const unread = ops.hasUnreadChangelog();
+        const latest = CHANGELOG[0];
+        const newsDesc = TOOL_VERSION ? t("set.whatsNewDesc", { v: TOOL_VERSION }) : latest ? t("set.whatsNewDesc", { v: latest.version }) : t("set.whatsNewDescNoVer");
+        // Link rows reuse the toggle-row layout; a chevron / external-link mark replaces the switch.
+        const link = (cmd, icon, title, desc, mark, extra) =>
+            `<div class="qb-opt qb-link" data-cmd="${cmd}" role="link" tabindex="0">
+               <span class="qb-oi">${svg(icon, "", 16)}</span>
+               <span class="qb-ot"><b>${title}${extra ?? ""}</b><span>${desc}</span></span>
+               ${svg(mark === "ext" ? ICON.open : ICON.chev, mark === "ext" ? "qb-ext" : "qb-chev", 14)}
+             </div>`;
         box.innerHTML = `
+          <div class="qb-sec">${esc(t("set.about"))}</div>
+          ${link("changelog", ICON.sparkle, esc(t("set.whatsNew")), esc(newsDesc), "chev", unread ? `<span class="qb-pill">${esc(t("set.new"))}</span>` : "")}
+          <div class="qb-btns">
+            <button class="qb-btn" data-cmd="github" title="${esc(REPO_URL)}">${svg(ICON.github, "", 13)}${esc(t("set.github"))}</button>
+            <button class="qb-btn" data-cmd="report" title="${esc(REPO_URL + "/issues")}">${svg(ICON.bug, "", 13)}${esc(t("set.report"))}</button>
+          </div>
           <div class="qb-sec">${esc(t("set.automation"))}</div>
           ${opt("autoEnroll", SETTINGS.autoEnroll, ICON.bolt, esc(t("set.autoEnroll")), esc(t("set.autoEnrollDesc")))}
           <div class="qb-sec">${esc(t("set.notifications"))}</div>
@@ -1224,21 +1340,42 @@
             <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}${esc(t("set.retryFailed"))}</button>
             <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}${esc(t("set.clearSkip", { n: state.skipped.size }))}</button>
           </div>`;
-        UI.panel.querySelector(".qb-foot span").textContent = t("foot.version", { v: AGENT_VERSION });
+        renderFooter();
+    }
+
+    function renderFooter() {
+        const v = UI.panel.querySelector(".qb-foot span");
+        v.textContent = t("foot.version", { v: TOOL_VERSION ?? AGENT_VERSION });
+        v.title = `agent script v${AGENT_VERSION}`;
         UI.panel.querySelector("#qb-openq").textContent = t("foot.open");
+    }
+
+    /** The "What's new" view: one block per release, newest first, installed one marked. */
+    function renderChangelog() {
+        const box = UI.panel.querySelector(".qb-log");
+        ops.markChangelogSeen(); // rendered = read: clears the NEW pill and the gear dot
+        const back = `<button class="qb-back" data-cmd="back">${svg(ICON.back, "", 14)}${esc(t("log.back"))}</button>`;
+        if (!CHANGELOG.length) {
+            box.innerHTML = back + `<div class="qb-empty">${svg(ICON.sparkle, "", 26)}<br>${esc(t("log.empty"))}</div>`;
+            return;
+        }
+        box.innerHTML = back + CHANGELOG.map(e => `
+          <div class="qb-ver">v${esc(e.version)}<span class="qb-date">${esc(e.date ?? "")}</span>
+            ${e.version === TOOL_VERSION ? `<span class="qb-cur">${esc(t("log.current"))}</span>` : ""}</div>
+          <ul class="qb-ul">${e.items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`).join("") +
+          `<div class="qb-btns"><button class="qb-btn" data-cmd="history" title="${esc(REPO_URL + "/blob/main/CHANGELOG.md")}">${svg(ICON.open, "", 13)}${esc(t("log.full"))}</button></div>`;
+        renderFooter();
     }
 
     function renderPanel() {
         if (!UI.panel) return;
         const s = snapshot();
-        const quests = UI.view === "quests";
-        UI.panel.querySelector(".qb-stats").style.display = quests ? "" : "none";
-        UI.panel.querySelector(".qb-body").style.display = quests ? "" : "none";
-        UI.panel.querySelector(".qb-pending").style.display = quests ? "" : "none";
-        UI.panel.querySelector(".qb-set").style.display = quests ? "none" : "";
-        UI.panel.querySelector(".qb-foot").style.display = quests ? "none" : "";
+        const quests = UI.view === "quests", settings = UI.view === "settings", log = UI.view === "changelog";
+        const show = (sel, on) => { UI.panel.querySelector(sel).style.display = on ? "" : "none"; };
+        show(".qb-stats", quests); show(".qb-body", quests); show(".qb-pending", quests);
+        show(".qb-set", settings); show(".qb-log", log); show(".qb-foot", !quests);
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", !quests);
-        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : "title.settings");
+        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : settings ? "title.settings" : "title.changelog");
         UI.panel.classList.toggle("qb-light", SETTINGS.theme === "light");
         if (UI.lang !== currentLang()) { // language changed: re-label the static chrome
             UI.lang = currentLang();
@@ -1252,7 +1389,9 @@
         }
 
         if (quests) renderQuests(s);
-        else if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); }
+        else if (settings) { if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); } }
+        else if (UI.sig !== "changelog:" + currentLang()) { renderChangelog(); UI.sig = "changelog:" + currentLang(); }
+        show("#qb-gear .qb-nd", ops.hasUnreadChangelog()); // after the render: opening What's new clears it
 
         const setStat = (id, val, cls) => {
             const b = UI.panel.querySelector("#qb-s-" + id);
@@ -1311,6 +1450,22 @@
         catch (e) { console.warn("[QuestAgent] Failed to open the Quests page:", e); return false; }
     }
 
+    /** Buttons and link rows in the settings / changelog views. */
+    function runCommand(cmd) {
+        switch (cmd) {
+            case "retry": ops.retryAllFailed(); break;
+            case "clearskip": ops.clearSkipped(); break;
+            case "testnotify": ops.testNotification(); return;
+            case "changelog": UI.view = "changelog"; break;
+            case "back": UI.view = "settings"; break;
+            case "github": ops.openExternal(REPO_URL); return;
+            case "report": ops.openExternal(REPO_URL + "/issues"); return;
+            case "history": ops.openExternal(REPO_URL + "/blob/main/CHANGELOG.md"); return;
+            default: return;
+        }
+        UI.sig = null; renderPanel();
+    }
+
     function onRowAction(act, id) {
         switch (act) {
             case "pause": ops.pauseQuest(id); break;
@@ -1336,7 +1491,7 @@
             <span class="qb-status"></span>
             <button class="qb-act" id="qb-pauseall" title="${esc(t("head.pauseAll"))}">${svg(ICON.pause, "", 15)}</button>
             <button class="qb-act" id="qb-scan" title="${esc(t("head.scan"))}">${svg(ICON.refresh, "", 15)}</button>
-            <button class="qb-act" id="qb-gear" title="${esc(t("head.settings"))}">${svg(ICON.gear, "", 15, true)}</button>
+            <button class="qb-act" id="qb-gear" title="${esc(t("head.settings"))}">${svg(ICON.gear, "", 15, true)}<span class="qb-nd" style="display:none"></span></button>
             <button class="qb-act qb-x" title="${esc(t("head.close"))}">${svg(ICON.close, "", 15)}</button>
           </div>
           <div class="qb-stats">
@@ -1347,8 +1502,9 @@
           </div>
           <div class="qb-body"></div>
           <div class="qb-set" style="display:none"></div>
+          <div class="qb-log" style="display:none"></div>
           <div class="qb-pending" id="qb-pending"></div>
-          <div class="qb-foot" style="display:none"><span>${esc(t("foot.version", { v: AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
+          <div class="qb-foot" style="display:none"><span title="agent script v${AGENT_VERSION}">${esc(t("foot.version", { v: TOOL_VERSION ?? AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
         // Anchor to the top-right corner by default; dragging switches to left/top.
         if (UI.pos) { p.style.top = UI.pos.top + "px"; p.style.left = UI.pos.left + "px"; }
         else { p.style.top = "40px"; p.style.right = "12px"; }
@@ -1382,16 +1538,17 @@
             const lg = e.target.closest("[data-lang]");
             if (lg) { ops.setSetting("language", lg.dataset.lang); UI.sig = null; renderPanel(); return; }
             const cmd = e.target.closest("[data-cmd]");
-            if (cmd) {
-                if (cmd.dataset.cmd === "retry") ops.retryAllFailed();
-                if (cmd.dataset.cmd === "clearskip") ops.clearSkipped();
-                if (cmd.dataset.cmd === "testnotify") { ops.testNotification(); return; }
-                UI.sig = null; renderPanel();
-            }
+            if (cmd) runCommand(cmd.dataset.cmd);
         });
         setBox.addEventListener("keydown", e => {
             const opt = e.target.closest("[data-opt]");
-            if (opt && (e.key === " " || e.key === "Enter")) { e.preventDefault(); flip(opt); }
+            if (opt && (e.key === " " || e.key === "Enter")) { e.preventDefault(); flip(opt); return; }
+            const lnk = e.target.closest("[data-cmd]");
+            if (lnk && (e.key === " " || e.key === "Enter")) { e.preventDefault(); runCommand(lnk.dataset.cmd); }
+        });
+        p.querySelector(".qb-log").addEventListener("click", e => {
+            const cmd = e.target.closest("[data-cmd]");
+            if (cmd) runCommand(cmd.dataset.cmd);
         });
         const scanBtn = p.querySelector("#qb-scan");
         scanBtn.onclick = () => {
@@ -1608,10 +1765,18 @@
         toasts: !!Toasts,       // false = in-app toasts use our own fallback
         persistent: !!storage,  // false = settings live only for this session
         locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
+        toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
-              toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; } }
+              toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
+              show(view) { UI.view = view === "settings" || view === "changelog" ? view : "quests"; UI.sig = null; togglePanel(true); } }
     };
-    console.log(`%c[QuestAgent] Agent v${AGENT_VERSION} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
+    console.log(`%c[QuestAgent] Agent v${AGENT_VERSION}${TOOL_VERSION ? " (tool v" + TOOL_VERSION + ")" : ""} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     if (SETTINGS.paused) console.log("[QuestAgent] Paused (from saved settings). Resume from the HUD.");
+    // First run after a self-update: say so once. The gear keeps its dot until
+    // What's new is opened. A fresh install (no saved settings) gets no toast.
+    if (hadSavedSettings && ops.hasUnreadChangelog() && SETTINGS.toastedVersion !== TOOL_VERSION) {
+        SETTINGS.toastedVersion = TOOL_VERSION; saveSettings();
+        setTimeout(() => { try { showToast(t("notify.updatedTitle", { v: TOOL_VERSION }), t("notify.updatedBody"), "info"); } catch (e) { /* ignore */ } }, 4000);
+    }
     scan();
 })();

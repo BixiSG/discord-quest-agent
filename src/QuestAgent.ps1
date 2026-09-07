@@ -258,7 +258,21 @@ function Get-AgentPayload {
         maxTaskAttempts = [int]$cfg.maxTaskAttempts
         hud             = [bool]$cfg.hud
         notify          = [bool]$cfg.notify
+        toolVersion     = (Get-LocalVersion)
+        repo            = [string]$cfg.repo
     } | ConvertTo-Json -Compress
+    # CHANGELOG.md (shipped with every update) feeds the HUD's "What's new" view.
+    # Passed as one JSON string literal, non-ASCII escaped like the locales.
+    # -InputObject, not a pipe: PS 5.1 wraps a piped string as {"value": "..."}.
+    $changelogJson = '""'
+    $changelogPath = Join-Path $Root "CHANGELOG.md"
+    if (Test-Path $changelogPath) {
+        try {
+            $changelogText = [string](Get-Content -Raw -Path $changelogPath -Encoding UTF8)
+            $changelogJson = [regex]::Replace((ConvertTo-Json -InputObject $changelogText -Compress), '[^\x00-\x7F]',
+                { param($m) '\u{0:x4}' -f [int][char]$m.Value })
+        } catch { Write-Log "Ignoring CHANGELOG.md: $($_.Exception.Message)" "Yellow" }
+    }
     # HUD languages: src\locales\<code>.json ships with the tool, <root>\locales\
     # <code>.json is for the user's own (it survives updates and wins on a clash).
     # Every non-ASCII character is re-encoded as \uXXXX below (ConvertTo-Json on
@@ -277,7 +291,7 @@ function Get-AgentPayload {
         $localesJson = [regex]::Replace(($locales | ConvertTo-Json -Depth 4 -Compress), '[^\x00-\x7F]',
             { param($m) '\u{0:x4}' -f [int][char]$m.Value })
     }
-    return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`n$js"
+    return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`nwindow.__questAgentChangelog = $changelogJson;`n$js"
 }
 
 # Returns: notarget | present | injected | error
@@ -340,7 +354,7 @@ function Invoke-SelfUpdate {
         if (-not $extracted) { throw "archive was empty" }
 
         # Never overwrite the user's config.json.
-        foreach ($item in @("src", "scripts", "VERSION", "README.md", "Install.bat", "Uninstall.bat", "Start-QuestAgent.bat")) {
+        foreach ($item in @("src", "scripts", "VERSION", "CHANGELOG.md", "README.md", "Install.bat", "Uninstall.bat", "Start-QuestAgent.bat")) {
             $from = Join-Path $extracted.FullName $item
             if (Test-Path $from) {
                 Copy-Item -Path $from -Destination $Root -Recurse -Force
@@ -385,6 +399,9 @@ function Invoke-Diagnose {
         $expr = @"
 JSON.stringify({
   agent: window.__questAgent ? window.__questAgent.version : null,
+  toolVersion: window.__questAgent ? (window.__questAgent.toolVersion || null) : null,
+  legacyQuestBypass: window.__questBypass ? (window.__questBypass.retiredBy ? 'retired' : 'RUNNING v' + window.__questBypass.version) : null,
+  changelogEntries: window.__questAgent && window.__questAgent.changelog ? window.__questAgent.changelog.length : null,
   status: window.__questAgent ? (window.__questAgent.error || window.__questAgent.status || 'ok') : null,
   hudButton: !!document.querySelector('#qb-btn'),
   hudButtonMode: window.__questAgent && window.__questAgent.ui ? window.__questAgent.ui.buttonMode : null,
@@ -412,6 +429,8 @@ if (Invoke-SelfUpdate) {
     $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$(Join-Path $Root 'src\QuestAgent.ps1')`"", "-NoUpdate")
     if ($AttachOnly) { $args += "-AttachOnly" }
     if ($NoWatch) { $args += "-NoWatch" }
+    if ($PSBoundParameters.ContainsKey("Branch")) { $args += @("-Branch", $Branch) }
+    if ($PSBoundParameters.ContainsKey("Port")) { $args += @("-Port", $Port) }
     Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList $args
     exit 0
 }

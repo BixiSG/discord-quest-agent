@@ -39,7 +39,7 @@ if (-not (Test-Path (Join-Path $SourceRoot "src\quest-agent.js"))) {
 # ---- Copy ------------------------------------------------------------------
 Say "Installing to $InstallDir ..."
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-foreach ($item in @("src", "scripts", "VERSION", "README.md", "LICENSE", "Start-QuestAgent.bat", "Uninstall.bat")) {
+foreach ($item in @("src", "scripts", "VERSION", "CHANGELOG.md", "README.md", "LICENSE", "Start-QuestAgent.bat", "Uninstall.bat")) {
     $from = Join-Path $SourceRoot $item
     if (Test-Path $from) { Copy-Item -Path $from -Destination $InstallDir -Recurse -Force }
 }
