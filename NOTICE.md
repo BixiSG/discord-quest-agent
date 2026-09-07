@@ -11,7 +11,8 @@ is included in or distributed by this repository.
 
 ## No Discord code is included
 
-Every file here is original work published under the [MIT license](LICENSE). This project
+Every file here is original work published under the [MIT license](LICENSE), except the
+notification chime credited below. This project
 contains no source code, assets, fonts or images taken from the Discord client, and it does
 not modify, patch, repackage or redistribute Discord in any form.
 
@@ -24,6 +25,13 @@ altered. Remove the tool and the client is byte-for-byte unchanged.
 Images in `docs/` show only this project's own interface, rendered with invented placeholder
 quest names and this project's own icons. They contain no third-party logos, game artwork or
 Discord interface elements.
+
+## Sound
+
+The notification chime is "Level Up 02" by Universfield, from Pixabay, used under the
+[Pixabay Content License](https://pixabay.com/service/license-summary/) (free for
+commercial use, no attribution required). It ships trimmed and re-encoded as a short mono
+Opus clip embedded in `src/quest-agent.js`; the same clip is in `docs/chime.ogg`.
 
 ## Terms of Service
 

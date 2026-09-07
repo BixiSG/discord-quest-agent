@@ -28,7 +28,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 14;
+    const AGENT_VERSION = 15;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -57,6 +57,8 @@
         hud: true,              // show the toolbar button + panel
         notify: true,           // OS notification when a reward is claimable
         toast: true,            // in-app toast when a reward is claimable
+        sound: true,            // short chime with the in-app toast
+        volume: 60,             // chime volume, 0-100
         theme: "dark"           // panel look: "dark" (Discord dark) or "light"
     }, (typeof window.__questAgentConfig === "object" && window.__questAgentConfig) || {});
     // The launcher passes the tool version (VERSION file) and the update repo.
@@ -126,6 +128,7 @@
         "set.notifyDesc": "Windows notification and taskbar flash when a reward is ready to claim.",
         "set.toast": "In-app toast", "set.toastDescDiscord": "A Discord toast at the top of the window, the same one Discord uses.",
         "set.toastDescOwn": "A small toast at the top of the Discord window.", "set.testNotify": "Send a test notification",
+        "set.sound": "Sound", "set.soundDesc": "A short chime with the in-app toast.", "set.volume": "Volume",
         "set.appearance": "Appearance", "set.themeDark": "Discord dark", "set.themeLight": "Light",
         "set.language": "Language", "set.langAuto": "Auto",
         "set.types": "Quest types", "set.interval": "Look for new quests every", "set.min": "{n} min",
@@ -186,14 +189,36 @@
         return s;
     }
 
+    // ---- Sound ------------------------------------------------------------
+    // A short chime ("Level Up 02" by Universfield, Pixabay; see NOTICE.md),
+    // mono Opus in a data URI so nothing is read from disk or the network and
+    // the file stays ASCII. Chromium plays Opus natively.
+    const CHIME_B64 = "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";
+    let chime = null;
+    const clampVolume = v => Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Math.round(Number(v)))) : 60;
+    function playChime(volume) {
+        const vol = clampVolume(volume) / 100;
+        if (!vol) return false;
+        try {
+            if (!chime) chime = new Audio("data:audio/ogg;base64," + CHIME_B64);
+            chime.volume = vol;
+            chime.currentTime = 0;
+            const p = chime.play();
+            if (p && typeof p.catch === "function") p.catch(e => console.warn("[QuestAgent] Chime did not play:", e));
+            return true;
+        } catch (e) { return false; }
+    }
+
     // ---- Notifications (defined early so the failure path can use them) --
     let SETTINGS = null; // assigned once storage is up; CONFIG stands in until then
     let Toasts = null;   // Discord's own toast module (optional; found during hooking)
     // kind: "success" | "info" | "error". Two channels, each its own setting:
-    // an OS notification (+ taskbar flash) and an in-app toast.
+    // an OS notification (+ taskbar flash) and an in-app toast (+ chime, its
+    // own setting; errors stay silent).
     function notifyRaw(title, body, kind) {
         const os = (SETTINGS ? SETTINGS.notify : CONFIG.notify) !== false;
         const inApp = (SETTINGS ? SETTINGS.toast : CONFIG.toast) !== false;
+        const sound = (SETTINGS ? SETTINGS.sound : CONFIG.sound) !== false;
         if (os) {
             try {
                 if (typeof Notification !== "undefined") {
@@ -203,7 +228,10 @@
             } catch (e) { /* ignore */ }
             try { DiscordNative?.window?.flashFrame?.(true); } catch (e) { /* ignore */ }
         }
-        if (inApp) showToast(title, body, kind ?? "info");
+        if (inApp) {
+            showToast(title, body, kind ?? "info");
+            if (sound && kind !== "error") playChime(SETTINGS ? SETTINGS.volume : CONFIG.volume);
+        }
     }
     /** In-app toast: Discord's own toast if the module was found, else ours. */
     function showToast(title, body, kind) {
@@ -352,6 +380,8 @@
         autoEnroll: CONFIG.autoEnroll !== false,
         notify: CONFIG.notify !== false,
         toast: CONFIG.toast !== false,
+        sound: CONFIG.sound !== false,
+        volume: clampVolume(CONFIG.volume),
         theme: CONFIG.theme === "light" ? "light" : "dark",
         language: (typeof CONFIG.language === "string" && LOCALES[CONFIG.language.toLowerCase()]) ? CONFIG.language.toLowerCase() : "auto",
         scanIntervalMs: Number(CONFIG.scanIntervalMs) || 120000,
@@ -376,6 +406,8 @@
             if (typeof s.autoEnroll === "boolean") SETTINGS.autoEnroll = s.autoEnroll;
             if (typeof s.notify === "boolean") SETTINGS.notify = s.notify;
             if (typeof s.toast === "boolean") SETTINGS.toast = s.toast;
+            if (typeof s.sound === "boolean") SETTINGS.sound = s.sound;
+            if (Number.isFinite(s.volume)) SETTINGS.volume = clampVolume(s.volume);
             if (s.theme === "light" || s.theme === "dark") SETTINGS.theme = s.theme;
             if (s.language === "auto" || (typeof s.language === "string" && LOCALES[s.language])) SETTINGS.language = s.language;
             if (typeof s.paused === "boolean") SETTINGS.paused = s.paused;
@@ -842,6 +874,11 @@
                 case "autoEnroll": SETTINGS.autoEnroll = !!value; saveSettings(); if (value) scan(); else refreshUI(); return true;
                 case "notify": SETTINGS.notify = !!value; saveSettings(); refreshUI(); return true;
                 case "toast": SETTINGS.toast = !!value; saveSettings(); refreshUI(); return true;
+                case "sound": SETTINGS.sound = !!value; saveSettings(); UI.sig = null; refreshUI(); if (value) playChime(SETTINGS.volume); return true;
+                case "volume": {
+                    if (!Number.isFinite(Number(value))) return false;
+                    SETTINGS.volume = clampVolume(value); saveSettings(); return true; // no re-render: keeps the slider smooth
+                }
                 case "theme": {
                     if (value !== "light" && value !== "dark") return false;
                     SETTINGS.theme = value; saveSettings(); refreshUI(); return true;
@@ -887,8 +924,10 @@
         /** Fire both notification channels (whichever are on) so the user can see what they look like. */
         testNotification() {
             notifyRaw(t("notify.testTitle"), t("notify.testBody"), "success");
-            return { os: SETTINGS.notify, inApp: SETTINGS.toast, discordToasts: !!Toasts };
+            return { os: SETTINGS.notify, inApp: SETTINGS.toast, sound: SETTINGS.sound, volume: SETTINGS.volume, discordToasts: !!Toasts };
         },
+        /** Play the chime at the saved volume (or the one given, 0-100). */
+        playChime(volume) { return playChime(volume ?? SETTINGS.volume); },
         /** True while the installed version's changelog hasn't been opened yet. */
         hasUnreadChangelog() {
             return !!TOOL_VERSION && SETTINGS.seenVersion !== TOOL_VERSION && CHANGELOG.some(e => e.version === TOOL_VERSION);
@@ -941,7 +980,8 @@
         bug: "M12 3a4 4 0 0 1 4 4v1h2a1 1 0 1 1 0 2h-2v2h3a1 1 0 1 1 0 2h-3v.5a4 4 0 0 1-8 0V14H5a1 1 0 1 1 0-2h3v-2H6a1 1 0 1 1 0-2h2V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v1h4V7a2 2 0 0 0-2-2Z",
         chev: "M9.3 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L13.6 12 9.3 7.7a1 1 0 0 1 0-1.4Z",
         eyeoff: "M2.3 2.3a1 1 0 0 1 1.4 0l18 18a1 1 0 0 1-1.4 1.4l-3.1-3.1A11.2 11.2 0 0 1 12 20C7 20 3 16.5 1 12a12.6 12.6 0 0 1 4.2-5.4L2.3 3.7a1 1 0 0 1 0-1.4ZM12 4c5 0 9 3.5 11 8a12.5 12.5 0 0 1-3.5 4.7l-3-3a4 4 0 0 0-5.2-5.2L8.1 6.2A10.8 10.8 0 0 1 12 4Zm-3.4 7 4.4 4.4A2.5 2.5 0 0 1 8.6 11Z",
-        folder: "M3 5a2 2 0 0 1 2-2h4.6a2 2 0 0 1 1.4.6L12.4 5H19a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 4v9h14V9H5Z"
+        folder: "M3 5a2 2 0 0 1 2-2h4.6a2 2 0 0 1 1.4.6L12.4 5H19a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 4v9h14V9H5Z",
+        speaker: "M4 9.5A1.5 1.5 0 0 1 5.5 8H8l4.4-3.5A1 1 0 0 1 14 5.3v13.4a1 1 0 0 1-1.6.8L8 16H5.5A1.5 1.5 0 0 1 4 14.5v-5Zm12.6-1.2a1 1 0 0 1 1.4.1 5.5 5.5 0 0 1 0 7.2 1 1 0 1 1-1.5-1.3 3.5 3.5 0 0 0 0-4.6 1 1 0 0 1 .1-1.4Zm2.7-2.8a1 1 0 0 1 1.4 0 9.5 9.5 0 0 1 0 13 1 1 0 0 1-1.4-1.4 7.5 7.5 0 0 0 0-10.2 1 1 0 0 1 0-1.4Z"
     };
     const svg = (path, cls, size, evenodd) =>
         `<svg class="${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor"${evenodd ? ' fill-rule="evenodd"' : ""} d="${path}"/></svg>`;
@@ -1130,6 +1170,13 @@
  font-weight:500;border:1px solid transparent;transition:background .1s,color .1s}
 #qb-panel .qb-seg button:hover{color:var(--qb-text);background:var(--qb-hover2)}
 #qb-panel .qb-seg button.qb-on{background:var(--qb-brand);color:#fff}
+#qb-panel .qb-vol{display:flex;align-items:center;gap:10px;padding:2px 14px 10px 56px}
+#qb-panel .qb-vol input{-webkit-appearance:none;appearance:none;flex:1;height:8px;margin:0;border-radius:4px;outline:none;cursor:pointer;
+ background:linear-gradient(90deg,var(--qb-brand) var(--qb-volp,60%),var(--qb-bg2) var(--qb-volp,60%))}
+#qb-panel .qb-vol input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--qb-knob);
+ border:0;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .1s}
+#qb-panel .qb-vol input:hover::-webkit-slider-thumb{transform:scale(1.15)}
+#qb-panel .qb-vol b{width:36px;text-align:right;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--qb-muted)}
 #qb-panel .qb-btns{display:flex;gap:8px;padding:6px 14px 8px}
 #qb-panel .qb-btn{flex:1;height:32px;border-radius:var(--qb-rs);background:var(--qb-hover2);border:1px solid var(--qb-border);
  font-size:12.5px;font-weight:500;color:var(--qb-text);display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -1354,6 +1401,9 @@
           <div class="qb-sec">${esc(t("set.notifications"))}</div>
           ${opt("notify", SETTINGS.notify, ICON.bell, esc(t("set.notify")), esc(t("set.notifyDesc")))}
           ${opt("toast", SETTINGS.toast, ICON.activity, esc(t("set.toast")), esc(t(Toasts ? "set.toastDescDiscord" : "set.toastDescOwn")))}
+          ${opt("sound", SETTINGS.sound, ICON.speaker, esc(t("set.sound")), esc(t("set.soundDesc")))}
+          ${SETTINGS.sound ? `<div class="qb-vol"><input type="range" min="0" max="100" step="5" value="${SETTINGS.volume}" data-vol
+               style="--qb-volp:${SETTINGS.volume}%" aria-label="${esc(t("set.volume"))}" title="${esc(t("set.volume"))}"><b>${SETTINGS.volume}%</b></div>` : ""}
           <div class="qb-btns"><button class="qb-btn" data-cmd="testnotify">${svg(ICON.bell, "", 13)}${esc(t("set.testNotify"))}</button></div>
           <div class="qb-sec">${esc(t("set.appearance"))}</div>
           <div class="qb-seg">${[["dark", t("set.themeDark")], ["light", t("set.themeLight")]].map(([k, l]) => `<button data-theme="${k}" class="${SETTINGS.theme === k ? "qb-on" : ""}">${esc(l)}</button>`).join("")}</div>
@@ -1577,6 +1627,20 @@
             if (opt && (e.key === " " || e.key === "Enter")) { e.preventDefault(); flip(opt); return; }
             const lnk = e.target.closest("[data-cmd]");
             if (lnk && (e.key === " " || e.key === "Enter")) { e.preventDefault(); runCommand(lnk.dataset.cmd); }
+        });
+        // Volume slider: the label and fill follow the drag; the value is saved
+        // (and previewed) once the drag ends.
+        setBox.addEventListener("input", e => {
+            const r = e.target.closest("[data-vol]");
+            if (!r) return;
+            r.style.setProperty("--qb-volp", r.value + "%");
+            r.nextElementSibling.textContent = r.value + "%";
+        });
+        setBox.addEventListener("change", e => {
+            const r = e.target.closest("[data-vol]");
+            if (!r) return;
+            ops.setSetting("volume", r.value);
+            playChime(SETTINGS.volume);
         });
         p.querySelector(".qb-log").addEventListener("click", e => {
             const cmd = e.target.closest("[data-cmd]");

@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.3.2 - 2026-09-07
+
+- Sound: a short chime plays with the in-app toast. Settings > Notifications has the switch and a volume slider; changing the volume previews it.
+
 ## 1.3.1 - 2026-09-07
 
 - Skipped quests (not automatable, skipped by you, failed) can be dismissed from the list; Settings > Maintenance brings them back.

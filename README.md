@@ -100,7 +100,9 @@ list). Switching a type off stops any running quest of that type and parks it un
 Notifications when a reward is ready come two ways, each with its own toggle: a **desktop
 notification** (Windows toast plus taskbar flash) and an **in-app toast** at the top of the
 Discord window. The in-app one uses Discord's own toast system when the agent can find it,
-and a look-alike drawn by the agent otherwise, so it works either way.
+and a look-alike drawn by the agent otherwise, so it works either way. The in-app toast
+can bring a short **chime** with it: a **Sound** switch and a **volume** slider sit right
+under it, and moving the slider previews the level. Errors stay silent.
 
 Settings and the skip list survive Discord restarts: they're stored inside the client,
 per Discord install. `config.json` supplies the defaults, the HUD's choices win over it.
@@ -134,7 +136,7 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.3.1 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.3.2 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
