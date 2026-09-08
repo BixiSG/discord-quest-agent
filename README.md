@@ -40,7 +40,8 @@ No warranty, see [LICENSE](LICENSE). You're running this on your own account, by
   calls until Discord announces new quests. It won't rate-limit you into oblivion.
 - Pings you (OS notification + taskbar flash) when a reward is ready to claim.
 - Re-injects itself after client reloads, and puts the debugging port back if a Discord
-  auto-update strips it.
+  auto-update strips it. Stays around when you close Discord: start it again by any
+  means and the agent restarts it with the port and is back within about a minute.
 - Updates itself from this repo. Discord changes its internals every so often and that
   breaks the agent, so a fix here reaches you without you doing anything.
 
@@ -136,7 +137,7 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.3.2 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.4.0 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
@@ -206,8 +207,10 @@ If you're not actively using the agent, start Discord from its own shortcut inst
 Run the **Quest Agent Diagnostics** shortcut (or `Start-QuestAgent.bat -Diagnose`) and paste
 the output into an issue. It lists versions, config and agent state, no tokens or messages.
 
-**No button in the title bar.** Usually Discord wasn't started by the agent, so there's no
-debugging port; start it from the Start Menu shortcut. If quests are still completing
+**No button in the title bar.** Usually the agent isn't running (check for its process in
+Task Manager: a PowerShell running `QuestAgent.ps1`), so Discord came up without the
+debugging port; start it from the Start Menu shortcut. While the agent runs it catches a
+Discord you start by hand and restarts it with the port. If quests are still completing
 (notifications arrive, progress moves), the agent is running but couldn't find a slot in
 the title bar. The button no longer depends on the English "Inbox" label, so non-English
 clients get it too; and if Discord's title bar has no usable slot at all, the agent puts a

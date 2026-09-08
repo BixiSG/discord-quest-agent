@@ -6,7 +6,8 @@
 .DESCRIPTION
     Launches (or attaches to) the Discord desktop client with a localhost-only
     debugging port, injects quest-agent.js into its renderer, and stays resident
-    to re-inject after reloads or Discord updates.
+    for the login session: it re-injects after reloads and Discord updates, and
+    when Discord is closed and started again it restarts it with the port.
 
 .PARAMETER Branch
     Auto (default), Stable, Ptb or Canary. Auto picks the running client, else
@@ -166,19 +167,35 @@ function Get-DiscordUpdateExe {
 # True while Discord's updater is downloading or applying a build. Force-killing
 # the client during that window is what corrupts an app-<version> folder in the
 # first place, so we back off instead.
+#
+# The updater log alone is a weak signal: Discord writes to it on every launch
+# and on an hourly update check, both of which end in "Update to latest
+# complete." within seconds. So a recent write only counts as "updating" while
+# the log is still being written to, or while the last update run it records has
+# not reported completion.
 function Test-DiscordUpdating {
     param($BranchInfo)
-    $log = Join-Path $BranchInfo.Data "logs\Discord_updater_rCURRENT.log"
-    if (Test-Path $log) {
-        try {
-            if (((Get-Date) - (Get-Item $log).LastWriteTime).TotalSeconds -lt 90) { return $true }
-        } catch { }
-    }
     $incoming = Join-Path $BranchInfo.Dir "download\incoming"
     if (Test-Path $incoming) {
         if (@(Get-ChildItem -Path $incoming -Force -ErrorAction SilentlyContinue).Count -gt 0) { return $true }
     }
-    return $false
+    $log = Join-Path $BranchInfo.Data "logs\Discord_updater_rCURRENT.log"
+    if (-not (Test-Path $log)) { return $false }
+    try {
+        $age = ((Get-Date) - (Get-Item $log).LastWriteTime).TotalSeconds
+        if ($age -ge 90) { return $false }
+        if ($age -lt 10) { return $true }          # still being written to
+        $tail = @(Get-Content -Path $log -Tail 60 -ErrorAction Stop)
+        $started = -1; $finished = -1
+        for ($i = 0; $i -lt $tail.Count; $i++) {
+            if ($tail[$i] -match 'Starting update to latest') { $started = $i }
+            if ($tail[$i] -match 'Update to latest complete') { $finished = $i }
+        }
+        # Nothing recognisable in the tail (log format changed?): keep the old,
+        # conservative "recent write = updating" rule.
+        if ($started -lt 0 -and $finished -lt 0) { return $true }
+        return ($started -gt $finished)
+    } catch { return $true }
 }
 
 # Ask Discord to close before reaching for Stop-Process, so it gets the chance
@@ -513,32 +530,66 @@ switch ($status) {
 if ($NoWatch) { exit 0 }
 
 # ---- Watchdog ---------------------------------------------------------------
-Write-Log "Watching: re-injects after reloads and Discord updates. Exits when Discord closes." "DarkCyan"
-$missingSince = $null
+# Stays resident for the whole login session. Re-injects after reloads, puts
+# the port back after a Discord auto-update, and - when Discord is closed and
+# later started again by hand or by Discord's own Run entry - restarts it with
+# the port, so the agent comes back without anyone touching this tool.
+Write-Log "Watching: re-injects after reloads and Discord updates, re-attaches when Discord is started again." "DarkCyan"
+$discordUp = $true          # was Discord running at the previous check?
+$noPortSince = $null        # when we first saw Discord running without the port
+$noPortReason = $null       # "started" (fresh launch) or "lost" (port vanished mid-session)
+$waitNoted = $false
 while ($true) {
-    Start-Sleep -Seconds 20
+    # Poll fast while Discord is closed or freshly started without the port, so
+    # a manual start is caught on the splash screen rather than mid-chat.
+    Start-Sleep -Seconds $(if (-not $discordUp -or $noPortReason -eq "started") { 5 } else { 20 })
     # The uninstaller deletes the install folder; don't outlive it.
     if (-not (Test-Path $AgentJs)) { Write-Log "Install folder is gone (uninstalled) - exiting." "DarkGray"; break }
     if (Test-CdpUp) {
-        $missingSince = $null
+        $discordUp = $true; $noPortSince = $null; $noPortReason = $null; $waitNoted = $false
         try {
             $s = Invoke-Injection
-            if ($s -eq "injected") { Write-Log "Re-injected after a reload." "Green" }
+            if ($s -eq "injected") { Write-Log "Re-injected after a reload or restart." "Green" }
         } catch { }
         continue
     }
-    # Port is gone: either Discord closed, or it updated and relaunched without the flag.
     $running = Get-Process -Name $branchInfo.Proc -ErrorAction SilentlyContinue
-    if (-not $running) { Write-Log "Discord closed - exiting." "DarkGray"; break }
-    if (-not $cfg.restartDiscord -or $AttachOnly) { continue }
-    if ($null -eq $missingSince) { $missingSince = Get-Date; continue }
-    if (((Get-Date) - $missingSince).TotalSeconds -ge 40) {
-        if (Test-DiscordUpdating $branchInfo) {
-            Write-Log "Discord is updating - waiting for it to finish before restarting it." "DarkGray"
-        } else {
-            Write-Log "Discord is running without the debugging port (likely auto-updated)." "Yellow"
-            [void](Start-DiscordWithPort)
-        }
-        $missingSince = $null
+    if (-not $running) {
+        if ($discordUp) { Write-Log "Discord closed - waiting for it to start again." "DarkGray" }
+        $discordUp = $false; $noPortSince = $null; $noPortReason = $null; $waitNoted = $false
+        continue
     }
+    # Discord is running but the port is gone: either it was just started
+    # without the flag, or it auto-updated and relaunched itself without it.
+    if ($null -eq $noPortSince) {
+        $noPortSince = Get-Date
+        $noPortReason = $(if ($discordUp) { "lost" } else { "started" })
+        $waitNoted = $false
+        if ($noPortReason -eq "started") { Write-Log "Discord was started without the debugging port." "Yellow" }
+    }
+    $discordUp = $true
+    if ($AttachOnly -or -not $cfg.restartDiscord) {
+        if (-not $waitNoted) {
+            $why = $(if ($AttachOnly) { "-AttachOnly" } else { "restartDiscord is false" })
+            Write-Log "Not restarting Discord ($why). Waiting for a debuggable Discord." "DarkGray"
+            $waitNoted = $true
+        }
+        continue
+    }
+    # A port that vanished mid-session is usually an auto-update relaunch: give
+    # the old process a moment to die before judging. A fresh start gets no
+    # grace, so the restart lands while the client is still on its splash.
+    $grace = $(if ($noPortReason -eq "started") { 0 } else { 40 })
+    if (((Get-Date) - $noPortSince).TotalSeconds -lt $grace) { continue }
+    if (Test-DiscordUpdating $branchInfo) {
+        if (-not $waitNoted) {
+            Write-Log "Discord is updating - waiting for it to finish before restarting it." "DarkGray"
+            $waitNoted = $true
+        }
+        continue
+    }
+    if ($noPortReason -eq "lost") { Write-Log "Discord is running without the debugging port (likely auto-updated)." "Yellow" }
+    [void](Start-DiscordWithPort)
+    # Whatever happened, judge the result afresh on the next pass.
+    $noPortSince = $null; $noPortReason = $null; $waitNoted = $false
 }

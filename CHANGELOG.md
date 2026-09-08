@@ -4,6 +4,11 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.4.0 - 2026-09-08
+
+- The agent no longer quits when Discord is closed. If you start Discord again yourself (or Windows does at login), the agent restarts it with the debugging port within about a minute and comes back on its own. Before, a closed-and-reopened Discord had no agent until you ran the tool again.
+- Faster restarts: the launcher now reads Discord's updater log properly instead of treating every write to it (Discord writes there on each launch and every hour) as an update in progress.
+
 ## 1.3.2 - 2026-09-07
 
 - Sound: a short chime plays with the in-app toast. Settings > Notifications has the switch and a volume slider; changing the volume previews it.
