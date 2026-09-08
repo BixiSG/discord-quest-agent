@@ -137,7 +137,7 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.4.0 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.4.1 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
@@ -146,6 +146,10 @@ login. No admin rights, nothing written outside your user profile.
 
 Then launch it from the Start Menu (**Discord Quest Agent**), or just log out and back in.
 Discord restarts once so it can come up with the debugging port.
+
+If something else on your PC already starts Discord with the debugging port (a launcher
+script, another tool), install with `Install.bat -AttachOnly`: the agent then only ever
+attaches to that Discord and never launches or restarts it itself.
 
 You need Windows 10/11, the Discord desktop app (Stable, PTB or Canary, auto-detected) and
 Windows PowerShell 5.1, which is already on your machine.

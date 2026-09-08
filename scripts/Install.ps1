@@ -13,6 +13,7 @@
 #>
 param(
     [switch]$NoStartup,
+    [switch]$AttachOnly,
     [switch]$Quiet
 )
 
@@ -82,6 +83,10 @@ function New-Shortcut {
 }
 
 $psArgs = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}\src\QuestAgent.ps1"' -f $InstallDir
+# -AttachOnly: something else on this PC already starts Discord with the
+# debugging port (a launcher script, another tool). The agent then only ever
+# attaches and never launches or restarts Discord itself.
+if ($AttachOnly) { $psArgs += " -AttachOnly" }
 
 New-Item -ItemType Directory -Force -Path $StartMenu | Out-Null
 New-Shortcut -Path (Join-Path $StartMenu "Discord Quest Agent.lnk") `
@@ -100,14 +105,19 @@ if ($NoStartup) {
     Say "Startup entry not installed (-NoStartup)." "DarkGray"
 } else {
     New-Shortcut -Path $startupLnk -Target "powershell.exe" -Arguments $psArgs -Description "Discord Quest Agent"
-    Say "Runs automatically at login."
+    Say "Runs automatically at login$(if ($AttachOnly) { ' (attach-only: never launches or restarts Discord)' } else { '' })."
 }
 
 Say ""
 Say "  Installed." "Green"
 Say ""
-Say "  IMPORTANT: Discord must be started by this tool so it exposes a" "Yellow"
-Say "  localhost debugging port. It will restart Discord once now." "Yellow"
+if ($AttachOnly) {
+    Say "  Attach-only: the agent waits for a Discord that was started with" "Yellow"
+    Say "  --remote-debugging-port=$((Get-Content $configPath | ConvertFrom-Json).port) and never starts or restarts one." "Yellow"
+} else {
+    Say "  IMPORTANT: Discord must be started by this tool so it exposes a" "Yellow"
+    Say "  localhost debugging port. It will restart Discord once now." "Yellow"
+}
 Say ""
 Say "  Start it from the Start Menu ('Discord Quest Agent') or let it run" "Gray"
 Say "  at your next login. Look for the Auto Quests button in Discord's" "Gray"

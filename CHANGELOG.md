@@ -4,6 +4,12 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.4.1 - 2026-09-08
+
+- The launcher never restarts a Discord that already carries the debugging-port flag but is slow to answer (still booting, or busy). Before, a short hiccup could restart your client mid-session.
+- Attach-only mode waits for as long as it takes instead of giving up after 10 minutes, and so does the wait for Discord's login screen.
+- Installer: Install.bat -AttachOnly for PCs where another tool already starts Discord with the debugging port; the agent then only ever attaches.
+
 ## 1.4.0 - 2026-09-08
 
 - The agent no longer quits when Discord is closed. If you start Discord again yourself (or Windows does at login), the agent restarts it with the debugging port within about a minute and comes back on its own. Before, a closed-and-reopened Discord had no agent until you ran the tool again.

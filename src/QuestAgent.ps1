@@ -219,6 +219,22 @@ function Test-CdpUp {
     catch { return $false }
 }
 
+# True when the main Discord process was started with our port flag. Tells
+# "the port is gone" (auto-update relaunch, started by hand) apart from "Discord
+# is still starting or too busy to answer" - only the former is a reason to
+# restart it. Without this, a 2 s CDP timeout under load would restart Discord
+# mid-game.
+function Test-DiscordHasPortFlag {
+    param($BranchInfo)
+    try {
+        foreach ($p in @(Get-CimInstance Win32_Process -Filter "Name = '$($BranchInfo.Proc).exe'" -ErrorAction Stop)) {
+            $cl = [string]$p.CommandLine
+            if ($cl -notmatch '--type=' -and $cl -match "--remote-debugging-port=$Port(\s|$)") { return $true }
+        }
+    } catch { }
+    return $false
+}
+
 # ---- CDP --------------------------------------------------------------------
 function Invoke-CdpEval {
     param([string]$WsUrl, [string]$Expression, [bool]$ReturnByValue = $false)
@@ -487,23 +503,36 @@ function Start-DiscordWithPort {
 
 if (-not (Test-CdpUp)) {
     $running = @(Get-Process -Name $branchInfo.Proc -ErrorAction SilentlyContinue)
-    $mayLaunch = $true
+    $mayLaunch = -not $AttachOnly
+    $holdUntil = $null
     if ($AttachOnly) {
         Write-Log "Attach-only: waiting for a debuggable Discord..." "Cyan"
-        $mayLaunch = $false
+    } elseif ($running.Count -and (Test-DiscordHasPortFlag $branchInfo)) {
+        # Someone (a previous run, another launcher) already started Discord
+        # with the port; it just has not bound it yet. Don't kill it for that.
+        Write-Log "Discord is starting with the debugging port; waiting for it." "Cyan"
+        $holdUntil = (Get-Date).AddMinutes(2)
     } elseif ($running.Count -and -not $cfg.restartDiscord) {
         Write-Log "Discord is running without the debugging port and restartDiscord is false. Nothing to do." "Yellow"
         exit 0
     }
     $launched = $false
-    if ($mayLaunch) { $launched = Start-DiscordWithPort }
+    if ($mayLaunch -and -not $holdUntil) { $launched = Start-DiscordWithPort }
     $deadline = (Get-Date).AddMinutes(10)
     $nextTry = (Get-Date).AddSeconds(30)
     while (-not (Test-CdpUp)) {
-        if ((Get-Date) -gt $deadline) { Write-Log "Debug port never came up; giving up." "Yellow"; exit 0 }
+        if ($AttachOnly) {
+            # Resident: whatever launches Discord with the port may do so long
+            # after login, so keep waiting and just say so now and then.
+            if ((Get-Date) -gt $deadline) { Write-Log "Still waiting for a debuggable Discord (attach-only)." "DarkGray"; $deadline = (Get-Date).AddMinutes(30) }
+        } elseif ((Get-Date) -gt $deadline) { Write-Log "Debug port never came up; giving up." "Yellow"; exit 0 }
+        if ($holdUntil -and (Get-Date) -gt $holdUntil) {
+            Write-Log "Discord has the port flag but the port never came up; restarting it." "Yellow"
+            $holdUntil = $null; $nextTry = Get-Date
+        }
         # A launch skipped because Discord was mid-update gets retried until the
         # updater finishes.
-        if ($mayLaunch -and -not $launched -and (Get-Date) -gt $nextTry) {
+        if ($mayLaunch -and -not $holdUntil -and -not $launched -and (Get-Date) -gt $nextTry) {
             $launched = Start-DiscordWithPort
             $nextTry = (Get-Date).AddSeconds(30)
         }
@@ -515,9 +544,11 @@ Write-Log "Waiting for Discord's renderer (log in if prompted)..." "Cyan"
 $deadline = (Get-Date).AddMinutes(10)
 $status = "notarget"
 while ($status -eq "notarget") {
+    if (-not (Test-CdpUp)) { $status = "noport"; break }
     $status = Invoke-Injection
     if ($status -eq "notarget") {
-        if ((Get-Date) -gt $deadline) { Write-Log "No renderer with webpack found; giving up." "Yellow"; exit 0 }
+        # Resident: the login screen can sit there for as long as it likes.
+        if ((Get-Date) -gt $deadline) { Write-Log "Still waiting for Discord's renderer (not logged in yet?)." "DarkGray"; $deadline = (Get-Date).AddMinutes(30) }
         Start-Sleep -Seconds 3
     }
 }
@@ -525,6 +556,7 @@ switch ($status) {
     "injected" { Write-Log "Agent injected. Look for the Auto Quests button in Discord's title bar." "Green" }
     "present"  { Write-Log "Agent already running in Discord." "Green" }
     "error"    { Write-Log "Injection failed - Discord's internals may have changed. Run with -Diagnose." "Yellow" }
+    "noport"   { Write-Log "Discord went away before the agent could be injected; watching for it." "Yellow" }
 }
 
 if ($NoWatch) { exit 0 }
@@ -568,6 +600,16 @@ while ($true) {
         if ($noPortReason -eq "started") { Write-Log "Discord was started without the debugging port." "Yellow" }
     }
     $discordUp = $true
+    # Started with our flag but not answering: it is booting (the port binds a
+    # few seconds in) or busy. Either way it will answer eventually; a restart
+    # would only cost the user their session.
+    if (Test-DiscordHasPortFlag $branchInfo) {
+        if (-not $waitNoted) {
+            Write-Log "Discord has the debugging port flag but is not answering yet; waiting, not restarting." "DarkGray"
+            $waitNoted = $true
+        }
+        continue
+    }
     if ($AttachOnly -or -not $cfg.restartDiscord) {
         if (-not $waitNoted) {
             $why = $(if ($AttachOnly) { "-AttachOnly" } else { "restartDiscord is false" })
