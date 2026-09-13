@@ -137,12 +137,13 @@ gets it shipped for everyone.
 
 ## 📦 Install
 
-1. Grab the [latest release](../../releases/latest) (v1.4.1 or newer), or *Code -> Download ZIP*.
+1. Grab the [latest release](../../releases/latest) (v1.4.2 or newer), or *Code -> Download ZIP*.
 2. Extract it somewhere. Don't run it from inside the ZIP.
 3. Double-click `Install.bat`.
 
 It installs to `%LOCALAPPDATA%\DiscordQuestAgent`, adds Start Menu shortcuts and runs at
-login. No admin rights, nothing written outside your user profile.
+login (the Startup entry is a `wscript` shortcut to `src\launch.vbs`, which starts the agent
+without any window). No admin rights, nothing written outside your user profile.
 
 Then launch it from the Start Menu (**Discord Quest Agent**), or just log out and back in.
 Discord restarts once so it can come up with the debugging port.

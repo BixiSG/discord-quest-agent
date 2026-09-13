@@ -82,15 +82,19 @@ function New-Shortcut {
     $sc.Save()
 }
 
-$psArgs = '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}\src\QuestAgent.ps1"' -f $InstallDir
+# The agent is started through wscript.exe + src\launch.vbs, never through
+# powershell.exe directly: a hidden powershell.exe shortcut does not start at
+# login on some Windows 11 PCs, a windowless script host does.
+$wscript = Join-Path $env:SystemRoot "System32\wscript.exe"
+$vbsArgs = '"{0}\src\launch.vbs"' -f $InstallDir
 # -AttachOnly: something else on this PC already starts Discord with the
 # debugging port (a launcher script, another tool). The agent then only ever
 # attaches and never launches or restarts Discord itself.
-if ($AttachOnly) { $psArgs += " -AttachOnly" }
+if ($AttachOnly) { $vbsArgs += " -AttachOnly" }
 
 New-Item -ItemType Directory -Force -Path $StartMenu | Out-Null
 New-Shortcut -Path (Join-Path $StartMenu "Discord Quest Agent.lnk") `
-    -Target "powershell.exe" -Arguments $psArgs -Description "Start the Discord Quest Agent"
+    -Target $wscript -Arguments $vbsArgs -Description "Start the Discord Quest Agent"
 New-Shortcut -Path (Join-Path $StartMenu "Quest Agent Diagnostics.lnk") `
     -Target "powershell.exe" `
     -Arguments ('-NoProfile -ExecutionPolicy Bypass -NoExit -File "{0}\src\QuestAgent.ps1" -Diagnose' -f $InstallDir) `
@@ -104,7 +108,7 @@ if ($NoStartup) {
     Remove-Item -Path $startupLnk -Force -ErrorAction SilentlyContinue
     Say "Startup entry not installed (-NoStartup)." "DarkGray"
 } else {
-    New-Shortcut -Path $startupLnk -Target "powershell.exe" -Arguments $psArgs -Description "Discord Quest Agent"
+    New-Shortcut -Path $startupLnk -Target $wscript -Arguments $vbsArgs -Description "Discord Quest Agent"
     Say "Runs automatically at login$(if ($AttachOnly) { ' (attach-only: never launches or restarts Discord)' } else { '' })."
 }
 

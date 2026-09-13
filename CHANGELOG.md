@@ -4,6 +4,11 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.4.2 - 2026-09-13
+
+- The Startup and Start Menu shortcuts start the agent through a windowless script host (wscript) instead of a hidden PowerShell window. On some Windows 11 PCs the old shortcut never ran at login, so the agent was only there when started by hand. Existing installs fix their own shortcut on the next start.
+- A self-update relaunches the agent the same way, so an update that lands at login no longer risks the same problem.
+
 ## 1.4.1 - 2026-09-08
 
 - The launcher never restarts a Discord that already carries the debugging-port flag but is slow to answer (still booting, or busy). Before, a short hiccup could restart your client mid-session.

@@ -453,19 +453,46 @@ JSON.stringify({
     }
 }
 
+# Installs from before v1.4.2 left a Startup shortcut that runs powershell.exe
+# directly, which does not start at login on some Windows 11 PCs. Point it at
+# launch.vbs once, keeping -AttachOnly. Only touches a shortcut that runs this
+# very install, so a copy started from a download folder never hijacks it.
+function Repair-StartupShortcut {
+    try {
+        $lnk = Join-Path ([Environment]::GetFolderPath("Startup")) "Discord Quest Agent.lnk"
+        $vbs = Join-Path $PSScriptRoot "launch.vbs"
+        if (-not (Test-Path $lnk) -or -not (Test-Path $vbs)) { return }
+        $shell = New-Object -ComObject WScript.Shell
+        $sc = $shell.CreateShortcut($lnk)
+        if ($sc.TargetPath -notmatch 'powershell\.exe$') { return }
+        if ($sc.Arguments -notmatch [regex]::Escape((Join-Path $PSScriptRoot "QuestAgent.ps1"))) { return }
+        $vbsArgs = "`"$vbs`""
+        if ($sc.Arguments -match '-AttachOnly') { $vbsArgs += " -AttachOnly" }
+        $sc.TargetPath = Join-Path $env:SystemRoot "System32\wscript.exe"
+        $sc.Arguments = $vbsArgs
+        $sc.WorkingDirectory = $Root
+        $sc.Save()
+        Write-Log "Startup shortcut now starts the agent through wscript (a plain powershell.exe shortcut may not run at login)." "DarkGray"
+    } catch { Write-Log "Could not update the Startup shortcut: $($_.Exception.Message)" "Yellow" }
+}
+
 if ($Diagnose) { Invoke-Diagnose; exit 0 }
 
 # ---- Main -------------------------------------------------------------------
 Write-Log "Discord Quest Agent v$(Get-LocalVersion) starting (port $Port)." "Cyan"
 
+Repair-StartupShortcut
+
 if (Invoke-SelfUpdate) {
-    # Relaunch the freshly downloaded copy and hand over.
-    $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$(Join-Path $Root 'src\QuestAgent.ps1')`"", "-NoUpdate")
+    # Relaunch the freshly downloaded copy and hand over. Through launch.vbs,
+    # not powershell.exe: a hidden powershell.exe started directly may not run
+    # at login (see launch.vbs), and a self-update at login is the common case.
+    $args = @("`"$(Join-Path $Root 'src\launch.vbs')`"", "-NoUpdate")
     if ($AttachOnly) { $args += "-AttachOnly" }
     if ($NoWatch) { $args += "-NoWatch" }
     if ($PSBoundParameters.ContainsKey("Branch")) { $args += @("-Branch", $Branch) }
     if ($PSBoundParameters.ContainsKey("Port")) { $args += @("-Port", $Port) }
-    Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList $args
+    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $args
     exit 0
 }
 
