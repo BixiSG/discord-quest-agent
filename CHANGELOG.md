@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.4.3 - 2026-09-14
+
+- Only one agent process runs per install. If a second launcher starts the agent while one is already resident, the newcomer notes it in the log and exits, so two watchdogs can never restart Discord over each other.
+
 ## 1.4.2 - 2026-09-13
 
 - The Startup and Start Menu shortcuts start the agent through a windowless script host (wscript) instead of a hidden PowerShell window. On some Windows 11 PCs the old shortcut never ran at login, so the agent was only there when started by hand. Existing installs fix their own shortcut on the next start.

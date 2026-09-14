@@ -481,6 +481,15 @@ if ($Diagnose) { Invoke-Diagnose; exit 0 }
 # ---- Main -------------------------------------------------------------------
 Write-Log "Discord Quest Agent v$(Get-LocalVersion) starting (port $Port)." "Cyan"
 
+# One resident agent per install. Two launchers (the Startup shortcut plus
+# another tool that also starts the agent) must not end up as two watchdogs
+# that could both restart Discord.
+$instanceMutex = New-Object System.Threading.Mutex($false, ("Local\DiscordQuestAgent-" + ($Root.ToLowerInvariant() -replace '[^a-z0-9]', '_')))
+if (-not $instanceMutex.WaitOne(0)) {
+    Write-Log "Another agent process is already running from this install; exiting." "DarkGray"
+    exit 0
+}
+
 Repair-StartupShortcut
 
 if (Invoke-SelfUpdate) {
@@ -492,6 +501,9 @@ if (Invoke-SelfUpdate) {
     if ($NoWatch) { $args += "-NoWatch" }
     if ($PSBoundParameters.ContainsKey("Branch")) { $args += @("-Branch", $Branch) }
     if ($PSBoundParameters.ContainsKey("Port")) { $args += @("-Port", $Port) }
+    # Let go of the single-instance mutex first, or the new copy sees us as
+    # "already running" and quits.
+    $instanceMutex.ReleaseMutex(); $instanceMutex.Dispose()
     Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $args
     exit 0
 }
