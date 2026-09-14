@@ -1,6 +1,12 @@
 # Login launcher via wscript (v1.4.2)
 
-Date: 2026-09-13. Status: approved.
+Date: 2026-09-13. Status: shipped in v1.4.2.
+
+> Post-mortem (2026-09-14): the "never ran at login" observation below had a different
+> cause. The install folder had been created from an automation shell whose writes to new
+> directories were not visible to the user's real session, so the shortcut pointed at a
+> file that did not exist there. The wscript launcher is still worth having (no console
+> window, not tied to a terminal's process tree) and stays.
 
 ## Problem
 

@@ -10,8 +10,8 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 
 ## 1.4.2 - 2026-09-13
 
-- The Startup and Start Menu shortcuts start the agent through a windowless script host (wscript) instead of a hidden PowerShell window. On some Windows 11 PCs the old shortcut never ran at login, so the agent was only there when started by hand. Existing installs fix their own shortcut on the next start.
-- A self-update relaunches the agent the same way, so an update that lands at login no longer risks the same problem.
+- The Startup and Start Menu shortcuts start the agent through a windowless script host (wscript) instead of a hidden PowerShell window: no console flashes at login, and closing a terminal can never take the agent down with it. Existing installs switch their own shortcut on the next start.
+- A self-update relaunches the agent the same way.
 
 ## 1.4.1 - 2026-09-08
 
