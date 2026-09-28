@@ -8,3 +8,6 @@ desktop.ini
 .DS_Store
 .vscode/
 .idea/
+
+# harness screenshots (dev/serve.py)
+dev/out/

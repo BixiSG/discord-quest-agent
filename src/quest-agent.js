@@ -23,6 +23,8 @@
  *     how long a price takes to save up,
  *   - shows the changelog (Settings > What's new) after a self-update and links
  *     to the GitHub project,
+ *   - hosts addons (src/addons/*.js): small extras such as the Orbling pet,
+ *     switched on in Settings > Addons,
  *   - retires the older QuestBypass prototype if one is still running.
  *
  * Idempotent: re-injecting is a no-op while an agent is already running.
@@ -31,7 +33,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 20;
+    const AGENT_VERSION = 21;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -175,6 +177,7 @@
         "notify.updatedTitle": "Quest agent updated to v{v}", "notify.updatedBody": "Settings \u2192 What's new lists the changes.",
         "tool.dismiss": "Dismiss (hide from this list)", "set.clearHidden": "Show dismissed quests ({n})",
         "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
+        "set.addons": "Addons",
         "title.stats": "Stats", "head.stats": "Stats and history",
         "stats.perMonth": "orbs / 30 days", "stats.perWeek": "about {n} a week",
         "stats.range": "usually {lo} to {hi} per 30 days", "stats.rangeSoon": "a usual range shows after 6 weeks of history",
@@ -324,6 +327,9 @@
     // Claim the global now so the watchdog doesn't inject a second agent while
     // we wait.
     window.__questAgent = { version: AGENT_VERSION, status: "starting", installedAt: Date.now() };
+    // A queue object left by a previous agent (forced re-injection) would hand new
+    // addons to that stopped hub; start a fresh queue for this one.
+    if (!Array.isArray(window.__questAgentAddons)) window.__questAgentAddons = [];
 
     // Retire the QuestBypass prototype (this tool's predecessor) if its
     // launcher got to the client first: it uses the same #qb-* ids, so two
@@ -458,6 +464,7 @@
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
         skipped: [],
         hidden: [],          // quest ids dismissed from the Skipped group (persisted)
+        addons: {},          // addon id -> switched on (Settings > Addons)
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
@@ -487,6 +494,7 @@
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
             if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
+            if (s.addons && typeof s.addons === "object") for (const [k, v] of Object.entries(s.addons)) if (typeof v === "boolean" && /^[a-z][a-z0-9-]{1,23}$/.test(k)) SETTINGS.addons[k] = v;
             if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
             if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
             if (Number.isFinite(s.goal) && s.goal >= 0) SETTINGS.goal = Math.min(1e7, Math.round(s.goal));
@@ -572,12 +580,13 @@
         try {
             for (const q of allQuests()) if (q?.id && (q.userStatus?.completedAt || HISTORY.q[q.id]) && recordQuest(q)) changed = true;
         } catch (e) { console.warn("[QuestAgent] History sync failed:", e); }
-        if (changed) saveHistory();
+        if (changed) { saveHistory(); emitAddons("quests"); }
         return changed;
     }
     /** The agent just ran a quest to 100%: record it now, the store may lag a beat. */
     function noteFinished(quest) {
         try { if (recordQuest(quest, Date.now())) saveHistory(); } catch (e) { /* history is best-effort */ }
+        emitAddons("quests");
     }
     loadHistory();
 
@@ -649,6 +658,91 @@
     }
     /** Orbs per day as CSV, oldest first. */
     const historyCsv = () => "day,orbs_earned,orbs_waiting_to_claim\r\n" + orbStats().days.map(d => `${d.day},${d.orbs},${d.waiting}`).join("\r\n") + "\r\n";
+
+    // ---- Addons (hub) ------------------------------------------------------
+    // Addons are separate scripts (src/addons/*.js) that the launcher injects
+    // after this one, one evaluation each so a broken addon can't take the
+    // agent down. Each queues a definition on window.__questAgentAddons:
+    //   { id, icon: 24px SVG path, strings: { "<id>.key": "English" },
+    //     init(api), mount(el, api) -> { unmount() }, destroy() }
+    // Switched-on ones (Settings > Addons) get a header button and a panel
+    // view. They run in the page with the agent's own access, which is why
+    // only addons shipped with this project are loaded.
+    const ADDONS = new Map(); // id -> { id, def, api, live, view, attention, listeners }
+    const ADDON_ID = /^[a-z][a-z0-9-]{1,23}$/;
+    function addonApi(a) {
+        const key = "questAgent.addon." + a.id;
+        return {
+            id: a.id,
+            t: (k, p) => t(a.id + "." + k, p),
+            tn: (k, n, p) => tn(a.id + "." + k, n, p),
+            lang: () => currentLang(),
+            theme: () => SETTINGS.theme,
+            fmtNum,
+            /** The addon's own saved object (null the first time). */
+            load() { try { const raw = storage?.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } },
+            save(obj) { try { storage?.setItem(key, JSON.stringify(obj)); return true; } catch (e) { return false; } },
+            /** Events: "quests" (a quest finished or a reward was claimed). Returns an unsubscribe function. */
+            on(ev, fn) { (a.listeners[ev] ??= new Set()).add(fn); return () => a.listeners[ev]?.delete(fn); },
+            /** Desktop / in-app notification, following the user's notification settings. */
+            notify(title, body) { notifyRaw(title, body, "info"); },
+            /** Every finished quest Discord lists: { id, orbs, at, claimed }. */
+            completions() {
+                return allQuests().filter(q => q?.userStatus?.completedAt)
+                    .map(q => ({ id: String(q.id), orbs: orbsOf(q), at: tsOf(q.userStatus.completedAt), claimed: !!q.userStatus.claimedAt }));
+            },
+            /** The Stats view's numbers: orbs per 30 days, waiting to be claimed, earned in total. */
+            pace() { const st = orbStats(); return { pace: st.pace, waiting: st.waiting, total: st.total }; },
+            openQuests() { if (openQuestsPage()) togglePanel(false); },
+            /** Ask for the user's attention: a dot on the addon's header button and on the title-bar button. */
+            attention(on) {
+                on = !!on;
+                if (a.attention === on) return;
+                a.attention = on; UI.addonSig = null;
+                if (UI.btn) UI.btn.dataset.k = "";
+                refreshUI(); updateBadge();
+            },
+            visible: () => UI.open && UI.view === "addon:" + a.id
+        };
+    }
+    function registerAddon(def) {
+        try {
+            if (!def || typeof def !== "object" || !ADDON_ID.test(def.id ?? "") || typeof def.mount !== "function") return false;
+            if (ADDONS.has(def.id)) stopAddon(def.id); // injected again (development): the new one replaces it
+            for (const [k, v] of Object.entries(def.strings ?? {})) if (k.startsWith(def.id + ".") && typeof v === "string") EN[k] = v;
+            const a = { id: def.id, def, listeners: {}, live: false, view: null, attention: false };
+            a.api = addonApi(a);
+            ADDONS.set(def.id, a);
+            if (SETTINGS.addons[def.id] === true) startAddon(def.id);
+            UI.sig = null; UI.addonSig = null; refreshUI();
+            return true;
+        } catch (e) { console.warn("[QuestAgent] Addon rejected:", e); return false; }
+    }
+    function startAddon(id) {
+        const a = ADDONS.get(id);
+        if (!a || a.live) return;
+        a.live = true;
+        try { a.def.init?.(a.api); } catch (e) { console.warn(`[QuestAgent] Addon "${id}" failed to start:`, e); }
+    }
+    function unmountAddonView(a) {
+        if (!a?.view) return;
+        try { a.view.unmount?.(); } catch (e) { /* ignore */ }
+        a.view = null;
+    }
+    function stopAddon(id) {
+        const a = ADDONS.get(id);
+        if (!a) return;
+        unmountAddonView(a);
+        if (a.live) { try { a.def.destroy?.(); } catch (e) { /* ignore */ } }
+        a.live = false; a.listeners = {}; a.attention = false;
+    }
+    function emitAddons(ev, data) {
+        for (const a of ADDONS.values()) {
+            if (!a.live) continue;
+            for (const fn of a.listeners[ev] ?? []) { try { fn(data); } catch (e) { console.warn(`[QuestAgent] Addon "${a.id}" ${ev} handler failed:`, e); } }
+        }
+    }
+    const addonAttention = () => [...ADDONS.values()].some(a => a.live && a.attention);
 
     // ---- State ----------------------------------------------------------
     const state = {
@@ -1127,6 +1221,15 @@
                 default: return false;
             }
         },
+        /** Switch an addon on or off; switching on opens it. */
+        setAddon(id, on) {
+            if (!ADDONS.has(id)) return false;
+            on = !!on;
+            SETTINGS.addons[id] = on; saveSettings();
+            if (on) { startAddon(id); UI.view = "addon:" + id; } else { stopAddon(id); if (UI.view === "addon:" + id) UI.view = "settings"; }
+            UI.sig = null; UI.addonSig = null; refreshUI(); updateBadge();
+            return on;
+        },
         retryAllFailed() {
             for (const id of [...state.failCounts.keys(), ...state.enrollFailed]) { state.failCounts.delete(id); state.enrollFailed.delete(id); state.handled.delete(id); }
             scan();
@@ -1482,6 +1585,12 @@
 #qb-panel .qb-ul{margin:0;padding:0 14px 6px;list-style:none}
 #qb-panel .qb-ul li{position:relative;padding:3px 0 3px 14px;font-size:12.5px;line-height:1.4;color:var(--qb-text)}
 #qb-panel .qb-ul li::before{content:"";position:absolute;left:2px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--qb-brand);opacity:.8}
+/* addons */
+#qb-panel .qb-addon-btns{display:contents}
+#qb-panel .qb-nd.qb-att{background:#ff73b3}
+#qb-panel .qb-addon{overflow-y:auto;scrollbar-width:thin}
+#qb-panel .qb-addon::-webkit-scrollbar{width:8px}
+#qb-panel .qb-addon::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
 /* stats view */
 #qb-panel .qb-stat.qb-tap{cursor:pointer;transition:border-color .1s}
 #qb-panel .qb-stat.qb-tap:hover{border-color:rgba(240,178,50,.5)}
@@ -1550,6 +1659,8 @@
 #qb-badge.qb-claim{background:var(--status-positive,#23a55a)}
 #qb-badge.qb-work{background:var(--status-warning,#f0b232)}
 #qb-badge.qb-hold{background:var(--primary-400,#80848e)}
+#qb-att{position:absolute;left:-3px;bottom:-2px;width:7px;height:7px;border-radius:50%;background:#ff73b3;
+ border:2px solid var(--background-base-lower,#1e1f22);box-sizing:content-box;pointer-events:none}
 #qb-btn .qb-ring{position:absolute;inset:1px;border-radius:50%;box-sizing:border-box;
  border:1.5px solid rgba(240,178,50,.25);border-top-color:#f0b232;
  animation:qb-spin .9s linear infinite;pointer-events:none}
@@ -1722,6 +1833,8 @@
                ${svg(mark === "ext" ? ICON.open : ICON.chev, mark === "ext" ? "qb-ext" : "qb-chev", 14)}
              </div>`;
         box.innerHTML = `
+          ${ADDONS.size ? `<div class="qb-sec">${esc(t("set.addons"))}</div>` + [...ADDONS.values()].map(a =>
+              opt("addon:" + a.id, a.live, a.def.icon || ICON.sparkle, esc(t(a.id + ".title")), esc(t(a.id + ".desc")))).join("") : ""}
           <div class="qb-sec">${esc(t("set.about"))}</div>
           ${link("changelog", ICON.sparkle, esc(t("set.whatsNew")), esc(newsDesc), "chev", unread ? `<span class="qb-pill">${esc(t("set.new"))}</span>` : "")}
           ${canOpenFolder ? link("folder", ICON.folder, esc(t("set.folder")), `<span title="${esc(t("set.folderDesc"))}">${esc(INSTALL_ROOT)}</span>`, "ext") : ""}
@@ -1858,6 +1971,7 @@
             discord: { build: env.BUILD_NUMBER ?? null, channel: env.RELEASE_CHANNEL ?? null, electron: (navigator.userAgent.match(/Electron\/([\d.]+)/) ?? [])[1] ?? null },
             locale: document.documentElement.lang || navigator.language, hudLanguage: currentLang(),
             hooks: { nav: !!NavTransitionTo, toasts: !!Toasts, storage: !!storage, orbGlyph: !!ORB_PATHS },
+            addons: Object.fromEntries([...ADDONS.values()].map(a => [a.id, a.live])),
             hud: { button: UI.mode, titleBarSlots: document.querySelectorAll('[class*="trailing_"]').length },
             state: {
                 stopped: state.stopped, paused: SETTINGS.paused, idle: state.timer == null, activeTasks: state.activeTasks,
@@ -1890,13 +2004,22 @@
     function renderPanel() {
         if (!UI.panel) return;
         const s = snapshot();
+        let addon = UI.view.startsWith("addon:") ? ADDONS.get(UI.view.slice(6)) : null;
+        if (UI.view.startsWith("addon:") && !addon?.live) { UI.view = "quests"; addon = null; } // switched off meanwhile
         const quests = UI.view === "quests", settings = UI.view === "settings", log = UI.view === "changelog", stats = UI.view === "stats";
         const show = (sel, on) => { UI.panel.querySelector(sel).style.display = on ? "" : "none"; };
         show(".qb-stats", quests); show(".qb-body", quests); show(".qb-pending", quests);
-        show(".qb-set", settings); show(".qb-log", log); show(".qb-stv", stats); show(".qb-foot", !quests);
+        show(".qb-set", settings); show(".qb-log", log); show(".qb-stv", stats); show(".qb-addon", !!addon); show(".qb-foot", !quests && !addon);
+        for (const a of ADDONS.values()) if (a.view && a !== addon) unmountAddonView(a); // left an addon view
+        const abKey = [...ADDONS.values()].filter(a => a.live).map(a => a.id + (a.attention ? "!" : "") + (a === addon ? "*" : "")).join(",") + currentLang();
+        if (UI.addonSig !== abKey) {
+            UI.addonSig = abKey;
+            UI.panel.querySelector(".qb-addon-btns").innerHTML = [...ADDONS.values()].filter(a => a.live).map(a =>
+                `<button class="qb-act ${a === addon ? "qb-on" : ""}" data-addon="${a.id}" title="${esc(t(a.id + ".title"))}">${svg(a.def.icon || ICON.sparkle, "", 15)}${a.attention ? '<span class="qb-nd qb-att"></span>' : ""}</button>`).join("");
+        }
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", settings || log);
         UI.panel.querySelector("#qb-statsbtn").classList.toggle("qb-on", stats);
-        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : settings ? "title.settings" : stats ? "title.stats" : "title.changelog");
+        UI.panel.querySelector(".qb-title").textContent = addon ? t(addon.id + ".title") : t(quests ? "title.quests" : settings ? "title.settings" : stats ? "title.stats" : "title.changelog");
         UI.panel.classList.toggle("qb-light", SETTINGS.theme === "light");
         if (UI.lang !== currentLang()) { // language changed: re-label the static chrome
             UI.lang = currentLang();
@@ -1912,6 +2035,19 @@
         }
 
         if (quests) renderQuests(s);
+        else if (addon) {
+            // The addon owns its view; it's mounted once per language/theme and unmounted when left.
+            const sig = `addon:${addon.id}:${currentLang()}:${SETTINGS.theme}`;
+            if (UI.sig !== sig || !addon.view) {
+                unmountAddonView(addon);
+                const box = UI.panel.querySelector(".qb-addon");
+                box.innerHTML = "";
+                // Claimed before mount(): anything mount() does that redraws the panel
+                // (attention(), say) must not start a second copy of the view.
+                UI.sig = sig; addon.view = {};
+                try { addon.view = addon.def.mount(box, addon.api) ?? {}; } catch (e) { console.warn(`[QuestAgent] Addon "${addon.id}" failed to open:`, e); addon.view = {}; }
+            }
+        }
         else if (settings) { if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); } }
         else if (stats) {
             // Re-render when the history changes, the day rolls over, or the language / "show older" state changes.
@@ -2028,6 +2164,7 @@
             <span class="qb-dot"></span><span class="qb-title">${esc(t("title.quests"))}</span>
             <span class="qb-status"></span>
             <button class="qb-act" id="qb-pauseall" title="${esc(t("head.pauseAll"))}">${svg(ICON.pause, "", 15)}</button>
+            <span class="qb-addon-btns"></span>
             <button class="qb-act" id="qb-statsbtn" title="${esc(t("head.stats"))}">${svg(ICON.chart, "", 15)}</button>
             <button class="qb-act" id="qb-scan" title="${esc(t("head.scan"))}">${svg(ICON.refresh, "", 15)}</button>
             <button class="qb-act" id="qb-gear" title="${esc(t("head.settings"))}">${svg(ICON.gear, "", 15, true)}<span class="qb-nd" style="display:none"></span></button>
@@ -2043,6 +2180,7 @@
           <div class="qb-set" style="display:none"></div>
           <div class="qb-log" style="display:none"></div>
           <div class="qb-stv" style="display:none"></div>
+          <div class="qb-addon" style="display:none"></div>
           <div class="qb-pending" id="qb-pending"></div>
           <div class="qb-foot" style="display:none"><span title="agent script v${AGENT_VERSION}">${esc(t("foot.version", { v: TOOL_VERSION ?? AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
         // Anchor to the top-right corner by default; dragging switches to left/top.
@@ -2055,6 +2193,12 @@
         p.querySelector("#qb-gear").onclick = () => { UI.view = UI.view === "settings" || UI.view === "changelog" ? "quests" : "settings"; UI.sig = null; renderPanel(); };
         const openStats = on => { UI.view = on ? "stats" : "quests"; UI.sig = null; syncHistory(); renderPanel(); };
         p.querySelector("#qb-statsbtn").onclick = () => openStats(UI.view !== "stats");
+        p.querySelector(".qb-addon-btns").addEventListener("click", e => {
+            const b = e.target.closest("[data-addon]");
+            if (!b) return;
+            const v = "addon:" + b.dataset.addon;
+            UI.view = UI.view === v ? "quests" : v; UI.sig = null; renderPanel();
+        });
         p.querySelector(".qb-stats").addEventListener("click", e => { if (e.target.closest("[data-go=stats]")) openStats(true); });
         p.querySelector(".qb-stv").addEventListener("click", async e => {
             const cmd = e.target.closest("[data-cmd]");
@@ -2108,7 +2252,9 @@
         const flip = opt => {
             const key = opt.dataset.opt;
             const on = !opt.classList.contains("qb-on");
-            if (key.startsWith("type:")) ops.setType(key.slice(5), on); else ops.setSetting(key, on);
+            if (key.startsWith("type:")) ops.setType(key.slice(5), on);
+            else if (key.startsWith("addon:")) { ops.setAddon(key.slice(6), on); return; }
+            else ops.setSetting(key, on);
             UI.sig = null; renderPanel();
         };
         setBox.addEventListener("click", e => {
@@ -2211,6 +2357,7 @@
             }
         } else {
             UI.open = false;
+            for (const a of ADDONS.values()) unmountAddonView(a);
             if (UI.tick != null) { clearInterval(UI.tick); UI.tick = null; }
             if (UI.keyHandler) { document.removeEventListener("keydown", UI.keyHandler); UI.keyHandler = null; }
             UI.panel?.remove();
@@ -2224,9 +2371,12 @@
         const badge = UI.btn.querySelector("#qb-badge");
         const ring = UI.btn.querySelector(".qb-ring");
         const working = s.running.length + s.queued.length;
-        const key = [s.claimable.length, SETTINGS.paused, working, currentLang()].join("|");
+        const att = addonAttention();
+        const key = [s.claimable.length, SETTINGS.paused, working, currentLang(), att].join("|");
         if (UI.btn.dataset.k === key) return; // nothing changed: no DOM writes
         UI.btn.dataset.k = key;
+        const attEl = UI.btn.querySelector("#qb-att");
+        if (attEl) attEl.style.display = att ? "" : "none";
         badge.classList.remove("qb-claim", "qb-work", "qb-hold");
         // Claimable wins: green + how many rewards are waiting. Then grey pause
         // glyph while everything is paused. Otherwise amber + spinning ring
@@ -2307,7 +2457,7 @@
         btn.setAttribute("tabindex", "0");
         btn.innerHTML = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
             <path fill="currentColor" d="M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9Zm1 3V4h4v1h-4Zm6.7 5.7-5 5a1 1 0 0 1-1.4 0l-2.5-2.5a1 1 0 1 1 1.4-1.4l1.8 1.79 4.3-4.3a1 1 0 0 1 1.4 1.41Z"/>
-          </svg><div id="qb-badge" style="display:none"></div>`;
+          </svg><div id="qb-badge" style="display:none"></div><div id="qb-att" style="display:none"></div>`;
         btn.onclick = () => togglePanel();
         btn.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePanel(); } };
 
@@ -2343,6 +2493,7 @@
     }
 
     function removeUI() {
+        for (const a of ADDONS.values()) unmountAddonView(a);
         try { UI.observer?.disconnect(); } catch (e) { /* ignore */ }
         if (UI.tick != null) { clearInterval(UI.tick); UI.tick = null; }
         if (UI.badgeTimer != null) { clearInterval(UI.badgeTimer); UI.badgeTimer = null; }
@@ -2375,6 +2526,7 @@
         disarmTimer();
         clearInterval(historyTimer);
         for (const t of state.tasks.values()) t.ctl.cancel("agent stopped");
+        for (const id of ADDONS.keys()) stopAddon(id);
         try { if (onQuestsRefresh) FluxDispatcher.unsubscribe("QUESTS_FETCH_CURRENT_QUESTS_SUCCESS", onQuestsRefresh); } catch (e) { /* ignore */ }
         removeUI();
         try { storageFrame?.remove(); } catch (e) { /* ignore */ }
@@ -2383,6 +2535,14 @@
 
     if (CONFIG.hud !== false) {
         try { installUI(); } catch (e) { console.warn("[QuestAgent] HUD failed to install:", e); }
+    }
+
+    // Addons that arrived while the agent was still hooking Discord queued
+    // themselves; from here on a push registers straight away.
+    {
+        const queued = Array.isArray(window.__questAgentAddons) ? window.__questAgentAddons : [];
+        window.__questAgentAddons = { push: (...defs) => { for (const d of defs) registerAddon(d); return ADDONS.size; } };
+        for (const d of queued) registerAddon(d);
     }
 
     window.__questAgent = {
@@ -2396,9 +2556,10 @@
         stats: orbStats, historyCsv, syncHistory,
         get orbGlyph() { return !!ORB_PATHS; }, // false = Discord's glyph wasn't found, the HUD uses its own
         diagnostics,
+        addons: { list: () => [...ADDONS.keys()], set: ops.setAddon, get: id => ADDONS.get(id)?.api ?? null },
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
-              show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }
+              show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) || /^addon:/.test(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }
     };
     console.log(`%c[QuestAgent] Agent v${AGENT_VERSION}${TOOL_VERSION ? " (tool v" + TOOL_VERSION + ")" : ""} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     if (SETTINGS.paused) console.log("[QuestAgent] Paused (from saved settings). Resume from the HUD.");

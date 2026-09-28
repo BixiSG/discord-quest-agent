@@ -157,6 +157,37 @@ clock. "Orbs won" on the main view comes from the same record, so it never drops
 quests expire. Discord doesn't hand the client a live orb balance, so none of this is your
 wallet.
 
+### Addons: Orbling, a pixel pet
+
+<p align="center">
+  <img src="docs/orbling-day.png" width="384" alt="Orbling by day: a grown-up Orbling with a crown chasing a ball in its room">
+  <img src="docs/orbling-night.png" width="384" alt="Orbling at night: a teen Orbling asleep on its bed under the lamp light">
+</p>
+
+Settings > **Addons** holds optional extras; each is off until you switch it on. The first
+one is **Orbling**, a tamagotchi-style pet that lives in the panel (paw button in the header
+once it's on). It's fed by the agent's work: every orb quest the agent finishes drops a
+*star snack* (under 500 orbs) or an *orb feast* (500+) into its bag, and claiming rewards
+makes it celebrate.
+
+- Tap the egg to hatch it, then name it. It grows from baby to kid, teen and adult; how you
+  raise it decides the adult form (Gourmet, Sprinter, Dapper, Classic, or the rare Astral).
+- Four needs (food, fun, energy, clean) drain slowly by the clock, gently at night, when it
+  sleeps. It never dies and nothing is lost while you're away; a neglected Orbling just gets
+  sad and stops growing. Berries are free, quest food is the good stuff.
+- Play with a ball or a 20-second **Orb catch** game (best score kept), clean up after it,
+  put it down for a nap, and open the **daily gift** to build a streak.
+- Hats to collect (hatching, growing up, 3- and 7-day streaks, a high Orb catch score, a
+  seasonal one) and an **album**: after three days as an adult an Orbling can leave on an
+  adventure, and a new egg arrives in a colour you haven't collected yet.
+- A present appears in its room while quest rewards wait to be claimed (click it for the
+  Quests page). A pink dot on the title-bar button means it wants something; an optional
+  reminder (at most every 8 hours, never at night) says what.
+
+It's pixel art drawn in code, and it costs nothing while the panel is closed: needs are
+worked out from timestamps when you look, and the room is only painted while it's on screen.
+Its state lives inside Discord next to the settings.
+
 ### Languages
 
 The HUD follows Discord's own language when it has a translation for it, and you can pin

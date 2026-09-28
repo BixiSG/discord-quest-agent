@@ -338,6 +338,19 @@ function Get-AgentPayload {
     return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`nwindow.__questAgentChangelog = $changelogJson;`n$js"
 }
 
+# Addons (src\addons\*.js) are evaluated one by one after the agent, so a broken
+# addon can't take the agent down with it. Each registers itself with the agent's
+# addon hub, or queues itself while the agent is still hooking Discord.
+function Invoke-AddonInjection {
+    param([string]$WsUrl)
+    foreach ($f in @(Get-ChildItem -Path (Join-Path $PSScriptRoot "addons") -Filter *.js -ErrorAction SilentlyContinue | Sort-Object Name)) {
+        try {
+            $resp = Invoke-CdpEval -WsUrl $WsUrl -Expression (Get-Content -Raw -Path $f.FullName -Encoding UTF8)
+            if ($resp -match '"exceptionDetails"') { Write-Log "Addon $($f.Name) failed to load in Discord." "Yellow" }
+        } catch { Write-Log "Addon $($f.Name) could not be injected: $($_.Exception.Message)" "Yellow" }
+    }
+}
+
 # Returns: notarget | present | injected | error
 function Invoke-Injection {
     $t = Find-DiscordTarget
@@ -351,6 +364,7 @@ function Invoke-Injection {
             Write-Log $resp "DarkGray"
             return "error"
         }
+        Invoke-AddonInjection -WsUrl $t.webSocketDebuggerUrl
         return "injected"
     } catch { return "notarget" }
 }

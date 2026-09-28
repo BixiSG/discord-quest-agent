@@ -4,6 +4,13 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.7.0 - 2026-09-28
+
+- Addons: Settings > Addons lists optional extras, each off until you switch it on.
+- The first addon is Orbling, a pixel pet in the panel. Every orb quest the agent finishes drops food for it, and claiming rewards makes it celebrate. Hatch it, name it, raise it through four stages to one of five adult forms.
+- Needs drain slowly by the clock and it sleeps at night; it never dies. Play with a ball or the 20-second Orb catch game, open a daily gift for a streak, collect hats, and send grown Orblings on an adventure into an album.
+- A pink dot on the title-bar button when it needs something, and an optional reminder at most every 8 hours, never at night.
+
 ## 1.6.1 - 2026-09-28
 
 - Quest rows whose game art fails to load show the task icon again. The fallback never worked inside Discord, whose security policy blocks the inline handler it used.
