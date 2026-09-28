@@ -65,8 +65,18 @@ The badge tells you what's going on without opening anything:
 Click it for the panel in the screenshot above: four counters across the top, then one row
 per quest with the game's own artwork, the orb reward, a progress bar and the time left.
 Rows are grouped into *Ready to claim*, *Running*, *Queued*, *Available* (only when
-auto-accept is off) and *Skipped* (with a reason). Drag the header to move it, press Esc to
-close it. Clicking a quest row jumps straight to the Quests page, where claiming happens.
+auto-accept is off) and *Skipped* (with a reason). Drag the header to move it (it stays
+where you put it), press Esc to close it. Clicking a quest row, or pressing Enter on it, jumps
+straight to the Quests page, where claiming happens.
+
+A reward has to be claimed within 30 days of the quest ending, or it's gone. In the last
+week a *Ready to claim* row counts down ("claim within 3 d", red on the last day), and when
+one has under 48 hours left the agent sends one reminder. A queued quest that ends within
+two days says so too. While idle, the header shows when the agent last checked for quests.
+
+The orb icon is Discord's own: the agent reads it from your running client when it starts,
+so nothing of Discord's ships with this project. If a Discord update moves it, the panel
+falls back to its own diamond.
 
 ### Controls
 
@@ -74,6 +84,7 @@ Hover a row for its buttons:
 
 | Row is... | Buttons |
 | --- | --- |
+| Ready to claim | **Claim** opens the Quests page |
 | Running | **Pause** / **Resume** the task, **Stop** (cancels it and skips the quest) |
 | Queued | **Run now** (takes over the one game/stream slot from whatever is using it; that one goes back to the queue), **Skip** |
 | Available | **Accept and run**, **Skip** |

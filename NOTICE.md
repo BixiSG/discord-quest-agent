@@ -20,6 +20,11 @@ The agent runs as a script inside a Discord client that the user already install
 themselves, using the Chrome DevTools Protocol that Electron exposes. Nothing on disk is
 altered. Remove the tool and the client is byte-for-byte unchanged.
 
+The panel shows Discord's own orb icon. It is not part of this repository: at runtime the
+agent reads the icon's shape from the Discord client already loaded on the user's machine
+and draws it inside that same client. When it can't find it, the panel uses this project's
+own icon.
+
 ## Screenshots
 
 Images in `docs/` show only this project's own interface, rendered with invented placeholder

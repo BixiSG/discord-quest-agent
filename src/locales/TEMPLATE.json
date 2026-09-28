@@ -158,5 +158,18 @@
   "stats.copied.one": "Copied {n} quest",
   "stats.copied.other": "Copied {n} quests",
   "stats.copyFailed": "Could not copy",
-  "stats.note": "Days follow your PC's clock. History starts with the quests Discord still listed when it was first recorded."
+  "stats.note": "Days follow your PC's clock. History starts with the quests Discord still listed when it was first recorded.",
+  "tool.claim": "Claim on the Quests page",
+  "stats.chipExpired": "expired",
+  "stats.legendExpired": "expired unclaimed",
+  "status.idleChecked": "idle, checked {ago}",
+  "ago.now": "just now",
+  "row.claimBy": "claim within {left}",
+  "row.endsIn": "ends in {left}",
+  "unit.d": "{n} d",
+  "unit.h": "{n} h",
+  "unit.m": "{n} min",
+  "notify.expiringTitle": "Unclaimed reward expires soon",
+  "notify.expiringBody": "{quest}: claim it within {left} or it's gone. Discover → Quests.",
+  "notify.expiringMany": "{n} unclaimed rewards expire within 2 days. Claim them in Discover → Quests."
 }

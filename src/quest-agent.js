@@ -30,7 +30,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 16;
+    const AGENT_VERSION = 17;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -45,6 +45,35 @@
     // Lets the agent run against mock data inside a live client. Absent in
     // normal use.
     const DEV = (typeof window.__questAgentDev === "object" && window.__questAgentDev) || null;
+
+    /** Discord's own orb glyph, read out of the client at runtime so the HUD
+     *  matches Discord without this project shipping Discord artwork. Finds a
+     *  component Discord passes as `orbIconHook`, resolves which module it came
+     *  from, and returns that icon's path data (validated as plain SVG path
+     *  syntax). null when Discord reshuffles it: the HUD keeps its own diamond. */
+    function findOrbGlyph(wpRequire) {
+        const factories = wpRequire?.m ?? {};
+        const glyphFrom = id => {
+            const src = factories[id] ? String(factories[id]) : "";
+            if (!src.includes('viewBox:"0 0 24 24"')) return null;
+            const paths = [];
+            for (const m of src.matchAll(/(fillRule:"evenodd",)?d:"([^"]{1,4000})"/g)) {
+                if (!/^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]+$/.test(m[2])) return null;
+                paths.push({ d: m[2], evenodd: !!m[1] });
+            }
+            return paths.length && paths.length <= 6 ? paths : null;
+        };
+        for (const id of Object.keys(factories)) {
+            const src = String(factories[id]);
+            if (!src.includes("orbIconHook:()=>")) continue;
+            const use = src.match(/orbIconHook:\(\)=>\(0,[\w$]+\.jsxs?\)\(([\w$]+)\.[\w$]+/);
+            if (!use) continue;
+            const decl = src.match(new RegExp("[^\\w$]" + use[1].replace(/\$/g, "\\$") + "=[\\w$]+\\((\\d+)\\)"));
+            const paths = decl && glyphFrom(decl[1]);
+            if (paths) return paths;
+        }
+        return null;
+    }
 
     // ---- Config ---------------------------------------------------------
     // Defaults below are overridden by config.json, which the launcher injects
@@ -119,7 +148,7 @@
         "row.notAccepted": "not accepted", "row.minLeft": "~{n} min left",
         "tool.pause": "Pause", "tool.resume": "Resume", "tool.resumeGlobal": "Resume (lifts the global pause)",
         "tool.stop": "Stop and skip", "tool.run": "Run now", "tool.skip": "Skip", "tool.accept": "Accept and run",
-        "tool.unskip": "Put back in the queue", "tool.retry": "Try again",
+        "tool.unskip": "Put back in the queue", "tool.retry": "Try again", "tool.claim": "Claim on the Quests page",
         "head.pauseAll": "Pause everything", "head.resumeAll": "Resume everything", "head.scan": "Scan for quests now",
         "head.settings": "Settings", "head.close": "Close",
         "empty.title": "Nothing to do right now.", "empty.sub": "Waiting for Discord to post new quests.",
@@ -159,6 +188,13 @@
         "stats.copied.one": "Copied {n} quest", "stats.copied.other": "Copied {n} quests",
         "stats.copyFailed": "Could not copy",
         "stats.note": "Days follow your PC's clock. History starts with the quests Discord still listed when it was first recorded.",
+        "stats.chipExpired": "expired", "stats.legendExpired": "expired unclaimed",
+        "status.idleChecked": "idle, checked {ago}", "ago.now": "just now",
+        "row.claimBy": "claim within {left}", "row.endsIn": "ends in {left}",
+        "unit.d": "{n} d", "unit.h": "{n} h", "unit.m": "{n} min",
+        "notify.expiringTitle": "Unclaimed reward expires soon",
+        "notify.expiringBody": "{quest}: claim it within {left} or it's gone. Discover \u2192 Quests.",
+        "notify.expiringMany": "{n} unclaimed rewards expire within 2 days. Claim them in Discover \u2192 Quests.",
         "task.WATCH_VIDEO.label": "video", "task.WATCH_VIDEO.title": "Watch a video",
         "task.WATCH_VIDEO.desc": "Trailer and video quests. Fully automatic.",
         "task.WATCH_VIDEO_ON_MOBILE.label": "mobile", "task.WATCH_VIDEO_ON_MOBILE.title": "Watch on mobile",
@@ -301,11 +337,13 @@
 
     let ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api;
     let NavTransitionTo; // optional: quest rows navigate to the Quests page; agent works without it
+    let WP = null;       // webpack require, kept for the lazy orb-glyph lookup
     let missing = ["not attempted"];
     for (let attempt = 1; attempt <= 40; attempt++) {
         try {
             const wpRequire = webpackChunkdiscord_app.push([[Symbol()], {}, r => r]);
             webpackChunkdiscord_app.pop();
+            WP = wpRequire;
 
             const find = pred => {
                 for (const m of Object.values(wpRequire.c)) {
@@ -417,7 +455,9 @@
         skipped: [],
         hidden: [],          // quest ids dismissed from the Skipped group (persisted)
         seenVersion: null,   // tool version whose changelog the user has opened
-        toastedVersion: null // tool version the "updated" toast was shown for
+        toastedVersion: null, // tool version the "updated" toast was shown for
+        panelPos: null,      // { top, left } after the panel was dragged
+        reminded: []         // quest ids already warned about an expiring reward
     };
     let hadSavedSettings = false; // false on a fresh install: no "updated" toast then
     function loadSettings() {
@@ -442,6 +482,8 @@
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
             if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
+            if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
+            if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
         } catch (e) { console.warn("[QuestAgent] Could not read saved settings:", e); }
     }
     function saveSettings() {
@@ -464,6 +506,10 @@
     const LEDGER = { quests: Object.create(null), rev: 0 }; // keyed by quest id; null prototype so no id can collide with Object keys
     const agentFinished = new Set(); // quest ids this agent ran to 100% this session
     const tsOf = v => { const n = typeof v === "number" ? v : Date.parse(v ?? ""); return Number.isFinite(n) && n > 0 ? n : null; };
+    /** Last moment the reward can be claimed (Discord: 30 days after the quest ends). */
+    const claimByOf = q => tsOf(q.config?.rewardsConfig?.rewardsExpireAt);
+    /** Finished, never claimed, and past the claim deadline: the reward is gone. */
+    const isLost = e => !e.claimedAt && e.claimBy != null && e.claimBy < Date.now();
     function loadLedger() {
         if (!storage) return;
         try {
@@ -511,6 +557,7 @@
             secs: Number(tasks[task]?.target) || old?.secs || 0,
             completedAt,
             claimedAt: tsOf(us.claimedAt) ?? old?.claimedAt ?? null,
+            claimBy: claimByOf(q) ?? old?.claimBy ?? null,
             byAgent: !!(old?.byAgent || agentFinished.has(q.id))
         };
         if (old && JSON.stringify(old) === JSON.stringify(e)) return false;
@@ -547,26 +594,50 @@
         const list = Object.values(LEDGER.quests).filter(e => tsOf(e.completedAt)).sort((a, b) => b.completedAt - a.completedAt);
         const orbs = arr => arr.reduce((s, e) => s + (Number(e.orbs) || 0), 0);
         const since = from => { const a = list.filter(e => e.completedAt >= from); return { orbs: orbs(a), n: a.length }; };
-        const claimed = list.filter(e => e.claimedAt);
+        const claimed = list.filter(e => e.claimedAt), lost = list.filter(isLost);
         const secs = list.reduce((s, e) => s + (Number(e.secs) || 0), 0);
         const days = new Map();
         for (const e of list) {
             const k = dayKey(e.completedAt);
             let d = days.get(k);
-            if (!d) { d = { key: k, ts: e.completedAt, orbs: 0, claimedOrbs: 0, entries: [] }; days.set(k, d); }
+            if (!d) { d = { key: k, ts: e.completedAt, orbs: 0, claimedOrbs: 0, lostOrbs: 0, entries: [] }; days.set(k, d); }
             d.orbs += Number(e.orbs) || 0;
             if (e.claimedAt) d.claimedOrbs += Number(e.orbs) || 0;
+            else if (isLost(e)) d.lostOrbs += Number(e.orbs) || 0;
             d.entries.push(e);
         }
         return {
             count: list.length,
             first: list.length ? list[list.length - 1].completedAt : null,
             today: since(dayStart(0)), week: since(dayStart(6)), month: since(dayStart(29)),
-            claimedOrbs: orbs(claimed), waitingOrbs: orbs(list) - orbs(claimed),
+            claimedOrbs: orbs(claimed), waitingOrbs: orbs(list) - orbs(claimed) - orbs(lost),
             secs, days: [...days.values()], list
         };
     }
-    const ledgerClaimedOrbs = () => Object.values(LEDGER.quests).reduce((s, e) => s + (e.claimedAt ? Number(e.orbs) || 0 : 0), 0);
+    let claimedMemo = { rev: -1, v: 0 }; // the panel asks every second; the ledger changes rarely
+    const ledgerClaimedOrbs = () => {
+        if (claimedMemo.rev !== LEDGER.rev) claimedMemo = { rev: LEDGER.rev, v: Object.values(LEDGER.quests).reduce((s, e) => s + (e.claimedAt ? Number(e.orbs) || 0 : 0), 0) };
+        return claimedMemo.v;
+    };
+    /** "3 d" / "5 h" / "20 min" until ms from now. */
+    const fmtLeft = ms => {
+        const m = Math.max(1, Math.round(ms / 60000));
+        return m >= 1440 ? t("unit.d", { n: fmtNum(Math.floor(m / 1440)) }) : m >= 60 ? t("unit.h", { n: fmtNum(Math.floor(m / 60)) }) : t("unit.m", { n: fmtNum(m) });
+    };
+    /** One reminder per quest when an unclaimed reward has under 48 h left (a batch becomes one notification). */
+    function remindExpiring() {
+        const now = Date.now(), done = new Set(SETTINGS.reminded), due = [];
+        for (const q of allQuests()) {
+            const by = claimByOf(q);
+            if (!q.userStatus?.completedAt || q.userStatus?.claimedAt || !by || by <= now || by - now > 48 * 3600e3 || done.has(q.id)) continue;
+            due.push({ q, left: by - now });
+        }
+        if (!due.length) return;
+        SETTINGS.reminded = [...SETTINGS.reminded, ...due.map(x => x.q.id)].slice(-200);
+        saveSettings();
+        if (due.length === 1) notifyRaw(t("notify.expiringTitle"), t("notify.expiringBody", { quest: due[0].q.config?.messages?.questName ?? due[0].q.id, left: fmtLeft(due[0].left) }), "info");
+        else notifyRaw(t("notify.expiringTitle"), t("notify.expiringMany", { n: due.length }), "info");
+    }
     /** The ledger as CSV (one row per quest, newest first). */
     function ledgerCsv() {
         const q = v => { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -591,6 +662,7 @@
         scanning: false,
         activeTasks: 0,          // tasks currently running (idle check waits for 0)
         timer: null,             // rescan interval; null while idle
+        lastScan: null,          // when the last scan finished (shown while idle)
         stopped: false           // set by stop(); scans become no-ops
     };
 
@@ -937,6 +1009,7 @@
         } finally {
             state.scanning = false;
         }
+        state.lastScan = Date.now();
         syncLedger();
         maybeIdle();
         refreshUI();
@@ -1143,6 +1216,27 @@
     const svg = (path, cls, size, evenodd) =>
         `<svg class="${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="currentColor"${evenodd ? ' fill-rule="evenodd"' : ""} d="${path}"/></svg>`;
 
+    let ORB_PATHS = null; // Discord's orb glyph, once findOrbGlyph has run
+    /** The orb glyph: Discord's own when it was found in the client, else our diamond. */
+    const orbSvg = size => ORB_PATHS
+        ? `<svg class="qb-orb" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${ORB_PATHS.map(p =>
+            `<path fill="currentColor"${p.evenodd ? ' fill-rule="evenodd" clip-rule="evenodd"' : ""} d="${p.d}"/>`).join("")}</svg>`
+        : svg(ICON.orb, "qb-orb", size);
+    /** 380 -> "6:20", 3725 -> "1:02:05". */
+    const fmtClock = secs => {
+        const x = Math.max(0, Math.round(secs)), h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60);
+        return h ? `${h}:${pad2(m)}:${pad2(x % 60)}` : `${m}:${pad2(x % 60)}`;
+    };
+    /** "just now" / "5 min ago" / "3 hr ago" in the HUD language. */
+    const fmtAgo = ms => {
+        const sec = (Date.now() - ms) / 1000;
+        if (sec < 60) return t("ago.now");
+        try {
+            const rtf = new Intl.RelativeTimeFormat(currentLang(), { numeric: "auto", style: "short" });
+            return sec < 3600 ? rtf.format(-Math.floor(sec / 60), "minute") : sec < 86400 ? rtf.format(-Math.floor(sec / 3600), "hour") : rtf.format(-Math.floor(sec / 86400), "day");
+        } catch (e) { return fmtLeft(sec * 1000); }
+    };
+
     const TASK_ICON = { WATCH_VIDEO: ICON.video, WATCH_VIDEO_ON_MOBILE: ICON.mobile, PLAY_ON_DESKTOP: ICON.desktop, STREAM_ON_DESKTOP: ICON.stream, PLAY_ACTIVITY: ICON.activity };
     /** Icon + translated texts for a task type (unknown types get a generic label). */
     const taskMeta = task => SUPPORTED.includes(task)
@@ -1177,6 +1271,7 @@
                 expires: q.config?.expiresAt,
                 tile: rel ? `https://cdn.discordapp.com/${rel}` : null,
                 color: q.config?.colors?.primary ?? null,
+                claimBy: claimByOf(q),
                 paused: !!(t && t.ctl.paused),
                 userPaused: !!(t && t.ctl.heldBy("user")),
                 why: null
@@ -1188,7 +1283,11 @@
 
         for (const q of allQuests()) {
             if (q.userStatus?.claimedAt) { orbsClaimed += orbsOf(q); continue; }
-            if (q.userStatus?.completedAt) { claimable.push(row(q)); orbsPending += orbsOf(q); continue; }
+            if (q.userStatus?.completedAt) {
+                const by = claimByOf(q);
+                if (by && by < Date.now()) continue; // claim window closed: the reward is gone
+                claimable.push(row(q)); orbsPending += orbsOf(q); continue;
+            }
             if (!live(q)) continue;
             const r = row(q);
             if (state.tasks.has(q.id)) { running.push(r); continue; }
@@ -1231,10 +1330,11 @@
 #qb-panel .qb-head{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;cursor:grab;
  border-bottom:1px solid var(--qb-border);user-select:none}
 #qb-panel .qb-head.qb-drag{cursor:grabbing}
-#qb-panel .qb-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--qb-muted)}
-#qb-panel .qb-dot.qb-live{animation:qb-pulse 2.2s ease-out infinite}
-@keyframes qb-pulse{0%{box-shadow:0 0 0 0 rgba(240,178,50,.55)}70%{box-shadow:0 0 0 7px rgba(240,178,50,0)}
- 100%{box-shadow:0 0 0 0 rgba(240,178,50,0)}}
+#qb-panel .qb-dot{position:relative;width:8px;height:8px;border-radius:50%;flex:none;background:var(--qb-muted)}
+/* pulse ring: transform + opacity only, so it never repaints the panel */
+#qb-panel .qb-dot.qb-live::after{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;
+ animation:qb-pulse 2.2s ease-out infinite;will-change:transform,opacity}
+@keyframes qb-pulse{from{transform:scale(1);opacity:.6}to{transform:scale(2.8);opacity:0}}
 #qb-panel .qb-title{font-weight:600;font-size:14px}
 #qb-panel .qb-status{flex:1;min-width:0;font-size:12px;color:var(--qb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #qb-panel .qb-status.qb-paused{color:var(--qb-amber)}
@@ -1271,6 +1371,15 @@
 #qb-panel .qb-row{position:relative;display:flex;gap:10px;padding:7px 12px 7px 14px;transition:background .1s;cursor:pointer}
 #qb-panel .qb-row:hover{background:var(--qb-hover)}
 #qb-panel .qb-row.qb-dim{opacity:.7}
+#qb-panel .qb-row.qb-live::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;
+ background:var(--qb-acc,var(--qb-brand))}
+#qb-panel .qb-row.qb-flash{animation:qb-flash 1.6s ease-out}
+@keyframes qb-flash{from{background:rgba(35,165,90,.24)}to{background:transparent}}
+#qb-panel .qb-tw{position:relative;flex:none;width:32px;height:32px;margin-top:1px}
+#qb-panel .qb-tw .qb-tile{margin-top:0}
+#qb-panel .qb-tick{position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;border-radius:50%;background:var(--qb-green);color:#fff;
+ display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--qb-bg)}
+#qb-panel .qb-row:hover .qb-tick{box-shadow:0 0 0 2px var(--qb-bg3)}
 #qb-panel .qb-row.qb-dim:hover{opacity:1}
 #qb-panel .qb-tile{width:32px;height:32px;border-radius:var(--qb-rs);flex:none;object-fit:cover;margin-top:1px;
  background:var(--qb-bg2)}
@@ -1299,10 +1408,14 @@
 #qb-panel .qb-sub{display:flex;justify-content:space-between;gap:8px;font-size:11px;
  color:var(--qb-muted);margin-top:4px;font-variant-numeric:tabular-nums}
 #qb-panel .qb-sub .qb-rt.qb-hold{color:var(--qb-amber)}
+#qb-panel .qb-sub .qb-rt.qb-urgent{color:var(--qb-red);font-weight:600}
+#qb-panel .qb-row:focus-visible,#qb-panel button:focus-visible,#qb-panel [tabindex]:focus-visible{outline:2px solid var(--qb-brand);outline-offset:-2px}
+#qb-panel .qb-orb{flex:none}
 #qb-panel .qb-empty{padding:28px 16px;text-align:center;color:var(--qb-muted);font-size:12px;line-height:1.6}
 #qb-panel .qb-empty svg{opacity:.35;margin-bottom:8px}
 #qb-panel .qb-pending{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--qb-amber);padding:0 14px}
-#qb-panel .qb-pending:not(:empty){padding:9px 14px;border-top:1px solid var(--qb-border);background:rgba(240,178,50,.05)}
+#qb-panel .qb-pending:not(:empty){padding:9px 14px;border-top:1px solid var(--qb-border);background:rgba(240,178,50,.05);cursor:pointer}
+#qb-panel .qb-pending:not(:empty):hover{background:rgba(240,178,50,.1)}
 /* settings view */
 #qb-panel .qb-set{overflow-y:auto;padding:4px 0 8px}
 #qb-panel .qb-set .qb-sec{padding-top:12px}
@@ -1389,11 +1502,14 @@
 #qb-panel .qb-chart{display:flex;align-items:flex-end;gap:4px;height:78px;padding:4px 14px 0}
 #qb-panel .qb-colw{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:default}
 #qb-panel .qb-col{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:3px 3px 1px 1px;overflow:hidden;background:var(--qb-bg2);
- transition:height .4s cubic-bezier(.4,0,.2,1)}
+ transform-origin:bottom;animation:qb-grow .45s cubic-bezier(.2,.8,.3,1) both}
+@keyframes qb-grow{from{transform:scaleY(0)}}
 #qb-panel .qb-col.qb-item{background:var(--qb-brand)}
 #qb-panel .qb-col i{display:block;flex:none}
 #qb-panel .qb-col .qb-c1{background:var(--qb-green)}
 #qb-panel .qb-col .qb-c2{background:var(--qb-amber)}
+#qb-panel .qb-col .qb-c3{background:var(--qb-off)}
+#qb-panel .qb-chip.qb-lost{color:var(--qb-muted);background:var(--qb-hover2)}
 #qb-panel .qb-colw:hover .qb-col{filter:brightness(1.15)}
 #qb-panel .qb-days{display:flex;gap:4px;padding:4px 14px 0;font-size:9.5px;color:var(--qb-muted);font-variant-numeric:tabular-nums}
 #qb-panel .qb-days span{flex:1;min-width:0;text-align:center}
@@ -1442,7 +1558,9 @@
 #qb-btn .qb-ring{position:absolute;inset:1px;border-radius:50%;box-sizing:border-box;
  border:1.5px solid rgba(240,178,50,.25);border-top-color:#f0b232;
  animation:qb-spin .9s linear infinite;pointer-events:none}
-@keyframes qb-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`;
+@keyframes qb-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+/* Windows "show animations" off: keep every state, drop the motion */
+@media (prefers-reduced-motion:reduce){#qb-panel,#qb-panel *,#qb-panel *::before,#qb-panel *::after,#qb-toast,#qb-btn .qb-ring{animation:none!important;transition:none!important}}`;
         UI.style = document.createElement("style");
         UI.style.id = "qb-style";
         UI.style.textContent = css;
@@ -1472,6 +1590,8 @@
     /** Hover actions for one row, by group. */
     function toolsFor(r, group) {
         switch (group) {
+            case "claimable":
+                return tool("claim", t("tool.claim"), ICON.open, "qb-go");
             case "running":
                 return (r.paused ? tool("resume", t(r.userPaused ? "tool.resume" : "tool.resumeGlobal"), ICON.play, "qb-go") : tool("pause", t("tool.pause"), ICON.pause)) +
                     tool("stop", t("tool.stop"), ICON.stop, "qb-danger");
@@ -1490,19 +1610,21 @@
     }
 
     /** Static markup for one quest row; dynamic bits are filled by updateRow. */
-    function rowHtml(r, group) {
+    function rowHtml(r, group, fresh) {
         const meta = taskMeta(r.task);
         const tile = r.tile
             ? `<img class="qb-tile" src="${esc(r.tile)}" alt="" loading="lazy"
                  onerror="this.outerHTML='<div class=&quot;qb-tile qb-tile-fb&quot;></div>'">`
             : `<div class="qb-tile qb-tile-fb">${svg(meta.icon, "", 16)}</div>`;
         const tools = toolsFor(r, group);
-        return `<div class="qb-row ${group === "blocked" ? "qb-dim" : ""}" data-qid="${esc(r.id)}" title="${esc(t("row.open"))}">
-            ${tile}
+        const cls = [group === "blocked" && "qb-dim", group === "running" && "qb-live", fresh && "qb-flash"].filter(Boolean).join(" ");
+        const accent = group === "running" && /^#[0-9a-f]{3,8}$/i.test(r.color ?? "") ? ` style="--qb-acc:${r.color}"` : "";
+        return `<div class="qb-row ${cls}" data-qid="${esc(r.id)}" title="${esc(t("row.open"))}" tabindex="0"${accent}>
+            <span class="qb-tw">${tile}${group === "claimable" ? `<span class="qb-tick">${svg(ICON.check, "", 10)}</span>` : ""}</span>
             <div class="qb-main">
               <div class="qb-r1">
                 <span class="qb-name" title="${esc(r.name)}">${esc(r.name)}</span>
-                ${r.orbs ? `<span class="qb-orbs ${tools ? "qb-hide-hover" : ""}">${svg(ICON.orb, "", 9)}${r.orbs}</span>` : ""}
+                ${r.orbs ? `<span class="qb-orbs ${tools ? "qb-hide-hover" : ""}">${orbSvg(11)}${r.orbs}</span>` : ""}
                 ${tools ? `<span class="qb-tools">${tools}</span>` : ""}
               </div>
               <div class="qb-bar"><div class="qb-fill"></div></div>
@@ -1522,12 +1644,20 @@
         fill.classList.toggle("qb-active", liveRow && r.pct < 100);
         fill.classList.toggle("qb-hold", group === "running" && r.paused);
         const mins = r.target > r.value ? Math.ceil((r.target - r.value) / 60) : 0;
-        el.querySelector(".qb-lt").textContent = `${meta.label}  ${r.value}/${r.target}s`;
+        el.querySelector(".qb-lt").textContent = r.supported
+            ? `${meta.label} \u00b7 ${fmtClock(r.value)} / ${fmtClock(r.target)}` : `${meta.label} \u00b7 ${r.value}/${r.target}`;
+        const now = Date.now();
+        // Claim deadline shows in the last week (red in the last day); a queued quest's end in its last two days.
+        const claimLeft = group === "claimable" && r.claimBy ? r.claimBy - now : Infinity;
+        const endLeft = (group === "queued" || group === "available") && r.expires ? new Date(r.expires).getTime() - now : Infinity;
         const rt = el.querySelector(".qb-rt");
-        rt.classList.toggle("qb-hold", group === "running" && r.paused);
+        rt.classList.toggle("qb-hold", (group === "running" && r.paused) || (endLeft < 48 * 3600e3) || (claimLeft < 7 * 864e5 && claimLeft >= 864e5));
+        rt.classList.toggle("qb-urgent", claimLeft < 864e5);
         rt.textContent =
             r.why ? reasonText(r.why)
             : group === "running" && r.paused ? t("row.paused")
+            : claimLeft < 7 * 864e5 ? t("row.claimBy", { left: fmtLeft(claimLeft) })
+            : endLeft < 48 * 3600e3 ? t("row.endsIn", { left: fmtLeft(endLeft) })
             : r.pct >= 100 ? t("row.complete")
             : group === "available" ? t("row.notAccepted")
             : mins ? t("row.minLeft", { n: mins }) : "";
@@ -1542,7 +1672,7 @@
         }
         if (s.claimable.length) return t("status.ready", { n: s.claimable.length });
         if (s.queued.length) return t("status.waitingSlot");
-        return t("status.idle");
+        return state.lastScan ? t("status.idleChecked", { ago: fmtAgo(state.lastScan) }) : t("status.idle");
     }
 
     function renderQuests(s) {
@@ -1558,11 +1688,14 @@
         // Rebuild only when the set of rows (or their tool state, or the language) changes; otherwise patch in place.
         const sig = currentLang() + "|" + groups.map(([, rows, key]) => key + ":" + rows.map(r => r.id + (r.paused ? "p" : "") + (r.why ?? "")).join(",")).join("|");
         if (sig !== UI.sig) {
+            // Rewards that turned claimable since the list was last drawn flash once.
+            const fresh = new Set(UI.claimSeen ? s.claimable.map(r => r.id).filter(id => !UI.claimSeen.has(id)) : []);
+            UI.claimSeen = new Set(s.claimable.map(r => r.id));
             body.innerHTML = groups.length
                 ? groups.map(([title, rows, key]) =>
                     `<div class="qb-sec">${esc(title)}<span class="qb-count">${rows.length}</span></div>` +
-                    rows.map(r => rowHtml(r, key)).join("")).join("")
-                : `<div class="qb-empty">${svg(ICON.orb, "", 26)}<br>${esc(t("empty.title"))}<br>${esc(t("empty.sub"))}</div>`;
+                    rows.map(r => rowHtml(r, key, key === "claimable" && fresh.has(r.id))).join("")).join("")
+                : `<div class="qb-empty">${orbSvg(26)}<br>${esc(t("empty.title"))}<br>${esc(t("empty.sub"))}</div>`;
             UI.sig = sig;
         }
         for (const [, rows, key] of groups) {
@@ -1663,7 +1796,7 @@
     function renderStats() {
         const box = UI.panel.querySelector(".qb-stv");
         const st = ledgerStats();
-        const orbTxt = (n, size) => `${svg(ICON.orb, "", size ?? 10)}${esc(fmtNum(n))}`;
+        const orbTxt = (n, size) => `${orbSvg(size ?? 12)}${esc(fmtNum(n))}`;
         const kpi = (value, label, sub, cls, subCls) =>
             `<div class="qb-kpi ${cls ?? ""}"><b>${value}</b><span>${esc(label)}</span>${sub ? `<i class="${subCls ?? ""}">${esc(sub)}</i>` : ""}</div>`;
         const zero = n => n ? "" : "qb-zero";
@@ -1690,35 +1823,36 @@
         for (let i = 13; i >= 0; i--) { const ts = dayStart(i); bars.push({ ts, d: byKey.get(dayKey(ts)) }); }
         const max = Math.max(0, ...bars.map(b => b.d?.orbs ?? 0));
         const chart = `<div class="qb-sec">${esc(t("stats.chart"))}</div>
-          <div class="qb-chart">${bars.map(({ ts, d }) => {
+          <div class="qb-chart">${bars.map(({ ts, d }, i) => {
               const orbs = d?.orbs ?? 0, n = d?.entries.length ?? 0;
               const h = orbs && max ? Math.max(5, Math.round((orbs / max) * 100)) : n ? 5 : 0;
-              const c1 = orbs ? Math.round((d.claimedOrbs / orbs) * 100) : 0;
+              const c1 = orbs ? Math.round((d.claimedOrbs / orbs) * 100) : 0, c3 = orbs ? Math.round((d.lostOrbs / orbs) * 100) : 0;
               const tip = t("stats.bar", { date: fmtDate(ts, DAY_FMT), orbs: fmtNum(orbs), quests: tn("stats.quests", n) });
-              return `<div class="qb-colw" title="${esc(tip)}"><div class="qb-col ${n && !orbs ? "qb-item" : ""}" style="height:${h}%">${orbs
-                  ? `<i class="qb-c1" style="height:${c1}%"></i><i class="qb-c2" style="height:${100 - c1}%"></i>` : ""}</div></div>`;
+              return `<div class="qb-colw" title="${esc(tip)}"><div class="qb-col ${n && !orbs ? "qb-item" : ""}" style="height:${h}%;animation-delay:${i * 18}ms">${orbs
+                  ? `<i class="qb-c1" style="height:${c1}%"></i><i class="qb-c2" style="height:${100 - c1 - c3}%"></i>${c3 ? `<i class="qb-c3" style="height:${c3}%"></i>` : ""}` : ""}</div></div>`;
           }).join("")}</div>
           <div class="qb-days">${bars.map(({ ts }, i) => `<span class="${i === bars.length - 1 ? "qb-now" : ""}">${new Date(ts).getDate()}</span>`).join("")}</div>
-          <div class="qb-legend"><span><i style="background:var(--qb-green)"></i>${esc(t("stats.legendClaimed"))}</span><span><i style="background:var(--qb-amber)"></i>${esc(t("stats.legendWaiting"))}</span></div>`;
+          <div class="qb-legend"><span><i style="background:var(--qb-green)"></i>${esc(t("stats.legendClaimed"))}</span><span><i style="background:var(--qb-amber)"></i>${esc(t("stats.legendWaiting"))}</span>${bars.some(b => b.d?.lostOrbs)
+              ? `<span><i style="background:var(--qb-off)"></i>${esc(t("stats.legendExpired"))}</span>` : ""}</div>`;
 
         // Daily log: the latest 7 active days unless "show older" was pressed.
         const days = UI.statsAll ? st.days : st.days.slice(0, 7);
         const kToday = dayKey(Date.now()), kYesterday = dayKey(dayStart(1));
         const dayLabel = d => d.key === kToday ? t("stats.dayToday") : d.key === kYesterday ? t("stats.dayYesterday") : fmtDate(d.ts, DAY_FMT);
         const entry = e => {
-            const due = !e.claimedAt;
-            const pay = e.orbs ? orbTxt(e.orbs, 9) : e.reward ? esc(e.reward) : "";
+            const lost = isLost(e), due = !e.claimedAt && !lost;
+            const pay = e.orbs ? orbTxt(e.orbs, 11) : e.reward ? esc(e.reward) : "";
             const full = e.name + (e.app && e.app !== e.name ? " \u2014 " + e.app : "");
             return `<div class="qb-ent ${due ? "qb-clk" : ""}"${due ? ` title="${esc(t("row.open"))}"` : ""}>
                 <span class="qb-ei">${svg(taskMeta(e.task).icon, "", 13)}</span>
                 <span class="qb-en" title="${esc(full)}">${esc(e.name)}</span>
                 <span class="qb-et">${esc(fmtDate(e.completedAt, { hour: "2-digit", minute: "2-digit" }))}</span>
                 ${pay ? `<span class="qb-eo"${e.reward && !e.orbs ? ` title="${esc(e.reward)}"` : ""}>${pay}</span>` : ""}
-                <span class="qb-chip ${due ? "qb-due" : "qb-ok"}">${esc(t(due ? "stats.chipWaiting" : "stats.chipClaimed"))}</span>
+                <span class="qb-chip ${lost ? "qb-lost" : due ? "qb-due" : "qb-ok"}">${esc(t(lost ? "stats.chipExpired" : due ? "stats.chipWaiting" : "stats.chipClaimed"))}</span>
               </div>`;
         };
         const log = `<div class="qb-sec">${esc(t("stats.log"))}</div>` +
-            days.map(d => `<div class="qb-day"><span>${esc(dayLabel(d))}</span>${d.orbs ? `<b>${orbTxt(d.orbs, 9)}</b>` : ""}</div>${d.entries.map(entry).join("")}`).join("") +
+            days.map(d => `<div class="qb-day"><span>${esc(dayLabel(d))}</span>${d.orbs ? `<b>${orbTxt(d.orbs, 11)}</b>` : ""}</div>${d.entries.map(entry).join("")}`).join("") +
             (st.days.length > days.length ? `<div class="qb-btns"><button class="qb-btn" data-cmd="more">${esc(t("stats.more", { n: st.days.length - days.length }))}</button></div>` : "");
         box.innerHTML = `<div class="qb-kpis">${cards}</div>${chart}${log}
           <div class="qb-btns"><button class="qb-btn" data-cmd="csv">${svg(ICON.copy, "", 13)}<span>${esc(t("stats.csv"))}</span></button></div>
@@ -1793,24 +1927,30 @@
         dot.style.background = state.stopped ? "var(--qb-red)" : SETTINGS.paused ? "var(--qb-amber)" : active ? "var(--qb-amber)" : s.claimable.length ? "var(--qb-green)" : "";
         dot.classList.toggle("qb-live", active);
         const st = UI.panel.querySelector(".qb-status");
-        st.textContent = statusText(s);
+        const stText = quests ? statusText(s) : ""; // other views: the title says where you are, and long titles need the room
+        if (st.textContent !== stText) st.textContent = stText;
         st.classList.toggle("qb-paused", SETTINGS.paused);
 
         const pa = UI.panel.querySelector("#qb-pauseall");
-        pa.innerHTML = svg(SETTINGS.paused ? ICON.play : ICON.pause, "", 15);
-        pa.title = t(SETTINGS.paused ? "head.resumeAll" : "head.pauseAll");
-        pa.classList.toggle("qb-warn", SETTINGS.paused);
+        const paKey = currentLang() + SETTINGS.paused;
+        if (pa.dataset.k !== paKey) { // rewrite the icon only when it changes, not every tick
+            pa.dataset.k = paKey;
+            pa.innerHTML = svg(SETTINGS.paused ? ICON.play : ICON.pause, "", 15);
+            pa.title = t(SETTINGS.paused ? "head.resumeAll" : "head.pauseAll");
+            pa.classList.toggle("qb-warn", SETTINGS.paused);
+        }
 
         const pend = UI.panel.querySelector("#qb-pending");
         const wantPend = s.orbsPending
-            ? `${svg(ICON.orb, "", 9)} ${esc(t("pending", { n: s.orbsPending }))}`
+            ? `${orbSvg(11)} ${esc(t("pending", { n: s.orbsPending }))}`
             : "";
         if (pend.innerHTML !== wantPend) pend.innerHTML = wantPend;
+        updateBadge(s);
     }
 
     /** Re-render the panel (if open) and badge after a state change. */
     function refreshUI() {
-        try { if (UI.open) renderPanel(); updateBadge(); } catch (e) { /* HUD must never break the agent */ }
+        try { if (UI.open) renderPanel(); else updateBadge(); } catch (e) { /* HUD must never break the agent */ }
     }
 
     /** Navigate the client to the Quests page (where Claim lives).
@@ -1860,6 +2000,7 @@
             case "unskip": ops.unskipQuest(id); break;
             case "retry": ops.retryQuest(id); break;
             case "dismiss": ops.dismissQuest(id); break;
+            case "claim": if (openQuestsPage()) togglePanel(false); return;
             case "run": ops.runNow(id).then(refreshUI); break;
         }
         refreshUI();
@@ -1895,6 +2036,7 @@
           <div class="qb-pending" id="qb-pending"></div>
           <div class="qb-foot" style="display:none"><span title="agent script v${AGENT_VERSION}">${esc(t("foot.version", { v: TOOL_VERSION ?? AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
         // Anchor to the top-right corner by default; dragging switches to left/top.
+        UI.pos = UI.pos ?? SETTINGS.panelPos; // where it was last dragged, across restarts
         if (UI.pos) { p.style.top = UI.pos.top + "px"; p.style.left = UI.pos.left + "px"; }
         else { p.style.top = "40px"; p.style.right = "12px"; }
 
@@ -1927,6 +2069,10 @@
             if (btn) { e.stopPropagation(); onRowAction(btn.dataset.act, btn.closest(".qb-row").dataset.qid); return; }
             if (e.target.closest(".qb-row") && openQuestsPage()) togglePanel(false);
         });
+        p.querySelector(".qb-body").addEventListener("keydown", e => {
+            if (e.key === "Enter" && e.target.classList?.contains("qb-row") && openQuestsPage()) togglePanel(false);
+        });
+        p.querySelector("#qb-pending").onclick = () => { if (openQuestsPage()) togglePanel(false); };
         const setBox = p.querySelector(".qb-set");
         const flip = opt => {
             const key = opt.dataset.opt;
@@ -1993,6 +2139,7 @@
             };
             const up = () => {
                 head.classList.remove("qb-drag");
+                if (UI.pos) { SETTINGS.panelPos = UI.pos; saveSettings(); }
                 document.removeEventListener("mousemove", move);
                 document.removeEventListener("mouseup", up);
             };
@@ -2014,7 +2161,7 @@
             // window change), snap back to the default top-right anchor.
             const r = UI.panel.getBoundingClientRect();
             if (r.right > window.innerWidth || r.bottom > window.innerHeight || r.left < 0 || r.top < 0) {
-                UI.pos = null;
+                UI.pos = null; SETTINGS.panelPos = null; saveSettings();
                 UI.panel.style.left = "auto"; UI.panel.style.right = "12px"; UI.panel.style.top = "40px";
             }
             if (UI.tick == null) UI.tick = setInterval(renderPanel, 1000);
@@ -2031,12 +2178,15 @@
         updateBadge();
     }
 
-    function updateBadge() {
+    function updateBadge(snap) {
         if (!UI.btn?.isConnected) return;
-        const s = snapshot();
+        const s = snap ?? snapshot();
         const badge = UI.btn.querySelector("#qb-badge");
         const ring = UI.btn.querySelector(".qb-ring");
         const working = s.running.length + s.queued.length;
+        const key = [s.claimable.length, SETTINGS.paused, working, currentLang()].join("|");
+        if (UI.btn.dataset.k === key) return; // nothing changed: no DOM writes
+        UI.btn.dataset.k = key;
         badge.classList.remove("qb-claim", "qb-work", "qb-hold");
         // Claimable wins: green + how many rewards are waiting. Then grey pause
         // glyph while everything is paused. Otherwise amber + spinning ring
@@ -2140,7 +2290,12 @@
         installButton();
         // Discord re-renders the title bar (channel switches, etc.) and drops our
         // node; re-add it whenever that happens, and keep the badge fresh.
-        UI.observer = new MutationObserver(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); });
+        // Button dropped: put it back at once (one cheap check). Floating: look for a
+        // title-bar slot at most once a second, not on every DOM change Discord makes.
+        UI.observer = new MutationObserver(() => {
+            if (!UI.btn?.isConnected) installButton();
+            else if (UI.mode === "floating" && UI.promote == null) UI.promote = setTimeout(() => { UI.promote = null; installButton(); }, 1000);
+        });
         UI.observer.observe(document.body, { childList: true, subtree: true });
         // The observer only fires on DOM changes; a quiet client still gets a
         // retry (this is also what promotes the floating button after 20 s).
@@ -2151,6 +2306,7 @@
         try { UI.observer?.disconnect(); } catch (e) { /* ignore */ }
         if (UI.tick != null) { clearInterval(UI.tick); UI.tick = null; }
         if (UI.badgeTimer != null) { clearInterval(UI.badgeTimer); UI.badgeTimer = null; }
+        if (UI.promote != null) { clearTimeout(UI.promote); UI.promote = null; }
         if (UI.keyHandler) { document.removeEventListener("keydown", UI.keyHandler); UI.keyHandler = null; }
         UI.btn?.remove(); UI.panel?.remove(); UI.style?.remove();
         document.querySelector("#qb-toast")?.remove();
@@ -2162,7 +2318,12 @@
     // History sync runs on its own slow timer: claims happen on Discord's page
     // while the agent may be idle, and the store forgets expired quests.
     syncLedger();
-    const ledgerTimer = setInterval(syncLedger, 15000);
+    const ledgerTimer = setInterval(() => { syncLedger(); try { remindExpiring(); } catch (e) { /* best-effort */ } }, 15000);
+    // One pass over Discord's module sources (~10-60 ms), off the startup path.
+    (window.requestIdleCallback ?? (f => setTimeout(f, 3000)))(() => {
+        try { ORB_PATHS = findOrbGlyph(WP); } catch (e) { ORB_PATHS = null; }
+        if (ORB_PATHS) { UI.sig = null; refreshUI(); } else console.log("[QuestAgent] Discord's orb glyph not found - using the HUD's own icon.");
+    }, { timeout: 5000 });
     let onQuestsRefresh;
     try {
         onQuestsRefresh = () => scan();
@@ -2193,6 +2354,7 @@
         locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
         toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG, installRoot: INSTALL_ROOT,
         stats: ledgerStats, history: () => ledgerStats().list, historyCsv: ledgerCsv, syncHistory: syncLedger,
+        get orbGlyph() { return !!ORB_PATHS; }, // false = Discord's glyph wasn't found, the HUD uses its own
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
               show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }

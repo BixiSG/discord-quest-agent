@@ -15,6 +15,7 @@
     ?empty=1        no history             ?view=stats|settings|quests
     ?reset=1        clear saved settings and history first
     ?fast=1         the running video quest finishes in ~15 s (exercises completion)
+    ?noglyph=1      no orb glyph to borrow (the HUD falls back to its own diamond)
 -->
 <style>
   :root { --background-base-lower: #1e1f22; }
@@ -82,8 +83,8 @@
   const quests = [
     quest("Night Runners Trailer", "Night Runners", { task: "WATCH_VIDEO", target: qs.get("fast") ? 20 : 900, value: qs.get("fast") ? 6 : 380, orbs: 700, enrolled: now - 600e3, color: "#e0409a" }),
     quest("Play Starfall Tactics", "Starfall Tactics", { task: "PLAY_ON_DESKTOP", target: 900, orbs: 500, enrolled: now - 300e3 }),
-    quest("Stream Hollow Deep", "Hollow Deep", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 2 }),
-    quest("Kingsroad Sneak Peek", "Kingsroad", { task: "WATCH_VIDEO_ON_MOBILE", target: 600, orbs: 300, completed: at(0, 9) }),
+    quest("Stream Hollow Deep", "Hollow Deep", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 1.5 }),
+    quest("Kingsroad Sneak Peek", "Kingsroad", { task: "WATCH_VIDEO_ON_MOBILE", target: 600, orbs: 300, completed: at(0, 9), claimIn: 3 }),
     quest("Aether Grid Launch", "Aether Grid", { task: "PLAY_ACTIVITY", target: 1200, reward: "Aether avatar decoration", completed: at(1, 20), claimIn: 0.6 }),
     quest("Moss & Metal", "Moss & Metal", { task: "WATCH_VIDEO", target: 600, orbs: 700, completed: at(1, 14), claimed: at(1, 15) }),
     quest("Achievement Hunter", "Iron Lanes", { task: "ACHIEVEMENT_IN_ACTIVITY", target: 1, orbs: 200, enrolled: now - 900e3 })
@@ -98,7 +99,7 @@
       const c = at(d, 8 + (i * 5) % 14);
       ql[id] = { id, name: ["Echo Park Trailer", "Play Driftline", "Rift Watch", "Sunken Crown", "Play Vale", "Warband Reveal"][i % 6],
                  app: "Game " + (i + 1), task: ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "WATCH_VIDEO_ON_MOBILE"][i % 3], orbs, reward: null,
-                 secs: 900, completedAt: c, claimedAt: c + 3600e3, byAgent: true };
+                 secs: 900, completedAt: c, claimedAt: i === 9 ? null : c + 3600e3, claimBy: i === 9 ? now - DAY : null, byAgent: true };
     });
     localStorage.setItem("questAgent.ledger.v1", JSON.stringify({ v: 1, quests: ql }));
   }
@@ -125,7 +126,14 @@
     7: { exports: { Bo: { get: async () => ({ body: [{ name: "Mock Game", executables: [{ os: "win32", name: "mock.exe" }] }] }), post: async () => ({ body: {} }) } } },
     8: { exports: { pX: function transitionTo(p) { console.log("transitionTo - Transitioning to", p); } } }
   };
-  window.webpackChunkdiscord_app = { push: ([, , fn]) => fn({ c: modules }), pop() {} };
+  // Module factories: a stand-in for the component Discord hands to orbIconHook, so the
+  // runtime glyph lookup has something to find. The star is this harness's own shape.
+  const factories = qs.get("noglyph") ? {} : {
+    // Minified shape, as Discord ships it: the finder matches "u=n(9001)" and "orbIconHook:()=>(0,t.jsx)(u.C".
+    9000: function (e, t, n) { var i,u=n(9001); return { hook: { orbIconHook:()=>(0,t.jsx)(u.C,{size:"xs"}) } }; },
+    9001: function (e, t, n) { return { viewBox:"0 0 24 24", d:"M12 2l3 7h7l-5.6 4.4L18.5 21 12 16.6 5.5 21l2.1-7.6L2 9h7l3-7Z" }; }
+  };
+  window.webpackChunkdiscord_app = { push: ([, , fn]) => fn({ c: modules, m: factories }), pop() {} };
   // Desktop-app bridge: enables play/stream spoofing; the clipboard lands in window.__copied.
   window.DiscordNative = { window: { flashFrame() {} }, clipboard: { copy: t => { window.__copied = t; } } };
 

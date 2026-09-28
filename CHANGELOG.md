@@ -4,6 +4,15 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.5.1 - 2026-09-28
+
+- Claim deadlines: a reward is lost 30 days after its quest ends. Ready-to-claim rows count down in their last week (red on the last day), and the agent reminds you once when one has under 48 hours left. Expired rewards leave the list and show as expired in Stats.
+- Ready-to-claim rows get a Claim button and a check mark on the game art; the orbs-waiting bar at the bottom opens the Quests page.
+- The orb icon is Discord's own, read from the running client (nothing of Discord's ships with the tool).
+- Progress reads 6:20 / 15:00 instead of 380/900s, running rows carry the quest's color, queued quests show when they end if it's within two days, and the idle header says when the agent last checked.
+- The panel remembers where you dragged it, rows work from the keyboard (Tab, Enter), and animations stop when Windows animations are off.
+- Lighter: the panel no longer rewrites unchanged parts every second, the badge only touches the page when its state changes, and the title-bar watcher no longer searches the page on every change Discord makes.
+
 ## 1.5.0 - 2026-09-28
 
 - Stats: a new view (chart button in the panel header) with orbs from quests finished today, this week and this month, orbs claimed in total, quests done and time saved.

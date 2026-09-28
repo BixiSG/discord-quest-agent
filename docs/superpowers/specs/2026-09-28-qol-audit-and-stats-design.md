@@ -79,3 +79,39 @@ bar, loads `src/quest-agent.js` with mock quests (running, queued,
 available, claimable, skipped, a 20-day claimed history with a non-orb
 reward) and is served locally for the built-in browser. It is not shipped:
 the updater copies `src`, `scripts` and the root files only.
+
+## Iteration 2 (v1.5.1): UI/UX pass, kept light
+
+Shipped findings 4-10 above, plus a second audit aimed at weight and look.
+
+**Runtime cost found and fixed**
+
+| Where | Cost | Fix |
+| --- | --- | --- |
+| Panel tick (1 s) | Rewrote the pause button's SVG every second | Written only when paused state or language changes |
+| Panel tick | Summed the whole ledger every second for "orbs won" | Memoised on the ledger revision |
+| Panel open | Built the snapshot twice per refresh (panel + badge) | Badge reuses the panel's snapshot; closed panel updates the badge only |
+| Badge (5 s) | Rewrote badge text, classes and title every time | Skips all DOM writes when count, pause state and language are unchanged |
+| Status dot | `box-shadow` keyframes: a repaint every frame while working | Pulse ring on `::after` with `transform`/`opacity` only (compositor) |
+| Title-bar observer | In floating mode, three `querySelectorAll` on every Discord DOM mutation | Coalesced to at most one check per second; a dropped button is still restored at once |
+
+**Orb icon (option A from the legal review):** `findOrbGlyph` scans the webpack
+factories once, in an idle callback (6 ms measured on build 621195, ~60 ms
+worst case), for the component Discord passes as `orbIconHook`, resolves its
+module, and keeps only path data that passes a strict SVG-path check. Nothing
+of Discord's is in the repository; `NOTICE.md` says so. Fallback: our diamond.
+
+**Claim deadlines:** `rewardsConfig.rewardsExpireAt` is consistently the
+quest's `expiresAt` + 30 days (checked on 80 live quests). Rows count down in
+the last week, red in the last day; one batched reminder per quest under 48 h;
+lost rewards leave *Ready to claim* and show as "expired" in Stats.
+
+**Design touches (all static CSS or one-shot, transform/opacity animations):**
+Claim button + check mark on claimable tiles, quest-color accent bar on
+running rows, a one-time green flash when a reward becomes claimable since the
+list was last drawn, staggered grow-in of the chart bars, `m:ss` progress, a
+clickable orbs-waiting bar, keyboard focus rings, and
+`prefers-reduced-motion` switching every animation off.
+
+**Next candidates:** copy diagnostics from the HUD (finding 11), and a
+compact mode for small windows.
