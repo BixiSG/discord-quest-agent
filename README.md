@@ -131,21 +131,31 @@ them into (**Copy diagnostics** under Maintenance does just the copying). **Inst
 `Uninstall.bat`, `config.json` and the agent files in Explorer. The changelog is
 English-only.
 
-### Stats and history
+### Stats: your orb pace
 
-The chart button in the header (or a click on the *orbs won* tile) opens **Stats**: orbs
-from quests finished today, in the last 7 and 30 days, orbs claimed in total (and how many
-are still waiting), quests done and the quest time the agent sat through for you. Below that
-a **14-day chart** (claimed in green, still to claim in amber) and a **daily log**: every
-finished quest under the day it hit 100%, with its reward and whether you've claimed it.
-Click an unclaimed one to jump to the Quests page. **Copy as CSV** puts the whole history on
-the clipboard for a spreadsheet.
+Quests come from Discord's partner campaigns, so single days swing between nothing and a
+couple of thousand orbs, and weeks between roughly 2k and 8k. Over 30 days that evens out,
+which is what makes it useful for planning. The chart button in the header (or a click on
+the *orbs won* tile) opens **Stats**:
 
-Discord only lists current quests, so the agent keeps this history itself, inside the
-client next to the settings. It starts with whatever Discord still listed when the agent
-first recorded it, and days follow your PC's clock. "Orbs won" on the main view comes from
-the same history, so it no longer drops when old quests expire. It counts orbs from quests
-you've claimed; Discord doesn't hand the client a live orb balance, so it isn't your wallet.
+- **Orbs per 30 days**, big, with the weekly average and the usual range: the same 30-day
+  window measured at every week of your history ("usually 14,600 to 18,500"). With less than
+  30 days recorded it's projected and says so; the range appears after about 6 weeks.
+- Cards for the **last 7 days**, **orbs earned** in total, and orbs **to claim** (click to
+  open the Quests page).
+- **12 weeks of bars**: claimed in green, still to claim in amber.
+- **Saving up for**: type a price in orbs and it tells you roughly how many days that takes
+  at your pace, with the spread between a slow and a busy month. Orbs waiting to be claimed
+  count toward it.
+- **Copy as CSV**: orbs per day, for a spreadsheet.
+
+Discord only lists quests from roughly the last two months, so the agent keeps its own
+record, inside the client next to the settings: just the date and the orb amount of each
+finished quest, no names or games. Older days are folded into per-day totals. It starts
+with whatever Discord still listed when the agent first ran, and days follow your PC's
+clock. "Orbs won" on the main view comes from the same record, so it never drops when old
+quests expire. Discord doesn't hand the client a live orb balance, so none of this is your
+wallet.
 
 ### Languages
 

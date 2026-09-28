@@ -18,8 +18,9 @@
  *   - puts a HUD in the title bar: pause/stop/skip/run-now per quest, a global
  *     pause, and settings (quest types, auto-accept, notifications, rescan
  *     interval) that persist across Discord restarts,
- *   - keeps a history of every finished quest (Stats view: orbs per day, week,
- *     month and lifetime, a 14-day chart, a daily log, CSV export),
+ *   - keeps a record of the orbs it earns (amounts and dates only) and shows
+ *     your pace: orbs per 30 days with its usual range, 12 weeks of bars and
+ *     how long a price takes to save up,
  *   - shows the changelog (Settings > What's new) after a self-update and links
  *     to the GitHub project,
  *   - retires the older QuestBypass prototype if one is still running.
@@ -30,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 18;
+    const AGENT_VERSION = 19;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -175,21 +176,23 @@
         "tool.dismiss": "Dismiss (hide from this list)", "set.clearHidden": "Show dismissed quests ({n})",
         "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
         "title.stats": "Stats", "head.stats": "Stats and history",
-        "stats.today": "today", "stats.week": "7 days", "stats.month": "30 days",
-        "stats.quests.one": "{n} quest", "stats.quests.other": "{n} quests",
-        "stats.claimed": "orbs claimed", "stats.toClaim": "+{n} to claim", "stats.allClaimed": "all claimed",
-        "stats.done": "quests done", "stats.since": "since {date}", "stats.time": "time saved", "stats.perQuest": "~{n} min per quest",
-        "stats.hours": "{n} h", "stats.mins": "{n} min",
-        "stats.chart": "Last 14 days", "stats.bar": "{date}: {orbs} orbs, {quests}",
+        "stats.perMonth": "orbs / 30 days", "stats.perWeek": "about {n} a week",
+        "stats.range": "usually {lo} to {hi} per 30 days", "stats.rangeSoon": "a usual range shows after 6 weeks of history",
+        "stats.projected": "projected from {n} of history",
+        "stats.days.one": "{n} day", "stats.days.other": "{n} days",
+        "stats.week": "7 days", "stats.lifetime": "orbs earned", "stats.since": "since {date}", "stats.waiting": "to claim",
+        "stats.chart": "Last 12 weeks", "stats.thisWeek": "this week", "stats.bar": "{from} - {to}: {orbs} orbs",
         "stats.legendClaimed": "claimed", "stats.legendWaiting": "waiting to claim",
-        "stats.log": "Daily log", "stats.dayToday": "Today", "stats.dayYesterday": "Yesterday",
-        "stats.chipClaimed": "claimed", "stats.chipWaiting": "to claim",
-        "stats.empty": "No finished quests yet. Every quest that reaches 100% lands here, by day.",
-        "stats.more": "Show older days ({n})", "stats.csv": "Copy as CSV",
-        "stats.copied.one": "Copied {n} quest", "stats.copied.other": "Copied {n} quests",
-        "stats.copyFailed": "Could not copy",
-        "stats.note": "Days follow your PC's clock. History starts with the quests Discord still listed when it was first recorded.",
-        "stats.chipExpired": "expired", "stats.legendExpired": "expired unclaimed",
+        "stats.goal": "Saving up for", "stats.goalPh": "price in orbs",
+        "stats.goalHint": "Type a price to see when you'll have it at your pace.",
+        "stats.goalEta": "About {days} at your pace (around {date}).",
+        "stats.goalRange": "Between {lo} and {hi}, depending on how many quests Discord runs.",
+        "stats.goalWaiting": "Counts the {n} orbs waiting to be claimed.",
+        "stats.goalCovered": "The {n} orbs waiting to be claimed already cover it.",
+        "stats.goalNoPace": "Needs a few finished quests first.",
+        "stats.empty": "No orbs recorded yet. Every orb quest that reaches 100% counts here.",
+        "stats.csv": "Copy as CSV", "stats.copied": "Copied", "stats.copyFailed": "Could not copy",
+        "stats.note": "Quests arrive in bursts, so days and weeks swing a lot; a month evens out. Only orb amounts and dates are kept, inside Discord on this PC.",
         "status.idleChecked": "idle, checked {ago}", "ago.now": "just now",
         "row.claimBy": "claim within {left}", "row.endsIn": "ends in {left}",
         "unit.d": "{n} d", "unit.h": "{n} h", "unit.m": "{n} min",
@@ -458,7 +461,8 @@
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
-        reminded: []         // quest ids already warned about an expiring reward
+        reminded: [],        // quest ids already warned about an expiring reward
+        goal: 0              // orbs being saved up for (Stats view)
     };
     let hadSavedSettings = false; // false on a fresh install: no "updated" toast then
     function loadSettings() {
@@ -485,6 +489,7 @@
             if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
             if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
             if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
+            if (Number.isFinite(s.goal) && s.goal >= 0) SETTINGS.goal = Math.min(1e7, Math.round(s.goal));
         } catch (e) { console.warn("[QuestAgent] Could not read saved settings:", e); }
     }
     function saveSettings() {
@@ -495,130 +500,133 @@
     }
     loadSettings();
 
-    // ---- History (ledger) -------------------------------------------------
-    // Discord only lists current quests: once one expires it leaves the store,
-    // and with it any trace of the orbs it paid. The ledger keeps one entry per
-    // finished quest, persisted next to the settings, so the Stats view can
-    // show totals, a 14-day chart and a daily log that outlive the quests. The
-    // first run backfills whatever Discord still lists. Days are the PC's
-    // local calendar days.
-    const LEDGER_KEY = "questAgent.ledger.v1";
-    const LEDGER_MAX = 1000;
-    const LEDGER = { quests: Object.create(null), rev: 0 }; // keyed by quest id; null prototype so no id can collide with Object keys
-    const agentFinished = new Set(); // quest ids this agent ran to 100% this session
+    // ---- Orb history --------------------------------------------------------
+    // Discord only lists recent quests (about two months), so a long-run pace
+    // needs a record of its own. Only amounts and dates are kept: per quest
+    // [local day, orbs, state] (0 waiting to claim, 1 claimed, 2 reward lost)
+    // while Discord may still list it, folded into a plain per-day total once
+    // it is far older than anything Discord lists. No names, no games.
+    const HISTORY_KEY = "questAgent.orbs.v1";
+    const FOLD_AFTER_DAYS = 180; // well past the listing + 30-day claim window
+    const HISTORY = { q: Object.create(null), days: Object.create(null), rev: 0 };
     const tsOf = v => { const n = typeof v === "number" ? v : Date.parse(v ?? ""); return Number.isFinite(n) && n > 0 ? n : null; };
     /** Last moment the reward can be claimed (Discord: 30 days after the quest ends). */
     const claimByOf = q => tsOf(q.config?.rewardsConfig?.rewardsExpireAt);
-    /** Finished, never claimed, and past the claim deadline: the reward is gone. */
-    const isLost = e => !e.claimedAt && e.claimBy != null && e.claimBy < Date.now();
-    function loadLedger() {
+
+    // Local calendar helpers (days are the PC's own calendar days).
+    const pad2 = n => String(n).padStart(2, "0");
+    const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+    const dayMs = key => { const [y, m, d] = key.split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+    const isDayKey = k => typeof k === "string" && /^\d{4}-\d{2}-\d{2}$/.test(k);
+    /** Local midnight, daysAgo days back (0 = today, -1 = tomorrow). */
+    const dayStart = daysAgo => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - daysAgo); return d.getTime(); };
+
+    function loadHistory() {
         if (!storage) return;
         try {
-            const raw = storage.getItem(LEDGER_KEY);
-            const l = raw ? JSON.parse(raw) : null;
-            if (!l || typeof l.quests !== "object" || !l.quests) return;
-            for (const [id, e] of Object.entries(l.quests)) {
-                if (e && typeof e === "object" && tsOf(e.completedAt)) LEDGER.quests[id] = e;
+            const h = JSON.parse(storage.getItem(HISTORY_KEY) || "null");
+            for (const [id, e] of Object.entries(h?.q ?? {})) {
+                if (Array.isArray(e) && isDayKey(e[0]) && Number.isFinite(e[1]) && e[1] > 0) HISTORY.q[id] = [e[0], e[1], e[2] === 1 || e[2] === 2 ? e[2] : 0];
             }
-        } catch (e) { console.warn("[QuestAgent] Could not read the quest history:", e); }
+            for (const [k, v] of Object.entries(h?.days ?? {})) if (isDayKey(k) && Number.isFinite(v) && v > 0) HISTORY.days[k] = v;
+            // 1.5.x kept a per-quest ledger with names and games: carry the amounts over, drop the rest.
+            const old = JSON.parse(storage.getItem("questAgent.ledger.v1") || "null");
+            if (old?.quests && typeof old.quests === "object") {
+                for (const [id, e] of Object.entries(old.quests)) {
+                    const c = tsOf(e?.completedAt), orbs = Number(e?.orbs) || 0;
+                    if (c && orbs > 0 && !HISTORY.q[id]) HISTORY.q[id] = [dayKey(c), orbs, e.claimedAt ? 1 : e.claimBy && e.claimBy < Date.now() ? 2 : 0];
+                }
+                storage.removeItem("questAgent.ledger.v1");
+                saveHistory();
+            }
+        } catch (e) { console.warn("[QuestAgent] Could not read the orb history:", e); }
     }
-    function saveLedger() {
-        LEDGER.rev++;
-        const ids = Object.keys(LEDGER.quests);
-        if (ids.length > LEDGER_MAX) {
-            ids.sort((a, b) => LEDGER.quests[a].completedAt - LEDGER.quests[b].completedAt);
-            for (const id of ids.slice(0, ids.length - LEDGER_MAX)) delete LEDGER.quests[id];
+    function saveHistory() {
+        HISTORY.rev++;
+        // Quests far older than anything Discord lists become plain day totals (lost rewards drop out).
+        const cutoff = dayStart(FOLD_AFTER_DAYS);
+        for (const [id, [k, orbs, st]] of Object.entries(HISTORY.q)) {
+            if (dayMs(k) >= cutoff) continue;
+            if (st !== 2) HISTORY.days[k] = (HISTORY.days[k] ?? 0) + orbs;
+            delete HISTORY.q[id];
         }
         if (!storage) return;
-        try { storage.setItem(LEDGER_KEY, JSON.stringify({ v: 1, quests: LEDGER.quests })); } catch (e) { /* quota / sandbox */ }
+        try { storage.setItem(HISTORY_KEY, JSON.stringify({ v: 1, q: HISTORY.q, days: HISTORY.days })); } catch (e) { /* quota / sandbox */ }
     }
-    /** Name of the first non-orb reward (avatar decoration, in-game item...), or null. */
-    const rewardLabelOf = q => {
-        const r = (q.config?.rewardsConfig?.rewards ?? []).find(x => x && !x.orbQuantity);
-        const n = r?.messages?.name ?? r?.messages?.nameWithArticle;
-        return typeof n === "string" && n.trim() ? n.trim().slice(0, 80) : null;
-    };
-    /** Create or refresh one quest's entry; true if it changed. fallbackTs stands in for a completedAt the store hasn't caught up with. */
-    function upsertLedger(q, fallbackTs) {
-        const us = q.userStatus ?? {};
-        const old = LEDGER.quests[q.id];
-        const completedAt = tsOf(us.completedAt) ?? old?.completedAt ?? fallbackTs ?? null;
-        if (!completedAt) return false;
-        const tasks = taskConfigOf(q)?.tasks ?? {};
-        // The task that actually reached its target; for multi-task quests any one of them can finish it.
-        const task = Object.keys(tasks).find(k => (us.progress?.[k]?.value ?? 0) >= (tasks[k]?.target ?? Infinity)) ??
-            supportedTasksOf(q)[0] ?? Object.keys(tasks)[0] ?? old?.task ?? null;
-        const e = {
-            id: q.id,
-            name: q.config?.messages?.questName ?? old?.name ?? String(q.id),
-            app: q.config?.application?.name ?? q.config?.messages?.gameTitle ?? old?.app ?? "",
-            task,
-            orbs: orbsOf(q),
-            reward: rewardLabelOf(q),
-            secs: Number(tasks[task]?.target) || old?.secs || 0,
-            completedAt,
-            claimedAt: tsOf(us.claimedAt) ?? old?.claimedAt ?? null,
-            claimBy: claimByOf(q) ?? old?.claimBy ?? null,
-            byAgent: !!(old?.byAgent || agentFinished.has(q.id))
-        };
-        if (old && JSON.stringify(old) === JSON.stringify(e)) return false;
-        LEDGER.quests[q.id] = e;
+    /** Record one finished orb quest; true if its entry changed. fallbackTs stands in for a completedAt the store hasn't caught up with. */
+    function recordQuest(q, fallbackTs) {
+        const orbs = orbsOf(q);
+        if (!orbs) return false; // only orbs count toward the pace
+        const us = q.userStatus ?? {}, old = HISTORY.q[q.id];
+        const done = tsOf(us.completedAt) ?? (old ? null : fallbackTs);
+        if (!done && !old) return false;
+        const by = claimByOf(q);
+        const e = [done ? dayKey(done) : old[0], orbs, us.claimedAt ? 1 : by && by < Date.now() ? 2 : 0];
+        if (old && old[0] === e[0] && old[1] === e[1] && old[2] === e[2]) return false;
+        HISTORY.q[q.id] = e;
         return true;
     }
-    /** Record every finished quest Discord lists (and claims on ones already recorded). Saves only on change. */
-    function syncLedger() {
+    /** Record every finished orb quest Discord lists (and claims on ones already recorded). Saves only on change. */
+    function syncHistory() {
         let changed = false;
         try {
-            for (const q of allQuests()) {
-                if (!q?.id || (!q.userStatus?.completedAt && !LEDGER.quests[q.id])) continue;
-                if (upsertLedger(q)) changed = true;
-            }
+            for (const q of allQuests()) if (q?.id && (q.userStatus?.completedAt || HISTORY.q[q.id]) && recordQuest(q)) changed = true;
         } catch (e) { console.warn("[QuestAgent] History sync failed:", e); }
-        if (changed) saveLedger();
+        if (changed) saveHistory();
         return changed;
     }
     /** The agent just ran a quest to 100%: record it now, the store may lag a beat. */
     function noteFinished(quest) {
-        agentFinished.add(quest.id);
-        try { if (upsertLedger(quest, Date.now())) saveLedger(); } catch (e) { /* history is best-effort */ }
+        try { if (recordQuest(quest, Date.now())) saveHistory(); } catch (e) { /* history is best-effort */ }
     }
-    loadLedger();
+    loadHistory();
 
-    // Local calendar helpers for the Stats view.
-    const pad2 = n => String(n).padStart(2, "0");
-    const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
-    /** Local midnight, daysAgo days back (0 = today). */
-    const dayStart = daysAgo => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - daysAgo); return d.getTime(); };
-
-    /** Everything the Stats view shows, computed from the ledger. */
-    function ledgerStats() {
-        const list = Object.values(LEDGER.quests).filter(e => tsOf(e.completedAt)).sort((a, b) => b.completedAt - a.completedAt);
-        const orbs = arr => arr.reduce((s, e) => s + (Number(e.orbs) || 0), 0);
-        const since = from => { const a = list.filter(e => e.completedAt >= from); return { orbs: orbs(a), n: a.length }; };
-        const claimed = list.filter(e => e.claimedAt), lost = list.filter(isLost);
-        const secs = list.reduce((s, e) => s + (Number(e.secs) || 0), 0);
-        const days = new Map();
-        for (const e of list) {
-            const k = dayKey(e.completedAt);
-            let d = days.get(k);
-            if (!d) { d = { key: k, ts: e.completedAt, orbs: 0, claimedOrbs: 0, lostOrbs: 0, entries: [] }; days.set(k, d); }
-            d.orbs += Number(e.orbs) || 0;
-            if (e.claimedAt) d.claimedOrbs += Number(e.orbs) || 0;
-            else if (isLost(e)) d.lostOrbs += Number(e.orbs) || 0;
-            d.entries.push(e);
+    /** Orbs earned per local day (lost rewards left out), and how much of it still waits to be claimed. */
+    function orbDays() {
+        const days = new Map(Object.entries(HISTORY.days).map(([k, v]) => [k, { orbs: v, waiting: 0 }]));
+        for (const [k, orbs, st] of Object.values(HISTORY.q)) {
+            if (st === 2) continue;
+            const d = days.get(k) ?? { orbs: 0, waiting: 0 };
+            d.orbs += orbs;
+            if (st === 0) d.waiting += orbs;
+            days.set(k, d);
         }
+        return days;
+    }
+    /** Pace and totals for the Stats view. Single days and weeks swing a lot; 30-day windows are what's predictable. */
+    function orbStats() {
+        const days = [...orbDays()].map(([k, d]) => ({ ms: dayMs(k), ...d })).sort((a, b) => a.ms - b.ms);
+        const sum = (from, to, f = "orbs") => days.reduce((s, d) => d.ms >= from && d.ms < to ? s + d[f] : s, 0);
+        const end = dayStart(-1); // tomorrow 00:00: windows include today
+        const first = days.length ? days[0].ms : null;
+        const span = first == null ? 0 : Math.max(1, Math.round((end - first) / 864e5)); // days of history, today included
+        const last30 = sum(dayStart(29), end);
+        // Under 30 days of history, scale what there is up to 30 days (and say so).
+        const pace = span >= 30 ? last30 : Math.round((last30 / span) * 30);
+        // The usual range: the same 30-day window slid back a week at a time, as far as the history reaches.
+        const windows = [];
+        for (let k = 0; k < 52; k++) {
+            const from = dayStart(7 * k + 29);
+            if (first == null || from < first) break;
+            windows.push(sum(from, dayStart(7 * k - 1)));
+        }
+        const weeks = [];
+        for (let k = 11; k >= 0; k--) {
+            const from = dayStart(7 * k + 6), to = dayStart(7 * k - 1);
+            weeks.push({ from, to, orbs: sum(from, to), waiting: sum(from, to, "waiting") });
+        }
+        const total = days.reduce((s, d) => s + d.orbs, 0), waiting = days.reduce((s, d) => s + d.waiting, 0);
         return {
-            count: list.length,
-            first: list.length ? list[list.length - 1].completedAt : null,
-            today: since(dayStart(0)), week: since(dayStart(6)), month: since(dayStart(29)),
-            claimedOrbs: orbs(claimed), waitingOrbs: orbs(list) - orbs(claimed) - orbs(lost),
-            secs, days: [...days.values()], list
+            pace, span, first, total, waiting, week: sum(dayStart(6), end), weeks,
+            lo: windows.length >= 3 ? Math.min(...windows) : null, hi: windows.length >= 3 ? Math.max(...windows) : null,
+            days: days.map(d => ({ day: dayKey(d.ms), orbs: d.orbs, waiting: d.waiting }))
         };
     }
-    let claimedMemo = { rev: -1, v: 0 }; // the panel asks every second; the ledger changes rarely
-    const ledgerClaimedOrbs = () => {
-        if (claimedMemo.rev !== LEDGER.rev) claimedMemo = { rev: LEDGER.rev, v: Object.values(LEDGER.quests).reduce((s, e) => s + (e.claimedAt ? Number(e.orbs) || 0 : 0), 0) };
-        return claimedMemo.v;
+    let earnedMemo = { rev: -1, v: 0 }; // the panel asks every second; the history changes rarely
+    /** Orbs earned and already claimed, all time (for the "orbs won" tile). */
+    const historyClaimedOrbs = () => {
+        if (earnedMemo.rev !== HISTORY.rev) { const st = orbStats(); earnedMemo = { rev: HISTORY.rev, v: st.total - st.waiting }; }
+        return earnedMemo.v;
     };
     /** "3 d" / "5 h" / "20 min" until ms from now. */
     const fmtLeft = ms => {
@@ -639,16 +647,8 @@
         if (due.length === 1) notifyRaw(t("notify.expiringTitle"), t("notify.expiringBody", { quest: due[0].q.config?.messages?.questName ?? due[0].q.id, left: fmtLeft(due[0].left) }), "info");
         else notifyRaw(t("notify.expiringTitle"), t("notify.expiringMany", { n: due.length }), "info");
     }
-    /** The ledger as CSV (one row per quest, newest first). */
-    function ledgerCsv() {
-        const q = v => { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-        const iso = ms => ms ? new Date(ms).toISOString() : "";
-        const rows = [["day", "completed_at", "claimed_at", "quest", "game", "task", "orbs", "reward", "task_seconds", "by_agent"]];
-        for (const e of ledgerStats().list) {
-            rows.push([dayKey(e.completedAt), iso(e.completedAt), iso(e.claimedAt), e.name, e.app, e.task, e.orbs, e.reward, e.secs, e.byAgent ? 1 : 0]);
-        }
-        return rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
-    }
+    /** Orbs per day as CSV, oldest first. */
+    const historyCsv = () => "day,orbs_earned,orbs_waiting_to_claim\r\n" + orbStats().days.map(d => `${d.day},${d.orbs},${d.waiting}`).join("\r\n") + "\r\n";
 
     // ---- State ----------------------------------------------------------
     const state = {
@@ -1011,7 +1011,7 @@
             state.scanning = false;
         }
         state.lastScan = Date.now();
-        syncLedger();
+        syncHistory();
         maybeIdle();
         refreshUI();
     }
@@ -1180,7 +1180,7 @@
     // ---- HUD: toolbar button + floating quest panel ----------------------
     // Discord's class names are hashed and change on updates, so the button
     // clones them off the live Inbox button instead of hardcoding them.
-    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null, statsAll: false };
+    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null };
 
     // Inline icons keep the panel pure-ASCII (no glyphs to mangle) and crisp.
     const ICON = {
@@ -1302,8 +1302,8 @@
             else available.push(r);
         }
         // Dismissed quests leave the Skipped group only; every other group still shows them.
-        // The store forgets expired quests; the ledger doesn't, so "orbs won" never shrinks.
-        orbsClaimed = Math.max(orbsClaimed, ledgerClaimedOrbs());
+        // The store forgets expired quests; the history doesn't, so "orbs won" never shrinks.
+        orbsClaimed = Math.max(orbsClaimed, historyClaimedOrbs());
         return { claimable, running, queued, available, blocked: blocked.filter(r => !state.hidden.has(r.id)), orbsClaimed, orbsPending };
     }
 
@@ -1489,48 +1489,42 @@
 #qb-panel .qb-stv::-webkit-scrollbar{width:8px}
 #qb-panel .qb-stv::-webkit-scrollbar-track{background:transparent}
 #qb-panel .qb-stv::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
-#qb-panel .qb-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px 2px}
+#qb-panel .qb-hero{margin:10px 12px 0;padding:12px 14px;border-radius:var(--qb-r);border:1px solid rgba(240,178,50,.25);
+ background:linear-gradient(135deg,rgba(240,178,50,.14),rgba(88,101,242,.08))}
+#qb-panel .qb-hero-v{display:flex;align-items:baseline;gap:6px;color:var(--qb-amber)}
+#qb-panel .qb-hero-v svg{align-self:center}
+#qb-panel .qb-hero-v b{font-size:28px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums}
+#qb-panel .qb-hero-v span{font-size:12px;color:var(--qb-muted)}
+#qb-panel .qb-hero-s{margin-top:4px;font-size:11.5px;line-height:1.45;color:var(--qb-muted)}
+#qb-panel .qb-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px 2px}
 #qb-panel .qb-kpi{min-width:0;background:var(--qb-bg2);border-radius:var(--qb-rs);padding:8px 10px;border:1px solid transparent}
-#qb-panel .qb-kpi b{display:flex;align-items:center;gap:4px;font-size:17px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
+#qb-panel .qb-kpi b{display:flex;align-items:center;gap:4px;font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
 #qb-panel .qb-kpi b svg{color:var(--qb-amber);flex:none}
 #qb-panel .qb-kpi span{display:block;margin-top:1px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--qb-muted)}
 #qb-panel .qb-kpi i{display:block;margin-top:3px;font-style:normal;font-size:10.5px;color:var(--qb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#qb-panel .qb-kpi i.qb-amb{color:var(--qb-amber)}
 #qb-panel .qb-kpi.qb-zero b{color:var(--qb-muted);opacity:.45}
 #qb-panel .qb-kpi.qb-zero b svg{color:inherit}
-#qb-panel .qb-kpi.qb-gold{background:rgba(240,178,50,.09);border-color:rgba(240,178,50,.22)}
-#qb-panel .qb-kpi.qb-gold b{color:var(--qb-amber)}
-#qb-panel .qb-chart{display:flex;align-items:flex-end;gap:4px;height:78px;padding:4px 14px 0}
+#qb-panel .qb-kpi.qb-due{background:rgba(240,178,50,.09);border-color:rgba(240,178,50,.22);cursor:pointer}
+#qb-panel .qb-kpi.qb-due b{color:var(--qb-amber)}
+#qb-panel .qb-chart{display:flex;align-items:flex-end;gap:5px;height:78px;padding:4px 14px 0}
 #qb-panel .qb-colw{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:default}
 #qb-panel .qb-col{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:3px 3px 1px 1px;overflow:hidden;background:var(--qb-bg2);
  transform-origin:bottom;animation:qb-grow .45s cubic-bezier(.2,.8,.3,1) both}
 @keyframes qb-grow{from{transform:scaleY(0)}}
-#qb-panel .qb-col.qb-item{background:var(--qb-brand)}
 #qb-panel .qb-col i{display:block;flex:none}
 #qb-panel .qb-col .qb-c1{background:var(--qb-green)}
 #qb-panel .qb-col .qb-c2{background:var(--qb-amber)}
-#qb-panel .qb-col .qb-c3{background:var(--qb-off)}
-#qb-panel .qb-chip.qb-lost{color:var(--qb-muted);background:var(--qb-hover2)}
 #qb-panel .qb-colw:hover .qb-col{filter:brightness(1.15)}
-#qb-panel .qb-days{display:flex;gap:4px;padding:4px 14px 0;font-size:9.5px;color:var(--qb-muted);font-variant-numeric:tabular-nums}
-#qb-panel .qb-days span{flex:1;min-width:0;text-align:center}
-#qb-panel .qb-days span.qb-now{color:var(--qb-text);font-weight:700}
+#qb-panel .qb-axis{display:flex;justify-content:space-between;padding:4px 14px 0;font-size:9.5px;color:var(--qb-muted)}
 #qb-panel .qb-legend{display:flex;gap:14px;padding:6px 14px 2px;font-size:10.5px;color:var(--qb-muted)}
 #qb-panel .qb-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
-#qb-panel .qb-day{display:flex;align-items:center;gap:8px;padding:10px 14px 3px;font-size:12px;font-weight:600}
-#qb-panel .qb-day span{flex:1}
-#qb-panel .qb-day b{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--qb-amber)}
-#qb-panel .qb-ent{display:flex;align-items:center;gap:8px;padding:4px 14px;font-size:12.5px}
-#qb-panel .qb-ent.qb-clk{cursor:pointer}
-#qb-panel .qb-ent.qb-clk:hover{background:var(--qb-hover)}
-#qb-panel .qb-ei{display:flex;flex:none;color:var(--qb-muted)}
-#qb-panel .qb-en{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#qb-panel .qb-et{flex:none;font-size:11px;color:var(--qb-muted);font-variant-numeric:tabular-nums}
-#qb-panel .qb-eo{flex:none;display:inline-flex;align-items:center;gap:3px;max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
- font-size:11px;font-weight:600;color:var(--qb-amber)}
-#qb-panel .qb-chip{flex:none;border-radius:4px;padding:1px 5px;font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
-#qb-panel .qb-chip.qb-ok{color:var(--qb-green);background:rgba(35,165,90,.12)}
-#qb-panel .qb-chip.qb-due{color:var(--qb-amber);background:rgba(240,178,50,.12)}
+#qb-panel .qb-goal{display:flex;align-items:center;gap:8px;margin:2px 14px 0;padding:0 10px;height:34px;border-radius:var(--qb-rs);
+ background:var(--qb-bg2);border:1px solid var(--qb-border);color:var(--qb-amber)}
+#qb-panel .qb-goal:focus-within{border-color:var(--qb-brand)}
+#qb-panel .qb-goal input{flex:1;min-width:0;height:100%;padding:0;background:none;border:0;outline:none;color:var(--qb-text);
+ font:inherit;font-size:14px;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+#qb-panel .qb-goal input::-webkit-outer-spin-button,#qb-panel .qb-goal input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#qb-panel .qb-goal-out{padding:6px 14px 4px;font-size:12px;line-height:1.45}
 #qb-panel .qb-note{padding:0 14px 4px;font-size:10.5px;line-height:1.45;color:var(--qb-muted)}
 /* our own toast (used when Discord's toast module isn't found) */
 #qb-toast{position:fixed;z-index:10001;top:48px;left:50%;transform:translateX(-50%);max-width:420px;display:flex;gap:10px;
@@ -1788,78 +1782,72 @@
     }
 
     const fmtDate = (ms, opts) => { try { return new Intl.DateTimeFormat(currentLang(), opts).format(new Date(ms)); } catch (e) { return dayKey(ms); } };
-    const fmtDuration = secs => {
-        const h = secs / 3600;
-        return h >= 1 ? t("stats.hours", { n: fmtNum(h >= 10 ? Math.round(h) : Math.round(h * 10) / 10) }) : t("stats.mins", { n: fmtNum(Math.round(secs / 60)) });
-    };
-    const DAY_FMT = { weekday: "short", month: "short", day: "numeric" };
+    const SHORT_DATE = { month: "short", day: "numeric" };
 
-    /** The Stats view: KPI cards, a 14-day chart and the daily log, all from the ledger. */
+    /** The savings line under the goal box: days to the price at the recent pace, with the usual spread. */
+    function goalText(st) {
+        const goal = SETTINGS.goal;
+        if (!goal) return t("stats.goalHint");
+        const need = goal - st.waiting; // waiting rewards count: they only need a click
+        if (need <= 0) return t("stats.goalCovered", { n: fmtNum(st.waiting) });
+        if (!st.pace) return t("stats.goalNoPace");
+        const daysAt = pace => Math.ceil(need / (pace / 30));
+        const days = daysAt(st.pace);
+        let out = t("stats.goalEta", { days: tn("stats.days", days), date: fmtDate(Date.now() + days * 864e5, SHORT_DATE) });
+        if (st.lo > 0 && st.hi > st.lo) out += " " + t("stats.goalRange", { lo: fmtNum(daysAt(st.hi)), hi: tn("stats.days", daysAt(st.lo)) });
+        if (st.waiting) out += " " + t("stats.goalWaiting", { n: fmtNum(st.waiting) });
+        return out;
+    }
+
+    /** The Stats view: the 30-day pace with its usual range, three cards, 12 weeks of bars and the savings goal. */
     function renderStats() {
         const box = UI.panel.querySelector(".qb-stv");
-        const st = ledgerStats();
+        if (box.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return false; // never rebuild under the cursor
+        const st = orbStats();
         const orbTxt = (n, size) => `${orbSvg(size ?? 12)}${esc(fmtNum(n))}`;
-        const kpi = (value, label, sub, cls, subCls) =>
-            `<div class="qb-kpi ${cls ?? ""}"><b>${value}</b><span>${esc(label)}</span>${sub ? `<i class="${subCls ?? ""}">${esc(sub)}</i>` : ""}</div>`;
-        const zero = n => n ? "" : "qb-zero";
-        const cards =
-            kpi(orbTxt(st.today.orbs), t("stats.today"), tn("stats.quests", st.today.n), zero(st.today.n)) +
-            kpi(orbTxt(st.week.orbs), t("stats.week"), tn("stats.quests", st.week.n), zero(st.week.n)) +
-            kpi(orbTxt(st.month.orbs), t("stats.month"), tn("stats.quests", st.month.n), zero(st.month.n)) +
-            kpi(orbTxt(st.claimedOrbs), t("stats.claimed"),
-                st.waitingOrbs ? t("stats.toClaim", { n: fmtNum(st.waitingOrbs) }) : st.count ? t("stats.allClaimed") : "",
-                st.claimedOrbs ? "qb-gold" : "qb-zero", st.waitingOrbs ? "qb-amb" : "") +
-            kpi(esc(fmtNum(st.count)), t("stats.done"),
-                st.first ? t("stats.since", { date: fmtDate(st.first, { month: "short", day: "numeric", year: "numeric" }) }) : "", zero(st.count)) +
-            kpi(esc(fmtDuration(st.secs)), t("stats.time"),
-                st.count ? t("stats.perQuest", { n: fmtNum(Math.round(st.secs / st.count / 60)) }) : "", zero(st.secs));
-        if (!st.count) {
-            box.innerHTML = `<div class="qb-kpis">${cards}</div><div class="qb-empty">${svg(ICON.chart, "", 26)}<br>${esc(t("stats.empty"))}</div>`;
+        const kpi = (value, label, sub, cls, attrs) =>
+            `<div class="qb-kpi ${cls ?? ""}"${attrs ?? ""}><b>${value}</b><span>${esc(label)}</span>${sub ? `<i>${esc(sub)}</i>` : ""}</div>`;
+        const cards = `<div class="qb-kpis">` +
+            kpi(orbTxt(st.week), t("stats.week"), "", st.week ? "" : "qb-zero") +
+            kpi(orbTxt(st.total), t("stats.lifetime"), st.first ? t("stats.since", { date: fmtDate(st.first, { ...SHORT_DATE, year: "numeric" }) }) : "", st.total ? "" : "qb-zero") +
+            kpi(orbTxt(st.waiting), t("stats.waiting"), "", st.waiting ? "qb-due" : "qb-zero", st.waiting ? ` data-go="claim" title="${esc(t("row.open"))}"` : "") +
+            `</div>`;
+        if (!st.total) {
+            box.innerHTML = cards + `<div class="qb-empty">${svg(ICON.chart, "", 26)}<br>${esc(t("stats.empty"))}</div>`;
             renderFooter();
-            return;
+            return true;
         }
 
-        // 14 bars, oldest left: total orbs finished that day, claimed part green, the rest amber.
-        const byKey = new Map(st.days.map(d => [d.key, d]));
-        const bars = [];
-        for (let i = 13; i >= 0; i--) { const ts = dayStart(i); bars.push({ ts, d: byKey.get(dayKey(ts)) }); }
-        const max = Math.max(0, ...bars.map(b => b.d?.orbs ?? 0));
-        const chart = `<div class="qb-sec">${esc(t("stats.chart"))}</div>
-          <div class="qb-chart">${bars.map(({ ts, d }, i) => {
-              const orbs = d?.orbs ?? 0, n = d?.entries.length ?? 0;
-              const h = orbs && max ? Math.max(5, Math.round((orbs / max) * 100)) : n ? 5 : 0;
-              const c1 = orbs ? Math.round((d.claimedOrbs / orbs) * 100) : 0, c3 = orbs ? Math.round((d.lostOrbs / orbs) * 100) : 0;
-              const tip = t("stats.bar", { date: fmtDate(ts, DAY_FMT), orbs: fmtNum(orbs), quests: tn("stats.quests", n) });
-              return `<div class="qb-colw" title="${esc(tip)}"><div class="qb-col ${n && !orbs ? "qb-item" : ""}" style="height:${h}%;animation-delay:${i * 18}ms">${orbs
-                  ? `<i class="qb-c1" style="height:${c1}%"></i><i class="qb-c2" style="height:${100 - c1 - c3}%"></i>${c3 ? `<i class="qb-c3" style="height:${c3}%"></i>` : ""}` : ""}</div></div>`;
-          }).join("")}</div>
-          <div class="qb-days">${bars.map(({ ts }, i) => `<span class="${i === bars.length - 1 ? "qb-now" : ""}">${new Date(ts).getDate()}</span>`).join("")}</div>
-          <div class="qb-legend"><span><i style="background:var(--qb-green)"></i>${esc(t("stats.legendClaimed"))}</span><span><i style="background:var(--qb-amber)"></i>${esc(t("stats.legendWaiting"))}</span>${bars.some(b => b.d?.lostOrbs)
-              ? `<span><i style="background:var(--qb-off)"></i>${esc(t("stats.legendExpired"))}</span>` : ""}</div>`;
+        const sub = st.span < 30
+            ? t("stats.projected", { n: tn("stats.days", st.span) })
+            : t("stats.perWeek", { n: fmtNum(Math.round(st.pace / 30 * 7 / 100) * 100) }) + ", " +
+              (st.lo != null ? t("stats.range", { lo: fmtNum(st.lo), hi: fmtNum(st.hi) }) : t("stats.rangeSoon"));
+        const hero = `<div class="qb-hero"><div class="qb-hero-v">${orbSvg(18)}<b>${esc(fmtNum(st.pace))}</b><span>${esc(t("stats.perMonth"))}</span></div>
+          <div class="qb-hero-s">${esc(sub)}</div></div>`;
 
-        // Daily log: the latest 7 active days unless "show older" was pressed.
-        const days = UI.statsAll ? st.days : st.days.slice(0, 7);
-        const kToday = dayKey(Date.now()), kYesterday = dayKey(dayStart(1));
-        const dayLabel = d => d.key === kToday ? t("stats.dayToday") : d.key === kYesterday ? t("stats.dayYesterday") : fmtDate(d.ts, DAY_FMT);
-        const entry = e => {
-            const lost = isLost(e), due = !e.claimedAt && !lost;
-            const pay = e.orbs ? orbTxt(e.orbs, 11) : e.reward ? esc(e.reward) : "";
-            const full = e.name + (e.app && e.app !== e.name ? " \u2014 " + e.app : "");
-            return `<div class="qb-ent ${due ? "qb-clk" : ""}"${due ? ` title="${esc(t("row.open"))}"` : ""}>
-                <span class="qb-ei">${svg(taskMeta(e.task).icon, "", 13)}</span>
-                <span class="qb-en" title="${esc(full)}">${esc(e.name)}</span>
-                <span class="qb-et">${esc(fmtDate(e.completedAt, { hour: "2-digit", minute: "2-digit" }))}</span>
-                ${pay ? `<span class="qb-eo"${e.reward && !e.orbs ? ` title="${esc(e.reward)}"` : ""}>${pay}</span>` : ""}
-                <span class="qb-chip ${lost ? "qb-lost" : due ? "qb-due" : "qb-ok"}">${esc(t(lost ? "stats.chipExpired" : due ? "stats.chipWaiting" : "stats.chipClaimed"))}</span>
-              </div>`;
-        };
-        const log = `<div class="qb-sec">${esc(t("stats.log"))}</div>` +
-            days.map(d => `<div class="qb-day"><span>${esc(dayLabel(d))}</span>${d.orbs ? `<b>${orbTxt(d.orbs, 11)}</b>` : ""}</div>${d.entries.map(entry).join("")}`).join("") +
-            (st.days.length > days.length ? `<div class="qb-btns"><button class="qb-btn" data-cmd="more">${esc(t("stats.more", { n: st.days.length - days.length }))}</button></div>` : "");
-        box.innerHTML = `<div class="qb-kpis">${cards}</div>${chart}${log}
+        // 12 rolling weeks, oldest left, ending today: claimed green, still to claim amber.
+        const max = Math.max(0, ...st.weeks.map(w => w.orbs));
+        const chart = `<div class="qb-sec">${esc(t("stats.chart"))}</div>
+          <div class="qb-chart">${st.weeks.map((w, i) => {
+              const h = w.orbs && max ? Math.max(5, Math.round((w.orbs / max) * 100)) : 0;
+              const c2 = w.orbs ? Math.round((w.waiting / w.orbs) * 100) : 0;
+              const tip = t("stats.bar", { from: fmtDate(w.from, SHORT_DATE), to: fmtDate(w.to - 864e5, SHORT_DATE), orbs: fmtNum(w.orbs) });
+              return `<div class="qb-colw" title="${esc(tip)}"><div class="qb-col" style="height:${h}%;animation-delay:${i * 18}ms">${w.orbs
+                  ? `<i class="qb-c1" style="height:${100 - c2}%"></i><i class="qb-c2" style="height:${c2}%"></i>` : ""}</div></div>`;
+          }).join("")}</div>
+          <div class="qb-axis"><span>${esc(fmtDate(st.weeks[0].from, SHORT_DATE))}</span><span>${esc(t("stats.thisWeek"))}</span></div>
+          <div class="qb-legend"><span><i style="background:var(--qb-green)"></i>${esc(t("stats.legendClaimed"))}</span><span><i style="background:var(--qb-amber)"></i>${esc(t("stats.legendWaiting"))}</span></div>`;
+
+        const goal = `<div class="qb-sec">${esc(t("stats.goal"))}</div>
+          <label class="qb-goal">${orbSvg(14)}<input type="number" min="0" max="10000000" step="100" inputmode="numeric" data-goal
+            placeholder="${esc(t("stats.goalPh"))}" value="${SETTINGS.goal || ""}" aria-label="${esc(t("stats.goal"))}"></label>
+          <div class="qb-goal-out" data-goal-out>${esc(goalText(st))}</div>`;
+
+        box.innerHTML = hero + cards + chart + goal + `
           <div class="qb-btns"><button class="qb-btn" data-cmd="csv">${svg(ICON.copy, "", 13)}<span>${esc(t("stats.csv"))}</span></button></div>
           <div class="qb-note">${esc(t("stats.note"))}</div>`;
         renderFooter();
+        return true;
     }
 
     /** What a bug report needs, gathered inside the client (no tokens, no messages; quest names are public). */
@@ -1875,7 +1863,8 @@
             state: {
                 stopped: state.stopped, paused: SETTINGS.paused, idle: state.timer == null, activeTasks: state.activeTasks,
                 lastScan: state.lastScan ? new Date(state.lastScan).toISOString() : null, enrollLocation: state.enrollLocation,
-                failed: state.failCounts.size, enrollFailed: state.enrollFailed.size, skipped: state.skipped.size, historyEntries: Object.keys(LEDGER.quests).length
+                failed: state.failCounts.size, enrollFailed: state.enrollFailed.size, skipped: state.skipped.size,
+                history: { recent: Object.keys(HISTORY.q).length, folded: Object.keys(HISTORY.days).length }
             },
             settings: { autoEnroll: SETTINGS.autoEnroll, notify: SETTINGS.notify, toast: SETTINGS.toast, scanIntervalMs: SETTINGS.scanIntervalMs, types: SETTINGS.types },
             quests: { claimable: s.claimable.map(brief), running: s.running.map(brief), queued: s.queued.map(brief), available: s.available.map(brief), skipped: s.blocked.map(brief) }
@@ -1927,8 +1916,8 @@
         else if (settings) { if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); } }
         else if (stats) {
             // Re-render when the history changes, the day rolls over, or the language / "show older" state changes.
-            const sig = `stats:${currentLang()}:${LEDGER.rev}:${dayKey(Date.now())}:${UI.statsAll ? 1 : 0}`;
-            if (UI.sig !== sig) { renderStats(); UI.sig = sig; }
+            const sig = `stats:${currentLang()}:${HISTORY.rev}:${dayKey(Date.now())}`;
+            if (UI.sig !== sig && renderStats()) UI.sig = sig;
         }
         else if (UI.sig !== "changelog:" + currentLang()) { renderChangelog(); UI.sig = "changelog:" + currentLang(); }
         show("#qb-gear .qb-nd", ops.hasUnreadChangelog()); // after the render: opening What's new clears it
@@ -2006,7 +1995,6 @@
             case "testnotify": ops.testNotification(); return;
             case "changelog": UI.view = "changelog"; break;
             case "back": UI.view = "settings"; break;
-            case "more": UI.statsAll = true; break;
             case "github": ops.openExternal(REPO_URL); return;
             case "report": ops.openExternal(REPO_URL + "/issues/new?template=bug_report.yml"); return;
             case "history": ops.openExternal(REPO_URL + "/blob/main/CHANGELOG.md"); return;
@@ -2066,23 +2054,34 @@
         p.querySelector(".qb-x").onclick = () => togglePanel(false);
         p.querySelector("#qb-pauseall").onclick = () => { ops.setPaused(!SETTINGS.paused); refreshUI(); };
         p.querySelector("#qb-gear").onclick = () => { UI.view = UI.view === "settings" || UI.view === "changelog" ? "quests" : "settings"; UI.sig = null; renderPanel(); };
-        const openStats = on => { UI.view = on ? "stats" : "quests"; UI.statsAll = false; UI.sig = null; syncLedger(); renderPanel(); };
+        const openStats = on => { UI.view = on ? "stats" : "quests"; UI.sig = null; syncHistory(); renderPanel(); };
         p.querySelector("#qb-statsbtn").onclick = () => openStats(UI.view !== "stats");
         p.querySelector(".qb-stats").addEventListener("click", e => { if (e.target.closest("[data-go=stats]")) openStats(true); });
         p.querySelector(".qb-stv").addEventListener("click", async e => {
             const cmd = e.target.closest("[data-cmd]");
             if (cmd?.dataset.cmd === "csv") {
                 const lab = cmd.querySelector("span");
-                const ok = await copyText(ledgerCsv());
+                const ok = await copyText(historyCsv());
                 if (lab) {
-                    lab.textContent = ok ? tn("stats.copied", Object.keys(LEDGER.quests).length) : t("stats.copyFailed");
+                    lab.textContent = ok ? t("stats.copied") : t("stats.copyFailed");
                     setTimeout(() => { if (lab.isConnected) lab.textContent = t("stats.csv"); }, 2500);
                 }
                 return;
             }
             if (cmd) { runCommand(cmd.dataset.cmd); return; }
-            if (e.target.closest(".qb-clk") && openQuestsPage()) togglePanel(false);
+            if (e.target.closest("[data-go=claim]") && openQuestsPage()) togglePanel(false);
         });
+        // Savings goal: saved as typed, only its result line is redrawn (the input keeps focus).
+        const stv = p.querySelector(".qb-stv");
+        stv.addEventListener("input", e => {
+            if (!e.target.matches("[data-goal]")) return;
+            SETTINGS.goal = Math.min(1e7, Math.max(0, Math.round(Number(e.target.value) || 0)));
+            saveSettings();
+            const out = stv.querySelector("[data-goal-out]");
+            if (out) out.textContent = goalText(orbStats());
+        });
+        // Keys typed into the goal box stay there (Discord must not treat them as shortcuts); Esc still closes.
+        stv.addEventListener("keydown", e => { if (e.target.matches("[data-goal]") && e.key !== "Escape") e.stopPropagation(); });
         p.querySelector("#qb-openq").onclick = () => { if (openQuestsPage()) togglePanel(false); };
         // Rows are rebuilt via innerHTML whenever the quest set changes, so
         // clicks are delegated: a tool button runs its action, anything else
@@ -2187,7 +2186,7 @@
         if (want) {
             if (!UI.panel?.isConnected) { UI.sig = null; UI.panel = buildPanel(); document.body.appendChild(UI.panel); }
             UI.open = true;
-            syncLedger();
+            syncHistory();
             renderPanel();
             // Self-heal: if a stored position leaves it off-screen (resolution or
             // window change), snap back to the default top-right anchor.
@@ -2349,8 +2348,8 @@
     armTimer();
     // History sync runs on its own slow timer: claims happen on Discord's page
     // while the agent may be idle, and the store forgets expired quests.
-    syncLedger();
-    const ledgerTimer = setInterval(() => { syncLedger(); try { remindExpiring(); } catch (e) { /* best-effort */ } }, 15000);
+    syncHistory();
+    const historyTimer = setInterval(() => { syncHistory(); try { remindExpiring(); } catch (e) { /* best-effort */ } }, 15000);
     // One pass over Discord's module sources (~10-60 ms), off the startup path.
     (window.requestIdleCallback ?? (f => setTimeout(f, 3000)))(() => {
         try { ORB_PATHS = findOrbGlyph(WP); } catch (e) { ORB_PATHS = null; }
@@ -2365,7 +2364,7 @@
     function stop() {
         state.stopped = true;
         disarmTimer();
-        clearInterval(ledgerTimer);
+        clearInterval(historyTimer);
         for (const t of state.tasks.values()) t.ctl.cancel("agent stopped");
         try { if (onQuestsRefresh) FluxDispatcher.unsubscribe("QUESTS_FETCH_CURRENT_QUESTS_SUCCESS", onQuestsRefresh); } catch (e) { /* ignore */ }
         removeUI();
@@ -2385,7 +2384,7 @@
         persistent: !!storage,  // false = settings live only for this session
         locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
         toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG, installRoot: INSTALL_ROOT,
-        stats: ledgerStats, history: () => ledgerStats().list, historyCsv: ledgerCsv, syncHistory: syncLedger,
+        stats: orbStats, historyCsv, syncHistory,
         get orbGlyph() { return !!ORB_PATHS; }, // false = Discord's glyph wasn't found, the HUD uses its own
         diagnostics,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,

@@ -126,6 +126,26 @@ compact mode for small windows.
 - Compact mode: dropped. Discord's own minimum window size always fits the
   400 px panel, and the panel already caps its height at 76% of the window.
 
+## Iteration 4 (v1.6.0): pace instead of a diary
+
+Decision (user, 2026-09-28): only orb amounts matter, for long-term budgeting.
+Live data from one account (78 finished quests over ~11 weeks, rewards of 200 or
+700 orbs): single days ran 0 to 2,200, single weeks 2,000 to 7,900 (4x), but
+rolling 4-week totals only 14,600 to 18,500 (about +/-12%). So days are noise and
+months are plannable.
+
+- Storage `questAgent.orbs.v1`: `q: { questId: [localDay, orbs, state] }` (0 waiting,
+  1 claimed, 2 lost) while Discord might still list the quest, folded into
+  `days: { localDay: orbs }` after 180 days (lost rewards dropped). Quest ids stay
+  only as long as they are needed to avoid counting a quest twice. The 1.5.x
+  ledger is converted and deleted on first load.
+- Stats: pace = orbs in the last 30 days (projected, and labelled, under 30 days
+  of history); usual range = min/max of the same window slid back a week at a
+  time (shown from 3 windows, i.e. ~6 weeks); 12 rolling weeks of bars; savings
+  goal = days to (price - waiting) at the pace, with the range from the slowest
+  and busiest windows.
+- Dropped: daily log, 14-day chart, quest names/games/tasks, time saved.
+
 ## Open proposals (need a decision, not built)
 
 - **History backup on disk.** The ledger lives in Discord's storage, so a

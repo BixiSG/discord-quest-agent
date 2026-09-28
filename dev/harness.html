@@ -42,7 +42,7 @@
 <script>
 (() => {
   const qs = new URLSearchParams(location.search);
-  if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); }
+  if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); localStorage.removeItem("questAgent.orbs.v1"); }
   if (qs.get("lang") || qs.get("theme")) {
     const s = JSON.parse(localStorage.getItem("questAgent.settings.v1") || "{}");
     if (qs.get("lang")) s.language = qs.get("lang");
@@ -89,18 +89,22 @@
     quest("Moss & Metal", "Moss & Metal", { task: "WATCH_VIDEO", target: 600, orbs: 700, completed: at(1, 14), claimed: at(1, 15) }),
     quest("Achievement Hunter", "Iron Lanes", { task: "ACHIEVEMENT_IN_ACTIVITY", target: 1, orbs: 200, enrolled: now - 900e3 })
   ];
-  // Older, already-claimed quests that have left Discord's store: seed the ledger directly.
-  const past = [[2, 700], [2, 300], [3, 500], [5, 700], [6, 400], [8, 700], [9, 250], [12, 700], [13, 500], [18, 700], [21, 300], [26, 700]];
-  const L = JSON.parse(localStorage.getItem("questAgent.ledger.v1") || "null");
-  if (!L && !qs.get("empty")) {
+  // Twelve weeks of older, claimed quests that have left Discord's store, written in the
+  // 1.5.x ledger format so every fresh load also exercises the migration to amounts-only.
+  // Deterministic: bursts of 200/700-orb quests with quiet days, like real campaigns.
+  if (!localStorage.getItem("questAgent.orbs.v1") && !localStorage.getItem("questAgent.ledger.v1") && !qs.get("empty")) {
     const ql = {};
-    past.forEach(([d, orbs], i) => {
-      const id = "13" + String(i).padStart(17, "0");
-      const c = at(d, 8 + (i * 5) % 14);
-      ql[id] = { id, name: ["Echo Park Trailer", "Play Driftline", "Rift Watch", "Sunken Crown", "Play Vale", "Warband Reveal"][i % 6],
-                 app: "Game " + (i + 1), task: ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "WATCH_VIDEO_ON_MOBILE"][i % 3], orbs, reward: null,
-                 secs: 900, completedAt: c, claimedAt: i === 9 ? null : c + 3600e3, claimBy: i === 9 ? now - DAY : null, byAgent: true };
-    });
+    let seed = 7;
+    const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+    for (let d = 2; d <= 84; d++) {
+      const n = rnd() < 0.35 ? 0 : 1 + Math.floor(rnd() * 3);
+      for (let j = 0; j < n; j++) {
+        const id = "13" + String(d * 10 + j).padStart(17, "0"), c = at(d, 8 + j * 3);
+        const lost = d === 40 && j === 0;
+        ql[id] = { id, name: "Old quest " + d + "/" + j, app: "Game", task: "WATCH_VIDEO", orbs: rnd() < 0.55 ? 200 : 700, reward: null,
+                   secs: 900, completedAt: c, claimedAt: lost ? null : c + 3600e3, claimBy: lost ? now - 5 * DAY : null, byAgent: true };
+      }
+    }
     localStorage.setItem("questAgent.ledger.v1", JSON.stringify({ v: 1, quests: ql }));
   }
   if (qs.get("empty")) for (const q of quests) { q.userStatus.completedAt = null; q.userStatus.claimedAt = null; }

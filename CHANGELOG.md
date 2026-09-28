@@ -4,6 +4,12 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.6.0 - 2026-09-28
+
+- Stats is now about your orb pace: orbs per 30 days with its usual range, the weekly average, 12 weeks of bars, and a Saving up for box that says roughly how many days a price takes.
+- The per-quest daily log and 14-day chart are gone. Single days swing too much to plan with; a month evens out.
+- The history keeps only the date and orb amount of each quest, no names or games. Existing history is converted on the first start.
+
 ## 1.5.2 - 2026-09-28
 
 - Report a problem now copies the agent's diagnostics to the clipboard and opens the bug form, so a report is one paste. Settings > Maintenance also has Copy diagnostics on its own.
