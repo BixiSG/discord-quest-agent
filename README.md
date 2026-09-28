@@ -119,8 +119,21 @@ problem** opens the issue tracker. **Install folder** opens the folder holding
 `Uninstall.bat`, `config.json` and the agent files in Explorer. The changelog is
 English-only.
 
-"Orbs won" is the total from quests you've already claimed. Discord doesn't hand the client
-a live orb balance, so it isn't your wallet.
+### Stats and history
+
+The chart button in the header (or a click on the *orbs won* tile) opens **Stats**: orbs
+from quests finished today, in the last 7 and 30 days, orbs claimed in total (and how many
+are still waiting), quests done and the quest time the agent sat through for you. Below that
+a **14-day chart** (claimed in green, still to claim in amber) and a **daily log**: every
+finished quest under the day it hit 100%, with its reward and whether you've claimed it.
+Click an unclaimed one to jump to the Quests page. **Copy as CSV** puts the whole history on
+the clipboard for a spreadsheet.
+
+Discord only lists current quests, so the agent keeps this history itself, inside the
+client next to the settings. It starts with whatever Discord still listed when the agent
+first recorded it, and days follow your PC's clock. "Orbs won" on the main view comes from
+the same history, so it no longer drops when old quests expire. It counts orbs from quests
+you've claimed; Discord doesn't hand the client a live orb balance, so it isn't your wallet.
 
 ### Languages
 
@@ -191,10 +204,12 @@ client already uses.
 | `hud` | `true` | Show the button and panel |
 | `notify` | `true` | Desktop notification when a reward is claimable |
 | `toast` | `true` | In-app toast when a reward is claimable |
+| `sound` | `true` | Chime with the in-app toast |
+| `volume` | `60` | Chime volume, 0-100 |
 | `theme` | `"dark"` | Panel look: `dark` (Discord dark) or `light` |
 | `language` | `"auto"` | HUD language: `auto` (follow Discord), `en`, `ru`, `uk`, or a code you added |
 
-`autoEnroll`, `scanIntervalMs`, `notify`, `toast`, `theme` and `language` are only defaults:
+`autoEnroll`, `scanIntervalMs`, `notify`, `toast`, `sound`, `volume`, `theme` and `language` are only defaults:
 whatever you set in the HUD's Settings view overrides them and is remembered inside Discord.
 
 ## 🔒 Security

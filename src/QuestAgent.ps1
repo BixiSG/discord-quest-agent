@@ -73,6 +73,11 @@ $DefaultConfig = [ordered]@{
     maxTaskAttempts = 3
     hud             = $true
     notify          = $true
+    toast           = $true
+    sound           = $true
+    volume          = 60
+    theme           = "dark"
+    language        = "auto"
 }
 
 function Get-Config {
@@ -291,6 +296,11 @@ function Get-AgentPayload {
         maxTaskAttempts = [int]$cfg.maxTaskAttempts
         hud             = [bool]$cfg.hud
         notify          = [bool]$cfg.notify
+        toast           = [bool]$cfg.toast
+        sound           = [bool]$cfg.sound
+        volume          = [int]$cfg.volume
+        theme           = [string]$cfg.theme
+        language        = [string]$cfg.language
         toolVersion     = (Get-LocalVersion)
         repo            = [string]$cfg.repo
         installRoot     = [string]$Root
@@ -442,6 +452,7 @@ JSON.stringify({
   titleBarSlots: document.querySelectorAll('[class*="trailing_"]').length,
   locale: document.documentElement.lang || navigator.language,
   activeTasks: window.__questAgent && window.__questAgent.state ? window.__questAgent.state.activeTasks : null,
+  historyEntries: window.__questAgent && window.__questAgent.history ? window.__questAgent.history().length : null,
   quests: window.__questAgent && window.__questAgent.ui ? window.__questAgent.ui.snapshot() : null
 })
 "@

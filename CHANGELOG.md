@@ -4,6 +4,13 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.5.0 - 2026-09-28
+
+- Stats: a new view (chart button in the panel header) with orbs from quests finished today, this week and this month, orbs claimed in total, quests done and time saved.
+- A 14-day chart and a daily log of every finished quest, with its reward and whether it has been claimed. Copy the whole history as CSV.
+- The agent keeps this history itself, so "orbs won" no longer shrinks when old quests expire from Discord.
+- The config.json settings toast, sound, volume, theme and language now take effect. Before, the launcher never passed them on.
+
 ## 1.4.3 - 2026-09-14
 
 - Only one agent process runs per install. If a second launcher starts the agent while one is already resident, the newcomer notes it in the log and exits, so two watchdogs can never restart Discord over each other.

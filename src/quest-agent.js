@@ -18,6 +18,8 @@
  *   - puts a HUD in the title bar: pause/stop/skip/run-now per quest, a global
  *     pause, and settings (quest types, auto-accept, notifications, rescan
  *     interval) that persist across Discord restarts,
+ *   - keeps a history of every finished quest (Stats view: orbs per day, week,
+ *     month and lifetime, a 14-day chart, a daily log, CSV export),
  *   - shows the changelog (Settings > What's new) after a self-update and links
  *     to the GitHub project,
  *   - retires the older QuestBypass prototype if one is still running.
@@ -28,7 +30,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 15;
+    const AGENT_VERSION = 16;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -142,6 +144,21 @@
         "notify.updatedTitle": "Quest agent updated to v{v}", "notify.updatedBody": "Settings \u2192 What's new lists the changes.",
         "tool.dismiss": "Dismiss (hide from this list)", "set.clearHidden": "Show dismissed quests ({n})",
         "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
+        "title.stats": "Stats", "head.stats": "Stats and history",
+        "stats.today": "today", "stats.week": "7 days", "stats.month": "30 days",
+        "stats.quests.one": "{n} quest", "stats.quests.other": "{n} quests",
+        "stats.claimed": "orbs claimed", "stats.toClaim": "+{n} to claim", "stats.allClaimed": "all claimed",
+        "stats.done": "quests done", "stats.since": "since {date}", "stats.time": "time saved", "stats.perQuest": "~{n} min per quest",
+        "stats.hours": "{n} h", "stats.mins": "{n} min",
+        "stats.chart": "Last 14 days", "stats.bar": "{date}: {orbs} orbs, {quests}",
+        "stats.legendClaimed": "claimed", "stats.legendWaiting": "waiting to claim",
+        "stats.log": "Daily log", "stats.dayToday": "Today", "stats.dayYesterday": "Yesterday",
+        "stats.chipClaimed": "claimed", "stats.chipWaiting": "to claim",
+        "stats.empty": "No finished quests yet. Every quest that reaches 100% lands here, by day.",
+        "stats.more": "Show older days ({n})", "stats.csv": "Copy as CSV",
+        "stats.copied.one": "Copied {n} quest", "stats.copied.other": "Copied {n} quests",
+        "stats.copyFailed": "Could not copy",
+        "stats.note": "Days follow your PC's clock. History starts with the quests Discord still listed when it was first recorded.",
         "task.WATCH_VIDEO.label": "video", "task.WATCH_VIDEO.title": "Watch a video",
         "task.WATCH_VIDEO.desc": "Trailer and video quests. Fully automatic.",
         "task.WATCH_VIDEO_ON_MOBILE.label": "mobile", "task.WATCH_VIDEO_ON_MOBILE.title": "Watch on mobile",
@@ -187,6 +204,16 @@
         let s = dict[key] ?? EN[key] ?? key;
         if (params) for (const [k, v] of Object.entries(params)) s = s.split("{" + k + "}").join(String(v));
         return s;
+    }
+    const fmtNum = n => { try { return new Intl.NumberFormat(currentLang()).format(n); } catch (e) { return String(n); } };
+    /** Count-aware t(): picks key.one / key.few / key.many / key.other by the language's plural rules; {n} is the formatted count. */
+    function tn(key, n, params) {
+        let cat = "other";
+        try { cat = new Intl.PluralRules(currentLang()).select(n); } catch (e) { /* unknown code: "other" */ }
+        const dict = LOCALES[currentLang()] ?? EN;
+        const keys = [key + "." + cat, key + ".other", key];
+        const k = keys.find(x => dict[x] != null) ?? keys.find(x => EN[x] != null) ?? key; // the language's own forms first
+        return t(k, Object.assign({ n: fmtNum(n) }, params));
     }
 
     // ---- Sound ------------------------------------------------------------
@@ -424,6 +451,132 @@
         try { storage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) { /* quota / sandbox */ }
     }
     loadSettings();
+
+    // ---- History (ledger) -------------------------------------------------
+    // Discord only lists current quests: once one expires it leaves the store,
+    // and with it any trace of the orbs it paid. The ledger keeps one entry per
+    // finished quest, persisted next to the settings, so the Stats view can
+    // show totals, a 14-day chart and a daily log that outlive the quests. The
+    // first run backfills whatever Discord still lists. Days are the PC's
+    // local calendar days.
+    const LEDGER_KEY = "questAgent.ledger.v1";
+    const LEDGER_MAX = 1000;
+    const LEDGER = { quests: Object.create(null), rev: 0 }; // keyed by quest id; null prototype so no id can collide with Object keys
+    const agentFinished = new Set(); // quest ids this agent ran to 100% this session
+    const tsOf = v => { const n = typeof v === "number" ? v : Date.parse(v ?? ""); return Number.isFinite(n) && n > 0 ? n : null; };
+    function loadLedger() {
+        if (!storage) return;
+        try {
+            const raw = storage.getItem(LEDGER_KEY);
+            const l = raw ? JSON.parse(raw) : null;
+            if (!l || typeof l.quests !== "object" || !l.quests) return;
+            for (const [id, e] of Object.entries(l.quests)) {
+                if (e && typeof e === "object" && tsOf(e.completedAt)) LEDGER.quests[id] = e;
+            }
+        } catch (e) { console.warn("[QuestAgent] Could not read the quest history:", e); }
+    }
+    function saveLedger() {
+        LEDGER.rev++;
+        const ids = Object.keys(LEDGER.quests);
+        if (ids.length > LEDGER_MAX) {
+            ids.sort((a, b) => LEDGER.quests[a].completedAt - LEDGER.quests[b].completedAt);
+            for (const id of ids.slice(0, ids.length - LEDGER_MAX)) delete LEDGER.quests[id];
+        }
+        if (!storage) return;
+        try { storage.setItem(LEDGER_KEY, JSON.stringify({ v: 1, quests: LEDGER.quests })); } catch (e) { /* quota / sandbox */ }
+    }
+    /** Name of the first non-orb reward (avatar decoration, in-game item...), or null. */
+    const rewardLabelOf = q => {
+        const r = (q.config?.rewardsConfig?.rewards ?? []).find(x => x && !x.orbQuantity);
+        const n = r?.messages?.name ?? r?.messages?.nameWithArticle;
+        return typeof n === "string" && n.trim() ? n.trim().slice(0, 80) : null;
+    };
+    /** Create or refresh one quest's entry; true if it changed. fallbackTs stands in for a completedAt the store hasn't caught up with. */
+    function upsertLedger(q, fallbackTs) {
+        const us = q.userStatus ?? {};
+        const old = LEDGER.quests[q.id];
+        const completedAt = tsOf(us.completedAt) ?? old?.completedAt ?? fallbackTs ?? null;
+        if (!completedAt) return false;
+        const tasks = taskConfigOf(q)?.tasks ?? {};
+        // The task that actually reached its target; for multi-task quests any one of them can finish it.
+        const task = Object.keys(tasks).find(k => (us.progress?.[k]?.value ?? 0) >= (tasks[k]?.target ?? Infinity)) ??
+            supportedTasksOf(q)[0] ?? Object.keys(tasks)[0] ?? old?.task ?? null;
+        const e = {
+            id: q.id,
+            name: q.config?.messages?.questName ?? old?.name ?? String(q.id),
+            app: q.config?.application?.name ?? q.config?.messages?.gameTitle ?? old?.app ?? "",
+            task,
+            orbs: orbsOf(q),
+            reward: rewardLabelOf(q),
+            secs: Number(tasks[task]?.target) || old?.secs || 0,
+            completedAt,
+            claimedAt: tsOf(us.claimedAt) ?? old?.claimedAt ?? null,
+            byAgent: !!(old?.byAgent || agentFinished.has(q.id))
+        };
+        if (old && JSON.stringify(old) === JSON.stringify(e)) return false;
+        LEDGER.quests[q.id] = e;
+        return true;
+    }
+    /** Record every finished quest Discord lists (and claims on ones already recorded). Saves only on change. */
+    function syncLedger() {
+        let changed = false;
+        try {
+            for (const q of allQuests()) {
+                if (!q?.id || (!q.userStatus?.completedAt && !LEDGER.quests[q.id])) continue;
+                if (upsertLedger(q)) changed = true;
+            }
+        } catch (e) { console.warn("[QuestAgent] History sync failed:", e); }
+        if (changed) saveLedger();
+        return changed;
+    }
+    /** The agent just ran a quest to 100%: record it now, the store may lag a beat. */
+    function noteFinished(quest) {
+        agentFinished.add(quest.id);
+        try { if (upsertLedger(quest, Date.now())) saveLedger(); } catch (e) { /* history is best-effort */ }
+    }
+    loadLedger();
+
+    // Local calendar helpers for the Stats view.
+    const pad2 = n => String(n).padStart(2, "0");
+    const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+    /** Local midnight, daysAgo days back (0 = today). */
+    const dayStart = daysAgo => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - daysAgo); return d.getTime(); };
+
+    /** Everything the Stats view shows, computed from the ledger. */
+    function ledgerStats() {
+        const list = Object.values(LEDGER.quests).filter(e => tsOf(e.completedAt)).sort((a, b) => b.completedAt - a.completedAt);
+        const orbs = arr => arr.reduce((s, e) => s + (Number(e.orbs) || 0), 0);
+        const since = from => { const a = list.filter(e => e.completedAt >= from); return { orbs: orbs(a), n: a.length }; };
+        const claimed = list.filter(e => e.claimedAt);
+        const secs = list.reduce((s, e) => s + (Number(e.secs) || 0), 0);
+        const days = new Map();
+        for (const e of list) {
+            const k = dayKey(e.completedAt);
+            let d = days.get(k);
+            if (!d) { d = { key: k, ts: e.completedAt, orbs: 0, claimedOrbs: 0, entries: [] }; days.set(k, d); }
+            d.orbs += Number(e.orbs) || 0;
+            if (e.claimedAt) d.claimedOrbs += Number(e.orbs) || 0;
+            d.entries.push(e);
+        }
+        return {
+            count: list.length,
+            first: list.length ? list[list.length - 1].completedAt : null,
+            today: since(dayStart(0)), week: since(dayStart(6)), month: since(dayStart(29)),
+            claimedOrbs: orbs(claimed), waitingOrbs: orbs(list) - orbs(claimed),
+            secs, days: [...days.values()], list
+        };
+    }
+    const ledgerClaimedOrbs = () => Object.values(LEDGER.quests).reduce((s, e) => s + (e.claimedAt ? Number(e.orbs) || 0 : 0), 0);
+    /** The ledger as CSV (one row per quest, newest first). */
+    function ledgerCsv() {
+        const q = v => { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+        const iso = ms => ms ? new Date(ms).toISOString() : "";
+        const rows = [["day", "completed_at", "claimed_at", "quest", "game", "task", "orbs", "reward", "task_seconds", "by_agent"]];
+        for (const e of ledgerStats().list) {
+            rows.push([dayKey(e.completedAt), iso(e.completedAt), iso(e.claimedAt), e.name, e.app, e.task, e.orbs, e.reward, e.secs, e.byAgent ? 1 : 0]);
+        }
+        return rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
+    }
 
     // ---- State ----------------------------------------------------------
     const state = {
@@ -706,6 +859,7 @@
         state.tasks.set(quest.id, { quest, taskName, ctl, startedAt: Date.now() });
         console.log(`[QuestAgent] Started "${questName}" (${taskName}).`);
         task.then(() => {
+            noteFinished(quest);
             notifyClaimable(questName, applicationName);
         }).catch(e => {
             if (e instanceof Cancelled) {
@@ -783,6 +937,7 @@
         } finally {
             state.scanning = false;
         }
+        syncLedger();
         maybeIdle();
         refreshUI();
     }
@@ -951,7 +1106,7 @@
     // ---- HUD: toolbar button + floating quest panel ----------------------
     // Discord's class names are hashed and change on updates, so the button
     // clones them off the live Inbox button instead of hardcoding them.
-    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null };
+    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null, statsAll: false };
 
     // Inline icons keep the panel pure-ASCII (no glyphs to mangle) and crisp.
     const ICON = {
@@ -981,6 +1136,8 @@
         chev: "M9.3 6.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-5 5a1 1 0 0 1-1.4-1.4L13.6 12 9.3 7.7a1 1 0 0 1 0-1.4Z",
         eyeoff: "M2.3 2.3a1 1 0 0 1 1.4 0l18 18a1 1 0 0 1-1.4 1.4l-3.1-3.1A11.2 11.2 0 0 1 12 20C7 20 3 16.5 1 12a12.6 12.6 0 0 1 4.2-5.4L2.3 3.7a1 1 0 0 1 0-1.4ZM12 4c5 0 9 3.5 11 8a12.5 12.5 0 0 1-3.5 4.7l-3-3a4 4 0 0 0-5.2-5.2L8.1 6.2A10.8 10.8 0 0 1 12 4Zm-3.4 7 4.4 4.4A2.5 2.5 0 0 1 8.6 11Z",
         folder: "M3 5a2 2 0 0 1 2-2h4.6a2 2 0 0 1 1.4.6L12.4 5H19a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 4v9h14V9H5Z",
+        chart: "M4 20a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4Zm7 0a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2Zm7 0a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-2Z",
+        copy: "M5 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Zm4-6h10a2 2 0 0 1 2 2v12a1 1 0 1 1-2 0V4H9a1 1 0 0 1 0-2Z",
         speaker: "M4 9.5A1.5 1.5 0 0 1 5.5 8H8l4.4-3.5A1 1 0 0 1 14 5.3v13.4a1 1 0 0 1-1.6.8L8 16H5.5A1.5 1.5 0 0 1 4 14.5v-5Zm12.6-1.2a1 1 0 0 1 1.4.1 5.5 5.5 0 0 1 0 7.2 1 1 0 1 1-1.5-1.3 3.5 3.5 0 0 0 0-4.6 1 1 0 0 1 .1-1.4Zm2.7-2.8a1 1 0 0 1 1.4 0 9.5 9.5 0 0 1 0 13 1 1 0 0 1-1.4-1.4 7.5 7.5 0 0 0 0-10.2 1 1 0 0 1 0-1.4Z"
     };
     const svg = (path, cls, size, evenodd) =>
@@ -1045,6 +1202,8 @@
             else available.push(r);
         }
         // Dismissed quests leave the Skipped group only; every other group still shows them.
+        // The store forgets expired quests; the ledger doesn't, so "orbs won" never shrinks.
+        orbsClaimed = Math.max(orbsClaimed, ledgerClaimedOrbs());
         return { claimable, running, queued, available, blocked: blocked.filter(r => !state.hidden.has(r.id)), orbsClaimed, orbsPending };
     }
 
@@ -1209,6 +1368,53 @@
 #qb-panel .qb-ul{margin:0;padding:0 14px 6px;list-style:none}
 #qb-panel .qb-ul li{position:relative;padding:3px 0 3px 14px;font-size:12.5px;line-height:1.4;color:var(--qb-text)}
 #qb-panel .qb-ul li::before{content:"";position:absolute;left:2px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--qb-brand);opacity:.8}
+/* stats view */
+#qb-panel .qb-stat.qb-tap{cursor:pointer;transition:border-color .1s}
+#qb-panel .qb-stat.qb-tap:hover{border-color:rgba(240,178,50,.5)}
+#qb-panel .qb-stv{overflow-y:auto;padding:0 0 8px;scrollbar-width:thin}
+#qb-panel .qb-stv::-webkit-scrollbar{width:8px}
+#qb-panel .qb-stv::-webkit-scrollbar-track{background:transparent}
+#qb-panel .qb-stv::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+#qb-panel .qb-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px 2px}
+#qb-panel .qb-kpi{min-width:0;background:var(--qb-bg2);border-radius:var(--qb-rs);padding:8px 10px;border:1px solid transparent}
+#qb-panel .qb-kpi b{display:flex;align-items:center;gap:4px;font-size:17px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
+#qb-panel .qb-kpi b svg{color:var(--qb-amber);flex:none}
+#qb-panel .qb-kpi span{display:block;margin-top:1px;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--qb-muted)}
+#qb-panel .qb-kpi i{display:block;margin-top:3px;font-style:normal;font-size:10.5px;color:var(--qb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#qb-panel .qb-kpi i.qb-amb{color:var(--qb-amber)}
+#qb-panel .qb-kpi.qb-zero b{color:var(--qb-muted);opacity:.45}
+#qb-panel .qb-kpi.qb-zero b svg{color:inherit}
+#qb-panel .qb-kpi.qb-gold{background:rgba(240,178,50,.09);border-color:rgba(240,178,50,.22)}
+#qb-panel .qb-kpi.qb-gold b{color:var(--qb-amber)}
+#qb-panel .qb-chart{display:flex;align-items:flex-end;gap:4px;height:78px;padding:4px 14px 0}
+#qb-panel .qb-colw{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:default}
+#qb-panel .qb-col{display:flex;flex-direction:column-reverse;min-height:2px;border-radius:3px 3px 1px 1px;overflow:hidden;background:var(--qb-bg2);
+ transition:height .4s cubic-bezier(.4,0,.2,1)}
+#qb-panel .qb-col.qb-item{background:var(--qb-brand)}
+#qb-panel .qb-col i{display:block;flex:none}
+#qb-panel .qb-col .qb-c1{background:var(--qb-green)}
+#qb-panel .qb-col .qb-c2{background:var(--qb-amber)}
+#qb-panel .qb-colw:hover .qb-col{filter:brightness(1.15)}
+#qb-panel .qb-days{display:flex;gap:4px;padding:4px 14px 0;font-size:9.5px;color:var(--qb-muted);font-variant-numeric:tabular-nums}
+#qb-panel .qb-days span{flex:1;min-width:0;text-align:center}
+#qb-panel .qb-days span.qb-now{color:var(--qb-text);font-weight:700}
+#qb-panel .qb-legend{display:flex;gap:14px;padding:6px 14px 2px;font-size:10.5px;color:var(--qb-muted)}
+#qb-panel .qb-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+#qb-panel .qb-day{display:flex;align-items:center;gap:8px;padding:10px 14px 3px;font-size:12px;font-weight:600}
+#qb-panel .qb-day span{flex:1}
+#qb-panel .qb-day b{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--qb-amber)}
+#qb-panel .qb-ent{display:flex;align-items:center;gap:8px;padding:4px 14px;font-size:12.5px}
+#qb-panel .qb-ent.qb-clk{cursor:pointer}
+#qb-panel .qb-ent.qb-clk:hover{background:var(--qb-hover)}
+#qb-panel .qb-ei{display:flex;flex:none;color:var(--qb-muted)}
+#qb-panel .qb-en{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#qb-panel .qb-et{flex:none;font-size:11px;color:var(--qb-muted);font-variant-numeric:tabular-nums}
+#qb-panel .qb-eo{flex:none;display:inline-flex;align-items:center;gap:3px;max-width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+ font-size:11px;font-weight:600;color:var(--qb-amber)}
+#qb-panel .qb-chip{flex:none;border-radius:4px;padding:1px 5px;font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+#qb-panel .qb-chip.qb-ok{color:var(--qb-green);background:rgba(35,165,90,.12)}
+#qb-panel .qb-chip.qb-due{color:var(--qb-amber);background:rgba(240,178,50,.12)}
+#qb-panel .qb-note{padding:0 14px 4px;font-size:10.5px;line-height:1.45;color:var(--qb-muted)}
 /* our own toast (used when Discord's toast module isn't found) */
 #qb-toast{position:fixed;z-index:10001;top:48px;left:50%;transform:translateX(-50%);max-width:420px;display:flex;gap:10px;
  align-items:flex-start;padding:10px 14px;background:var(--qb-bg);color:var(--qb-text);border:1px solid var(--qb-border);
@@ -1446,15 +1652,106 @@
         renderFooter();
     }
 
+    const fmtDate = (ms, opts) => { try { return new Intl.DateTimeFormat(currentLang(), opts).format(new Date(ms)); } catch (e) { return dayKey(ms); } };
+    const fmtDuration = secs => {
+        const h = secs / 3600;
+        return h >= 1 ? t("stats.hours", { n: fmtNum(h >= 10 ? Math.round(h) : Math.round(h * 10) / 10) }) : t("stats.mins", { n: fmtNum(Math.round(secs / 60)) });
+    };
+    const DAY_FMT = { weekday: "short", month: "short", day: "numeric" };
+
+    /** The Stats view: KPI cards, a 14-day chart and the daily log, all from the ledger. */
+    function renderStats() {
+        const box = UI.panel.querySelector(".qb-stv");
+        const st = ledgerStats();
+        const orbTxt = (n, size) => `${svg(ICON.orb, "", size ?? 10)}${esc(fmtNum(n))}`;
+        const kpi = (value, label, sub, cls, subCls) =>
+            `<div class="qb-kpi ${cls ?? ""}"><b>${value}</b><span>${esc(label)}</span>${sub ? `<i class="${subCls ?? ""}">${esc(sub)}</i>` : ""}</div>`;
+        const zero = n => n ? "" : "qb-zero";
+        const cards =
+            kpi(orbTxt(st.today.orbs), t("stats.today"), tn("stats.quests", st.today.n), zero(st.today.n)) +
+            kpi(orbTxt(st.week.orbs), t("stats.week"), tn("stats.quests", st.week.n), zero(st.week.n)) +
+            kpi(orbTxt(st.month.orbs), t("stats.month"), tn("stats.quests", st.month.n), zero(st.month.n)) +
+            kpi(orbTxt(st.claimedOrbs), t("stats.claimed"),
+                st.waitingOrbs ? t("stats.toClaim", { n: fmtNum(st.waitingOrbs) }) : st.count ? t("stats.allClaimed") : "",
+                st.claimedOrbs ? "qb-gold" : "qb-zero", st.waitingOrbs ? "qb-amb" : "") +
+            kpi(esc(fmtNum(st.count)), t("stats.done"),
+                st.first ? t("stats.since", { date: fmtDate(st.first, { month: "short", day: "numeric", year: "numeric" }) }) : "", zero(st.count)) +
+            kpi(esc(fmtDuration(st.secs)), t("stats.time"),
+                st.count ? t("stats.perQuest", { n: fmtNum(Math.round(st.secs / st.count / 60)) }) : "", zero(st.secs));
+        if (!st.count) {
+            box.innerHTML = `<div class="qb-kpis">${cards}</div><div class="qb-empty">${svg(ICON.chart, "", 26)}<br>${esc(t("stats.empty"))}</div>`;
+            renderFooter();
+            return;
+        }
+
+        // 14 bars, oldest left: total orbs finished that day, claimed part green, the rest amber.
+        const byKey = new Map(st.days.map(d => [d.key, d]));
+        const bars = [];
+        for (let i = 13; i >= 0; i--) { const ts = dayStart(i); bars.push({ ts, d: byKey.get(dayKey(ts)) }); }
+        const max = Math.max(0, ...bars.map(b => b.d?.orbs ?? 0));
+        const chart = `<div class="qb-sec">${esc(t("stats.chart"))}</div>
+          <div class="qb-chart">${bars.map(({ ts, d }) => {
+              const orbs = d?.orbs ?? 0, n = d?.entries.length ?? 0;
+              const h = orbs && max ? Math.max(5, Math.round((orbs / max) * 100)) : n ? 5 : 0;
+              const c1 = orbs ? Math.round((d.claimedOrbs / orbs) * 100) : 0;
+              const tip = t("stats.bar", { date: fmtDate(ts, DAY_FMT), orbs: fmtNum(orbs), quests: tn("stats.quests", n) });
+              return `<div class="qb-colw" title="${esc(tip)}"><div class="qb-col ${n && !orbs ? "qb-item" : ""}" style="height:${h}%">${orbs
+                  ? `<i class="qb-c1" style="height:${c1}%"></i><i class="qb-c2" style="height:${100 - c1}%"></i>` : ""}</div></div>`;
+          }).join("")}</div>
+          <div class="qb-days">${bars.map(({ ts }, i) => `<span class="${i === bars.length - 1 ? "qb-now" : ""}">${new Date(ts).getDate()}</span>`).join("")}</div>
+          <div class="qb-legend"><span><i style="background:var(--qb-green)"></i>${esc(t("stats.legendClaimed"))}</span><span><i style="background:var(--qb-amber)"></i>${esc(t("stats.legendWaiting"))}</span></div>`;
+
+        // Daily log: the latest 7 active days unless "show older" was pressed.
+        const days = UI.statsAll ? st.days : st.days.slice(0, 7);
+        const kToday = dayKey(Date.now()), kYesterday = dayKey(dayStart(1));
+        const dayLabel = d => d.key === kToday ? t("stats.dayToday") : d.key === kYesterday ? t("stats.dayYesterday") : fmtDate(d.ts, DAY_FMT);
+        const entry = e => {
+            const due = !e.claimedAt;
+            const pay = e.orbs ? orbTxt(e.orbs, 9) : e.reward ? esc(e.reward) : "";
+            const full = e.name + (e.app && e.app !== e.name ? " \u2014 " + e.app : "");
+            return `<div class="qb-ent ${due ? "qb-clk" : ""}"${due ? ` title="${esc(t("row.open"))}"` : ""}>
+                <span class="qb-ei">${svg(taskMeta(e.task).icon, "", 13)}</span>
+                <span class="qb-en" title="${esc(full)}">${esc(e.name)}</span>
+                <span class="qb-et">${esc(fmtDate(e.completedAt, { hour: "2-digit", minute: "2-digit" }))}</span>
+                ${pay ? `<span class="qb-eo"${e.reward && !e.orbs ? ` title="${esc(e.reward)}"` : ""}>${pay}</span>` : ""}
+                <span class="qb-chip ${due ? "qb-due" : "qb-ok"}">${esc(t(due ? "stats.chipWaiting" : "stats.chipClaimed"))}</span>
+              </div>`;
+        };
+        const log = `<div class="qb-sec">${esc(t("stats.log"))}</div>` +
+            days.map(d => `<div class="qb-day"><span>${esc(dayLabel(d))}</span>${d.orbs ? `<b>${orbTxt(d.orbs, 9)}</b>` : ""}</div>${d.entries.map(entry).join("")}`).join("") +
+            (st.days.length > days.length ? `<div class="qb-btns"><button class="qb-btn" data-cmd="more">${esc(t("stats.more", { n: st.days.length - days.length }))}</button></div>` : "");
+        box.innerHTML = `<div class="qb-kpis">${cards}</div>${chart}${log}
+          <div class="qb-btns"><button class="qb-btn" data-cmd="csv">${svg(ICON.copy, "", 13)}<span>${esc(t("stats.csv"))}</span></button></div>
+          <div class="qb-note">${esc(t("stats.note"))}</div>`;
+        renderFooter();
+    }
+
+    /** Put text on the clipboard: Discord's own bridge first, then the web APIs. */
+    async function copyText(text) {
+        try {
+            if (typeof DiscordNative !== "undefined" && typeof DiscordNative.clipboard?.copy === "function") { DiscordNative.clipboard.copy(text); return true; }
+        } catch (e) { /* try the web API */ }
+        try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* try execCommand */ }
+        try {
+            const ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta); ta.select();
+            const ok = document.execCommand("copy");
+            ta.remove();
+            return ok;
+        } catch (e) { return false; }
+    }
+
     function renderPanel() {
         if (!UI.panel) return;
         const s = snapshot();
-        const quests = UI.view === "quests", settings = UI.view === "settings", log = UI.view === "changelog";
+        const quests = UI.view === "quests", settings = UI.view === "settings", log = UI.view === "changelog", stats = UI.view === "stats";
         const show = (sel, on) => { UI.panel.querySelector(sel).style.display = on ? "" : "none"; };
         show(".qb-stats", quests); show(".qb-body", quests); show(".qb-pending", quests);
-        show(".qb-set", settings); show(".qb-log", log); show(".qb-foot", !quests);
-        UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", !quests);
-        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : settings ? "title.settings" : "title.changelog");
+        show(".qb-set", settings); show(".qb-log", log); show(".qb-stv", stats); show(".qb-foot", !quests);
+        UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", settings || log);
+        UI.panel.querySelector("#qb-statsbtn").classList.toggle("qb-on", stats);
+        UI.panel.querySelector(".qb-title").textContent = t(quests ? "title.quests" : settings ? "title.settings" : stats ? "title.stats" : "title.changelog");
         UI.panel.classList.toggle("qb-light", SETTINGS.theme === "light");
         if (UI.lang !== currentLang()) { // language changed: re-label the static chrome
             UI.lang = currentLang();
@@ -1462,6 +1759,8 @@
             lab("#qb-s-run + span", "stat.running"); lab("#qb-s-queue + span", "stat.queued");
             lab("#qb-s-claim + span", "stat.claim"); lab("#qb-s-orbs + span", "stat.orbs");
             UI.panel.querySelector("#qb-scan").title = t("head.scan");
+            UI.panel.querySelector("#qb-statsbtn").title = t("head.stats");
+            UI.panel.querySelector(".qb-tap").title = t("head.stats");
             UI.panel.querySelector("#qb-gear").title = t("head.settings");
             UI.panel.querySelector(".qb-x").title = t("head.close");
             UI.panel.setAttribute("aria-label", t("btn.label"));
@@ -1469,6 +1768,11 @@
 
         if (quests) renderQuests(s);
         else if (settings) { if (UI.sig !== "settings:" + currentLang()) { renderSettings(); UI.sig = "settings:" + currentLang(); } }
+        else if (stats) {
+            // Re-render when the history changes, the day rolls over, or the language / "show older" state changes.
+            const sig = `stats:${currentLang()}:${LEDGER.rev}:${dayKey(Date.now())}:${UI.statsAll ? 1 : 0}`;
+            if (UI.sig !== sig) { renderStats(); UI.sig = sig; }
+        }
         else if (UI.sig !== "changelog:" + currentLang()) { renderChangelog(); UI.sig = "changelog:" + currentLang(); }
         show("#qb-gear .qb-nd", ops.hasUnreadChangelog()); // after the render: opening What's new clears it
 
@@ -1539,6 +1843,7 @@
             case "testnotify": ops.testNotification(); return;
             case "changelog": UI.view = "changelog"; break;
             case "back": UI.view = "settings"; break;
+            case "more": UI.statsAll = true; break;
             case "github": ops.openExternal(REPO_URL); return;
             case "report": ops.openExternal(REPO_URL + "/issues"); return;
             case "history": ops.openExternal(REPO_URL + "/blob/main/CHANGELOG.md"); return;
@@ -1572,6 +1877,7 @@
             <span class="qb-dot"></span><span class="qb-title">${esc(t("title.quests"))}</span>
             <span class="qb-status"></span>
             <button class="qb-act" id="qb-pauseall" title="${esc(t("head.pauseAll"))}">${svg(ICON.pause, "", 15)}</button>
+            <button class="qb-act" id="qb-statsbtn" title="${esc(t("head.stats"))}">${svg(ICON.chart, "", 15)}</button>
             <button class="qb-act" id="qb-scan" title="${esc(t("head.scan"))}">${svg(ICON.refresh, "", 15)}</button>
             <button class="qb-act" id="qb-gear" title="${esc(t("head.settings"))}">${svg(ICON.gear, "", 15, true)}<span class="qb-nd" style="display:none"></span></button>
             <button class="qb-act qb-x" title="${esc(t("head.close"))}">${svg(ICON.close, "", 15)}</button>
@@ -1580,11 +1886,12 @@
             <div class="qb-stat"><b id="qb-s-run">0</b><span>${esc(t("stat.running"))}</span></div>
             <div class="qb-stat"><b id="qb-s-queue">0</b><span>${esc(t("stat.queued"))}</span></div>
             <div class="qb-stat"><b id="qb-s-claim">0</b><span>${esc(t("stat.claim"))}</span></div>
-            <div class="qb-stat qb-gold"><b id="qb-s-orbs">0</b><span>${esc(t("stat.orbs"))}</span></div>
+            <div class="qb-stat qb-gold qb-tap" data-go="stats" title="${esc(t("head.stats"))}"><b id="qb-s-orbs">0</b><span>${esc(t("stat.orbs"))}</span></div>
           </div>
           <div class="qb-body"></div>
           <div class="qb-set" style="display:none"></div>
           <div class="qb-log" style="display:none"></div>
+          <div class="qb-stv" style="display:none"></div>
           <div class="qb-pending" id="qb-pending"></div>
           <div class="qb-foot" style="display:none"><span title="agent script v${AGENT_VERSION}">${esc(t("foot.version", { v: TOOL_VERSION ?? AGENT_VERSION }))}</span><a id="qb-openq">${esc(t("foot.open"))}</a></div>`;
         // Anchor to the top-right corner by default; dragging switches to left/top.
@@ -1593,7 +1900,24 @@
 
         p.querySelector(".qb-x").onclick = () => togglePanel(false);
         p.querySelector("#qb-pauseall").onclick = () => { ops.setPaused(!SETTINGS.paused); refreshUI(); };
-        p.querySelector("#qb-gear").onclick = () => { UI.view = UI.view === "quests" ? "settings" : "quests"; UI.sig = null; renderPanel(); };
+        p.querySelector("#qb-gear").onclick = () => { UI.view = UI.view === "settings" || UI.view === "changelog" ? "quests" : "settings"; UI.sig = null; renderPanel(); };
+        const openStats = on => { UI.view = on ? "stats" : "quests"; UI.statsAll = false; UI.sig = null; syncLedger(); renderPanel(); };
+        p.querySelector("#qb-statsbtn").onclick = () => openStats(UI.view !== "stats");
+        p.querySelector(".qb-stats").addEventListener("click", e => { if (e.target.closest("[data-go=stats]")) openStats(true); });
+        p.querySelector(".qb-stv").addEventListener("click", async e => {
+            const cmd = e.target.closest("[data-cmd]");
+            if (cmd?.dataset.cmd === "csv") {
+                const lab = cmd.querySelector("span");
+                const ok = await copyText(ledgerCsv());
+                if (lab) {
+                    lab.textContent = ok ? tn("stats.copied", Object.keys(LEDGER.quests).length) : t("stats.copyFailed");
+                    setTimeout(() => { if (lab.isConnected) lab.textContent = t("stats.csv"); }, 2500);
+                }
+                return;
+            }
+            if (cmd) { runCommand(cmd.dataset.cmd); return; }
+            if (e.target.closest(".qb-clk") && openQuestsPage()) togglePanel(false);
+        });
         p.querySelector("#qb-openq").onclick = () => { if (openQuestsPage()) togglePanel(false); };
         // Rows are rebuilt via innerHTML whenever the quest set changes, so
         // clicks are delegated: a tool button runs its action, anything else
@@ -1684,6 +2008,7 @@
         if (want) {
             if (!UI.panel?.isConnected) { UI.sig = null; UI.panel = buildPanel(); document.body.appendChild(UI.panel); }
             UI.open = true;
+            syncLedger();
             renderPanel();
             // Self-heal: if a stored position leaves it off-screen (resolution or
             // window change), snap back to the default top-right anchor.
@@ -1834,6 +2159,10 @@
 
     // ---- Install --------------------------------------------------------
     armTimer();
+    // History sync runs on its own slow timer: claims happen on Discord's page
+    // while the agent may be idle, and the store forgets expired quests.
+    syncLedger();
+    const ledgerTimer = setInterval(syncLedger, 15000);
     let onQuestsRefresh;
     try {
         onQuestsRefresh = () => scan();
@@ -1843,6 +2172,7 @@
     function stop() {
         state.stopped = true;
         disarmTimer();
+        clearInterval(ledgerTimer);
         for (const t of state.tasks.values()) t.ctl.cancel("agent stopped");
         try { if (onQuestsRefresh) FluxDispatcher.unsubscribe("QUESTS_FETCH_CURRENT_QUESTS_SUCCESS", onQuestsRefresh); } catch (e) { /* ignore */ }
         removeUI();
@@ -1862,9 +2192,10 @@
         persistent: !!storage,  // false = settings live only for this session
         locales: Object.keys(LOCALES), get language() { return currentLang(); }, t,
         toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG, installRoot: INSTALL_ROOT,
+        stats: ledgerStats, history: () => ledgerStats().list, historyCsv: ledgerCsv, syncHistory: syncLedger,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
-              show(view) { UI.view = view === "settings" || view === "changelog" ? view : "quests"; UI.sig = null; togglePanel(true); } }
+              show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }
     };
     console.log(`%c[QuestAgent] Agent v${AGENT_VERSION}${TOOL_VERSION ? " (tool v" + TOOL_VERSION + ")" : ""} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     if (SETTINGS.paused) console.log("[QuestAgent] Paused (from saved settings). Resume from the HUD.");
