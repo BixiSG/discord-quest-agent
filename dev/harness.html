@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quest Agent HUD harness</title>
+<!--
+  Development harness: fakes the bits of Discord's renderer the agent hooks
+  (webpack module cache, stores, API, title bar) and loads ../src/quest-agent.js
+  against mock quests, so the HUD can be exercised in any browser without a
+  Discord account. Not shipped (the updater copies src/ and scripts/ only).
+
+  Serve the repo root over http (python -m http.server 8765) and open
+  http://localhost:8765/dev/harness.html. Query options:
+    ?lang=ru|uk     HUD language           ?theme=light   light panel
+    ?empty=1        no history             ?view=stats|settings|quests
+    ?reset=1        clear saved settings and history first
+    ?fast=1         the running video quest finishes in ~15 s (exercises completion)
+-->
+<style>
+  :root { --background-base-lower: #1e1f22; }
+  body { margin: 0; height: 100vh; background: #313338; color: #dbdee1; font: 14px "gg sans", "Segoe UI", sans-serif; }
+  .bar { height: 36px; background: #1e1f22; display: flex; align-items: center; padding: 0 8px; }
+  .bar .title { flex: 1; color: #949ba4; font-size: 12px; }
+  .trailing_x1 { display: flex; gap: 8px; align-items: center; }
+  .iconWrapper_x2 { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #b5bac1; }
+  .clickable_x3 { cursor: pointer; display: flex; }
+  .note { padding: 60px 24px; color: #949ba4; max-width: 520px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="title">Discord (harness)</span>
+  <div class="trailing_x1">
+    <div class="iconWrapper_x2"><div class="clickable_x3" role="button" aria-label="Inbox">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v12h-5l-3 3-3-3H4z"/></svg>
+    </div></div>
+  </div>
+</div>
+<div class="note">Mock client. The quest button sits left of the inbox icon in the bar above.
+  <code>__questAgent</code> is live in the console.</div>
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); }
+  if (qs.get("lang") || qs.get("theme")) {
+    const s = JSON.parse(localStorage.getItem("questAgent.settings.v1") || "{}");
+    if (qs.get("lang")) s.language = qs.get("lang");
+    if (qs.get("theme")) s.theme = qs.get("theme");
+    localStorage.setItem("questAgent.settings.v1", JSON.stringify(s));
+  }
+
+  const DAY = 864e5, now = Date.now();
+  const iso = ms => new Date(ms).toISOString();
+  const at = (daysAgo, hour) => { const d = new Date(now - daysAgo * DAY); d.setHours(hour, 17, 0, 0); return d.getTime(); };
+  let n = 0;
+  // One mock quest. opts: task, target, value, orbs, reward, enrolled, completed, claimed, expiresIn (days)
+  const quest = (name, app, o) => {
+    const id = String(1400000000000000000n + BigInt(++n));
+    const rewards = [];
+    if (o.orbs) rewards.push({ type: 4, orbQuantity: o.orbs, messages: { name: o.orbs + " Orbs" } });
+    if (o.reward) rewards.push({ type: 3, messages: { name: o.reward } });
+    return {
+      id,
+      config: {
+        configVersion: 2,
+        expiresAt: iso(now + (o.expiresIn ?? 6) * DAY),
+        application: { id: "10" + n, name: app },
+        messages: { questName: name, gameTitle: app },
+        colors: { primary: o.color ?? null },
+        assets: {},
+        rewardsConfig: { rewards, rewardsExpireAt: iso(now + (o.claimIn ?? 20) * DAY) },
+        taskConfigV2: { tasks: { [o.task]: { type: o.task, target: o.target, applications: [{ id: "10" + n }] } } }
+      },
+      userStatus: {
+        enrolledAt: o.enrolled || o.completed ? iso(o.enrolled ?? o.completed - 3600e3) : null,
+        completedAt: o.completed ? iso(o.completed) : null,
+        claimedAt: o.claimed ? iso(o.claimed) : null,
+        progress: { [o.task]: { value: o.completed ? o.target : (o.value ?? 0) } }
+      }
+    };
+  };
+  const quests = [
+    quest("Night Runners Trailer", "Night Runners", { task: "WATCH_VIDEO", target: qs.get("fast") ? 20 : 900, value: qs.get("fast") ? 6 : 380, orbs: 700, enrolled: now - 600e3, color: "#e0409a" }),
+    quest("Play Starfall Tactics", "Starfall Tactics", { task: "PLAY_ON_DESKTOP", target: 900, orbs: 500, enrolled: now - 300e3 }),
+    quest("Stream Hollow Deep", "Hollow Deep", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 2 }),
+    quest("Kingsroad Sneak Peek", "Kingsroad", { task: "WATCH_VIDEO_ON_MOBILE", target: 600, orbs: 300, completed: at(0, 9) }),
+    quest("Aether Grid Launch", "Aether Grid", { task: "PLAY_ACTIVITY", target: 1200, reward: "Aether avatar decoration", completed: at(1, 20), claimIn: 0.6 }),
+    quest("Moss & Metal", "Moss & Metal", { task: "WATCH_VIDEO", target: 600, orbs: 700, completed: at(1, 14), claimed: at(1, 15) }),
+    quest("Achievement Hunter", "Iron Lanes", { task: "ACHIEVEMENT_IN_ACTIVITY", target: 1, orbs: 200, enrolled: now - 900e3 })
+  ];
+  // Older, already-claimed quests that have left Discord's store: seed the ledger directly.
+  const past = [[2, 700], [2, 300], [3, 500], [5, 700], [6, 400], [8, 700], [9, 250], [12, 700], [13, 500], [18, 700], [21, 300], [26, 700]];
+  const L = JSON.parse(localStorage.getItem("questAgent.ledger.v1") || "null");
+  if (!L && !qs.get("empty")) {
+    const ql = {};
+    past.forEach(([d, orbs], i) => {
+      const id = "13" + String(i).padStart(17, "0");
+      const c = at(d, 8 + (i * 5) % 14);
+      ql[id] = { id, name: ["Echo Park Trailer", "Play Driftline", "Rift Watch", "Sunken Crown", "Play Vale", "Warband Reveal"][i % 6],
+                 app: "Game " + (i + 1), task: ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "WATCH_VIDEO_ON_MOBILE"][i % 3], orbs, reward: null,
+                 secs: 900, completedAt: c, claimedAt: c + 3600e3, byAgent: true };
+    });
+    localStorage.setItem("questAgent.ledger.v1", JSON.stringify({ v: 1, quests: ql }));
+  }
+  if (qs.get("empty")) for (const q of quests) { q.userStatus.completedAt = null; q.userStatus.claimedAt = null; }
+
+  // Fake webpack module cache: shapes match the finders at the top of quest-agent.js.
+  const listeners = {};
+  class Streaming { getStreamerActiveStreamMetadata() { return null; } }
+  class Quests { constructor() { this.quests = new Map(quests.map(q => [q.id, q])); } getQuest(id) { return this.quests.get(id); } }
+  class Channels { getAllThreadsForParent() { return []; } getSortedPrivateChannels() { return [{ id: "1" }]; } }
+  class Dispatcher {
+    flushWaitQueue() {}
+    subscribe(t, f) { (listeners[t] ??= []).push(f); }
+    unsubscribe(t, f) { listeners[t] = (listeners[t] ?? []).filter(x => x !== f); }
+    dispatch(ev) { for (const f of listeners[ev.type] ?? []) f(ev); }
+  }
+  const modules = {
+    1: { exports: { A: new Streaming() } },
+    2: { exports: { Ay: { getRunningGames: () => [], getGameForPID: () => null } } },
+    3: { exports: { A: new Quests() } },
+    4: { exports: { A: new Channels() } },
+    5: { exports: { Ay: { getSFWDefaultChannel() {}, getAllGuilds: () => ({}) } } },
+    6: { exports: { h: new Dispatcher() } },
+    7: { exports: { Bo: { get: async () => ({ body: [{ name: "Mock Game", executables: [{ os: "win32", name: "mock.exe" }] }] }), post: async () => ({ body: {} }) } } },
+    8: { exports: { pX: function transitionTo(p) { console.log("transitionTo - Transitioning to", p); } } }
+  };
+  window.webpackChunkdiscord_app = { push: ([, , fn]) => fn({ c: modules }), pop() {} };
+  // Desktop-app bridge: enables play/stream spoofing; the clipboard lands in window.__copied.
+  window.DiscordNative = { window: { flashFrame() {} }, clipboard: { copy: t => { window.__copied = t; } } };
+
+  // Mock API: video progress ticks up, nothing reaches a server.
+  window.__questAgentDev = {
+    quests,
+    api: {
+      get: modules[7].exports.Bo.get,
+      post: async ({ url, body }) => {
+        const q = quests.find(x => url.includes(x.id));
+        if (q && url.endsWith("/video-progress")) {
+          const k = Object.keys(q.config.taskConfigV2.tasks)[0];
+          const target = q.config.taskConfigV2.tasks[k].target;
+          q.userStatus.progress[k] = { value: Math.min(target, Math.floor(body.timestamp)) };
+          if (body.timestamp >= target && !q.userStatus.completedAt) q.userStatus.completedAt = new Date().toISOString();
+          return { body: { completed_at: q.userStatus.completedAt } };
+        }
+        if (q && url.endsWith("/enroll")) { q.userStatus.enrolledAt = new Date().toISOString(); return { body: {} }; }
+        return { body: { progress: { PLAY_ACTIVITY: { value: 0 } } } };
+      }
+    }
+  };
+  window.__questAgentConfig = { toolVersion: "1.5.0", repo: "BixiSG/discord-quest-agent", installRoot: "C:\\Users\\you\\AppData\\Local\\DiscordQuestAgent" };
+  // What the launcher injects: shipped locales and the changelog, read from the repo.
+  const text = url => fetch(url).then(r => r.ok ? r.text() : "").catch(() => "");
+  Promise.all([text("../src/locales/ru.json"), text("../src/locales/uk.json"), text("../CHANGELOG.md")]).then(([ru, uk, log]) => {
+    window.__questAgentLocales = {};
+    if (ru) window.__questAgentLocales.ru = JSON.parse(ru);
+    if (uk) window.__questAgentLocales.uk = JSON.parse(uk);
+    window.__questAgentChangelog = log;
+    const s = document.createElement("script");
+    s.src = "../src/quest-agent.js";
+    s.onload = () => {
+      const view = qs.get("view");
+      if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);
+    };
+    document.body.appendChild(s);
+  });
+})();
+</script>
+</body>
+</html>
