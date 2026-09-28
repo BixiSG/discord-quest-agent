@@ -171,5 +171,7 @@
   "unit.m": "{n} min",
   "notify.expiringTitle": "Unclaimed reward expires soon",
   "notify.expiringBody": "{quest}: claim it within {left} or it's gone. Discover → Quests.",
-  "notify.expiringMany": "{n} unclaimed rewards expire within 2 days. Claim them in Discover → Quests."
+  "notify.expiringMany": "{n} unclaimed rewards expire within 2 days. Claim them in Discover → Quests.",
+  "set.copyDiag": "Copy diagnostics",
+  "set.diagCopied": "Copied - paste it into the issue"
 }

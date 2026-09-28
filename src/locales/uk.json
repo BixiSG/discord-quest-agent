@@ -162,5 +162,7 @@
   "unit.m": "{n} хв",
   "notify.expiringTitle": "Нагорода скоро згорить",
   "notify.expiringBody": "{quest}: заберіть протягом {left}, інакше нагорода пропаде. Discover → Квести.",
-  "notify.expiringMany": "Незабраних нагород, що згорять найближчі 2 дні: {n}. Заберіть їх у Discover → Квести."
+  "notify.expiringMany": "Незабраних нагород, що згорять найближчі 2 дні: {n}. Заберіть їх у Discover → Квести.",
+  "set.copyDiag": "Скопіювати діагностику",
+  "set.diagCopied": "Скопійовано — вставте в issue"
 }

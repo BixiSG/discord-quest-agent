@@ -12,7 +12,8 @@ body:
     attributes:
       label: Diagnostics output
       description: >
-        Run the "Quest Agent Diagnostics" Start Menu shortcut and paste the whole output.
+        In the HUD: Settings > Report a problem copies it for you, just paste. Without a HUD:
+        run the "Quest Agent Diagnostics" Start Menu shortcut and paste the whole output.
         It contains no tokens or message content, but it does list your quest names.
       render: text
     validations:

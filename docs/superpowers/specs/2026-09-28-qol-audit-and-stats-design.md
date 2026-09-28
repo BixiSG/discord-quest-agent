@@ -115,3 +115,26 @@ clickable orbs-waiting bar, keyboard focus rings, and
 
 **Next candidates:** copy diagnostics from the HUD (finding 11), and a
 compact mode for small windows.
+
+## Iteration 3 (v1.5.2)
+
+- Finding 11 shipped: **Report a problem** copies an in-client diagnostics
+  report (versions, Discord build and channel, hook health, HUD mode, agent
+  state, settings, quest summary; no tokens or messages) and opens the bug
+  form; Settings > Maintenance has **Copy diagnostics** on its own. The
+  shortcut-based diagnostics stay for when there is no HUD.
+- Compact mode: dropped. Discord's own minimum window size always fits the
+  400 px panel, and the panel already caps its height at 76% of the window.
+
+## Open proposals (need a decision, not built)
+
+- **History backup on disk.** The ledger lives in Discord's storage, so a
+  Discord reinstall or cache wipe loses it. The resident launcher could read
+  it over CDP now and then, keep `history.json` in the install folder, and hand
+  it back on injection so the agent merges what it's missing. Cost: a timer
+  and a file in the launcher, and PowerShell 5.1 code that can only be
+  verified at a real login.
+- **Real "Scan now".** Scan re-reads Discord's quest store; it never asks the
+  server. If Discord doesn't refresh quests in a long-running client, new ones
+  show up late. Fixing it means calling Discord's own quest-fetch action,
+  another internal to find and keep working.

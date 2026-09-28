@@ -126,7 +126,8 @@ The top of Settings has an **About** block. **What's new** opens the changelog
 first, the installed one marked. After a self-update the agent drops a toast once, and the
 gear keeps a dot until you've opened the list, so you know something changed without
 reading the repo. Next to it, **GitHub** opens this project in your browser and **Report a
-problem** opens the issue tracker. **Install folder** opens the folder holding
+problem** copies the agent's diagnostics to your clipboard and opens a bug report to paste
+them into (**Copy diagnostics** under Maintenance does just the copying). **Install folder** opens the folder holding
 `Uninstall.bat`, `config.json` and the agent files in Explorer. The changelog is
 English-only.
 
@@ -235,8 +236,10 @@ If you're not actively using the agent, start Discord from its own shortcut inst
 
 ## 🩺 When something breaks
 
-Run the **Quest Agent Diagnostics** shortcut (or `Start-QuestAgent.bat -Diagnose`) and paste
-the output into an issue. It lists versions, config and agent state, no tokens or messages.
+Press **Report a problem** in the HUD's Settings: it copies the diagnostics and opens the bug
+form, so you only paste. If the HUD isn't there at all, run the **Quest Agent Diagnostics**
+shortcut (or `Start-QuestAgent.bat -Diagnose`) and paste its output instead. Both list
+versions, settings and agent state, no tokens or messages.
 
 **No button in the title bar.** Usually the agent isn't running (check for its process in
 Task Manager: a PowerShell running `QuestAgent.ps1`), so Discord came up without the

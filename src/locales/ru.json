@@ -162,5 +162,7 @@
   "unit.m": "{n} мин",
   "notify.expiringTitle": "Награда скоро сгорит",
   "notify.expiringBody": "{quest}: заберите в течение {left}, иначе награда пропадёт. Discover → Квесты.",
-  "notify.expiringMany": "Незабранных наград, которые сгорят в ближайшие 2 дня: {n}. Заберите их в Discover → Квесты."
+  "notify.expiringMany": "Незабранных наград, которые сгорят в ближайшие 2 дня: {n}. Заберите их в Discover → Квесты.",
+  "set.copyDiag": "Скопировать диагностику",
+  "set.diagCopied": "Скопировано — вставьте в issue"
 }

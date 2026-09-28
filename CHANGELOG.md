@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.5.2 - 2026-09-28
+
+- Report a problem now copies the agent's diagnostics to the clipboard and opens the bug form, so a report is one paste. Settings > Maintenance also has Copy diagnostics on its own.
+
 ## 1.5.1 - 2026-09-28
 
 - Claim deadlines: a reward is lost 30 days after its quest ends. Ready-to-claim rows count down in their last week (red on the last day), and the agent reminds you once when one has under 48 hours left. Expired rewards leave the list and show as expired in Stats.

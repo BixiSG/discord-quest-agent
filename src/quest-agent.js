@@ -30,7 +30,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 17;
+    const AGENT_VERSION = 18;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -168,6 +168,7 @@
         "set.about": "About", "set.whatsNew": "What's new", "set.whatsNewDesc": "Changes in v{v} and earlier updates.",
         "set.whatsNewDescNoVer": "What changed in recent updates.", "set.new": "NEW",
         "set.github": "GitHub", "set.report": "Report a problem",
+        "set.copyDiag": "Copy diagnostics", "set.diagCopied": "Copied - paste it into the issue",
         "title.changelog": "What's new", "log.back": "Back to settings", "log.current": "installed",
         "log.empty": "No changelog found. It arrives with the next update.", "log.full": "Full history on GitHub",
         "notify.updatedTitle": "Quest agent updated to v{v}", "notify.updatedBody": "Settings \u2192 What's new lists the changes.",
@@ -1733,7 +1734,7 @@
           ${canOpenFolder ? link("folder", ICON.folder, esc(t("set.folder")), `<span title="${esc(t("set.folderDesc"))}">${esc(INSTALL_ROOT)}</span>`, "ext") : ""}
           <div class="qb-btns">
             <button class="qb-btn" data-cmd="github" title="${esc(REPO_URL)}">${svg(ICON.github, "", 13)}${esc(t("set.github"))}</button>
-            <button class="qb-btn" data-cmd="report" title="${esc(REPO_URL + "/issues")}">${svg(ICON.bug, "", 13)}${esc(t("set.report"))}</button>
+            <button class="qb-btn" data-cmd="report" title="${esc(REPO_URL + "/issues")}">${svg(ICON.bug, "", 13)}<span>${esc(t("set.report"))}</span></button>
           </div>
           <div class="qb-sec">${esc(t("set.automation"))}</div>
           ${opt("autoEnroll", SETTINGS.autoEnroll, ICON.bolt, esc(t("set.autoEnroll")), esc(t("set.autoEnrollDesc")))}
@@ -1757,7 +1758,8 @@
             <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}${esc(t("set.retryFailed"))}</button>
             <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}${esc(t("set.clearSkip", { n: state.skipped.size }))}</button>
           </div>
-          <div class="qb-btns"><button class="qb-btn" data-cmd="clearhidden">${svg(ICON.eyeoff, "", 13)}${esc(t("set.clearHidden", { n: state.hidden.size }))}</button></div>`;
+          <div class="qb-btns"><button class="qb-btn" data-cmd="clearhidden">${svg(ICON.eyeoff, "", 13)}${esc(t("set.clearHidden", { n: state.hidden.size }))}</button></div>
+          <div class="qb-btns"><button class="qb-btn" data-cmd="diag">${svg(ICON.copy, "", 13)}<span>${esc(t("set.copyDiag"))}</span></button></div>`;
         renderFooter();
     }
 
@@ -1859,6 +1861,27 @@
           <div class="qb-note">${esc(t("stats.note"))}</div>`;
         renderFooter();
     }
+
+    /** What a bug report needs, gathered inside the client (no tokens, no messages; quest names are public). */
+    function diagnostics() {
+        const s = snapshot(), env = window.GLOBAL_ENV ?? {};
+        const brief = r => ({ name: r.name, task: r.task, pct: r.pct, ...(r.why ? { why: r.why } : {}), ...(r.paused ? { paused: true } : {}) });
+        return {
+            tool: TOOL_VERSION, agent: AGENT_VERSION,
+            discord: { build: env.BUILD_NUMBER ?? null, channel: env.RELEASE_CHANNEL ?? null, electron: (navigator.userAgent.match(/Electron\/([\d.]+)/) ?? [])[1] ?? null },
+            locale: document.documentElement.lang || navigator.language, hudLanguage: currentLang(),
+            hooks: { nav: !!NavTransitionTo, toasts: !!Toasts, storage: !!storage, orbGlyph: !!ORB_PATHS },
+            hud: { button: UI.mode, titleBarSlots: document.querySelectorAll('[class*="trailing_"]').length },
+            state: {
+                stopped: state.stopped, paused: SETTINGS.paused, idle: state.timer == null, activeTasks: state.activeTasks,
+                lastScan: state.lastScan ? new Date(state.lastScan).toISOString() : null, enrollLocation: state.enrollLocation,
+                failed: state.failCounts.size, enrollFailed: state.enrollFailed.size, skipped: state.skipped.size, historyEntries: Object.keys(LEDGER.quests).length
+            },
+            settings: { autoEnroll: SETTINGS.autoEnroll, notify: SETTINGS.notify, toast: SETTINGS.toast, scanIntervalMs: SETTINGS.scanIntervalMs, types: SETTINGS.types },
+            quests: { claimable: s.claimable.map(brief), running: s.running.map(brief), queued: s.queued.map(brief), available: s.available.map(brief), skipped: s.blocked.map(brief) }
+        };
+    }
+    const diagnosticsText = () => "Discord Quest Agent diagnostics (copied from the HUD)\n" + JSON.stringify(diagnostics(), null, 2);
 
     /** Put text on the clipboard: Discord's own bridge first, then the web APIs. */
     async function copyText(text) {
@@ -1985,7 +2008,7 @@
             case "back": UI.view = "settings"; break;
             case "more": UI.statsAll = true; break;
             case "github": ops.openExternal(REPO_URL); return;
-            case "report": ops.openExternal(REPO_URL + "/issues"); return;
+            case "report": ops.openExternal(REPO_URL + "/issues/new?template=bug_report.yml"); return;
             case "history": ops.openExternal(REPO_URL + "/blob/main/CHANGELOG.md"); return;
             default: return;
         }
@@ -2090,6 +2113,15 @@
             const lg = e.target.closest("[data-lang]");
             if (lg) { ops.setSetting("language", lg.dataset.lang); UI.sig = null; renderPanel(); return; }
             const cmd = e.target.closest("[data-cmd]");
+            if (cmd?.dataset.cmd === "diag" || cmd?.dataset.cmd === "report") {
+                // Both put the diagnostics on the clipboard; Report then opens the bug form to paste them into.
+                const lab = cmd.querySelector("span"), was = lab?.textContent;
+                copyText(diagnosticsText()).then(ok => {
+                    if (lab) { lab.textContent = ok ? t("set.diagCopied") : t("stats.copyFailed"); setTimeout(() => { if (lab.isConnected) lab.textContent = was; }, 3000); }
+                    if (cmd.dataset.cmd === "report") runCommand("report");
+                });
+                return;
+            }
             if (cmd) runCommand(cmd.dataset.cmd);
         });
         setBox.addEventListener("keydown", e => {
@@ -2355,6 +2387,7 @@
         toolVersion: TOOL_VERSION, repo: REPO_URL, changelog: CHANGELOG, installRoot: INSTALL_ROOT,
         stats: ledgerStats, history: () => ledgerStats().list, historyCsv: ledgerCsv, syncHistory: syncLedger,
         get orbGlyph() { return !!ORB_PATHS; }, // false = Discord's glyph wasn't found, the HUD uses its own
+        diagnostics,
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
               show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }
