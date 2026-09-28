@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 19;
+    const AGENT_VERSION = 20;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -1608,8 +1608,7 @@
     function rowHtml(r, group, fresh) {
         const meta = taskMeta(r.task);
         const tile = r.tile
-            ? `<img class="qb-tile" src="${esc(r.tile)}" alt="" loading="lazy"
-                 onerror="this.outerHTML='<div class=&quot;qb-tile qb-tile-fb&quot;></div>'">`
+            ? `<img class="qb-tile" src="${esc(r.tile)}" alt="" loading="lazy" data-task="${esc(r.task ?? "")}">`
             : `<div class="qb-tile qb-tile-fb">${svg(meta.icon, "", 16)}</div>`;
         const tools = toolsFor(r, group);
         const cls = [group === "blocked" && "qb-dim", group === "running" && "qb-live", fresh && "qb-flash"].filter(Boolean).join(" ");
@@ -2091,6 +2090,16 @@
             if (btn) { e.stopPropagation(); onRowAction(btn.dataset.act, btn.closest(".qb-row").dataset.qid); return; }
             if (e.target.closest(".qb-row") && openQuestsPage()) togglePanel(false);
         });
+        // Game art that fails to load becomes the task icon. A listener, not an inline onerror:
+        // Discord's CSP (script-src with a nonce) silently blocks inline handlers.
+        p.querySelector(".qb-body").addEventListener("error", e => {
+            const img = e.target;
+            if (img?.tagName !== "IMG" || !img.classList.contains("qb-tile")) return;
+            const fb = document.createElement("div");
+            fb.className = "qb-tile qb-tile-fb";
+            fb.innerHTML = svg(taskMeta(img.dataset.task || null).icon, "", 16);
+            img.replaceWith(fb);
+        }, true);
         p.querySelector(".qb-body").addEventListener("keydown", e => {
             if (e.key === "Enter" && e.target.classList?.contains("qb-row") && openQuestsPage()) togglePanel(false);
         });

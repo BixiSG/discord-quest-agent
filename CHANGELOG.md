@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.6.1 - 2026-09-28
+
+- Quest rows whose game art fails to load show the task icon again. The fallback never worked inside Discord, whose security policy blocks the inline handler it used.
+
 ## 1.6.0 - 2026-09-28
 
 - Stats is now about your orb pace: orbs per 30 days with its usual range, the weekly average, 12 weeks of bars, and a Saving up for box that says roughly how many days a price takes.

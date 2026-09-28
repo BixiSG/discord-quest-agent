@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Quest Agent HUD harness</title>
+<!-- Discord's own script-src shape: a nonce, so 'unsafe-inline' is ignored and inline
+     event handlers (onerror="...") are blocked, exactly as in the real client. -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-eval' 'unsafe-inline' 'nonce-harness' blob:">
 <!--
   Development harness: fakes the bits of Discord's renderer the agent hooks
   (webpack module cache, stores, API, title bar) and loads ../src/quest-agent.js
@@ -39,7 +42,7 @@
 </div>
 <div class="note">Mock client. The quest button sits left of the inbox icon in the bar above.
   <code>__questAgent</code> is live in the console.</div>
-<script>
+<script nonce="harness">
 (() => {
   const qs = new URLSearchParams(location.search);
   if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); localStorage.removeItem("questAgent.orbs.v1"); }
@@ -68,7 +71,7 @@
         application: { id: "10" + n, name: app },
         messages: { questName: name, gameTitle: app },
         colors: { primary: o.color ?? null },
-        assets: {},
+        assets: o.tile ? { gameTileDark: o.tile } : {},
         rewardsConfig: { rewards, rewardsExpireAt: iso(now + (o.claimIn ?? 20) * DAY) },
         taskConfigV2: { tasks: { [o.task]: { type: o.task, target: o.target, applications: [{ id: "10" + n }] } } }
       },
@@ -82,7 +85,7 @@
   };
   const quests = [
     quest("Night Runners Trailer", "Night Runners", { task: "WATCH_VIDEO", target: qs.get("fast") ? 20 : 900, value: qs.get("fast") ? 6 : 380, orbs: 700, enrolled: now - 600e3, color: "#e0409a" }),
-    quest("Play Starfall Tactics", "Starfall Tactics", { task: "PLAY_ON_DESKTOP", target: 900, orbs: 500, enrolled: now - 300e3 }),
+    quest("Play Starfall Tactics", "Starfall Tactics", { task: "PLAY_ON_DESKTOP", target: 900, orbs: 500, enrolled: now - 300e3, tile: "harness/missing-art.png" }),
     quest("Stream Hollow Deep", "Hollow Deep", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 1.5 }),
     quest("Kingsroad Sneak Peek", "Kingsroad", { task: "WATCH_VIDEO_ON_MOBILE", target: 600, orbs: 300, completed: at(0, 9), claimIn: 3 }),
     quest("Aether Grid Launch", "Aether Grid", { task: "PLAY_ACTIVITY", target: 1200, reward: "Aether avatar decoration", completed: at(1, 20), claimIn: 0.6 }),
