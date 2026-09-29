@@ -2,7 +2,7 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
+import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SUPPORTS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
@@ -398,7 +398,11 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         hero.rev++;
         up = true;
         if (state.activity.capBackoff) state.activity.capBackoff = 0; // stronger now: map auto-push may climb sooner
-        pushLog(state, "level", "log.levelUp", { level: hero.level });
+        // The line names what the new level opens: skills and supports nobody would otherwise notice.
+        const opened = [...Object.values(SKILLS).filter(s => s.level === hero.level).map(s => ref.skill(s.id)),
+            ...Object.values(SUPPORTS).filter(s => s.level === hero.level).map(s => ref.support(s.id))];
+        if (opened.length && hero.level > 1) pushLog(state, "level", "log.levelUpNew", { level: hero.level, list: ref.list(opened) });
+        else pushLog(state, "level", "log.levelUp", { level: hero.level });
         ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;

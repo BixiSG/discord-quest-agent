@@ -51,7 +51,7 @@ describe("classes", () => {
         for (const sk of Object.values(SKILLS)) {
             const cls = Object.values(CLASSES).find(c => { const w = BASES[c.startWeapon]!.kind; return sk.kind === "spell" || !sk.weapons?.length || sk.weapons.includes(w); });
             if (!cls) continue; // melee skills for non-starting weapons are covered by content tests
-            const g = game(cls.id); g.hero.level = 30; g.hero.rev++;
+            const g = game(cls.id); g.hero.level = Math.max(30, sk.level); g.hero.rev++;
             expect(setSkill(g, sk.id)).toBeNull();
             expect(sheetOf(g).skill.dps, sk.id).toBeGreaterThan(0);
         }

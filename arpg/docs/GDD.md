@@ -42,8 +42,8 @@ most four levels above the hero.
 
 - **Class** (P1: Vanguard; P2: Strider, Arcanist). Sets base attributes,
   starting skill and the start node on the passive tree.
-- **Attributes**: Might (life, melee damage), Grace (accuracy, evasion),
-  Wit (mana, energy shield).
+- **Attributes**: Might (life, melee damage), Grace (accuracy, evasion,
+  projectile attack damage), Wit (mana, energy shield).
 - **Level** 1-100. One passive point per level.
 - **Main skill** plus up to five **supports**. Supports modify the skill
   (more damage, extra targets, conversion, leech). Support slots open at

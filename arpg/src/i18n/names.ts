@@ -197,6 +197,9 @@ export function resolveParam(v: string | number, l?: Lang): string | number {
         case "tier": return tierName(Number(rest), lg);
         case "base": return baseName(rest, lg);
         case "relic": return relicName(rest, lg);
+        case "skill": return skillName(rest, lg);
+        case "support": return supportName(rest, lg);
+        case "list": return rest.split(",").map(x => resolveParam(`@${x}`, lg)).join(tr(lg, "common.list"));
         case "key": return tr(lg, rest);
         case "map": {
             const [area = "", tier = "0", pin = ""] = rest.split(":");

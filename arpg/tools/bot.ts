@@ -21,13 +21,15 @@ import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode }
 import type { GameState, Hero } from "../src/core/state";
 
 const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
+/** BOT_KIND=attack or spell keeps the bot to one kind of skill (balance checks of attacks against spells). */
+const KIND = process.env.BOT_KIND;
 
 export function botTune(state: GameState): void {
     const hero = state.hero;
     // Skill + supports: greedy supports for each usable skill, keep the best.
     let best = { skill: hero.skill, supports: hero.supports, score: -1 };
     for (const sk of Object.values(SKILLS)) {
-        if (sk.level > hero.level) continue;
+        if (sk.level > hero.level || (KIND && sk.kind !== KIND)) continue;
         const sup: string[] = [];
         for (let slot = 0; slot < supportSlots(hero.level); slot++) {
             let pick: string | null = null, ps = score({ ...hero, skill: sk.id, supports: sup });

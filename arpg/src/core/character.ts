@@ -121,8 +121,43 @@ export function hitChance(acc: number, eva: number): number {
     return Math.min(1, Math.max(0.05, (1.5 * acc) / (acc + eva)));
 }
 
+/** The skill in use (Crescent Swing when it isn't available) and the supports linked to it. */
+export interface Link {
+    def: SkillDef;
+    /** The chosen skill is unknown or needs a higher level. */
+    missing: boolean;
+    tags: Set<string>;
+    /** Supports that apply, in slot order. */
+    used: string[];
+    /** Slotted supports that don't fit the skill. */
+    unfit: string[];
+}
+
+export function linkOf(hero: Hero): Link {
+    const L = hero.level;
+    let def = SKILLS[hero.skill];
+    const missing = !def || def.level > L;
+    if (missing) def = SKILLS.crescent!;
+    const tags = new Set<string>([...def!.tags, def!.kind]);
+    const used: string[] = [], unfit: string[] = [];
+    for (const id of hero.supports.slice(0, supportSlots(L))) {
+        const sup = SUPPORTS[id];
+        if (!sup || sup.level > L) continue;
+        if (sup.requires.length && !sup.requires.some(t => tags.has(t))) { unfit.push(id); continue; }
+        used.push(id);
+    }
+    return { def: def!, missing, tags, used, unfit };
+}
+
+/** Modifiers linked supports put on the hero (Steadfast's less damage taken), named for the breakdown. */
+export function supportSelfMods(link: Link): Mod[] {
+    return link.used.flatMap(id => (SUPPORTS[id]!.self ?? []).map(m => ({ ...m, src: SUPPORTS[id]!.name })));
+}
+
 export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
-    const base = heroMods(hero, extra);
+    const link = linkOf(hero);
+    const self = supportSelfMods(link);
+    const base = heroMods(hero, self.length ? [...extra, ...self] : extra);
     const bag = new StatBag(base.mods);
     const problems = [...base.problems];
     const cls = CLASSES[hero.cls]!;
@@ -134,6 +169,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     bag.add({ stat: "damage", kind: "inc", value: Math.floor(str / 5), tags: ["melee", "phys"], src: "Might" });
     bag.add({ stat: "accuracy", kind: "flat", value: dex * 2, src: "Grace" });
     bag.add({ stat: "evasion", kind: "inc", value: Math.floor(dex / 5), src: "Grace" });
+    bag.add({ stat: "damage", kind: "inc", value: Math.floor(dex / 5), tags: ["projectile", "attack"], src: "Grace" });
     bag.add({ stat: "mana", kind: "flat", value: Math.floor(int / 2), src: "Wit" });
     bag.add({ stat: "energyShield", kind: "inc", value: Math.floor(int / 5), src: "Wit" });
 
@@ -152,7 +188,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
     const manaRegen = bag.flat("manaRegen") + mana * 0.07;
 
-    const skill = calcSkill(hero, bag, problems, manaRegen);
+    const skill = calcSkill(hero, bag, problems, manaRegen, link);
 
     // EHP (COMBAT.md 7): pool over the share of a reference hit that gets through.
     const ref = monsterDamage(L) * 1.5;
@@ -174,10 +210,10 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     };
 }
 
-function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: number): SkillCalc {
+function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: number, link: Link): SkillCalc {
     const L = hero.level;
-    let def = SKILLS[hero.skill];
-    if (!def || def.level > L) { problems.push("skill not available"); def = SKILLS.crescent!; }
+    const def = link.def;
+    if (link.missing) problems.push("skill not available");
     const weaponItem = hero.equipment.weapon;
     const wst = weaponItem && levelReq(weaponItem) <= L ? itemStats(weaponItem).weapon : undefined;
     const wkind = wst ? BASES[weaponItem!.base]!.kind : "unarmed";
@@ -191,15 +227,12 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     const bag = new StatBag();
     bag.addAll(allMods(heroBag));
     for (const m of def.mods ?? []) bag.add(m);
-    const tags = new Set<string>([...def.tags, def.kind]);
-    const slots = supportSlots(L);
-    const used: string[] = [];
+    const tags = link.tags;
+    const used = link.used;
     let manaMult = 1, extraTargets = 0;
-    for (const id of hero.supports.slice(0, slots)) {
-        const sup = SUPPORTS[id];
-        if (!sup || sup.level > L) continue;
-        if (sup.requires.length && !sup.requires.some(t => tags.has(t))) { problems.push(`${sup.name} does not support ${def.name}`); continue; }
-        used.push(id);
+    for (const id of link.unfit) problems.push(`${SUPPORTS[id]!.name} does not support ${def.name}`);
+    for (const id of used) {
+        const sup = SUPPORTS[id]!;
         for (const m of sup.mods) bag.add({ ...m, src: sup.name });
         manaMult *= sup.manaMult;
         extraTargets += sup.targets ?? 0;
@@ -278,7 +311,7 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     return {
         id: def.id, name: def.name, kind: def.kind, shape: def.shape, fx: def.fx, tags: [...tags],
         hit, avgHit, critChance, critMulti, speed, sustain, hitChance: hc, accuracy, targets, manaCost,
-        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: used,
+        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: [...used],
     };
 }
 

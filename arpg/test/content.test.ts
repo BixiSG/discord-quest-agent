@@ -35,7 +35,7 @@ describe("content", () => {
         }
     });
     it("supports are sane", () => {
-        for (const s of Object.values(SUPPORTS)) { expect(s.manaMult).toBeGreaterThanOrEqual(1); expect(s.mods.length + (s.targets ?? 0)).toBeGreaterThan(0); }
+        for (const s of Object.values(SUPPORTS)) { expect(s.manaMult).toBeGreaterThanOrEqual(1); expect(s.mods.length + (s.targets ?? 0) + (s.self?.length ?? 0)).toBeGreaterThan(0); }
     });
     it("affix tiers climb and every affix can roll somewhere", () => {
         const allDomains = new Set(Object.values(BASES).flatMap(b => [...domainsOf(b)]));

@@ -33,6 +33,12 @@ For each damage type T:
 
 Hero life before modifiers is `classLife + 20 (L-1)`.
 
+**Attributes**: every 2 Might is +1 life and every 5 is 1% increased melee
+physical damage; every Grace is +2 accuracy, and every 5 is 1% increased
+evasion and 1% increased projectile attack damage (round 8: bows had no
+attribute of their own); every 2 Wit is +1 mana and every 5 is 1% increased
+energy shield.
+
 Unarmed attacks use 2-5 phys at 1.2 attacks per second.
 
 **Conversion**: a skill or support may convert a share of phys to one

@@ -67,6 +67,19 @@ export const SKILLS: Record<string, SkillDef> = {
         weapons: MELEE, fx: "arc", blurb: "A burning arc. Half of its physical damage becomes fire.",
         mods: [{ stat: "convert.fire", kind: "flat", value: 50, src: "Cinderwake" }],
     },
+    // ---- round 8: late melee
+    gravecleave: {
+        id: "gravecleave", name: "Gravecleave", kind: "attack", shape: "area",
+        tags: ["attack", "melee", "area"], effectiveness: 130, speedMult: 0.9, targets: 4, manaCost: 10, level: 28,
+        weapons: MELEE, fx: "arc", blurb: "A heavy downward cleave that splits the pack: up to four enemies, and a critical hit bites deeper.",
+        mods: [{ stat: "critMulti", kind: "flat", value: 25, src: "Gravecleave" }],
+    },
+    tidalcrash: {
+        id: "tidalcrash", name: "Tidal Crash", kind: "attack", shape: "area",
+        tags: ["attack", "melee", "area", "slam", "cold"], effectiveness: 150, speedMult: 0.75, targets: 6, manaCost: 14, level: 40,
+        weapons: MELEE, fx: "slam", blurb: "Brings the weapon down like the sea on the floodgate. Six enemies feel it; half of its physical damage becomes cold.",
+        mods: [{ stat: "convert.cold", kind: "flat", value: 50, src: "Tidal Crash" }],
+    },
 
     // ---- bow skills (Strider)
     twinshot: {
@@ -96,6 +109,19 @@ export const SKILLS: Record<string, SkillDef> = {
         tags: ["attack", "melee", "strike"], effectiveness: 130, speedMult: 1.2, manaCost: 4, level: 4,
         weapons: ["dagger", "sword"], fx: "stab", blurb: "Fast stabs for when the pack is too close to shoot.",
     },
+    // ---- round 8: late bow
+    sunpiercer: {
+        id: "sunpiercer", name: "Sunpiercer", kind: "attack", shape: "projectile",
+        tags: ["attack", "projectile", "bow", "fire"], effectiveness: 120, targets: 2, manaCost: 10, level: 30,
+        weapons: BOW, fx: "bolt", blurb: "An arrow lit from the dead sun's coal. It passes through two enemies; most of its physical damage becomes fire.",
+        mods: [{ stat: "convert.fire", kind: "flat", value: 60, src: "Sunpiercer" }, { stat: "critChance", kind: "inc", value: 30, src: "Sunpiercer" }],
+    },
+    blightarrow: {
+        id: "blightarrow", name: "Blight Arrow", kind: "attack", shape: "single",
+        tags: ["attack", "projectile", "bow", "strike", "chaos"], effectiveness: 240, speedMult: 0.8, manaCost: 11, level: 44,
+        weapons: BOW, fx: "bolt", blurb: "A slow shot dipped in rot. Half of its physical damage becomes chaos, and it looks for the weak spot.",
+        mods: [{ stat: "convert.chaos", kind: "flat", value: 50, src: "Blight Arrow" }, { stat: "critChance", kind: "inc", value: 40, src: "Blight Arrow" }, { stat: "critMulti", kind: "flat", value: 20, src: "Blight Arrow" }],
+    },
 
     // ---- spells (Arcanist)
     emberbolt: {
@@ -122,5 +148,16 @@ export const SKILLS: Record<string, SkillDef> = {
         id: "hexbloom", name: "Hex Bloom", kind: "spell", shape: "area",
         tags: ["spell", "area", "chaos"], effectiveness: 80, damage: { chaos: [6, 10] }, castTime: 0.9, crit: 5, targets: 3, manaCost: 11, level: 20,
         fx: "nova", blurb: "Rot flowers open in the pack. Few things resist it.",
+    },
+    // ---- round 8: late spells
+    sunflare: {
+        id: "sunflare", name: "Sunflare", kind: "spell", shape: "area",
+        tags: ["spell", "area", "fire"], effectiveness: 85, damage: { fire: [7, 12] }, castTime: 1.0, crit: 6, targets: 5, manaCost: 14, level: 30,
+        fx: "nova", blurb: "The sun as it was, for a moment, over the whole pack: fire on up to five enemies.",
+    },
+    voidlance: {
+        id: "voidlance", name: "Void Lance", kind: "spell", shape: "projectile",
+        tags: ["spell", "projectile", "chaos"], effectiveness: 110, damage: { chaos: [11, 17] }, castTime: 0.85, crit: 7, targets: 2, manaCost: 13, level: 42,
+        fx: "bolt", blurb: "A splinter of the dark that ate the light. It passes through two enemies; few things resist it.",
     },
 };

@@ -46,7 +46,7 @@ export function menuView(c: Ctx): HTMLElement {
             h("div", { class: "row" }, h("button", { class: "btn", text: t("menu.export"), on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
                 h("button", { class: "btn alt", text: t("menu.copy"), on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast(t("menu.copied")), () => c.toast(t("menu.copyByHand"))); } } })),
             out, inp,
-            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }),
+            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), attrs: { "data-act": "import" }, on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }),
                 h("button", { class: "btn alt", text: t("menu.hintsAgain"), attrs: hintsSeen(st).length ? {} : { disabled: "" },
                     on: { click: () => c.act(s => { delete s.settings.hints; }, t("menu.hintsBack")) } }))),
         h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
