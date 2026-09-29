@@ -4,6 +4,7 @@
 import { advance, type SimEvents } from "../src/core/sim/engine";
 import { newGame, sheetOf } from "../src/core/game";
 import { ZONES } from "../src/core/data";
+import { botTune } from "./bot";
 
 const HOUR = 3600e3;
 const args = process.argv.slice(2);
@@ -19,10 +20,13 @@ for (let s = 1; s <= seeds; s++) {
     let deaths = 0, kills = 0, bossKills = 0;
     const ev: SimEvents = { death: () => deaths++, kill: m => { kills++; if (m.def in { tidewarden: 1, keeper: 1 }) bossKills++; } };
     console.log(`\n== ${cls} seed ${s}`);
+    botTune(g);
     console.log("hours  lvl  zone                      dps      pack    life   ehpPhys  ehpCold  deaths  kills  stash dust");
     const t0 = performance.now();
+    let t = 0;
     for (const h of checkpoints) {
-        advance(g, h * HOUR, ev);
+        // The bot re-tunes the build every 10 simulated minutes.
+        while (t < h * HOUR) { t = Math.min(h * HOUR, t + 10 * 60e3); advance(g, t, ev); botTune(g); }
         const sh = sheetOf(g);
         console.log([String(h).padStart(5), String(g.hero.level).padStart(4), ZONES[g.activity.zone]!.name.padEnd(24),
             f(sh.skill.dps).padStart(8), f(sh.skill.packDps).padStart(8), f(sh.life).padStart(7), f(sh.ehp.phys).padStart(8), f(sh.ehp.cold).padStart(8),

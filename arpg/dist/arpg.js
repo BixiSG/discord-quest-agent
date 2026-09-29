@@ -4379,8 +4379,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => {
           this.view = v.id;
           this.sig = "";
-          this.ctx && (this.ctx.sel = {});
+          if (this.ctx) this.ctx.sel = {};
           this.renderTab(true);
+          this.body.scrollTop = 0;
         } } }));
       }
     }

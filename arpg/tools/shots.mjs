@@ -30,8 +30,8 @@ await page.goto(base + "?away=180");
 await page.waitForTimeout(2500);
 await page.screenshot({ path: `${out}/03-away.png` });
 await shadow(".modal .btn").last().click({ force: true });
-for (const [tab, name] of [["Gear", "04-gear"], ["Hero", "05-hero"], ["Skills", "06-skills"], ["World", "07-world"], ["Menu", "08-menu"]]) {
-    await shadow(`.tabs button:text("${tab}")`).click({ force: true });
+for (const [tab, name] of [["Gear", "04-gear"], ["Hero", "05-hero"], ["Skills", "06-skills"], ["World", "07-world"], ["Menu", "08-menu"], ["Tree", "09-tree"], ["Forge", "10-forge"]]) {
+    await shadow(`.tabs button[data-v="${tab.toLowerCase()}"]`).click({ force: true });
     await page.waitForTimeout(500);
     if (tab === "Gear") { const c = shadow(".stash .cell:not(.empty)").first(); if (await c.count()) { await c.click({ force: true }); await page.waitForTimeout(300); } }
     await page.screenshot({ path: `${out}/${name}.png` });

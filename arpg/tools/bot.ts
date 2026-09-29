@@ -1,0 +1,47 @@
+// A simple player for the balance simulator: picks the best skill and
+// supports, and spends passive points greedily by build score.
+
+import { buildScore, setSkill, setSupports, sheetOf } from "../src/core/game";
+import { deriveSheet, supportSlots } from "../src/core/character";
+import { PASSIVES, SKILLS, SUPPORTS } from "../src/core/data";
+import { canAllocate, pointsLeft } from "../src/core/passives";
+import type { GameState, Hero } from "../src/core/state";
+
+const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
+
+export function botTune(state: GameState): void {
+    const hero = state.hero;
+    // Skill + supports: greedy supports for each usable skill, keep the best.
+    let best = { skill: hero.skill, supports: hero.supports, score: -1 };
+    for (const sk of Object.values(SKILLS)) {
+        if (sk.level > hero.level) continue;
+        const sup: string[] = [];
+        for (let slot = 0; slot < supportSlots(hero.level); slot++) {
+            let pick: string | null = null, ps = score({ ...hero, skill: sk.id, supports: sup });
+            for (const s of Object.values(SUPPORTS)) {
+                if (s.level > hero.level || sup.includes(s.id)) continue;
+                const v = score({ ...hero, skill: sk.id, supports: [...sup, s.id] });
+                if (v > ps * 1.001) { ps = v; pick = s.id; }
+            }
+            if (!pick) break;
+            sup.push(pick);
+        }
+        const v = score({ ...hero, skill: sk.id, supports: sup });
+        if (v > best.score) best = { skill: sk.id, supports: sup, score: v };
+    }
+    setSkill(state, best.skill);
+    setSupports(state, best.supports);
+    // Passives: take the open node with the best score gain, notables first on ties.
+    while (pointsLeft(hero) > 0) {
+        const open = Object.values(PASSIVES).filter(n => !canAllocate(hero, n.id));
+        if (!open.length) break;
+        let pick = open[0]!, ps = -1;
+        for (const n of open) {
+            const v = score({ ...hero, passives: [...hero.passives, n.id] }) * (n.kind === "notable" ? 1.002 : 1);
+            if (v > ps) { ps = v; pick = n; }
+        }
+        hero.passives.push(pick.id);
+        hero.rev++;
+    }
+    void sheetOf(state);
+}

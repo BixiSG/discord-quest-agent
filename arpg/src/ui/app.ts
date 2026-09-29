@@ -124,7 +124,10 @@ export class GameWindow {
         this.dragger(grip, (dx, dy, g) => { g.w += dx; g.h += dy; });
 
         for (const v of VIEWS) {
-            this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => { this.view = v.id; this.sig = ""; this.ctx && (this.ctx.sel = {}); this.renderTab(true); } } }));
+            this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => {
+                this.view = v.id; this.sig = ""; if (this.ctx) this.ctx.sel = {};
+                this.renderTab(true); this.body.scrollTop = 0;
+            } } }));
         }
     }
 
