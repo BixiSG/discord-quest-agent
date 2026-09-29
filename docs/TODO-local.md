@@ -168,6 +168,16 @@ Release checklist (for when the user says go):
 - [ ] After merge: the installed agent here is v1.4.3 - updating it (or keeping the branch agent
       running) is what gets 1.7.0 onto this PC.
 
+## Round 5 (2026-09-29 evening): traders, sockets, the ending
+
+User: "think further of features/story/updates/endgame. maybe some traders with items/gems/etc,
+maybe weapon socketing." Design in `arpg/docs/ROADMAP.md`. Built after the localisation merge so
+new text goes into the en/ru/uk tables from the start.
+- [ ] 5a: the Wandering Market (Pedlar, Jeweller; stock rotates every 2 h of hero time) and
+      sockets + ember stones (6 kinds x 5 tiers, effect by slot, pouch, cutting, drilling, auto-set).
+- [ ] 5b: Cartographer, echoes (12 lore pages from map bosses/pinnacles), sun shards.
+- [ ] 5c: the Rekindling - relight the sun (rebirth with dawn bonuses, heirloom, dawn passives).
+
 ## Next updates (roadmap, 2026-09-29)
 
 Ship readiness (next, needs the user's call on the release shape):
