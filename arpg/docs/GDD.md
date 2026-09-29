@@ -121,6 +121,24 @@ Dust and currency pile up late, so the Forge has sinks that scale:
 - **Reroll until upgrade**: Reshaper, Tempest Shard or Temper Oil on a stash
   item again and again (up to 20) until it beats what is worn.
 
+## Companions (round 4)
+
+Nine small creatures of the March. One walks behind the hero in battle (a
+baby-sized sprite) and gives one bonus that grows over 20 levels: armour, item
+quantity, rarity, movement, critical chance, life, attack speed, cast speed or
+experience. Levels come from bond - a point per kill while it is out; a
+duplicate adds 4000. Each act boss gives one on its first clear; bosses, map
+bosses and pinnacles rarely bring others (unfound ones first), and contracts
+can pay one. The Hero tab shows the active one and the collection.
+
+## The ember shrine (round 4)
+
+Timed blessings for the late game's dust and spare orbs: an hour of Insight
+(20% more experience), Fortune (40% rarity), Plenty (15% quantity) or Hoard
+(30% more currency), priced by level (about 2.4k dust at level 32, 7k at 76).
+Orbs above 50 of a kind can pay first at their shop price; Keep up renews a
+blessing when it runs out. Blessings run on simulation time.
+
 ## Contracts (round 3)
 
 Three standing goals on the World tab: slay monsters, champions or bosses,
@@ -128,8 +146,13 @@ clear runs (maps in the endgame, from a tier near the deepest cleared), find
 rares. They fill in while the hero plays, sized to about half an hour each at
 any stage, and pay dust scaled to the level plus currency weighted towards
 the rarer orbs; some add a relic the codex is missing, three maps or a sigil.
-A finished contract waits to be claimed; one you don't want can be rerolled
-for dust.
+A finished contract waits to be claimed (its dust follows the hero's level at
+claim time); one you don't want can be rerolled for dust.
+
+## Pinnacles: scouting (round 4)
+
+The Atlas can scout a pinnacle: five fights on a copy of the hero, nothing
+spent, reported as wins, time and a verdict (ready, risky, not yet).
 
 ## World
 
@@ -149,7 +172,7 @@ map and 3% of the XP towards the next level. Auto-push drops back one zone
 after three deaths in a row, and visits each open trial once the hero is two
 levels above it. In maps, two failed maps without eight clean ones between
 them cap the device a tier lower; eight clean maps in a row raise the cap one
-tier. With only deeper maps held, the device dampens one to the cap rather
+tier, and each drop doubles that streak (16, 32, 64) until the next level-up. With only deeper maps held, the device dampens one to the cap rather
 than run it deep (it used to ignore the cap then, and the hero died on a
 loop).
 

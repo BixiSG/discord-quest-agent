@@ -23,7 +23,13 @@ It has nothing to do with quests: it never reads quest data or orbs.
   that turns ember dust into rares (or keeps forging until one is an
   upgrade), and an ordered loot filter.
 - A contract board: three standing goals that pay dust, currency, missing
-  relics, maps or sigils.
+  relics, companions, maps or sigils.
+- Nine companions: one walks at the hero's side and gives a bonus that grows
+  with its bond.
+- An ember shrine: timed blessings (experience, rarity, quantity, currency)
+  that turn late dust and spare orbs into progress.
+- Loot filter presets and affix rules; a pinnacle scout that fights five times
+  on a copy of the hero before you spend sigils.
 - A 129-node passive tree with keystones.
 - Endgame: maps tier 1-16 with mods, the endless Depths past tier 16, an
   atlas tree and four pinnacle bosses.
