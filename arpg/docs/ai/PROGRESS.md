@@ -22,3 +22,23 @@ One entry per loop iteration, newest last.
 - Dev: arpg/dev/play.html (standalone, CSP nonce), dev/harness.html `?arpg=1`,
   `npm run smoke` (Playwright, fails on console errors). Screenshots checked.
 - Next: code review of P0+P1 (combined, since P1 landed in the same tick).
+
+## 2 - Review P0+P1, P2 core
+- Code review subagent: 11 findings, all fixed:
+  1. saves are validated (`core/validate.ts`) before the game trusts them; bad
+     main falls back to backup; import swaps state only after validation;
+  2. switching the addon off no longer injects the standalone opener;
+  3. auto-equip ignored problems-scored builds (buildScore returned 0);
+  4. loop/open double-start guards; 5. window refits on resize;
+  6. Menu no longer rebuilds while typing; 7. leech capped per second;
+  8. spell base damage no longer scaled by effectiveness;
+  9. COMBAT.md numbers match the code, pinned by a test;
+  10. worn gear is never salvaged, stash-full salvage is logged, equip checks
+      the cap; 11. backup rotates every 5 min, pagehide writes a sync
+      localStorage quick save; paste/copy/input no longer bubble to Discord.
+- P2 core: 129-node passive tree (3 starts, 9 themed branches, 18-node ring,
+  3 keystones) with allocate/refund (dust), Strider (bow) and Arcanist (spells)
+  with 10 new skills and 5 supports, 10 crafting currencies (deterministic
+  crafting RNG), relics (10), rule-based loot filter, currency drops, save v2
+  migration with fixture test. UI: Tree (canvas pan/zoom), Forge, filter
+  editor. 72 tests.

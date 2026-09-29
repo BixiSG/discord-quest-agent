@@ -2,6 +2,7 @@
 
 import type { RngState } from "./rng";
 import type { Item, Slot } from "./types";
+import type { FilterRule } from "./filter";
 
 export interface Hero {
     name: string;
@@ -12,6 +13,8 @@ export interface Hero {
     supports: string[];
     equipment: Partial<Record<Slot, Item>>;
     passives: string[];
+    /** Passive points from act rewards, on top of one per level. */
+    bonusPoints: number;
     asc?: string;
     /** Bumped on every change that affects the stat sheet. */
     rev: number;
@@ -38,7 +41,7 @@ export interface RunState {
     /** Seconds left in travel / respawn. */
     timer: number;
     monsters: MonsterState[];
-    hero: { life: number; es: number; mana: number; flask: number; flaskLeft: number; flaskRate: number; cd: number; esDelay: number };
+    hero: { life: number; es: number; mana: number; flask: number; flaskLeft: number; flaskRate: number; cd: number; esDelay: number; leech?: number };
     /** Totals for this run, for the log. */
     kills: number;
     xp: number;
@@ -79,9 +82,14 @@ export interface GameState {
         /** Loot filter: minimum rarity kept (P1). */
         keep: "plain" | "enchanted" | "rare";
         autoEquip: boolean;
+        filter: FilterRule[];
     };
     totals: Totals;
     nextUid: number;
+    /** Set when a kept drop had to be salvaged; cleared when space is made. */
+    stashFull?: boolean;
+    /** Crafts done so far: seeds the crafting RNG. */
+    craftSeq: number;
     log: LogEntry[];
 }
 

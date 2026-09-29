@@ -36,6 +36,17 @@ export const SUPPORTS: Record<string, SupportDef> = {
         mods: [m("damage", "more", 30, ["melee"]), m("damage", "more", 20, ["phys"])], blurb: "30% more melee damage, 20% more physical damage." },
     fracture: { id: "fracture", name: "Fracture", requires: ["attack"], level: 26, manaMult: 1.3,
         mods: [m("pen.fire", "flat", 15), m("pen.cold", "flat", 15), m("pen.lightning", "flat", 15), m("damage", "more", 10, ["elemental"])], blurb: "Hits ignore 15% of elemental resistances; 10% more elemental damage." },
+    // ---- spell and projectile supports
+    echo: { id: "echo", name: "Echoing Words", requires: ["spell"], level: 4, manaMult: 1.4,
+        mods: [m("castSpeed", "more", 35), m("damage", "more", -12)], blurb: "35% more cast speed, 12% less damage." },
+    potency: { id: "potency", name: "Potency", requires: ["spell"], level: 1, manaMult: 1.3,
+        mods: [m("damage", "more", 30, ["spell"])], blurb: "30% more spell damage." },
+    volley: { id: "volley", name: "Volley", requires: ["projectile"], level: 6, manaMult: 1.3, targets: 1,
+        mods: [m("damage", "more", -10)], blurb: "One more projectile target, 10% less damage." },
+    elemfocus: { id: "elemfocus", name: "Elemental Focus", requires: ["fire", "cold", "lightning"], level: 12, manaMult: 1.3,
+        mods: [m("damage", "more", 30, ["elemental"])], blurb: "30% more elemental damage." },
+    rot: { id: "rot", name: "Rot", requires: [], level: 22, manaMult: 1.3,
+        mods: [m("convert.chaos", "flat", 25), m("damage", "more", 15, ["chaos"])], blurb: "25% of physical damage becomes chaos; 15% more chaos damage." },
 };
 
 /** Character levels at which support slots open. */

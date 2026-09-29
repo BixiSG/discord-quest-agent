@@ -5,7 +5,8 @@
 import { advance, STEP_MS } from "../core/sim/engine";
 import { startReport, type Report } from "../core/sim/report";
 import { newGame, sheetOf } from "../core/game";
-import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap } from "../core/save";
+import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type SaveEnvelope } from "../core/save";
+import { validateState } from "../core/validate";
 import type { GameState } from "../core/state";
 import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
 import { supportSlots } from "../core/character";
@@ -17,6 +18,9 @@ import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from 
 import { itemCard } from "./views";
 
 const GEO_KEY = "hollowmarch.window";
+/** Synchronous copy written on pagehide, when an IndexedDB write may not finish. */
+const QUICK_KEY = "hollowmarch.quicksave";
+const BACKUP_MS = 5 * 60e3;
 const AUTOSAVE_MS = 20e3;
 const REPORT_MIN_MS = 60e3;
 
@@ -28,6 +32,9 @@ export interface AppHooks {
     theme?(): "dark" | "light";
     onClose?(): void;
 }
+
+// Events typed or pasted in the game must not reach Discord's document handlers.
+const STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
 
 export class GameWindow {
     private host: HTMLDivElement | null = null;
@@ -44,19 +51,26 @@ export class GameWindow {
     private timer: number | null = null;
     private raf: number | null = null;
     private lastSave = 0;
+    private lastBackup = 0;
     private busy = false;
     private ctx!: Ctx;
     private stopKeys: ((e: Event) => void) | null = null;
-    private onUnload = () => { void this.save(); };
+    private onUnload = () => {
+        if (!this.state) return;
+        try { localStorage.setItem(QUICK_KEY, JSON.stringify(wrap(this.state, Date.now()))); } catch { /* quota: IndexedDB save below may still land */ }
+        void this.save();
+    };
+    private onResize = () => this.refit();
 
     constructor(private store: SaveStore, private hooks: AppHooks = {}) {}
 
     get isOpen(): boolean { return !!this.host; }
 
     async open(): Promise<void> {
-        if (this.host) { this.win.style.display = ""; return; }
+        if (this.host) { this.win.style.display = ""; this.refit(); return; }
         this.build();
         window.addEventListener("pagehide", this.onUnload);
+        window.addEventListener("resize", this.onResize);
         const loaded = await this.load();
         if (!this.host) return; // closed while loading
         if (!loaded) { this.showCreation(); return; }
@@ -69,7 +83,8 @@ export class GameWindow {
         this.stopLoop();
         await this.save();
         window.removeEventListener("pagehide", this.onUnload);
-        if (this.stopKeys) for (const k of ["keydown", "keyup", "keypress"]) this.host.removeEventListener(k, this.stopKeys);
+        window.removeEventListener("resize", this.onResize);
+        if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
         this.host.remove();
         this.host = null;
         this.state = null;
@@ -88,7 +103,7 @@ export class GameWindow {
         this.root.append(style);
         // Keys typed in the game must not reach Discord's shortcuts.
         this.stopKeys = (e: Event) => e.stopPropagation();
-        for (const k of ["keydown", "keyup", "keypress"]) host.addEventListener(k, this.stopKeys);
+        for (const k of STOP_EVENTS) host.addEventListener(k, this.stopKeys);
 
         const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
         this.who = h("span", { class: "who" });
@@ -146,16 +161,31 @@ export class GameWindow {
 
     // ---- persistence --------------------------------------------------------
 
+    /** Unwraps, migrates and validates; the state is only used when it can produce a stat sheet. */
+    private static accept(raw: unknown): SaveEnvelope<GameState> {
+        const env = unwrap<GameState>(raw);
+        env.state = validateState(env.state);
+        sheetOf(env.state);
+        return env;
+    }
+
     private async load(): Promise<boolean> {
+        let quick: SaveEnvelope<GameState> | null = null;
+        try {
+            const q = localStorage.getItem(QUICK_KEY);
+            if (q) quick = GameWindow.accept(JSON.parse(q));
+        } catch (e) { console.warn("[Hollowmarch] quick save unusable:", e); }
         for (const key of ["main", "backup"]) {
             try {
                 const raw = await this.store.get(key);
                 if (!raw) continue;
-                const env = unwrap<GameState>(raw);
-                this.state = env.state;
+                const env = GameWindow.accept(raw);
+                this.state = quick && quick.savedAt > env.savedAt ? quick.state : env.state;
+                this.lastBackup = Date.now();
                 return true;
             } catch (e) { console.warn(`[Hollowmarch] save "${key}" unusable:`, e); }
         }
+        if (quick) { this.state = quick.state; return true; }
         return false;
     }
 
@@ -164,9 +194,14 @@ export class GameWindow {
         if (!s) return;
         this.lastSave = Date.now();
         try {
-            const prev = await this.store.get("main");
-            if (prev) await this.store.put("backup", prev as never);
+            // The backup rotates every few minutes, so a bad state can't overwrite both at once.
+            if (Date.now() - this.lastBackup > BACKUP_MS) {
+                const prev = await this.store.get("main");
+                if (prev) await this.store.put("backup", prev as SaveEnvelope);
+                this.lastBackup = Date.now();
+            }
             await this.store.put("main", wrap(s, Date.now()));
+            try { localStorage.removeItem(QUICK_KEY); } catch { /* ignore */ }
         } catch (e) { console.warn("[Hollowmarch] save failed:", e); }
         this.hooks.summary?.(summaryOf(s));
     }
@@ -200,6 +235,7 @@ export class GameWindow {
     }
 
     private startLoop(): void {
+        this.stopLoop();
         this.makeCtx();
         this.sig = "";
         this.renderTab(true);
@@ -249,7 +285,9 @@ export class GameWindow {
             exportSave: () => exportText(wrap(this.state!, Date.now())),
             importSave: async text => {
                 try {
-                    const env = unwrap<GameState>(importText(text));
+                    const env = GameWindow.accept(importText(text));
+                    await this.save();
+                    this.lastBackup = 0; // the next save moves the pre-import hero into the backup
                     this.state = env.state;
                     this.ctx.sel = {};
                     await this.catchUp();
@@ -329,7 +367,10 @@ export class GameWindow {
         clear(this.hud);
         this.hudEls = {};
         this.who.textContent = "A new Kindled";
+        let started = false;
         this.body.append(creationView(async (name, cls) => {
+            if (started) return;
+            started = true;
             this.state = newGame({ name, cls, now: Date.now(), seed: (Math.random() * 2 ** 32) >>> 0 });
             await this.save();
             this.startLoop();

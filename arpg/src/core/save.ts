@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -12,7 +12,20 @@ export interface SaveEnvelope<S = unknown> {
 }
 
 type Migration = (state: any) => any;
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+    // v2 (P2): passive bonus points, loot filter rules, crafting counter.
+    1: (s: any) => {
+        s.hero.bonusPoints ??= 0;
+        s.settings.filter ??= [
+            { on: true, action: "keep", rarity: ["relic"] },
+            { on: true, action: "salvage", rarity: ["plain", "enchanted"], behind: 10 },
+            { on: false, action: "keep", rarity: ["rare"], minAffixes: 5 },
+        ];
+        s.craftSeq ??= 0;
+        s.currency ??= {};
+        return s;
+    },
+};
 
 export class SaveError extends Error {}
 

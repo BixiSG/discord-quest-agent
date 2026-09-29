@@ -71,6 +71,9 @@ Single-target skills hit one.
 
 ## 8. Recovery
 
+Mana regenerates 7% of maximum per second plus flat regeneration. Skill mana
+cost grows 3% per hero level and is multiplied by each support's multiplier.
+
 - Life regeneration: flat per second plus percent of max life.
 - Leech: a share of damage dealt returns as life, at most 10% of max life
   per second.
@@ -83,16 +86,19 @@ Single-target skills hit one.
 Each monster has an archetype (`brute`, `skirmisher`, `caster`, ...) with
 multipliers over the level tables in `src/core/data/scaling.ts`:
 
-    life(L)   = 22 * 1.12^(L-1) * (1 + 0.04 (L-1))
-    damage(L) = 4  * 1.10^(L-1) * (1 + 0.03 (L-1))
-    armour(L) = evasion(L) = accuracy(L) = 12 + 9 (L-1) * 1.04^(L-1)
+    life(L)   = 20 * 1.085^(L-1) * (1 + 0.03 (L-1))
+    damage(L) = 5  * 1.06^(L-1)  * (1 + 0.02 (L-1))
+    armour(L) = evasion(L) = accuracy(L) = 12 + 9 (L-1) * 1.03^(L-1)
 
-Packs have 3-6 normal monsters, sometimes a **champion** (x3 life, x1.5
-damage, x3 XP). Bosses have x25 life, x2.5 damage and 20-40% resistances.
+Monster armour counts at half against the hero's hits. Packs have 2-6 normal
+monsters, sometimes a **champion** (x3 life, x1.5 damage, x3 XP). Bosses
+spawn one level above their zone with their own multipliers in
+`data/monsters.ts` (the Tide-Warden: x25 life, x2.4 damage; the Chapel
+Keeper: x12 life, x1.8 damage) and 10-40% resistances.
 
 ## 10. Experience
 
-    xpToNext(L)  = round(60 * L^2.4 + 140 * L)
+    xpToNext(L)  = round((80 * L^2.8 + 120 * L) * (L > 60 ? 1.07^(L-60) : 1))
     monsterXp(L) = 4 * L^1.9 + 6
 
 Kills more than `3 + floor(L/16)` levels away from the hero give less XP:

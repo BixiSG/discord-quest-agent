@@ -2,9 +2,9 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { MONSTERS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
+import { CURRENCIES, CURRENCY_ORDER, MONSTERS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
-import { rollItem } from "../items";
+import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
 import { DAMAGE_TYPES, type Item } from "../types";
 import { sheetOf, receiveItem, pushLog } from "../game";
@@ -29,6 +29,7 @@ export interface SimEvents {
     runDone?(zone: string): void;
     zone?(from: string, to: string, why: "push" | "retreat" | "unlock"): void;
     flask?(): void;
+    currency?(id: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -103,6 +104,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     h.mana = Math.min(sheet.mana, h.mana + sheet.manaRegen * DT);
     if (h.esDelay > 0) h.esDelay -= DT;
     else h.es = Math.min(sheet.es, h.es + sheet.es * 0.2 * DT);
+    h.leech = Math.min(sheet.life * 0.1, (h.leech ?? sheet.life * 0.1) + sheet.life * 0.1 * DT);
     if (h.flaskLeft > 0) { h.life = Math.min(sheet.life, h.life + h.flaskRate * DT); h.flaskLeft -= DT; }
 
     switch (run.phase) {
@@ -179,8 +181,11 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
         if (m.life <= 0) sheet = onKill(state, run, m, sheet, rng, ev);
     }
     if (sk.leech > 0 && dealt > 0) {
+        // COMBAT.md 8: at most 10% of max life per second, tracked as a refilling budget.
         const h = run.hero;
-        h.life = Math.min(sheet.life, h.life + Math.min(dealt * sk.leech / 100, sheet.life * 0.1));
+        const got = Math.min(dealt * sk.leech / 100, h.leech ?? sheet.life * 0.1);
+        h.leech = (h.leech ?? sheet.life * 0.1) - got;
+        h.life = Math.min(sheet.life, h.life + got);
     }
     return sheet;
 }
@@ -236,10 +241,21 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     for (let k = 0; k < drops; k++) {
         const bonus = sheet.rarity + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
-        const item = rollItem(rng, state.nextUid++, m.level, opts);
+        const relicChance = (d.boss ? 0.04 : m.champion ? 0.01 : 0.003) * (1 + sheet.rarity / 200);
+        const item = (rng.chance(relicChance) && rollRelic(rng, state.nextUid, m.level)) || rollItem(rng, state.nextUid, m.level, opts);
+        state.nextUid++;
         const r = receiveItem(state, item);
         if (r.equipped) changed = true;
         ev.loot?.(item, r.kept, r.equipped);
+    }
+    // Crafting currency.
+    const cRolls = d.boss ? 3 : 1;
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty;
+    for (let k = 0; k < cRolls; k++) {
+        if (!rng.chance(cChance)) continue;
+        const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
+        state.currency[cur] = (state.currency[cur] ?? 0) + 1;
+        ev.currency?.(cur);
     }
     if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
     return changed ? sheetOf(state) : sheet;

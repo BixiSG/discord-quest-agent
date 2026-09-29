@@ -16,7 +16,7 @@ before the next phase starts.
 - [x] Toolchain: TypeScript strict, esbuild IIFE (ASCII-only), Vitest
 - [x] Seeded RNG, stat/modifier engine, save envelope + migrations
 - [x] Dev harness: plain browser page (dev/play.html) and the mock hub in dev/harness.html
-- [ ] Review P0
+- [x] Review P0
 
 ## P1 - vertical slice
 - [x] Content: Vanguard class, skills, supports, item bases, affixes, Act 1 zones + boss
@@ -28,7 +28,7 @@ before the next phase starts.
 - [x] UI: overlay window (Shadow DOM, drag/resize), launcher card, battle view,
       inventory/equipment, character sheet with DPS/EHP breakdown, skills
 - [x] Saves: IndexedDB, export/import
-- [ ] Review P1
+- [x] Review P1
 
 ## P2 - depth
 - [ ] Canvas passive tree (shared tree, three class starts)

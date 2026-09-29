@@ -5,6 +5,7 @@ import { deriveSheet, type Sheet } from "./character";
 import { BASES, CLASSES, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
 import { baseOf, levelReq, salvageValue } from "./items";
 import { hashSeed } from "./rng";
+import { DEFAULT_FILTER, keepItem } from "./filter";
 import { newTotals, type GameState, type LogEntry } from "./state";
 import type { Item, Rarity, Slot } from "./types";
 
@@ -17,12 +18,12 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
     const seed = opts.seed ?? hashSeed(opts.now, opts.name.length);
     const state: GameState = {
         seed, createdAt: opts.now, simTo: opts.now,
-        hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], rev: 0 },
+        hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, rev: 0 },
         stash: [], stashCap: 60, dust: 0, currency: {},
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
-        settings: { keep: "rare", autoEquip: true },
-        totals: newTotals(), nextUid: 1, log: [],
+        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
+        totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", `${opts.name} wakes on the shore.`);
@@ -49,7 +50,6 @@ export function pushLog(state: GameState, kind: LogEntry["kind"], text: string):
 
 /** One number for "is this build better": offence and defence, geometric. */
 export function buildScore(s: Sheet): number {
-    if (s.problems.length) return 0;
     const off = Math.sqrt(Math.max(0.01, s.skill.dps) * Math.max(0.01, s.skill.packDps));
     const def = Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
     return Math.pow(off, 0.6) * Math.pow(def, 0.4);
@@ -93,6 +93,10 @@ export function equip(state: GameState, uid: number, slot?: Slot): string | null
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
+    const eq = state.hero.equipment;
+    const b = baseOf(item);
+    const out = (eq[target] ? 1 : 0) + (target === "weapon" && eq.offhand && (b.weapon?.hands === 2 || baseOf(eq.offhand).kind === "quiver") ? 1 : 0);
+    if (state.stash.length - 1 + out > state.stashCap) return "stash full";
     state.stash.splice(i, 1);
     state.stash.push(...putOn(state, item, target));
     return null;
@@ -140,8 +144,10 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
     state.totals.items++;
     if (state.settings.autoEquip) {
         const slot = upgradeSlot(state, item);
-        if (slot) {
-            for (const old of putOn(state, item, slot)) stashOrSalvage(state, old);
+        // Gear taken off must fit in the stash: never salvage something the player wore.
+        const displaced = slot ? (state.hero.equipment[slot] ? 1 : 0) + (slot === "weapon" && state.hero.equipment.offhand ? 1 : 0) : 0;
+        if (slot && state.stash.length + displaced <= state.stashCap) {
+            for (const old of putOn(state, item, slot)) state.stash.push(old);
             pushLog(state, "loot", `Equipped a new ${BASES[item.base]!.name}.`);
             return { kept: true, equipped: true };
         }
@@ -150,9 +156,9 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
 }
 
 function stashOrSalvage(state: GameState, item: Item): boolean {
-    if (RARITY_RANK[item.rarity] >= RARITY_RANK[state.settings.keep] && state.stash.length < state.stashCap) {
-        state.stash.push(item);
-        return true;
+    if (keepItem(state, item)) {
+        if (state.stash.length < state.stashCap) { state.stash.push(item); return true; }
+        if (!state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
     }
     salvageItem(state, item);
     return false;
@@ -173,6 +179,7 @@ export function salvage(state: GameState, uids: number[]): number {
         salvageItem(state, state.stash.splice(i, 1)[0]!);
         n++;
     }
+    if (n) state.stashFull = false;
     return n;
 }
 

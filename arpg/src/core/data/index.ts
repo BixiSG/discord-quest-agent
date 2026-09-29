@@ -6,3 +6,6 @@ export * from "./bases";
 export * from "./affixes";
 export * from "./monsters";
 export * from "./zones";
+export * from "./passives";
+export * from "./currency";
+export * from "./relics";

@@ -30,17 +30,26 @@ interface HubApi {
 
 let storePromise: Promise<SaveStore> | null = null;
 let game: GameWindow | null = null;
+let opening: Promise<void> | null = null;
+const w = window as unknown as { __questAgent?: unknown; __questAgentAddons?: { push(d: unknown): unknown }; __hollowmarch?: unknown };
+/** No hub on the page (dev/play.html): the game boots by itself. */
+const standalone = !(w.__questAgent || w.__questAgentAddons);
 let hub: HubApi | null = null;
 let refreshCard: (() => void) | null = null;
 
 const store = () => (storePromise ??= openStore());
 
-async function openGame(): Promise<void> {
+function openGame(): Promise<void> {
+    // One open at a time: a double click must not create two windows on one save.
+    return (opening ??= doOpen().finally(() => { opening = null; }));
+}
+
+async function doOpen(): Promise<void> {
     if (!game) {
         game = new GameWindow(await store(), {
             summary: (s: Summary) => { hub?.save(s); refreshCard?.(); },
             theme: () => (hub?.theme() === "light" ? "light" : hub ? "dark" : "light"),
-            onClose: () => { refreshCard?.(); if (!hub) showOpener(); },
+            onClose: () => { refreshCard?.(); if (standalone) showOpener(); },
         });
     }
     await game.open();
@@ -65,7 +74,12 @@ const def = {
         refreshCard = draw;
         return { unmount() { view?.unmount(); if (refreshCard === draw) refreshCard = null; } };
     },
-    destroy() { void game?.close(); game = null; hub = null; },
+    destroy() {
+        // Switched off in Settings: save and close, then let go of the hub.
+        const g = game;
+        game = null;
+        void (g ? g.close() : Promise.resolve()).finally(() => { hub = null; refreshCard = null; });
+    },
 };
 
 // Standalone page: a button to reopen the window after closing it.
@@ -77,8 +91,7 @@ function showOpener(): void {
     document.body.append(b);
 }
 
-const w = window as unknown as { __questAgent?: unknown; __questAgentAddons?: { push(d: unknown): unknown }; __hollowmarch?: unknown };
-if (w.__questAgent || w.__questAgentAddons) {
+if (!standalone) {
     const queue = w.__questAgentAddons ?? (w.__questAgentAddons = [] as unknown[] as { push(d: unknown): unknown });
     queue.push(def);
 } else {

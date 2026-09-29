@@ -68,10 +68,10 @@
       let total = 0;
       for (const x of arr) total += Math.max(0, weight(x));
       if (total <= 0) return void 0;
-      let r2 = this.next() * total;
+      let r3 = this.next() * total;
       for (const x of arr) {
-        r2 -= Math.max(0, weight(x));
-        if (r2 < 0) return x;
+        r3 -= Math.max(0, weight(x));
+        if (r3 < 0) return x;
       }
       return arr[arr.length - 1];
     }
@@ -135,11 +135,38 @@
       startWeapon: "sword1",
       startNode: "start_vanguard",
       color: "#e2543b"
+    },
+    strider: {
+      id: "strider",
+      name: "Strider",
+      blurb: "A lamplighter who walked the drowned roads for a living. Quick feet, a bow, and a good eye.",
+      str: 12,
+      dex: 24,
+      int: 10,
+      life: 52,
+      startSkill: "twinshot",
+      startWeapon: "bow1",
+      startNode: "start_strider",
+      color: "#19b3a3"
+    },
+    arcanist: {
+      id: "arcanist",
+      name: "Arcanist",
+      blurb: "A chapel scholar who read the ember's writing before it burned him alive. Spells and a shield of light.",
+      str: 10,
+      dex: 12,
+      int: 24,
+      life: 46,
+      startSkill: "emberbolt",
+      startWeapon: "wand1",
+      startNode: "start_arcanist",
+      color: "#8b5cf6"
     }
   };
 
   // src/core/data/skills.ts
   var MELEE = ["sword", "axe", "mace", "greatsword", "greataxe", "dagger", "staff"];
+  var BOW = ["bow"];
   var SKILLS = {
     crescent: {
       id: "crescent",
@@ -213,6 +240,159 @@
       fx: "arc",
       blurb: "A burning arc. Half of its physical damage becomes fire.",
       mods: [{ stat: "convert.fire", kind: "flat", value: 50, src: "Cinderwake" }]
+    },
+    // ---- bow skills (Strider)
+    twinshot: {
+      id: "twinshot",
+      name: "Twin Shot",
+      kind: "attack",
+      shape: "projectile",
+      tags: ["attack", "projectile", "bow"],
+      effectiveness: 80,
+      targets: 1,
+      manaCost: 4,
+      level: 1,
+      weapons: BOW,
+      fx: "bolt",
+      blurb: "Two arrows from one draw; each can pass through an enemy."
+    },
+    barbrain: {
+      id: "barbrain",
+      name: "Rain of Barbs",
+      kind: "attack",
+      shape: "area",
+      tags: ["attack", "projectile", "area", "bow"],
+      effectiveness: 70,
+      targets: 4,
+      manaCost: 7,
+      level: 6,
+      weapons: BOW,
+      fx: "nova",
+      blurb: "Arrows fired high that come down across the whole pack."
+    },
+    heartseeker: {
+      id: "heartseeker",
+      name: "Heartseeker",
+      kind: "attack",
+      shape: "single",
+      tags: ["attack", "projectile", "bow", "strike"],
+      effectiveness: 190,
+      speedMult: 0.85,
+      manaCost: 7,
+      level: 10,
+      weapons: BOW,
+      fx: "bolt",
+      blurb: "A slow aimed shot that finds the gaps in armour.",
+      mods: [{ stat: "critChance", kind: "inc", value: 60, src: "Heartseeker" }, { stat: "critMulti", kind: "flat", value: 30, src: "Heartseeker" }]
+    },
+    stormvolley: {
+      id: "stormvolley",
+      name: "Storm Volley",
+      kind: "attack",
+      shape: "projectile",
+      tags: ["attack", "projectile", "bow", "lightning"],
+      effectiveness: 95,
+      targets: 2,
+      manaCost: 9,
+      level: 18,
+      weapons: BOW,
+      fx: "bolt",
+      blurb: "Charged arrows; half their physical damage becomes lightning.",
+      mods: [{ stat: "convert.lightning", kind: "flat", value: 50, src: "Storm Volley" }]
+    },
+    skewer: {
+      id: "skewer",
+      name: "Skewer",
+      kind: "attack",
+      shape: "single",
+      tags: ["attack", "melee", "strike"],
+      effectiveness: 130,
+      speedMult: 1.2,
+      manaCost: 4,
+      level: 4,
+      weapons: ["dagger", "sword"],
+      fx: "stab",
+      blurb: "Fast stabs for when the pack is too close to shoot."
+    },
+    // ---- spells (Arcanist)
+    emberbolt: {
+      id: "emberbolt",
+      name: "Ember Bolt",
+      kind: "spell",
+      shape: "projectile",
+      tags: ["spell", "projectile", "fire"],
+      effectiveness: 100,
+      damage: { fire: [5, 9] },
+      castTime: 0.75,
+      crit: 6,
+      targets: 0,
+      manaCost: 5,
+      level: 1,
+      fx: "bolt",
+      blurb: "A thrown coal of the dead sun."
+    },
+    frostring: {
+      id: "frostring",
+      name: "Rime Ring",
+      kind: "spell",
+      shape: "area",
+      tags: ["spell", "area", "cold"],
+      effectiveness: 70,
+      damage: { cold: [4, 7] },
+      castTime: 0.8,
+      crit: 6,
+      targets: 4,
+      manaCost: 8,
+      level: 4,
+      fx: "nova",
+      blurb: "A ring of frost bursts out from you and bites everything near."
+    },
+    chainspark: {
+      id: "chainspark",
+      name: "Chain Spark",
+      kind: "spell",
+      shape: "projectile",
+      tags: ["spell", "projectile", "lightning"],
+      effectiveness: 80,
+      damage: { lightning: [1, 15] },
+      castTime: 0.7,
+      crit: 7,
+      targets: 2,
+      manaCost: 7,
+      level: 8,
+      fx: "bolt",
+      blurb: "A spark that jumps from enemy to enemy."
+    },
+    glacial: {
+      id: "glacial",
+      name: "Glacial Lance",
+      kind: "spell",
+      shape: "single",
+      tags: ["spell", "cold"],
+      effectiveness: 150,
+      damage: { cold: [12, 18] },
+      castTime: 1,
+      crit: 8,
+      manaCost: 10,
+      level: 12,
+      fx: "stab",
+      blurb: "A spear of old ice, slow to form and hard to survive."
+    },
+    hexbloom: {
+      id: "hexbloom",
+      name: "Hex Bloom",
+      kind: "spell",
+      shape: "area",
+      tags: ["spell", "area", "chaos"],
+      effectiveness: 80,
+      damage: { chaos: [6, 10] },
+      castTime: 0.9,
+      crit: 5,
+      targets: 3,
+      manaCost: 11,
+      level: 20,
+      fx: "nova",
+      blurb: "Rot flowers open in the pack. Few things resist it."
     }
   };
 
@@ -300,6 +480,53 @@
       manaMult: 1.3,
       mods: [m("pen.fire", "flat", 15), m("pen.cold", "flat", 15), m("pen.lightning", "flat", 15), m("damage", "more", 10, ["elemental"])],
       blurb: "Hits ignore 15% of elemental resistances; 10% more elemental damage."
+    },
+    // ---- spell and projectile supports
+    echo: {
+      id: "echo",
+      name: "Echoing Words",
+      requires: ["spell"],
+      level: 4,
+      manaMult: 1.4,
+      mods: [m("castSpeed", "more", 35), m("damage", "more", -12)],
+      blurb: "35% more cast speed, 12% less damage."
+    },
+    potency: {
+      id: "potency",
+      name: "Potency",
+      requires: ["spell"],
+      level: 1,
+      manaMult: 1.3,
+      mods: [m("damage", "more", 30, ["spell"])],
+      blurb: "30% more spell damage."
+    },
+    volley: {
+      id: "volley",
+      name: "Volley",
+      requires: ["projectile"],
+      level: 6,
+      manaMult: 1.3,
+      targets: 1,
+      mods: [m("damage", "more", -10)],
+      blurb: "One more projectile target, 10% less damage."
+    },
+    elemfocus: {
+      id: "elemfocus",
+      name: "Elemental Focus",
+      requires: ["fire", "cold", "lightning"],
+      level: 12,
+      manaMult: 1.3,
+      mods: [m("damage", "more", 30, ["elemental"])],
+      blurb: "30% more elemental damage."
+    },
+    rot: {
+      id: "rot",
+      name: "Rot",
+      requires: [],
+      level: 22,
+      manaMult: 1.3,
+      mods: [m("convert.chaos", "flat", 25), m("damage", "more", 15, ["chaos"])],
+      blurb: "25% of physical damage becomes chaos; 15% more chaos damage."
     }
   };
   var SUPPORT_SLOT_LEVELS = [1, 1, 8, 18, 32];
@@ -869,40 +1096,302 @@
   ];
   var ZONE_ORDER = ACTS.flatMap((a) => a.zones);
 
+  // src/core/data/passives.ts
+  var m2 = (stat, kind, value, tags) => tags ? { stat, kind, value, tags } : { stat, kind, value };
+  var THEMES = {
+    iron: {
+      name: "Iron",
+      small: [["Iron Skin", [m2("armour", "inc", 12)]], ["Thick Blood", [m2("life", "inc", 5)]]],
+      notables: [["Bulwark Oath", [m2("armour", "inc", 30), m2("life", "inc", 8), m2("block", "flat", 3)]], ["Unbroken", [m2("life", "inc", 12), m2("lifeRegenPct", "flat", 1)]]]
+    },
+    blade: {
+      name: "Blade",
+      small: [["Honed Edge", [m2("damage", "inc", 10, ["melee"])]], ["Quick Hands", [m2("attackSpeed", "inc", 4)]]],
+      notables: [["Butcher's Rhythm", [m2("damage", "inc", 25, ["melee"]), m2("attackSpeed", "inc", 8)]], ["Split Bone", [m2("damage", "inc", 30, ["phys"]), m2("critMulti", "flat", 15)]]]
+    },
+    ember: {
+      name: "Ember",
+      small: [["Kindle", [m2("damage", "inc", 12, ["fire"])]], ["Hearth Ward", [m2("res.fire", "flat", 8)]]],
+      notables: [["Pyre Heart", [m2("damage", "inc", 30, ["fire"]), m2("pen.fire", "flat", 8)]], ["Cinder Skin", [m2("res.fire", "flat", 20), m2("maxRes.fire", "flat", 3), m2("life", "inc", 6)]]]
+    },
+    wind: {
+      name: "Wind",
+      small: [["Light Step", [m2("evasion", "inc", 12)]], ["Fleet", [m2("moveSpeed", "inc", 3)]]],
+      notables: [["Gale Dancer", [m2("evasion", "inc", 35), m2("moveSpeed", "inc", 6)]], ["Afterimage", [m2("evasion", "inc", 25), m2("block", "flat", 4), m2("life", "inc", 6)]]]
+    },
+    arrow: {
+      name: "Arrow",
+      small: [["Fletching", [m2("damage", "inc", 10, ["projectile"])]], ["Keen Sight", [m2("critChance", "inc", 12)]]],
+      notables: [["Deadeye", [m2("critChance", "inc", 40), m2("critMulti", "flat", 20)]], ["Barbed Volley", [m2("damage", "inc", 25, ["projectile"]), m2("pierce", "flat", 1)]]]
+    },
+    storm: {
+      name: "Storm",
+      small: [["Static", [m2("damage", "inc", 12, ["lightning"])]], ["Grounding", [m2("res.lightning", "flat", 8)]]],
+      notables: [["Thunderhead", [m2("damage", "inc", 30, ["lightning"]), m2("pen.lightning", "flat", 8)]], ["Rod of the Squall", [m2("res.lightning", "flat", 20), m2("maxRes.lightning", "flat", 3), m2("attackSpeed", "inc", 5)]]]
+    },
+    aegis: {
+      name: "Aegis",
+      small: [["Shimmer", [m2("energyShield", "inc", 12)]], ["Focus", [m2("mana", "inc", 6)]]],
+      notables: [["Mirror Mind", [m2("energyShield", "inc", 35), m2("mana", "inc", 10)]], ["Still Water", [m2("energyShield", "inc", 25), m2("manaRegen", "flat", 4), m2("life", "inc", 5)]]]
+    },
+    sorcery: {
+      name: "Sorcery",
+      small: [["Chant", [m2("damage", "inc", 10, ["spell"])]], ["Swift Words", [m2("castSpeed", "inc", 4)]]],
+      notables: [["Grand Litany", [m2("damage", "inc", 28, ["spell"]), m2("castSpeed", "inc", 8)]], ["Fateweaver", [m2("critChance", "inc", 45, ["spell"]), m2("critMulti", "flat", 15)]]]
+    },
+    frost: {
+      name: "Frost",
+      small: [["Chill", [m2("damage", "inc", 12, ["cold"])]], ["Tide Ward", [m2("res.cold", "flat", 8)]]],
+      notables: [["Heart of Winter", [m2("damage", "inc", 30, ["cold"]), m2("pen.cold", "flat", 8)]], ["Rime Coat", [m2("res.cold", "flat", 20), m2("maxRes.cold", "flat", 3), m2("energyShield", "inc", 8)]]]
+    }
+  };
+  var TREE_CLASSES = [
+    { cls: "vanguard", angle: -90, branches: [THEMES.iron, THEMES.blade, THEMES.ember] },
+    { cls: "strider", angle: 30, branches: [THEMES.wind, THEMES.arrow, THEMES.storm] },
+    { cls: "arcanist", angle: 150, branches: [THEMES.aegis, THEMES.sorcery, THEMES.frost] }
+  ];
+  var RING_MODS = [
+    ["Vigour", [m2("life", "flat", 12)]],
+    ["Prism", [m2("res.fire", "flat", 5), m2("res.cold", "flat", 5), m2("res.lightning", "flat", 5)]],
+    ["Might", [m2("str", "flat", 10)]],
+    ["Grace", [m2("dex", "flat", 10)]],
+    ["Wit", [m2("int", "flat", 10)]],
+    ["Ferocity", [m2("damage", "inc", 8)]]
+  ];
+  var KEYSTONES = [
+    ["Glass Oath", [m2("damage", "more", 35), m2("life", "more", -30)], "Hit much harder. Break much easier."],
+    ["Iron Vow", [m2("armour", "more", 60), m2("evasion", "more", -100), m2("attackSpeed", "more", -8)], "Armour swells; you no longer dodge."],
+    ["Ember Blood", [m2("lifeRegenPct", "flat", 3), m2("res.fire", "flat", -30), m2("life", "more", 15)], "Burn hot and heal fast; fire hurts more."]
+  ];
+  var rad = (deg) => deg * Math.PI / 180;
+  var polar = (r3, deg) => [Math.round(r3 * Math.cos(rad(deg))), Math.round(r3 * Math.sin(rad(deg)))];
+  function build2() {
+    const nodes = {};
+    const add = (n) => {
+      if (nodes[n.id]) throw new Error("dup node " + n.id);
+      nodes[n.id] = { ...n, links: [] };
+      return n.id;
+    };
+    const link = (a, b) => {
+      nodes[a].links.push(b);
+      nodes[b].links.push(a);
+    };
+    const RING = 18, R_RING = 130;
+    const ring = [];
+    for (let i = 0; i < RING; i++) {
+      const [name, mods] = RING_MODS[i % RING_MODS.length];
+      const [x, y] = polar(R_RING, -90 + 360 / RING * i);
+      ring.push(add({ id: `ring${i}`, name, kind: "ring", x, y, mods }));
+    }
+    ring.forEach((id, i) => link(id, ring[(i + 1) % RING]));
+    const branchEnds = {};
+    for (const c of TREE_CLASSES) {
+      const [sx, sy] = polar(260, c.angle);
+      const start = add({ id: `start_${c.cls}`, name: "Ember Seat", kind: "start", x: sx, y: sy, mods: [], cls: c.cls });
+      let prev = start;
+      for (let k = 0; k < 2; k++) {
+        const [x, y] = polar(220 - 40 * (k + 1), c.angle);
+        const id = add({ id: `${c.cls}_in${k}`, name: "Path of Embers", kind: "small", x, y, mods: [m2("life", "flat", 8)] });
+        link(prev, id);
+        prev = id;
+      }
+      const ringIdx = Math.round(((c.angle + 90) % 360 + 360) % 360 / (360 / RING)) % RING;
+      link(prev, ring[ringIdx]);
+      branchEnds[c.cls] = [];
+      c.branches.forEach((theme, b) => {
+        const ang = c.angle + (b - 1) * 34;
+        const path = [];
+        let p = start;
+        for (let k = 0; k < 9; k++) {
+          const r3 = 320 + k * 58;
+          const bend = ang + (b - 1) * k * 1.5;
+          const [x, y] = polar(r3, bend);
+          const notable = k === 4 || k === 8;
+          const [name, mods] = notable ? theme.notables[k === 4 ? 0 : 1] : theme.small[k % 2];
+          const id = add({ id: `${c.cls}_b${b}_${k}`, name, kind: notable ? "notable" : "small", x, y, mods });
+          link(p, id);
+          p = id;
+          path.push(id);
+        }
+        branchEnds[c.cls].push(path);
+      });
+    }
+    TREE_CLASSES.forEach((c, i) => {
+      const next = TREE_CLASSES[(i + 1) % TREE_CLASSES.length];
+      const from = branchEnds[c.cls][2][2], to = branchEnds[next.cls][0][2];
+      const mid = c.angle + 60;
+      let p = from;
+      const bridge = [];
+      for (let k = 0; k < 5; k++) {
+        const [x, y] = polar(470, mid - 20 + k * 10);
+        const [name2, mods2] = RING_MODS[(i * 5 + k) % RING_MODS.length];
+        const id = add({ id: `bridge${i}_${k}`, name: name2, kind: "small", x, y, mods: mods2 });
+        link(p, id);
+        p = id;
+        bridge.push(id);
+      }
+      link(p, to);
+      const [name, mods] = KEYSTONES[i];
+      const [kx0, ky0] = polar(580, mid);
+      const pre = add({ id: `ks${i}_path`, name: "Threshold", kind: "small", x: kx0, y: ky0, mods: [m2("damage", "inc", 6)] });
+      link(bridge[2], pre);
+      const [kx, ky] = polar(680, mid);
+      link(pre, add({ id: `keystone${i}`, name, kind: "keystone", x: kx, y: ky, mods }));
+    });
+    return nodes;
+  }
+  var PASSIVES = build2();
+  var KEYSTONE_TEXT = Object.fromEntries(KEYSTONES.map(([n, , t]) => [n, t]));
+  function passivePoints(level, bonus) {
+    return level - 1 + bonus;
+  }
+
+  // src/core/data/currency.ts
+  var list2 = [
+    { id: "kindling", name: "Kindling", blurb: "Turns a plain item enchanted.", cost: 5, drop: 1e3, color: "#ff9a2e" },
+    { id: "reshaper", name: "Reshaper", blurb: "Rerolls the affixes of an enchanted item.", cost: 8, drop: 900, color: "#5aa9ff" },
+    { id: "graft", name: "Graft", blurb: "Adds an affix to an enchanted item with room for one.", cost: 12, drop: 500, color: "#3fbf5f" },
+    { id: "crownseal", name: "Crown Seal", blurb: "Raises an enchanted item to rare and adds an affix.", cost: 40, drop: 200, color: "#ffd23f" },
+    { id: "forgeheart", name: "Forgeheart", blurb: "Turns a plain item rare.", cost: 60, drop: 150, color: "#ff5a36" },
+    { id: "tempest", name: "Tempest Shard", blurb: "Rerolls every affix of a rare item.", cost: 50, drop: 160, color: "#7fd1ff" },
+    { id: "starfall", name: "Starfall", blurb: "Adds an affix to a rare item with room for one.", cost: 180, drop: 25, color: "#fff27a" },
+    { id: "salt", name: "Salt of Undoing", blurb: "Strips every affix; the item becomes plain.", cost: 10, drop: 400, color: "#e9e4d4" },
+    { id: "unmaker", name: "Unmaker", blurb: "Removes one random affix.", cost: 70, drop: 90, color: "#8b5cf6" },
+    { id: "temper", name: "Temper Oil", blurb: "Rerolls the numbers, keeps the affixes.", cost: 30, drop: 250, color: "#c9a26b" }
+  ];
+  var CURRENCIES = Object.fromEntries(list2.map((c) => [c.id, c]));
+  var CURRENCY_ORDER = list2.map((c) => c.id);
+
+  // src/core/data/relics.ts
+  var r2 = (stat, kind, range, text, tags) => tags ? { stat, kind, range, text, tags } : { stat, kind, range, text };
+  var list3 = [
+    {
+      id: "tidebreaker",
+      name: "The Tide's Refusal",
+      base: "greatsword3",
+      level: 16,
+      weight: 100,
+      flavour: "It was forged to hold the sea back. It still tries.",
+      mods: [r2("local.physInc", "inc", [120, 160], "{0}% increased physical damage"), r2("res.cold", "flat", [20, 30], "+{0}% cold resistance"), r2("life", "flat", [40, 60], "+{0} to maximum life")]
+    },
+    {
+      id: "lampwick",
+      name: "Lampwick",
+      base: "wand2",
+      level: 8,
+      weight: 100,
+      flavour: "Still warm. Still waiting for someone to come home.",
+      mods: [r2("damage", "inc", [40, 60], "{0}% increased spell damage", ["spell"]), r2("addMin.fire", "flat", [3, 5], "Adds {0} min fire damage to spells", ["spell"]), r2("addMax.fire", "flat", [9, 14], "Adds {0} max fire damage to spells", ["spell"]), r2("manaRegen", "flat", [3, 5], "{0} mana regenerated per second")]
+    },
+    {
+      id: "gullfeather",
+      name: "Gullfeather Stride",
+      base: "leather_boots2",
+      level: 8,
+      weight: 100,
+      flavour: "The gulls never land. Now neither do you.",
+      mods: [r2("moveSpeed", "inc", [25, 35], "{0}% increased movement speed"), r2("local.evasion", "flat", [60, 90], "+{0} to evasion"), r2("dex", "flat", [15, 25], "+{0} to Grace")]
+    },
+    {
+      id: "chapelbell",
+      name: "The Keeper's Bell",
+      base: "amulet_life",
+      level: 12,
+      weight: 80,
+      flavour: "Rings for a service no one attends.",
+      mods: [r2("life", "inc", [8, 12], "{0}% increased maximum life"), r2("lifeRegenPct", "flat", [1, 2], "Regenerate {0}% of life per second"), r2("res.chaos", "flat", [15, 25], "+{0}% chaos resistance")]
+    },
+    {
+      id: "saltcrown",
+      name: "Saltcrown",
+      base: "plate_helmet3",
+      level: 16,
+      weight: 90,
+      flavour: "Heavy with the sea. Heavier with the oath.",
+      mods: [r2("local.defInc", "inc", [80, 120], "{0}% increased armour"), r2("res.fire", "flat", [15, 25], "+{0}% fire resistance"), r2("res.cold", "flat", [15, 25], "+{0}% cold resistance"), r2("res.lightning", "flat", [15, 25], "+{0}% lightning resistance")]
+    },
+    {
+      id: "emberknot",
+      name: "Emberknot",
+      base: "ring_ember",
+      level: 20,
+      weight: 80,
+      flavour: "Two coals that never quite touch.",
+      mods: [r2("damage", "inc", [20, 30], "{0}% increased fire damage", ["fire"]), r2("convert.fire", "flat", [20, 30], "{0}% of physical damage converted to fire"), r2("res.cold", "flat", [-20, -10], "{0}% cold resistance")]
+    },
+    {
+      id: "lastlight",
+      name: "Last Light",
+      base: "dagger8",
+      level: 74,
+      weight: 30,
+      flavour: "The final ray of the March's sun, sharpened.",
+      mods: [r2("local.physInc", "inc", [180, 240], "{0}% increased physical damage"), r2("local.critChance", "inc", [40, 60], "{0}% increased critical chance"), r2("critMulti", "flat", [30, 45], "+{0}% critical multiplier"), r2("leech", "flat", [2, 3], "{0}% of damage leeched as life")]
+    },
+    {
+      id: "hollowheart",
+      name: "Hollow Heart",
+      base: "silk_body5",
+      level: 38,
+      weight: 60,
+      flavour: "There is nothing in it. That is the point.",
+      mods: [r2("local.defInc", "inc", [150, 200], "{0}% increased energy shield"), r2("energyShield", "inc", [10, 15], "{0}% increased maximum energy shield"), r2("life", "more", [-20, -20], "{0}% less maximum life")]
+    },
+    {
+      id: "stormstring",
+      name: "Stormstring",
+      base: "bow4",
+      level: 26,
+      weight: 70,
+      flavour: "It hums before the storm does.",
+      mods: [r2("local.addMin.lightning", "flat", [2, 4], "Adds {0} min lightning damage"), r2("local.addMax.lightning", "flat", [60, 80], "Adds {0} max lightning damage"), r2("local.attackSpeed", "inc", [10, 15], "{0}% increased attack speed"), r2("pierce", "flat", [1, 1], "Projectiles pierce {0} more enemy")]
+    },
+    {
+      id: "wardenseye",
+      name: "Warden's Eye",
+      base: "focus_offhand4",
+      level: 26,
+      weight: 70,
+      flavour: "It watched the gate for three hundred years and never blinked.",
+      mods: [r2("castSpeed", "inc", [12, 18], "{0}% increased cast speed"), r2("damage", "inc", [30, 40], "{0}% increased cold damage", ["cold"]), r2("pen.cold", "flat", [10, 15], "Hits ignore {0}% cold resistance")]
+    }
+  ];
+  var RELICS = Object.fromEntries(list3.map((x) => [x.id, x]));
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
     constructor(mods = []) {
-      for (const m2 of mods) this.add(m2);
+      for (const m3 of mods) this.add(m3);
     }
-    add(m2) {
-      let list2 = this.by.get(m2.stat);
-      if (!list2) this.by.set(m2.stat, list2 = []);
-      list2.push(m2);
+    add(m3) {
+      let list4 = this.by.get(m3.stat);
+      if (!list4) this.by.set(m3.stat, list4 = []);
+      list4.push(m3);
     }
     addAll(mods) {
-      for (const m2 of mods) this.add(m2);
+      for (const m3 of mods) this.add(m3);
     }
     /** Every modifier for a stat (for breakdowns). */
     mods(stat) {
       return this.by.get(stat) ?? [];
     }
-    static applies(m2, ctx) {
-      if (!m2.tags || m2.tags.length === 0) return true;
+    static applies(m3, ctx) {
+      if (!m3.tags || m3.tags.length === 0) return true;
       if (!ctx) return false;
-      for (const t of m2.tags) if (!ctx.has(t)) return false;
+      for (const t of m3.tags) if (!ctx.has(t)) return false;
       return true;
     }
     /** Sum of flat or inc values. */
     sum(stat, kind, ctx) {
       let s = 0;
-      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === kind && _StatBag.applies(m2, ctx)) s += m2.value;
+      for (const m3 of this.by.get(stat) ?? []) if (m3.kind === kind && _StatBag.applies(m3, ctx)) s += m3.value;
       return s;
     }
     /** Product of (1 + more/100). */
     more(stat, ctx) {
       let p = 1;
-      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === "more" && _StatBag.applies(m2, ctx)) p *= 1 + m2.value / 100;
+      for (const m3 of this.by.get(stat) ?? []) if (m3.kind === "more" && _StatBag.applies(m3, ctx)) p *= 1 + m3.value / 100;
       return p;
     }
     flat(stat, ctx) {
@@ -1000,11 +1489,11 @@
     }
   }
   function pickRarity(rng, bonus = 0) {
-    const m2 = 1 + bonus / 100;
-    const rare = 0.08 * m2, ench = 0.35 * Math.sqrt(m2);
-    const r2 = rng.next();
-    if (r2 < rare) return "rare";
-    if (r2 < rare + ench) return "enchanted";
+    const m3 = 1 + bonus / 100;
+    const rare = 0.08 * m3, ench = 0.35 * Math.sqrt(m3);
+    const r3 = rng.next();
+    if (r3 < rare) return "rare";
+    if (r3 < rare + ench) return "enchanted";
     return "plain";
   }
   function pickBase(rng, ilvl, slots) {
@@ -1020,16 +1509,36 @@
     rollAffixes(rng, item);
     return item;
   }
+  function relicOf(item) {
+    return item.relic ? RELICS[item.relic] : void 0;
+  }
+  function rollRelic(rng, uid, ilvl) {
+    const pool = Object.values(RELICS).filter((r3) => r3.level <= ilvl);
+    const def2 = rng.weighted(pool, (r3) => r3.weight);
+    if (!def2) return null;
+    return { uid, base: def2.base, ilvl, rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m3) => rng.int(m3.range[0], m3.range[1])) };
+  }
+  function relicLines(item) {
+    const def2 = relicOf(item);
+    if (!def2) return [];
+    return def2.mods.map((m3, i) => m3.text.replace("{0}", String(item.relicRolls?.[i] ?? m3.range[0])));
+  }
   function rawMods(item) {
     const out = [];
     const b = baseOf(item);
     const src = itemLabel(item);
-    for (const m2 of b.implicit ?? []) out.push({ ...m2, src });
+    for (const m3 of b.implicit ?? []) out.push({ ...m3, src });
+    const relic = item.relic ? RELICS[item.relic] : void 0;
+    if (relic) relic.mods.forEach((m3, i) => {
+      const mod = { stat: m3.stat, kind: m3.kind, value: item.relicRolls?.[i] ?? m3.range[0], src };
+      if (m3.tags) mod.tags = m3.tags;
+      out.push(mod);
+    });
     for (const a of item.affixes) {
       const def2 = affixOf(a);
-      def2.mods.forEach((m2, i) => {
-        const mod = { stat: m2.stat, kind: m2.kind, value: a.rolls[i] ?? 0, src };
-        if (m2.tags) mod.tags = m2.tags;
+      def2.mods.forEach((m3, i) => {
+        const mod = { stat: m3.stat, kind: m3.kind, value: a.rolls[i] ?? 0, src };
+        if (m3.tags) mod.tags = m3.tags;
         out.push(mod);
       });
     }
@@ -1038,8 +1547,8 @@
   function itemStats(item) {
     const b = baseOf(item);
     const mods = rawMods(item);
-    const local = (stat) => mods.filter((m2) => m2.stat === stat).reduce((s, m2) => s + m2.value, 0);
-    const out = { global: mods.filter((m2) => !m2.stat.startsWith("local.")) };
+    const local = (stat) => mods.filter((m3) => m3.stat === stat).reduce((s, m3) => s + m3.value, 0);
+    const out = { global: mods.filter((m3) => !m3.stat.startsWith("local.")) };
     if (b.weapon) {
       const inc = 1 + local("local.physInc") / 100;
       const added = {};
@@ -1069,6 +1578,7 @@
   }
   function itemLabel(item) {
     const b = baseOf(item);
+    if (item.relic) return RELICS[item.relic]?.name ?? b.name;
     if (item.rarity === "rare" && item.name) return item.name;
     if (item.rarity === "enchanted") {
       const p = item.affixes.find((a) => affixOf(a).type === "prefix");
@@ -1085,13 +1595,73 @@
     return affixOf(a).tiers.length - a.tier;
   }
   function salvageValue(item) {
-    const r2 = { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
-    return Math.max(1, Math.round(r2 * (1 + item.ilvl / 10)));
+    const r3 = { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
+    return Math.max(1, Math.round(r3 * (1 + item.ilvl / 10)));
   }
   function levelReq(item) {
     let req2 = baseOf(item).level;
     for (const a of item.affixes) req2 = Math.max(req2, Math.floor((affixOf(a).tiers[a.tier]?.ilvl ?? 1) * 0.8));
     return Math.min(req2, 90);
+  }
+
+  // src/core/passives.ts
+  function startNode(hero) {
+    return CLASSES[hero.cls].startNode;
+  }
+  function pointsLeft(hero) {
+    return passivePoints(hero.level, hero.bonusPoints ?? 0) - hero.passives.length;
+  }
+  function passiveMods(hero) {
+    const out = [];
+    for (const id of hero.passives) {
+      const n = PASSIVES[id];
+      if (!n) continue;
+      for (const md of n.mods) out.push({ ...md, src: n.name });
+    }
+    return out;
+  }
+  function canAllocate(hero, id) {
+    const n = PASSIVES[id];
+    if (!n) return "unknown node";
+    if (n.kind === "start") return "start nodes are free";
+    if (hero.passives.includes(id)) return "already allocated";
+    if (pointsLeft(hero) <= 0) return "no points left";
+    const start = startNode(hero);
+    const have = new Set(hero.passives);
+    if (!n.links.some((l) => l === start || have.has(l))) return "not connected";
+    return null;
+  }
+  function allocate(state, id) {
+    const err = canAllocate(state.hero, id);
+    if (err) return err;
+    state.hero.passives.push(id);
+    state.hero.rev++;
+    return null;
+  }
+  var refundCost = (hero) => 5 + hero.level * 2;
+  function canRefund(hero, id) {
+    if (!hero.passives.includes(id)) return false;
+    const rest = new Set(hero.passives.filter((p) => p !== id));
+    const start = startNode(hero);
+    const seen = /* @__PURE__ */ new Set();
+    const queue = [start];
+    while (queue.length) {
+      const cur = queue.pop();
+      for (const l of PASSIVES[cur]?.links ?? []) if (rest.has(l) && !seen.has(l)) {
+        seen.add(l);
+        queue.push(l);
+      }
+    }
+    return seen.size === rest.size;
+  }
+  function refund(state, id) {
+    if (!canRefund(state.hero, id)) return "other nodes depend on it";
+    const cost = refundCost(state.hero);
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    state.hero.passives = state.hero.passives.filter((p) => p !== id);
+    state.hero.rev++;
+    return null;
   }
 
   // src/core/types.ts
@@ -1107,7 +1677,7 @@
   function heroMods(hero, extra = []) {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods = [...extra];
+    const mods = [...extra, ...passiveMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
@@ -1230,7 +1800,7 @@
     }
     const bag = new StatBag();
     bag.addAll(allMods(heroBag));
-    for (const m2 of def2.mods ?? []) bag.add(m2);
+    for (const m3 of def2.mods ?? []) bag.add(m3);
     const tags = /* @__PURE__ */ new Set([...def2.tags, def2.kind]);
     const slots = supportSlots(L);
     const used = [];
@@ -1243,11 +1813,12 @@
         continue;
       }
       used.push(id);
-      for (const m2 of sup.mods) bag.add({ ...m2, src: sup.name });
+      for (const m3 of sup.mods) bag.add({ ...m3, src: sup.name });
       manaMult *= sup.manaMult;
       extraTargets += sup.targets ?? 0;
     }
     const eff = def2.effectiveness / 100 * (usable ? 1 : 0.5);
+    const isSpell = def2.kind === "spell";
     const baseDmg = zeroRanges();
     let crit, speed;
     if (def2.kind === "attack") {
@@ -1271,7 +1842,8 @@
     const ctx = tagSet([...tags]);
     for (const t of DAMAGE_TYPES) {
       const c = tagSet([...tags, t]);
-      baseDmg[t] = [(baseDmg[t][0] + bag.flat(`addMin.${t}`, c)) * eff, (baseDmg[t][1] + bag.flat(`addMax.${t}`, c)) * eff];
+      const lo = bag.flat(`addMin.${t}`, c), hi = bag.flat(`addMax.${t}`, c);
+      baseDmg[t] = isSpell ? [baseDmg[t][0] + lo * eff, baseDmg[t][1] + hi * eff] : [(baseDmg[t][0] + lo) * eff, (baseDmg[t][1] + hi) * eff];
     }
     const conv = zeroes();
     let convTotal = 0;
@@ -1359,6 +1931,39 @@
     ...DAMAGE_TYPES.flatMap((t) => [`addMin.${t}`, `addMax.${t}`, `pen.${t}`, `convert.${t}`])
   ];
 
+  // src/core/filter.ts
+  var DEFAULT_FILTER = [
+    { on: true, action: "keep", rarity: ["relic"] },
+    { on: true, action: "salvage", rarity: ["plain", "enchanted"], behind: 10 },
+    { on: false, action: "keep", rarity: ["rare"], minAffixes: 5 }
+  ];
+  function ruleMatches(r3, item, heroLevel) {
+    const b = BASES[item.base];
+    if (!b) return false;
+    if (r3.rarity?.length && !r3.rarity.includes(item.rarity)) return false;
+    if (r3.slots?.length && !r3.slots.includes(b.slot)) return false;
+    if (r3.minIlvl && item.ilvl < r3.minIlvl) return false;
+    if (r3.behind && b.level > heroLevel - r3.behind) return false;
+    if (r3.minAffixes && item.affixes.length < r3.minAffixes) return false;
+    if (r3.group && !item.affixes.some((a) => affixOf(a).group === r3.group)) return false;
+    return true;
+  }
+  var RANK = { plain: 0, enchanted: 1, rare: 2, relic: 3 };
+  function keepItem(state, item) {
+    for (const r3 of state.settings.filter ?? []) if (r3.on && ruleMatches(r3, item, state.hero.level)) return r3.action === "keep";
+    return RANK[item.rarity] >= RANK[state.settings.keep];
+  }
+  function describeRule(r3) {
+    const parts = [];
+    parts.push(r3.rarity?.length ? r3.rarity.join("/") : "any rarity");
+    if (r3.slots?.length) parts.push(r3.slots.join("/"));
+    if (r3.minIlvl) parts.push(`ilvl ${r3.minIlvl}+`);
+    if (r3.behind) parts.push(`base ${r3.behind}+ levels behind`);
+    if (r3.minAffixes) parts.push(`${r3.minAffixes}+ affixes`);
+    if (r3.group) parts.push(`with ${r3.group}`);
+    return `${r3.action === "keep" ? "Keep" : "Salvage"} ${parts.join(", ")}`;
+  }
+
   // src/core/state.ts
   var newTotals = () => ({ kills: 0, deaths: 0, runs: 0, items: 0, salvaged: 0, dust: 0, simMs: 0 });
 
@@ -1373,16 +1978,17 @@
       seed,
       createdAt: opts.now,
       simTo: opts.now,
-      hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], rev: 0 },
+      hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, rev: 0 },
       stash: [],
       stashCap: 60,
       dust: 0,
       currency: {},
       world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
       activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
-      settings: { keep: "rare", autoEquip: true },
+      settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
       totals: newTotals(),
       nextUid: 1,
+      craftSeq: 0,
       log: []
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
@@ -1402,7 +2008,6 @@
     if (state.log.length > LOG_MAX) state.log.splice(0, state.log.length - LOG_MAX);
   }
   function buildScore(s) {
-    if (s.problems.length) return 0;
     const off = Math.sqrt(Math.max(0.01, s.skill.dps) * Math.max(0.01, s.skill.packDps));
     const def2 = Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
     return Math.pow(off, 0.6) * Math.pow(def2, 0.4);
@@ -1446,6 +2051,10 @@
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
+    const eq = state.hero.equipment;
+    const b = baseOf(item);
+    const out = (eq[target] ? 1 : 0) + (target === "weapon" && eq.offhand && (b.weapon?.hands === 2 || baseOf(eq.offhand).kind === "quiver") ? 1 : 0);
+    if (state.stash.length - 1 + out > state.stashCap) return "stash full";
     state.stash.splice(i, 1);
     state.stash.push(...putOn(state, item, target));
     return null;
@@ -1488,8 +2097,9 @@
     state.totals.items++;
     if (state.settings.autoEquip) {
       const slot = upgradeSlot(state, item);
-      if (slot) {
-        for (const old of putOn(state, item, slot)) stashOrSalvage(state, old);
+      const displaced = slot ? (state.hero.equipment[slot] ? 1 : 0) + (slot === "weapon" && state.hero.equipment.offhand ? 1 : 0) : 0;
+      if (slot && state.stash.length + displaced <= state.stashCap) {
+        for (const old of putOn(state, item, slot)) state.stash.push(old);
         pushLog(state, "loot", `Equipped a new ${BASES[item.base].name}.`);
         return { kept: true, equipped: true };
       }
@@ -1497,9 +2107,15 @@
     return { kept: stashOrSalvage(state, item), equipped: false };
   }
   function stashOrSalvage(state, item) {
-    if (RARITY_RANK[item.rarity] >= RARITY_RANK[state.settings.keep] && state.stash.length < state.stashCap) {
-      state.stash.push(item);
-      return true;
+    if (keepItem(state, item)) {
+      if (state.stash.length < state.stashCap) {
+        state.stash.push(item);
+        return true;
+      }
+      if (!state.stashFull) {
+        state.stashFull = true;
+        pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged.");
+      }
     }
     salvageItem(state, item);
     return false;
@@ -1518,6 +2134,7 @@
       salvageItem(state, state.stash.splice(i, 1)[0]);
       n++;
     }
+    if (n) state.stashFull = false;
     return n;
   }
   function setSkill(state, id) {
@@ -1628,6 +2245,7 @@
     h2.mana = Math.min(sheet.mana, h2.mana + sheet.manaRegen * DT);
     if (h2.esDelay > 0) h2.esDelay -= DT;
     else h2.es = Math.min(sheet.es, h2.es + sheet.es * 0.2 * DT);
+    h2.leech = Math.min(sheet.life * 0.1, (h2.leech ?? sheet.life * 0.1) + sheet.life * 0.1 * DT);
     if (h2.flaskLeft > 0) {
       h2.life = Math.min(sheet.life, h2.life + h2.flaskRate * DT);
       h2.flaskLeft -= DT;
@@ -1670,7 +2288,7 @@
           h2.flaskRate = flaskAmount(state.hero.level, sheet) / FLASK_S;
           ev.flask?.();
         }
-        if (run.monsters.every((m2) => m2.life <= 0)) {
+        if (run.monsters.every((m3) => m3.life <= 0)) {
           run.pack++;
           const last = run.pack > run.packs || run.pack === run.packs && !run.boss;
           run.phase = last ? "done" : "travel";
@@ -1684,16 +2302,16 @@
   function heroAttack(state, run, sheet, rng, ev) {
     const sk = sheet.skill;
     const alive = [];
-    run.monsters.forEach((m2, i) => {
-      if (m2.life > 0) alive.push(i);
+    run.monsters.forEach((m3, i) => {
+      if (m3.life > 0) alive.push(i);
     });
     const targets = alive.slice(0, sk.targets);
     ev.heroUse?.(sk.fx, targets);
     let dealt = 0;
     for (const i of targets) {
-      const m2 = run.monsters[i];
-      const d = MONSTERS[m2.def];
-      if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m2.level) * d.evasion))) {
+      const m3 = run.monsters[i];
+      const d = MONSTERS[m3.def];
+      if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m3.level) * d.evasion))) {
         ev.heroMiss?.(i);
         continue;
       }
@@ -1704,32 +2322,34 @@
         if (hi <= 0) continue;
         let x = rng.range(lo, hi);
         if (crit) x *= sk.critMulti / 100;
-        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m2.level) * d.armour * 0.5, x);
+        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m3.level) * d.armour * 0.5, x);
         else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
         dmg += Math.max(0, x);
       }
       dmg = Math.max(1, dmg);
-      m2.life -= dmg;
+      m3.life -= dmg;
       dealt += dmg;
       ev.heroHit?.(i, dmg, crit);
-      if (m2.life <= 0) sheet = onKill(state, run, m2, sheet, rng, ev);
+      if (m3.life <= 0) sheet = onKill(state, run, m3, sheet, rng, ev);
     }
     if (sk.leech > 0 && dealt > 0) {
       const h2 = run.hero;
-      h2.life = Math.min(sheet.life, h2.life + Math.min(dealt * sk.leech / 100, sheet.life * 0.1));
+      const got = Math.min(dealt * sk.leech / 100, h2.leech ?? sheet.life * 0.1);
+      h2.leech = (h2.leech ?? sheet.life * 0.1) - got;
+      h2.life = Math.min(sheet.life, h2.life + got);
     }
     return sheet;
   }
   function monstersAct(run, sheet, rng, ev) {
     const h2 = run.hero;
-    run.monsters.forEach((m2, i) => {
-      if (m2.life <= 0 || h2.life <= 0) return;
-      const d = MONSTERS[m2.def];
-      m2.atk -= DT;
-      if (m2.atk > 0) return;
-      m2.atk += rng.range(0.85, 1.15) / d.speed;
+    run.monsters.forEach((m3, i) => {
+      if (m3.life <= 0 || h2.life <= 0) return;
+      const d = MONSTERS[m3.def];
+      m3.atk -= DT;
+      if (m3.atk > 0) return;
+      m3.atk += rng.range(0.85, 1.15) / d.speed;
       if (!d.spell) {
-        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m2.level) * d.accuracy, sheet.evasion));
+        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m3.level) * d.accuracy, sheet.evasion));
         if (rng.chance(evade)) {
           ev.monsterHit?.(i, 0, "evade");
           return;
@@ -1739,7 +2359,7 @@
         ev.monsterHit?.(i, 0, "block");
         return;
       }
-      const base = monsterDamage(m2.level) * d.damage * (m2.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
+      const base = monsterDamage(m3.level) * d.damage * (m3.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
       let dmg = 0;
       for (const t of DAMAGE_TYPES) {
         const share = d.split[t];
@@ -1757,28 +2377,38 @@
       ev.monsterHit?.(i, dmg, null);
     });
   }
-  function onKill(state, run, m2, sheet, rng, ev) {
-    const d = MONSTERS[m2.def];
+  function onKill(state, run, m3, sheet, rng, ev) {
+    const d = MONSTERS[m3.def];
     const hero = state.hero;
-    const xp = Math.round(monsterXp(m2.level) * d.xp * (m2.champion ? 3 : 1) * xpPenalty(hero.level, m2.level) * sheet.xpGain);
+    const xp = Math.round(monsterXp(m3.level) * d.xp * (m3.champion ? 3 : 1) * xpPenalty(hero.level, m3.level) * sheet.xpGain);
     run.kills++;
     run.xp += xp;
     state.totals.kills++;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
-    ev.kill?.(m2, xp);
+    ev.kill?.(m3, xp);
     let changed = gainXp(state, xp, ev);
     const qty = 1 + sheet.quantity / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
-    else if (rng.chance((m2.champion ? 0.4 : 0.07) * qty)) drops = 1;
+    else if (rng.chance((m3.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-      const bonus = sheet.rarity + (m2.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const bonus = sheet.rarity + (m3.champion ? 100 : 0) + (d.boss ? 250 : 0);
       const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
-      const item = rollItem(rng, state.nextUid++, m2.level, opts);
-      const r2 = receiveItem(state, item);
-      if (r2.equipped) changed = true;
-      ev.loot?.(item, r2.kept, r2.equipped);
+      const relicChance = (d.boss ? 0.04 : m3.champion ? 0.01 : 3e-3) * (1 + sheet.rarity / 200);
+      const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m3.level) || rollItem(rng, state.nextUid, m3.level, opts);
+      state.nextUid++;
+      const r3 = receiveItem(state, item);
+      if (r3.equipped) changed = true;
+      ev.loot?.(item, r3.kept, r3.equipped);
+    }
+    const cRolls = d.boss ? 3 : 1;
+    const cChance = (d.boss ? 0.6 : m3.champion ? 0.12 : 0.02) * qty;
+    for (let k = 0; k < cRolls; k++) {
+      if (!rng.chance(cChance)) continue;
+      const cur = rng.weighted(CURRENCY_ORDER, (id) => CURRENCIES[id].drop);
+      state.currency[cur] = (state.currency[cur] ?? 0) + 1;
+      ev.currency?.(cur);
     }
     if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
     return changed ? sheetOf(state) : sheet;
@@ -1865,10 +2495,10 @@
       zones: []
     };
     const events = {
-      kill: (m2, xp) => {
+      kill: (m3, xp) => {
         report.kills++;
         report.xp += xp;
-        if (MONSTERS[m2.def]?.boss) report.bosses++;
+        if (MONSTERS[m3.def]?.boss) report.bosses++;
       },
       death: () => {
         report.deaths++;
@@ -1902,8 +2532,21 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 1;
-  var MIGRATIONS = {};
+  var SAVE_VERSION = 2;
+  var MIGRATIONS = {
+    // v2 (P2): passive bonus points, loot filter rules, crafting counter.
+    1: (s) => {
+      s.hero.bonusPoints ??= 0;
+      s.settings.filter ??= [
+        { on: true, action: "keep", rarity: ["relic"] },
+        { on: true, action: "salvage", rarity: ["plain", "enchanted"], behind: 10 },
+        { on: false, action: "keep", rarity: ["rare"], minAffixes: 5 }
+      ];
+      s.craftSeq ??= 0;
+      s.currency ??= {};
+      return s;
+    }
+  };
   var SaveError = class extends Error {
   };
   function wrap(state, savedAt) {
@@ -1917,9 +2560,9 @@
     if (env.v > target) throw new SaveError(`save is from a newer version (${env.v})`);
     let state = env.state;
     for (let v = env.v; v < target; v++) {
-      const m2 = migrations[v];
-      if (!m2) throw new SaveError(`no migration from version ${v}`);
-      state = m2(state);
+      const m3 = migrations[v];
+      if (!m3) throw new SaveError(`no migration from version ${v}`);
+      state = m3(state);
     }
     return { game: "hollowmarch", v: target, savedAt: typeof env.savedAt === "number" ? env.savedAt : 0, state };
   }
@@ -1946,6 +2589,82 @@
     } catch {
       throw new SaveError("export is damaged");
     }
+  }
+
+  // src/core/validate.ts
+  var num = (v, what, min = -Infinity, max = Infinity) => {
+    if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
+    return v;
+  };
+  var obj = (v, what) => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) throw new SaveError(`missing ${what}`);
+    return v;
+  };
+  function checkItem(it) {
+    const i = obj(it, "item");
+    num(i.uid, "item id");
+    num(i.ilvl, "item level", 1, 1e3);
+    if (!BASES[i.base]) throw new SaveError(`unknown item base ${String(i.base)}`);
+    if (!["plain", "enchanted", "rare", "relic"].includes(i.rarity)) throw new SaveError("bad rarity");
+    if (!Array.isArray(i.affixes)) throw new SaveError("bad affixes");
+    for (const a of i.affixes) {
+      const def2 = AFFIXES[a?.id];
+      if (!def2 || !def2.tiers[a.tier] || !Array.isArray(a.rolls) || a.rolls.length !== def2.mods.length) throw new SaveError(`bad affix ${String(a?.id)}`);
+      a.rolls.forEach((r3) => num(r3, "affix roll"));
+    }
+    if (i.rarity === "relic" && (!i.relic || !RELICS[i.relic])) throw new SaveError(`unknown relic ${String(i.relic)}`);
+    return i;
+  }
+  function validateState(raw) {
+    const s = obj(raw, "state");
+    num(s.seed, "seed");
+    num(s.simTo, "time");
+    num(s.nextUid, "item counter", 0);
+    const hero = obj(s.hero, "hero");
+    if (!CLASSES[hero.cls]) throw new SaveError(`unknown class ${String(hero.cls)}`);
+    if (typeof hero.name !== "string") throw new SaveError("bad name");
+    num(hero.level, "level", 1, 100);
+    num(hero.xp, "xp", 0);
+    num(hero.rev, "revision");
+    hero.bonusPoints = typeof hero.bonusPoints === "number" && Number.isFinite(hero.bonusPoints) ? hero.bonusPoints : 0;
+    if (!SKILLS[hero.skill]) hero.skill = CLASSES[hero.cls].startSkill;
+    hero.supports = Array.isArray(hero.supports) ? hero.supports.filter((id) => SUPPORTS[id]) : [];
+    hero.passives = Array.isArray(hero.passives) ? hero.passives.filter((id) => PASSIVES[id] && PASSIVES[id].kind !== "start") : [];
+    obj(hero.equipment, "equipment");
+    for (const k of Object.keys(hero.equipment)) {
+      if (!SLOTS.includes(k)) throw new SaveError(`bad slot ${k}`);
+      checkItem(hero.equipment[k]);
+    }
+    if (!Array.isArray(s.stash)) throw new SaveError("bad stash");
+    s.stash.forEach(checkItem);
+    num(s.stashCap, "stash size", 1, 1e4);
+    num(s.dust, "dust", 0);
+    s.currency = s.currency && typeof s.currency === "object" ? s.currency : {};
+    for (const [k, v] of Object.entries(s.currency)) if (typeof v !== "number" || !Number.isFinite(v) || v < 0) delete s.currency[k];
+    const world = obj(s.world, "world");
+    world.unlocked = Array.isArray(world.unlocked) ? world.unlocked.filter((z) => ZONES[z]) : [];
+    if (!world.unlocked.length) world.unlocked = ["a1_shore"];
+    world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
+    world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
+    const act = obj(s.activity, "activity");
+    if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) {
+      act.zone = world.unlocked[world.unlocked.length - 1];
+      act.run = null;
+    }
+    if (act.run && (!ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
+    if (act.run && act.run.monsters.some((m3) => !m3 || !MONSTERS[m3.def])) act.run = null;
+    num(act.runIndex, "run index", 0);
+    act.streak = Number.isFinite(act.streak) ? act.streak : 0;
+    act.deaths = Number.isFinite(act.deaths) ? act.deaths : 0;
+    act.acc = 0;
+    const set = obj(s.settings, "settings");
+    if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
+    set.autoEquip = set.autoEquip !== false;
+    if (!Array.isArray(set.filter)) set.filter = structuredClone(DEFAULT_FILTER);
+    s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
+    s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
+    s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
+    return s;
   }
 
   // src/ui/battle.ts
@@ -2043,23 +2762,23 @@
       this.background(zone.palette, zone.id);
       const pos = this.positions(state);
       if (run && (run.phase === "fight" || run.phase === "dead")) {
-        run.monsters.forEach((m2, i) => {
+        run.monsters.forEach((m3, i) => {
           const p = pos[i];
-          if (m2.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
+          if (m3.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
           const died = this.dying.get(i);
           const fade = died ? 1 - (now - died) / 400 : 1;
           if (fade <= 0) return;
-          const def2 = MONSTERS[m2.def];
+          const def2 = MONSTERS[m3.def];
           const hit = now - (this.flash.get(i) ?? -1e9) < 90;
           g.globalAlpha = Math.max(0, fade);
-          drawMonster(g, def2, p[0], p[1] + (died ? (1 - fade) * 6 : 0), hit, m2.champion, now);
+          drawMonster(g, def2, p[0], p[1] + (died ? (1 - fade) * 6 : 0), hit, m3.champion, now);
           g.globalAlpha = 1;
           if (!died) {
             const w2 = def2.boss ? 40 : 22;
-            bar(g, p[0] - w2 / 2, p[1] - monsterHeight(def2) - 8, w2, 3, m2.life / m2.maxLife, m2.champion ? "#ffc233" : "#e5383b");
+            bar(g, p[0] - w2 / 2, p[1] - monsterHeight(def2) - 8, w2, 3, m3.life / m3.maxLife, m3.champion ? "#ffc233" : "#e5383b");
           }
         });
-        const boss = run.monsters.find((m2) => MONSTERS[m2.def]?.boss && m2.life > 0);
+        const boss = run.monsters.find((m3) => MONSTERS[m3.def]?.boss && m3.life > 0);
         if (boss) {
           g.fillStyle = "#111";
           g.fillRect(90, 4, 140, 12);
@@ -2504,11 +3223,447 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     return out;
   }
 
+  // src/ui/text.ts
+  var NAMES = {
+    life: "maximum life",
+    mana: "maximum mana",
+    energyShield: "maximum energy shield",
+    lifeRegen: "life regenerated per second",
+    lifeRegenPct: "% of life regenerated per second",
+    manaRegen: "mana regenerated per second",
+    armour: "armour",
+    evasion: "evasion",
+    block: "% chance to block",
+    str: "Might",
+    dex: "Grace",
+    int: "Wit",
+    accuracy: "accuracy",
+    damage: "damage",
+    critChance: "critical chance",
+    critMulti: "% critical multiplier",
+    attackSpeed: "attack speed",
+    castSpeed: "cast speed",
+    area: "area of effect",
+    pierce: "projectile pierce",
+    leech: "% of damage leeched as life",
+    flaskHeal: "flask healing",
+    flaskCharges: "flask charges gained",
+    moveSpeed: "movement speed",
+    itemRarity: "rarity of items found",
+    itemQuantity: "quantity of items found",
+    xpGain: "experience gained",
+    manaCost: "mana cost",
+    dmgTaken: "damage taken",
+    lifeOnKill: "life gained per kill",
+    baseCrit: "% base critical chance"
+  };
+  var TYPES = { phys: "physical", fire: "fire", cold: "cold", lightning: "lightning", chaos: "chaos" };
+  function statName(stat) {
+    const [head, t] = stat.split(".");
+    if (t && head && TYPES[t]) {
+      switch (head) {
+        case "res":
+          return `% ${TYPES[t]} resistance`;
+        case "maxRes":
+          return `% maximum ${TYPES[t]} resistance`;
+        case "pen":
+          return `% ${TYPES[t]} penetration`;
+        case "convert":
+          return `% of physical damage converted to ${TYPES[t]}`;
+        case "addMin":
+          return `minimum added ${TYPES[t]} damage`;
+        case "addMax":
+          return `maximum added ${TYPES[t]} damage`;
+      }
+    }
+    return NAMES[stat] ?? stat;
+  }
+  function modText(m3) {
+    const tags = m3.tags?.length ? ` (${m3.tags.map((t) => TYPES[t] ?? t).join(", ")})` : "";
+    const name = statName(m3.stat);
+    if (m3.kind === "inc") return `${Math.abs(m3.value)}% ${m3.value >= 0 ? "increased" : "reduced"} ${name}${tags}`;
+    if (m3.kind === "more") return `${Math.abs(m3.value)}% ${m3.value >= 0 ? "more" : "less"} ${name}${tags}`;
+    const sign = m3.value >= 0 ? "+" : "";
+    return name.startsWith("%") ? `${sign}${m3.value}${name}${tags}` : `${sign}${m3.value} ${name}${tags}`;
+  }
+
+  // src/core/crafting.ts
+  var hasRoom = (item) => {
+    const c = countAffixes(item), m3 = MAX_AFFIXES[item.rarity];
+    return c.prefix < m3.prefix || c.suffix < m3.suffix;
+  };
+  var EFFECTS = {
+    kindling: (it, rng) => {
+      if (it.rarity !== "plain") return "needs a plain item";
+      it.rarity = "enchanted";
+      rollAffixes(rng, it);
+      return null;
+    },
+    reshaper: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      rollAffixes(rng, it);
+      return null;
+    },
+    graft: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
+      addRandomAffix(rng, it);
+      return null;
+    },
+    crownseal: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      it.rarity = "rare";
+      it.name = rareName(rng);
+      addRandomAffix(rng, it);
+      return null;
+    },
+    forgeheart: (it, rng) => {
+      if (it.rarity !== "plain") return "needs a plain item";
+      it.rarity = "rare";
+      rollAffixes(rng, it);
+      return null;
+    },
+    tempest: (it, rng) => {
+      if (it.rarity !== "rare") return "needs a rare item";
+      const name = it.name;
+      rollAffixes(rng, it);
+      if (name) it.name = name;
+      return null;
+    },
+    starfall: (it, rng) => {
+      if (it.rarity !== "rare") return "needs a rare item";
+      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
+      addRandomAffix(rng, it);
+      return null;
+    },
+    salt: (it) => {
+      if (it.rarity === "relic") return "relics can't be undone";
+      if (it.rarity === "plain") return "already plain";
+      it.rarity = "plain";
+      it.affixes = [];
+      delete it.name;
+      return null;
+    },
+    unmaker: (it, rng) => {
+      if (it.rarity !== "enchanted" && it.rarity !== "rare") return "needs an enchanted or rare item";
+      if (!it.affixes.length) return "no affixes";
+      it.affixes.splice(rng.int(0, it.affixes.length - 1), 1);
+      return null;
+    },
+    temper: (it, rng) => {
+      if (it.rarity === "relic") {
+        return "relics can't be tempered";
+      }
+      if (!it.affixes.length) return "no affixes";
+      for (const a of it.affixes) {
+        const t = affixOf(a).tiers[a.tier];
+        if (t) a.rolls = t.ranges.map(([lo, hi]) => rng.int(lo, hi));
+      }
+      return null;
+    }
+  };
+  function findItem(state, uid) {
+    const s = state.stash.find((x) => x.uid === uid);
+    if (s) return { item: s };
+    for (const slot of SLOTS) {
+      const it = state.hero.equipment[slot];
+      if (it?.uid === uid) return { item: it, slot };
+    }
+    return null;
+  }
+  function applyCurrency(state, currency, uid) {
+    const eff = EFFECTS[currency];
+    if (!eff || !CURRENCIES[currency]) return "unknown currency";
+    if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const copy = structuredClone(found.item);
+    const rng = new Rng(hashSeed(state.seed, 25458, state.craftSeq));
+    const err = eff(copy, rng);
+    if (err) return err;
+    state.craftSeq++;
+    Object.assign(found.item, copy);
+    if (!copy.name) delete found.item.name;
+    state.currency[currency]--;
+    if (found.slot) state.hero.rev++;
+    return null;
+  }
+  function buyCurrency(state, currency, n = 1) {
+    const def2 = CURRENCIES[currency];
+    if (!def2) return "unknown currency";
+    const cost = def2.cost * n;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    state.currency[currency] = (state.currency[currency] ?? 0) + n;
+    return null;
+  }
+
+  // src/ui/forge.ts
+  function forgeView(c) {
+    const st = c.state;
+    const items = [...SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), ...st.stash];
+    const picker = h("div", { class: "stash" });
+    for (const it of items) {
+      const eq = SLOTS.some((s) => st.hero.equipment[s]?.uid === it.uid);
+      const cell = h("div", {
+        class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`,
+        title: itemLabel(it) + (eq ? " (equipped)" : ""),
+        on: { click: () => {
+          c.sel = { uid: it.uid };
+          c.rerender();
+        } }
+      }, iconFor(baseOf(it).kind, baseOf(it).slot));
+      if (eq) cell.append(h("span", { class: "lbl", text: "worn" }));
+      picker.append(cell);
+    }
+    const found = c.sel.uid !== void 0 ? findItem(st, c.sel.uid) : null;
+    const target = found ? itemCard(found.item, null) : h("div", { class: "card muted", text: "Pick an item to work on." });
+    const bench = h("div", { class: "col", style: "gap:6px" });
+    for (const id of CURRENCY_ORDER) {
+      const def2 = CURRENCIES[id];
+      const have = st.currency[id] ?? 0;
+      bench.append(h(
+        "div",
+        { class: "skill", style: "cursor:default;align-items:center" },
+        h("div", { style: `width:14px;height:14px;border:2px solid #111;background:${def2.color};flex:none` }),
+        h("div", { class: "grow" }, h("div", { class: "nm", text: `${def2.name} x${have}` }), h("div", { class: "ds", text: def2.blurb })),
+        h("button", { class: "btn", text: "Use", attrs: have > 0 && found ? {} : { disabled: "" }, on: { click: () => c.act((s) => applyCurrency(s, id, c.sel.uid), `${def2.name} used`) } }),
+        h("button", { class: "btn alt", text: `Buy ${def2.cost}`, title: "Costs ember dust", attrs: st.dust >= def2.cost ? {} : { disabled: "" }, on: { click: () => c.act((s) => buyCurrency(s, id)) } })
+      ));
+    }
+    return h(
+      "div",
+      { class: "col" },
+      h(
+        "div",
+        { class: "row" },
+        h("span", { class: "tag", style: "background:var(--gold)", text: `Ember dust ${fmt(st.dust)}` }),
+        h("span", { class: "muted", style: "font-size:11px", text: "Currency drops from champions and bosses; the forge sells it for dust." })
+      ),
+      h(
+        "div",
+        { class: "row", style: "align-items:flex-start;gap:12px" },
+        h("div", { class: "col grow", style: "min-width:250px" }, target, h("div", { class: "card" }, h("h3", { text: "Items" }), picker)),
+        h("div", { class: "card", style: "flex:1;min-width:260px" }, h("h3", { text: "Currency" }), bench)
+      )
+    );
+  }
+
+  // src/ui/tree.ts
+  var cam = { x: 0, y: 0, z: 0.55, centred: "" };
+  var COLORS = { line: "#111111", taken: "#ffc233", open: "#ffffff", locked: "#9a917f", ring: "#19b3a3", keystone: "#ff5a36", notable: "#8b5cf6" };
+  function treeView(c) {
+    const hero = c.state.hero;
+    const canvas = h("canvas", { style: "width:100%;height:460px;display:block;cursor:grab;background:#fff4dc;border:3px solid #111;touch-action:none" });
+    const info = h("div", { class: "card", style: "min-height:92px" });
+    const pts = pointsLeft(hero);
+    const head = h(
+      "div",
+      { class: "row" },
+      h("span", { class: "tag", style: pts > 0 ? "background:var(--gold)" : "", text: `${pts} point${pts === 1 ? "" : "s"} left` }),
+      h("span", { class: "tag", text: `${hero.passives.length} taken` }),
+      h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Lit nodes can be taken." }),
+      h("span", { class: "grow" }),
+      h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
+      h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
+      h("button", { class: "btn alt", text: "Centre", on: { click: () => {
+        cam.centred = "";
+        centre();
+        draw();
+      } } })
+    );
+    const taken = new Set(hero.passives);
+    const start = PASSIVES[`start_${hero.cls}`];
+    const isOpen = (n) => !taken.has(n.id) && n.kind !== "start" && n.links.some((l) => l === start.id || taken.has(l));
+    let hover = null;
+    let selected = null;
+    const centre = () => {
+      if (cam.centred === hero.cls) return;
+      cam.x = -start.x * 0.6;
+      cam.y = -start.y * 0.6;
+      cam.z = 0.55;
+      cam.centred = hero.cls;
+    };
+    centre();
+    const toScreen = (n, w2, hh) => [w2 / 2 + (n.x + cam.x) * cam.z, hh / 2 + (n.y + cam.y) * cam.z];
+    const radius = (n) => (n.kind === "keystone" ? 16 : n.kind === "notable" ? 12 : n.kind === "start" ? 14 : 7) * Math.max(0.6, cam.z);
+    function draw() {
+      const dpr = window.devicePixelRatio || 1;
+      const w2 = canvas.clientWidth || 600, hh = canvas.clientHeight || 460;
+      if (canvas.width !== Math.round(w2 * dpr)) {
+        canvas.width = Math.round(w2 * dpr);
+        canvas.height = Math.round(hh * dpr);
+      }
+      const g = canvas.getContext("2d");
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = "#fff4dc";
+      g.fillRect(0, 0, w2, hh);
+      for (const n of Object.values(PASSIVES)) {
+        const [x1, y1] = toScreen(n, w2, hh);
+        for (const l of n.links) {
+          if (l < n.id) continue;
+          const m3 = PASSIVES[l];
+          const [x2, y2] = toScreen(m3, w2, hh);
+          const on = (taken.has(n.id) || n.id === start.id) && (taken.has(l) || l === start.id);
+          g.strokeStyle = on ? "#ff5a36" : "#b9ad95";
+          g.lineWidth = on ? 5 : 3;
+          g.beginPath();
+          g.moveTo(x1, y1);
+          g.lineTo(x2, y2);
+          g.stroke();
+        }
+      }
+      for (const n of Object.values(PASSIVES)) {
+        const [x, y] = toScreen(n, w2, hh);
+        if (x < -30 || y < -30 || x > w2 + 30 || y > hh + 30) continue;
+        const r3 = radius(n);
+        const own = taken.has(n.id) || n.id === start.id;
+        const open = isOpen(n);
+        let fill = own ? COLORS.taken : open ? COLORS.open : COLORS.locked;
+        if (!own && n.kind === "keystone") fill = open ? "#ffb3a3" : "#c98b7f";
+        g.fillStyle = COLORS.line;
+        if (n.kind === "notable" || n.kind === "keystone") {
+          g.fillRect(x - r3 - 2, y - r3 - 2, 2 * r3 + 4, 2 * r3 + 4);
+          g.fillStyle = fill;
+          g.fillRect(x - r3, y - r3, 2 * r3, 2 * r3);
+        } else {
+          g.beginPath();
+          g.arc(x, y, r3 + 2, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = fill;
+          g.beginPath();
+          g.arc(x, y, r3, 0, Math.PI * 2);
+          g.fill();
+        }
+        if (n.kind === "ring" && !own) {
+          g.fillStyle = COLORS.ring;
+          g.beginPath();
+          g.arc(x, y, r3 * 0.45, 0, Math.PI * 2);
+          g.fill();
+        }
+        if (n.kind === "start") {
+          g.fillStyle = n.cls === hero.cls ? "#ff5a36" : "#9a917f";
+          g.beginPath();
+          g.arc(x, y, r3 * 0.55, 0, Math.PI * 2);
+          g.fill();
+        }
+        if (n === hover || n === selected) {
+          g.strokeStyle = "#ff5a36";
+          g.lineWidth = 3;
+          g.strokeRect(x - r3 - 5, y - r3 - 5, 2 * r3 + 10, 2 * r3 + 10);
+        }
+        if ((n.kind === "notable" || n.kind === "keystone" || n.kind === "start") && cam.z > 0.45) {
+          g.font = "bold 11px Segoe UI, sans-serif";
+          g.textAlign = "center";
+          const label = n.kind === "start" ? (n.cls ?? "").toUpperCase() : n.name;
+          g.fillStyle = "#fff4dc";
+          g.fillText(label, x + 1, y + r3 + 15);
+          g.fillStyle = "#111";
+          g.fillText(label, x, y + r3 + 14);
+        }
+      }
+    }
+    function showInfo(n) {
+      info.replaceChildren();
+      if (!n) {
+        info.append(h("div", { class: "muted", text: "Hover a node to read it." }));
+        return;
+      }
+      const own = taken.has(n.id);
+      info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
+      for (const m3 of n.mods) info.append(h("div", { text: modText(m3) }));
+      if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: KEYSTONE_TEXT[n.name] }));
+      if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? "Your ember seat." : "Another calling starts here." }));
+      const row = h("div", { class: "row", style: "margin-top:6px" });
+      if (own) {
+        const ok = canRefund(hero, n.id);
+        row.append(h("button", {
+          class: "btn alt",
+          text: `Refund (${refundCost(hero)} dust)`,
+          attrs: ok ? {} : { disabled: "" },
+          title: ok ? "" : "Other taken nodes depend on it",
+          on: { click: () => c.act((s) => refund(s, n.id)) }
+        }));
+      } else if (n.kind !== "start") {
+        const err = canAllocate(hero, n.id);
+        row.append(h("button", { class: "btn", text: "Take", attrs: err ? { disabled: "" } : {}, title: err ?? "", on: { click: () => c.act((s) => allocate(s, n.id)) } }));
+        if (err) row.append(h("span", { class: "muted", text: err }));
+      }
+      info.append(row);
+    }
+    const pick = (ev) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+      let best = null, bd = Infinity;
+      for (const n of Object.values(PASSIVES)) {
+        const [x, y] = toScreen(n, rect.width, rect.height);
+        const d = Math.hypot(x - mx, y - my);
+        if (d < radius(n) + 6 && d < bd) {
+          best = n;
+          bd = d;
+        }
+      }
+      return best;
+    };
+    let drag = null;
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = { x: e.clientX, y: e.clientY, moved: 0 };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (drag) {
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        drag.moved += Math.abs(dx) + Math.abs(dy);
+        cam.x += dx / cam.z;
+        cam.y += dy / cam.z;
+        drag.x = e.clientX;
+        drag.y = e.clientY;
+        draw();
+        return;
+      }
+      const n = pick(e);
+      if (n !== hover) {
+        hover = n;
+        showInfo(n ?? selected);
+        draw();
+        canvas.style.cursor = n ? "pointer" : "grab";
+      }
+    });
+    canvas.addEventListener("pointerup", (e) => {
+      const wasClick = drag && drag.moved < 6;
+      drag = null;
+      canvas.style.cursor = "grab";
+      if (!wasClick) return;
+      const n = pick(e);
+      selected = n;
+      if (n && isOpen(n) && !canAllocate(hero, n.id)) {
+        c.act((s) => allocate(s, n.id));
+        return;
+      }
+      showInfo(n);
+      draw();
+    });
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      zoom(e.deltaY < 0 ? 1.12 : 0.89);
+    }, { passive: false });
+    function zoom(f) {
+      cam.z = Math.max(0.25, Math.min(1.6, cam.z * f));
+      draw();
+    }
+    showInfo(null);
+    requestAnimationFrame(draw);
+    return h("div", { class: "col" }, head, canvas, info);
+  }
+
   // src/ui/views.ts
   var VIEWS = [
     { id: "hero", label: "Hero" },
     { id: "gear", label: "Gear" },
+    { id: "forge", label: "Forge" },
     { id: "skills", label: "Skills" },
+    { id: "tree", label: "Tree" },
     { id: "world", label: "World" },
     { id: "log", label: "Log" },
     { id: "menu", label: "Menu" }
@@ -2520,14 +3675,18 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         return `${s.hero.rev}`;
       case "gear":
         return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
+      case "forge":
+        return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
       case "skills":
         return `${s.hero.rev}:${s.hero.level}`;
+      case "tree":
+        return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}`;
       case "world":
         return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
       case "log":
         return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
       case "menu":
-        return `${s.settings.keep}:${s.settings.autoEquip}:${s.totals.runs}`;
+        return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
     }
   }
   function renderView(id, c) {
@@ -2536,6 +3695,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         return heroView(c);
       case "gear":
         return gearView(c);
+      case "forge":
+        return forgeView(c);
+      case "tree":
+        return treeView(c);
       case "skills":
         return skillsView(c);
       case "world":
@@ -2568,10 +3731,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list2 = h("div", { class: "kv" });
-      for (const m2 of mods) list2.append(h("div", { text: m2.src ?? "?" }), h("div", { class: "num", text: `${m2.kind === "flat" ? "+" : ""}${m2.value}${m2.kind === "flat" ? "" : "% " + m2.kind}${m2.tags ? " [" + m2.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list2.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list2, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list4 = h("div", { class: "kv" });
+      for (const m3 of mods) list4.append(h("div", { text: m3.src ?? "?" }), h("div", { class: "num", text: `${m3.kind === "flat" ? "+" : ""}${m3.value}${m3.kind === "flat" ? "" : "% " + m3.kind}${m3.tags ? " [" + m3.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list4.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list4, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const off = h(
       "div",
@@ -2633,9 +3796,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
     const el = h("div", { class: "col", style: "gap:3px" });
     for (const t of DAMAGE_TYPES) {
-      const m2 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
-      m2.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
-      el.append(m2);
+      const m3 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
+      m3.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
+      el.append(m3);
     }
     return el;
   }
@@ -2656,7 +3819,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     if (st.weapon) {
       const w2 = st.weapon;
       const rows = [["Physical", `${w2.phys[0]}-${w2.phys[1]}`]];
-      for (const [t, r2] of Object.entries(w2.added)) rows.push([TYPE_NAME[t], `${r2[0]}-${r2[1]}`]);
+      for (const [t, r3] of Object.entries(w2.added)) rows.push([TYPE_NAME[t], `${r3[0]}-${r3[1]}`]);
       rows.push(["Attacks per second", w2.aps.toFixed(2)], ["Critical chance", `${w2.crit.toFixed(1)}%`], ["Hands", String(w2.hands)]);
       card.append(kv(rows));
     }
@@ -2671,12 +3834,18 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     if (b.implicit?.length) {
       card.append(h("hr"));
-      for (const m2 of b.implicit) card.append(h("div", { class: "aff", text: implicitText(m2.stat, m2.value, m2.kind, m2.tags) }));
+      for (const m3 of b.implicit) card.append(h("div", { class: "aff", text: modText(m3) }));
     }
     if (item.affixes.length) {
       card.append(h("hr"));
       const sorted = [...item.affixes].sort((a, z) => affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1);
       for (const a of sorted) card.append(h("div", { class: "aff" }, affixText(a), h("b", { text: `${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+    }
+    const relic = relicOf(item);
+    if (relic) {
+      card.append(h("hr"));
+      for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
+      card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relic.flavour }));
     }
     if (c && opts.compareSlot !== void 0) {
       const slot = opts.compareSlot ?? slotsFor(b).find((s) => !c.state.hero.equipment[s]) ?? slotsFor(b)[0];
@@ -2688,32 +3857,6 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       }
     }
     return card;
-  }
-  function implicitText(stat, value, kind, tags) {
-    const names = {
-      accuracy: "accuracy",
-      critChance: "critical chance",
-      damage: "damage",
-      str: "Might",
-      dex: "Grace",
-      int: "Wit",
-      life: "maximum life",
-      mana: "maximum mana",
-      lifeRegen: "life regenerated per second",
-      "res.fire": "fire resistance",
-      "res.cold": "cold resistance",
-      "res.lightning": "lightning resistance",
-      "res.chaos": "chaos resistance",
-      armour: "armour",
-      energyShield: "energy shield",
-      flaskHeal: "flask healing",
-      "addMin.phys": "min physical damage to attacks",
-      "addMax.phys": "max physical damage to attacks"
-    };
-    const n = names[stat] ?? stat;
-    const t = tags?.length ? ` (${tags.join(", ")})` : "";
-    if (kind === "inc") return `${value}% increased ${n}${t}`;
-    return `+${value}${stat.startsWith("res.") ? "%" : ""} ${n}${t}`;
   }
   function compareRows(now, next) {
     const rows = [
@@ -2969,9 +4112,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         "div",
         { class: "card col" },
         h("h3", { text: "Loot" }),
-        h("div", { class: "row" }, "Filter", keep),
         h("label", { class: "chk" }, auto, "Equip upgrades automatically"),
-        h("div", { class: "muted", style: "font-size:11px", text: "Items the filter drops are salvaged into ember dust." })
+        filterEditor(c),
+        h("div", { class: "row" }, "Otherwise", keep),
+        h("div", { class: "muted", style: "font-size:11px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })
       ),
       h(
         "div",
@@ -3028,13 +4172,66 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       )
     );
   }
+  function filterEditor(c) {
+    const rules = c.state.settings.filter;
+    const box2 = h("div", { class: "col", style: "gap:4px" });
+    const edit = (fn) => c.act((s) => {
+      fn(s.settings.filter);
+    });
+    rules.forEach((r3, i) => {
+      const on = h("input", { attrs: { type: "checkbox" } });
+      on.checked = r3.on;
+      on.addEventListener("change", () => edit((rs) => {
+        rs[i].on = on.checked;
+      }));
+      box2.append(h(
+        "div",
+        { class: "row", style: "gap:4px;flex-wrap:nowrap" },
+        on,
+        h("span", { class: "grow", style: `font-size:12px;${r3.on ? "" : "opacity:.5"}`, text: describeRule(r3) }),
+        h("button", { class: "x", text: "^", title: "Move up", on: { click: () => edit((rs) => {
+          if (i > 0) [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]];
+        }) } }),
+        h("button", { class: "x", text: "x", title: "Delete", on: { click: () => edit((rs) => {
+          rs.splice(i, 1);
+        }) } })
+      ));
+    });
+    const action = h("select");
+    for (const a of ["keep", "salvage"]) action.append(h("option", { text: a, attrs: { value: a } }));
+    const rarity = h("select");
+    for (const [v, t] of [["", "any rarity"], ["plain", "plain"], ["enchanted", "enchanted"], ["rare", "rare"], ["relic", "relic"]]) rarity.append(h("option", { text: t, attrs: { value: v } }));
+    const slot = h("select");
+    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v || "any slot", attrs: { value: v } }));
+    const minAff = h("select");
+    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
+    box2.append(h(
+      "div",
+      { class: "row", style: "gap:4px" },
+      action,
+      rarity,
+      slot,
+      minAff,
+      h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit((rs) => {
+        const r3 = { on: true, action: action.value };
+        if (rarity.value) r3.rarity = [rarity.value];
+        if (slot.value) r3.slots = [slot.value];
+        if (+minAff.value) r3.minAffixes = +minAff.value;
+        rs.push(r3);
+      }) } }),
+      h("button", { class: "btn alt", text: "Reset", on: { click: () => edit((rs) => {
+        rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER));
+      }) } })
+    ));
+    return box2;
+  }
   function creationView(onStart) {
     const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
     let cls = Object.keys(CLASSES)[0];
-    const list2 = h("div", { class: "col" });
+    const list4 = h("div", { class: "col" });
     const draw = () => {
-      clear(list2);
-      for (const k of Object.values(CLASSES)) list2.append(h(
+      clear(list4);
+      for (const k of Object.values(CLASSES)) list4.append(h(
         "div",
         { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => {
           cls = k.id;
@@ -3060,7 +4257,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         h("h3", { text: "Name your Kindled" }),
         name,
         h("h3", { text: "Choose a calling" }),
-        list2,
+        list4,
         h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })
       )
     );
@@ -3068,9 +4265,12 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
 
   // src/ui/app.ts
   var GEO_KEY = "hollowmarch.window";
+  var QUICK_KEY = "hollowmarch.quicksave";
+  var BACKUP_MS = 5 * 6e4;
   var AUTOSAVE_MS = 2e4;
   var REPORT_MIN_MS = 6e4;
-  var GameWindow = class {
+  var STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
+  var GameWindow = class _GameWindow {
     constructor(store2, hooks = {}) {
       this.store = store2;
       this.hooks = hooks;
@@ -3091,22 +4291,31 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     timer = null;
     raf = null;
     lastSave = 0;
+    lastBackup = 0;
     busy = false;
     ctx;
     stopKeys = null;
     onUnload = () => {
+      if (!this.state) return;
+      try {
+        localStorage.setItem(QUICK_KEY, JSON.stringify(wrap(this.state, Date.now())));
+      } catch {
+      }
       void this.save();
     };
+    onResize = () => this.refit();
     get isOpen() {
       return !!this.host;
     }
     async open() {
       if (this.host) {
         this.win.style.display = "";
+        this.refit();
         return;
       }
       this.build();
       window.addEventListener("pagehide", this.onUnload);
+      window.addEventListener("resize", this.onResize);
       const loaded = await this.load();
       if (!this.host) return;
       if (!loaded) {
@@ -3121,7 +4330,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       this.stopLoop();
       await this.save();
       window.removeEventListener("pagehide", this.onUnload);
-      if (this.stopKeys) for (const k of ["keydown", "keyup", "keypress"]) this.host.removeEventListener(k, this.stopKeys);
+      window.removeEventListener("resize", this.onResize);
+      if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
       this.host.remove();
       this.host = null;
       this.state = null;
@@ -3137,7 +4347,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       style.textContent = CSS;
       this.root.append(style);
       this.stopKeys = (e) => e.stopPropagation();
-      for (const k of ["keydown", "keyup", "keypress"]) host.addEventListener(k, this.stopKeys);
+      for (const k of STOP_EVENTS) host.addEventListener(k, this.stopKeys);
       const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
       this.who = h("span", { class: "who" });
       const bar2 = h(
@@ -3223,17 +4433,36 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       });
     }
     // ---- persistence --------------------------------------------------------
+    /** Unwraps, migrates and validates; the state is only used when it can produce a stat sheet. */
+    static accept(raw) {
+      const env = unwrap(raw);
+      env.state = validateState(env.state);
+      sheetOf(env.state);
+      return env;
+    }
     async load() {
+      let quick = null;
+      try {
+        const q = localStorage.getItem(QUICK_KEY);
+        if (q) quick = _GameWindow.accept(JSON.parse(q));
+      } catch (e) {
+        console.warn("[Hollowmarch] quick save unusable:", e);
+      }
       for (const key of ["main", "backup"]) {
         try {
           const raw = await this.store.get(key);
           if (!raw) continue;
-          const env = unwrap(raw);
-          this.state = env.state;
+          const env = _GameWindow.accept(raw);
+          this.state = quick && quick.savedAt > env.savedAt ? quick.state : env.state;
+          this.lastBackup = Date.now();
           return true;
         } catch (e) {
           console.warn(`[Hollowmarch] save "${key}" unusable:`, e);
         }
+      }
+      if (quick) {
+        this.state = quick.state;
+        return true;
       }
       return false;
     }
@@ -3242,9 +4471,16 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       if (!s) return;
       this.lastSave = Date.now();
       try {
-        const prev = await this.store.get("main");
-        if (prev) await this.store.put("backup", prev);
+        if (Date.now() - this.lastBackup > BACKUP_MS) {
+          const prev = await this.store.get("main");
+          if (prev) await this.store.put("backup", prev);
+          this.lastBackup = Date.now();
+        }
         await this.store.put("main", wrap(s, Date.now()));
+        try {
+          localStorage.removeItem(QUICK_KEY);
+        } catch {
+        }
       } catch (e) {
         console.warn("[Hollowmarch] save failed:", e);
       }
@@ -3267,7 +4503,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         const f = (s.simTo - from) / Math.max(1, target - from);
         bar2.style.width = (f * 100).toFixed(1) + "%";
         label.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
-        await new Promise((r2) => setTimeout(r2, 0));
+        await new Promise((r3) => setTimeout(r3, 0));
         if (!this.host) return;
       }
       this.battle.quiet = false;
@@ -3278,6 +4514,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       await this.save();
     }
     startLoop() {
+      this.stopLoop();
       this.makeCtx();
       this.sig = "";
       this.renderTab(true);
@@ -3321,7 +4558,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           this.renderTab(true);
           void this.save();
         },
-        toast: (m2) => this.toast(m2),
+        toast: (m3) => this.toast(m3),
         modal: (el) => this.modal(el),
         sel: {},
         rerender: () => {
@@ -3331,7 +4568,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         exportSave: () => exportText(wrap(this.state, Date.now())),
         importSave: async (text) => {
           try {
-            const env = unwrap(importText(text));
+            const env = _GameWindow.accept(importText(text));
+            await this.save();
+            this.lastBackup = 0;
             this.state = env.state;
             this.ctx.sel = {};
             await this.catchUp();
@@ -3403,41 +4642,44 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       setTimeout(() => t.remove(), 2200);
     }
     modal(content) {
-      const m2 = h("div", { class: "modal" }, content);
-      this.win.append(m2);
-      return () => m2.remove();
+      const m3 = h("div", { class: "modal" }, content);
+      this.win.append(m3);
+      return () => m3.remove();
     }
     showCreation() {
       clear(this.body);
       clear(this.hud);
       this.hudEls = {};
       this.who.textContent = "A new Kindled";
+      let started = false;
       this.body.append(creationView(async (name, cls) => {
+        if (started) return;
+        started = true;
         this.state = newGame({ name, cls, now: Date.now(), seed: Math.random() * 2 ** 32 >>> 0 });
         await this.save();
         this.startLoop();
       }));
     }
-    showReport(r2) {
+    showReport(r3) {
       const rows = [
-        ["Time away", fmtDuration(r2.to - r2.from)],
-        ["Runs cleared", fmt(r2.runs)],
-        ["Monsters slain", fmt(r2.kills)],
-        ["Bosses", fmt(r2.bosses)],
-        ["Deaths", fmt(r2.deaths)],
-        ["Levels", r2.levelTo > r2.levelFrom ? `${r2.levelFrom} -> ${r2.levelTo}` : `${r2.levelTo} (no change)`],
-        ["Experience", fmt(r2.xp)],
-        ["Items kept", fmt(r2.kept)],
-        ["Salvaged", fmt(r2.salvaged)],
-        ["Ember dust", `+${fmt(r2.dust)}`]
+        ["Time away", fmtDuration(r3.to - r3.from)],
+        ["Runs cleared", fmt(r3.runs)],
+        ["Monsters slain", fmt(r3.kills)],
+        ["Bosses", fmt(r3.bosses)],
+        ["Deaths", fmt(r3.deaths)],
+        ["Levels", r3.levelTo > r3.levelFrom ? `${r3.levelFrom} -> ${r3.levelTo}` : `${r3.levelTo} (no change)`],
+        ["Experience", fmt(r3.xp)],
+        ["Items kept", fmt(r3.kept)],
+        ["Salvaged", fmt(r3.salvaged)],
+        ["Ember dust", `+${fmt(r3.dust)}`]
       ];
       const kvEl = h("div", { class: "kv" });
       for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
       const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
-      if (r2.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r2.zones.join(", ")}` }));
-      if (r2.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r2.equipped.slice(-4).join(", ")}` }));
-      if (r2.best.length) {
-        const best = r2.best[r2.best.length - 1];
+      if (r3.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r3.zones.join(", ")}` }));
+      if (r3.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
+      if (r3.best.length) {
+        const best = r3.best[r3.best.length - 1];
         card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
       }
       const close = this.modal(card);
@@ -3496,10 +4738,10 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
   // src/platform/store.ts
   var DB = "hollowmarch";
   var STORE = "saves";
-  function req(r2) {
+  function req(r3) {
     return new Promise((res, rej) => {
-      r2.onsuccess = () => res(r2.result);
-      r2.onerror = () => rej(r2.error);
+      r3.onsuccess = () => res(r3.result);
+      r3.onerror = () => rej(r3.error);
     });
   }
   async function openStore() {
@@ -3527,15 +4769,15 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     }
   }
   function memoryStore() {
-    const m2 = /* @__PURE__ */ new Map();
+    const m3 = /* @__PURE__ */ new Map();
     return {
       kind: "memory",
-      get: async (key) => structuredClone(m2.get(key)),
+      get: async (key) => structuredClone(m3.get(key)),
       put: async (key, value) => {
-        m2.set(key, structuredClone(value));
+        m3.set(key, structuredClone(value));
       },
       del: async (key) => {
-        m2.delete(key);
+        m3.delete(key);
       }
     };
   }
@@ -3556,10 +4798,18 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
   };
   var storePromise = null;
   var game = null;
+  var opening = null;
+  var w = window;
+  var standalone = !(w.__questAgent || w.__questAgentAddons);
   var hub = null;
   var refreshCard = null;
   var store = () => storePromise ??= openStore();
-  async function openGame() {
+  function openGame() {
+    return opening ??= doOpen().finally(() => {
+      opening = null;
+    });
+  }
+  async function doOpen() {
     if (!game) {
       game = new GameWindow(await store(), {
         summary: (s) => {
@@ -3569,7 +4819,7 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
         theme: () => hub?.theme() === "light" ? "light" : hub ? "dark" : "light",
         onClose: () => {
           refreshCard?.();
-          if (!hub) showOpener();
+          if (standalone) showOpener();
         }
       });
     }
@@ -3600,9 +4850,12 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
       } };
     },
     destroy() {
-      void game?.close();
+      const g = game;
       game = null;
-      hub = null;
+      void (g ? g.close() : Promise.resolve()).finally(() => {
+        hub = null;
+        refreshCard = null;
+      });
     }
   };
   function showOpener() {
@@ -3615,8 +4868,7 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     });
     document.body.append(b);
   }
-  var w = window;
-  if (w.__questAgent || w.__questAgentAddons) {
+  if (!standalone) {
     const queue = w.__questAgentAddons ?? (w.__questAgentAddons = []);
     queue.push(def);
   } else {

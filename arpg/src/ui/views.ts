@@ -4,11 +4,15 @@
 import { ACTS, BASES, CLASSES, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, RARITY_RANK, buildScore } from "../core/game";
-import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue } from "../core/items";
+import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
 import { clear, fmt, h, pct } from "./dom";
 import { iconFor } from "./icons";
+import { modText } from "./text";
+import { forgeView } from "./forge";
+import { treeView } from "./tree";
+import { DEFAULT_FILTER, describeRule, type FilterRule } from "../core/filter";
 
 export interface Ctx {
     state: GameState;
@@ -24,10 +28,10 @@ export interface Ctx {
     storeKind: string;
 }
 
-export type ViewId = "hero" | "gear" | "skills" | "world" | "log" | "menu";
+export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "log" | "menu";
 export const VIEWS: { id: ViewId; label: string }[] = [
-    { id: "hero", label: "Hero" }, { id: "gear", label: "Gear" }, { id: "skills", label: "Skills" },
-    { id: "world", label: "World" }, { id: "log", label: "Log" }, { id: "menu", label: "Menu" },
+    { id: "hero", label: "Hero" }, { id: "gear", label: "Gear" }, { id: "forge", label: "Forge" }, { id: "skills", label: "Skills" },
+    { id: "tree", label: "Tree" }, { id: "world", label: "World" }, { id: "log", label: "Log" }, { id: "menu", label: "Menu" },
 ];
 
 /** What a view depends on; it is rebuilt when this changes. */
@@ -36,10 +40,12 @@ export function viewSig(id: ViewId, c: Ctx): string {
     switch (id) {
         case "hero": return `${s.hero.rev}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
+        case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
+        case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}`;
         case "world": return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
-        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.totals.runs}`;
+        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
     }
 }
 
@@ -47,6 +53,8 @@ export function renderView(id: ViewId, c: Ctx): HTMLElement {
     switch (id) {
         case "hero": return heroView(c);
         case "gear": return gearView(c);
+        case "forge": return forgeView(c);
+        case "tree": return treeView(c);
         case "skills": return skillsView(c);
         case "world": return worldView(c);
         case "log": return logView(c);
@@ -183,12 +191,18 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
     }
     if (b.implicit?.length) {
         card.append(h("hr"));
-        for (const m of b.implicit) card.append(h("div", { class: "aff", text: implicitText(m.stat, m.value, m.kind, m.tags) }));
+        for (const m of b.implicit) card.append(h("div", { class: "aff", text: modText(m) }));
     }
     if (item.affixes.length) {
         card.append(h("hr"));
         const sorted = [...item.affixes].sort((a, z) => (affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1));
         for (const a of sorted) card.append(h("div", { class: "aff" }, affixText(a), h("b", { text: `${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+    }
+    const relic = relicOf(item);
+    if (relic) {
+        card.append(h("hr"));
+        for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
+        card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relic.flavour }));
     }
     if (c && opts.compareSlot !== undefined) {
         const slot = opts.compareSlot ?? slotsFor(b).find(s => !c.state.hero.equipment[s]) ?? slotsFor(b)[0]!;
@@ -200,16 +214,6 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
         }
     }
     return card;
-}
-
-function implicitText(stat: string, value: number, kind: string, tags?: string[]): string {
-    const names: Record<string, string> = { accuracy: "accuracy", critChance: "critical chance", damage: "damage", str: "Might", dex: "Grace", int: "Wit", life: "maximum life", mana: "maximum mana",
-        lifeRegen: "life regenerated per second", "res.fire": "fire resistance", "res.cold": "cold resistance", "res.lightning": "lightning resistance", "res.chaos": "chaos resistance",
-        armour: "armour", energyShield: "energy shield", flaskHeal: "flask healing", "addMin.phys": "min physical damage to attacks", "addMax.phys": "max physical damage to attacks" };
-    const n = names[stat] ?? stat;
-    const t = tags?.length ? ` (${tags.join(", ")})` : "";
-    if (kind === "inc") return `${value}% increased ${n}${t}`;
-    return `+${value}${stat.startsWith("res.") ? "%" : ""} ${n}${t}`;
 }
 
 function compareRows(now: Sheet, next: Sheet): HTMLElement {
@@ -392,9 +396,10 @@ function menuView(c: Ctx): HTMLElement {
     const t = st.totals;
     return h("div", { class: "grid2" },
         h("div", { class: "card col" }, h("h3", { text: "Loot" }),
-            h("div", { class: "row" }, "Filter", keep),
             h("label", { class: "chk" }, auto, "Equip upgrades automatically"),
-            h("div", { class: "muted", style: "font-size:11px", text: "Items the filter drops are salvaged into ember dust." })),
+            filterEditor(c),
+            h("div", { class: "row" }, "Otherwise", keep),
+            h("div", { class: "muted", style: "font-size:11px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
         h("div", { class: "card col" }, h("h3", { text: "Save" }),
             h("div", { class: "muted", style: "font-size:11px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
             h("div", { class: "row" }, h("button", { class: "btn", text: "Export", on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
@@ -412,6 +417,39 @@ function menuView(c: Ctx): HTMLElement {
                         h("button", { class: "btn alt", text: "Cancel", on: { click: () => close() } }))));
             } } })),
     );
+}
+
+function filterEditor(c: Ctx): HTMLElement {
+    const rules = c.state.settings.filter;
+    const box = h("div", { class: "col", style: "gap:4px" });
+    const edit = (fn: (r: FilterRule[]) => void) => c.act(s => { fn(s.settings.filter); });
+    rules.forEach((r, i) => {
+        const on = h("input", { attrs: { type: "checkbox" } });
+        on.checked = r.on;
+        on.addEventListener("change", () => edit(rs => { rs[i]!.on = on.checked; }));
+        box.append(h("div", { class: "row", style: "gap:4px;flex-wrap:nowrap" }, on,
+            h("span", { class: "grow", style: `font-size:12px;${r.on ? "" : "opacity:.5"}`, text: describeRule(r) }),
+            h("button", { class: "x", text: "^", title: "Move up", on: { click: () => edit(rs => { if (i > 0) [rs[i - 1], rs[i]] = [rs[i]!, rs[i - 1]!]; }) } }),
+            h("button", { class: "x", text: "x", title: "Delete", on: { click: () => edit(rs => { rs.splice(i, 1); }) } })));
+    });
+    const action = h("select");
+    for (const a of ["keep", "salvage"]) action.append(h("option", { text: a, attrs: { value: a } }));
+    const rarity = h("select");
+    for (const [v, t] of [["", "any rarity"], ["plain", "plain"], ["enchanted", "enchanted"], ["rare", "rare"], ["relic", "relic"]] as const) rarity.append(h("option", { text: t, attrs: { value: v } }));
+    const slot = h("select");
+    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v || "any slot", attrs: { value: v } }));
+    const minAff = h("select");
+    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
+    box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff,
+        h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit(rs => {
+            const r: FilterRule = { on: true, action: action.value as FilterRule["action"] };
+            if (rarity.value) r.rarity = [rarity.value as Item["rarity"]];
+            if (slot.value) r.slots = [slot.value];
+            if (+minAff.value) r.minAffixes = +minAff.value;
+            rs.push(r);
+        }) } }),
+        h("button", { class: "btn alt", text: "Reset", on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER)); }) } })));
+    return box;
 }
 
 /** Character creation. */

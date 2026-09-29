@@ -1,7 +1,7 @@
 // Item generation and item stats. Pure: randomness comes from the Rng passed in.
 
 import { Rng } from "./rng";
-import { AFFIXES, AFFIX_ILVLS, BASES, RARE_NAMES_A, RARE_NAMES_B, type AffixDef, type BaseDef, type DefenceStats, type WeaponStats } from "./data";
+import { AFFIXES, AFFIX_ILVLS, BASES, RARE_NAMES_A, RARE_NAMES_B, RELICS, type AffixDef, type BaseDef, type DefenceStats, type RelicDef, type WeaponStats } from "./data";
 import type { AffixRoll, DamageType, Item, Mod, Rarity } from "./types";
 
 export const MAX_AFFIXES: Record<Rarity, { prefix: number; suffix: number }> = {
@@ -128,6 +128,25 @@ export function rollItem(rng: Rng, uid: number, ilvl: number, opts: RollOpts = {
     return item;
 }
 
+export function relicOf(item: Item): RelicDef | undefined {
+    return item.relic ? RELICS[item.relic] : undefined;
+}
+
+/** A relic that can drop at this item level, or null when none can. */
+export function rollRelic(rng: Rng, uid: number, ilvl: number): Item | null {
+    const pool = Object.values(RELICS).filter(r => r.level <= ilvl);
+    const def = rng.weighted(pool, r => r.weight);
+    if (!def) return null;
+    return { uid, base: def.base, ilvl, rarity: "relic", affixes: [], relic: def.id, relicRolls: def.mods.map(m => rng.int(m.range[0], m.range[1])) };
+}
+
+/** Relic mod lines for display. */
+export function relicLines(item: Item): string[] {
+    const def = relicOf(item);
+    if (!def) return [];
+    return def.mods.map((m, i) => m.text.replace("{0}", String(item.relicRolls?.[i] ?? m.range[0])));
+}
+
 // ---- stats -----------------------------------------------------------------
 
 /** Every modifier an item contributes, split into local (item's own base) and global. */
@@ -136,6 +155,12 @@ export function rawMods(item: Item): Mod[] {
     const b = baseOf(item);
     const src = itemLabel(item);
     for (const m of b.implicit ?? []) out.push({ ...m, src });
+    const relic = item.relic ? RELICS[item.relic] : undefined;
+    if (relic) relic.mods.forEach((m, i) => {
+        const mod: Mod = { stat: m.stat, kind: m.kind, value: item.relicRolls?.[i] ?? m.range[0], src };
+        if (m.tags) mod.tags = m.tags;
+        out.push(mod);
+    });
     for (const a of item.affixes) {
         const def = affixOf(a);
         def.mods.forEach((m, i) => {
@@ -190,6 +215,7 @@ export function itemStats(item: Item): ItemStats {
 
 export function itemLabel(item: Item): string {
     const b = baseOf(item);
+    if (item.relic) return RELICS[item.relic]?.name ?? b.name;
     if (item.rarity === "rare" && item.name) return item.name;
     if (item.rarity === "enchanted") {
         const p = item.affixes.find(a => affixOf(a).type === "prefix");

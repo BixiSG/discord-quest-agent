@@ -4,6 +4,7 @@
 import { StatBag, tagSet } from "./stats";
 import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
 import { itemStats, levelReq } from "./items";
+import { passiveMods } from "./passives";
 import type { Hero } from "./state";
 import { DAMAGE_TYPES, ELEMENTS, SLOTS, type DamageType, type Mod } from "./types";
 
@@ -69,7 +70,7 @@ export function supportSlots(level: number): number {
 export function heroMods(hero: Hero, extra: Mod[] = []): { mods: Mod[]; armour: number; evasion: number; es: number; block: number; problems: string[] } {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods: Mod[] = [...extra];
+    const mods: Mod[] = [...extra, ...passiveMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems: string[] = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
@@ -186,6 +187,7 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[]): SkillCalc 
     }
 
     const eff = (def.effectiveness / 100) * (usable ? 1 : 0.5);
+    const isSpell = def.kind === "spell";
     const baseDmg = zeroRanges();
     let crit: number, speed: number;
     if (def.kind === "attack") {
@@ -203,7 +205,9 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[]): SkillCalc 
     const ctx = tagSet([...tags]);
     for (const t of DAMAGE_TYPES) {
         const c = tagSet([...tags, t]);
-        baseDmg[t] = [(baseDmg[t][0] + bag.flat(`addMin.${t}`, c)) * eff, (baseDmg[t][1] + bag.flat(`addMax.${t}`, c)) * eff];
+        // COMBAT.md 3: attacks scale weapon + added by effectiveness; spells only the added part.
+        const lo = bag.flat(`addMin.${t}`, c), hi = bag.flat(`addMax.${t}`, c);
+        baseDmg[t] = isSpell ? [baseDmg[t][0] + lo * eff, baseDmg[t][1] + hi * eff] : [(baseDmg[t][0] + lo) * eff, (baseDmg[t][1] + hi) * eff];
     }
 
     // Conversion from phys (COMBAT.md 3).
