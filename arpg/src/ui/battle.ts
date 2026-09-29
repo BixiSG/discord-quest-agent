@@ -1,4 +1,7 @@
-// Battle view: a 320x120 pixel canvas scaled up with pixelated sampling.
+// Battle view: a pixel canvas scaled up by a whole number with pixelated
+// sampling. Its logical size follows the window (resize()), so the scene is
+// never stretched or letterboxed; the ground sits a fixed height above the
+// bottom and the packs spread over the width.
 // It only reads state and a queue of effects fed by the simulation events;
 // nothing here changes the game.
 
@@ -6,10 +9,10 @@ import { BASES, CLASSES, MONSTERS, ZONES, type MonsterDef } from "../core/data";
 import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
+import { drawText } from "./gfx/pixfont";
 
+/** Default logical size; resize() changes it. */
 export const W = 320, H = 120;
-const GROUND = 100;
-const HERO_X = 64;
 
 interface Fx { kind: string; t: number; targets: number[] }
 interface Float { x: number; y: number; text: string; color: string; t: number; big: boolean }
@@ -27,6 +30,10 @@ export class Battle {
     private travel = 0;
     /** Set by the app while it is catching up, so bursts of events don't pile up. */
     quiet = false;
+    private W = W;
+    private H = H;
+    private get GROUND() { return this.H - 20; }
+    private get HERO_X() { return Math.round(Math.max(48, this.W * 0.2)); }
 
     constructor() {
         this.canvas = document.createElement("canvas");
@@ -34,14 +41,25 @@ export class Battle {
         this.g = this.canvas.getContext("2d")!;
     }
 
+    /** Logical size in scene pixels. */
+    resize(w: number, h: number): void {
+        w = Math.max(200, Math.round(w)); h = Math.max(90, Math.round(h));
+        if (w === this.W && h === this.H) return;
+        this.W = w; this.H = h;
+        this.canvas.width = w; this.canvas.height = h;
+    }
+
     positions(state: GameState): [number, number][] {
         const run = state.activity.run;
         if (!run) return [];
-        const n = run.monsters.length;
-        if (n === 1 && MONSTERS[run.monsters[0]!.def]?.boss) return [[236, GROUND]];
+        const n = run.monsters.length, G = this.GROUND;
+        if (n === 1 && MONSTERS[run.monsters[0]!.def]?.boss) return [[Math.round(this.W * 0.72), G]];
+        // Packs fill the right half: three columns, later rows step back and up.
+        const x0 = Math.round(Math.max(this.HERO_X + 90, this.W * 0.55));
+        const step = Math.round(Math.min(48, (this.W - 30 - x0) / 3.5));
         return run.monsters.map((_, i) => {
             const row = Math.floor(i / 3), col = i % 3;
-            return [178 + col * 44 + row * 22, GROUND - row * 12];
+            return [x0 + col * step + row * Math.round(step / 2), G - row * 12];
         });
     }
 
@@ -62,11 +80,11 @@ export class Battle {
             },
             monsterHit: (_i, dmg, avoided) => {
                 if (this.quiet) return;
-                if (avoided) this.pushFloat({ x: HERO_X, y: GROUND - 34, text: avoided, color: "#7fd1ff", t: now(), big: false });
-                else { this.heroHurt = now(); this.pushFloat({ x: HERO_X - 6, y: GROUND - 34, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false }); }
+                if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 34, text: avoided, color: "#7fd1ff", t: now(), big: false });
+                else { this.heroHurt = now(); this.pushFloat({ x: this.HERO_X - 6, y: this.GROUND - 34, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false }); }
             },
-            flask: () => { if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 44, text: "+flask", color: "#3fbf5f", t: now(), big: false }); },
-            level: l => { if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 52, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true }); },
+            flask: () => { if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 44, text: "+flask", color: "#3fbf5f", t: now(), big: false }); },
+            level: l => { if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 52, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true }); },
         };
     }
 
@@ -110,9 +128,11 @@ export class Battle {
             });
             const boss = run.monsters.find(m => MONSTERS[m.def]?.boss && m.life > 0);
             if (boss) {
-                g.fillStyle = "#111"; g.fillRect(90, 4, 140, 12);
-                g.fillStyle = "#fff"; g.font = "bold 8px monospace"; g.textAlign = "center";
-                g.fillText(MONSTERS[boss.def]!.name.toUpperCase(), 160, 13);
+                // Boss plate: name over a life bar, top centre.
+                const bw = Math.min(180, this.W - 120), bx = Math.round(this.W / 2 - bw / 2);
+                g.fillStyle = "#111"; g.fillRect(bx - 2, 3, bw + 4, 18);
+                drawText(g, MONSTERS[boss.def]!.name.toUpperCase(), this.W / 2, 3, "#ffffff", "center");
+                bar(g, bx, 14, bw, 4, boss.life / boss.maxLife, "#e5383b");
             }
         }
 
@@ -124,31 +144,27 @@ export class Battle {
         const dead = run?.phase === "dead";
         const wItem = state.hero.equipment.weapon;
         const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? (BASES[wItem.base]?.kind ?? "sword") : "none", shield: !!state.hero.equipment.offhand };
-        drawHero(g, HERO_X + lunge, GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
+        drawHero(g, this.HERO_X + lunge, this.GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
 
         // Skill effects.
         this.fx = this.fx.filter(f => now - f.t < 350);
         for (const f of this.fx) this.drawFx(f, pos, now);
 
-        // Floating numbers.
-        g.textAlign = "center";
+        // Floating numbers: pixel font, crits pop bigger for a moment.
         this.floats = this.floats.filter(f => now - f.t < 800);
         for (const f of this.floats) {
             const k = (now - f.t) / 800;
-            g.font = f.big ? "bold 10px monospace" : "bold 8px monospace";
-            g.globalAlpha = 1 - k * k;
-            const y = f.y - k * 16;
-            g.fillStyle = "#111"; g.fillText(f.text, f.x + 1, y + 1);
-            g.fillStyle = f.color; g.fillText(f.text, f.x, y);
+            g.globalAlpha = Math.max(0, 1 - k * k);
+            const y = Math.round(f.y - k * 16 - (f.big && k < 0.15 ? 2 : 0));
+            drawText(g, f.text.toUpperCase(), Math.round(f.x), y, f.color, "center");
         }
         g.globalAlpha = 1;
 
         if (dead && run) {
-            g.fillStyle = "rgba(10,10,14,0.6)"; g.fillRect(0, 0, W, H);
-            g.fillStyle = "#ff5a36"; g.font = "bold 12px monospace"; g.textAlign = "center";
-            g.fillText("THE EMBER RELIGHTS", W / 2, 54);
-            g.fillStyle = "#fff"; g.font = "bold 8px monospace";
-            g.fillText(`back in ${Math.max(0, run.timer).toFixed(0)}s`, W / 2, 68);
+            g.fillStyle = "rgba(10,10,14,0.6)"; g.fillRect(0, 0, this.W, this.H);
+            const cy = Math.round(this.H / 2) - 12;
+            drawText(g, "THE EMBER RELIGHTS", this.W / 2, cy, "#ff5a36", "center");
+            drawText(g, `BACK IN ${Math.max(0, run.timer).toFixed(0)}S`, this.W / 2, cy + 12, "#ffffff", "center");
         }
         // Pack progress pips.
         if (run) {
@@ -164,18 +180,20 @@ export class Battle {
 
     private background(pal: [string, string, string], seedStr: string): void {
         const g = this.g;
+        const W = this.W, H = this.H, G = this.GROUND;
         g.fillStyle = pal[0]; g.fillRect(0, 0, W, H);
-        // Stars / motes in the accent colour.
+        // Stars / motes in the accent colour, as many as the width asks for.
         let s = 0; for (const c of seedStr) s = (s * 31 + c.charCodeAt(0)) >>> 0;
         g.fillStyle = pal[2];
-        for (let i = 0; i < 14; i++) { s = (s * 1103515245 + 12345) >>> 0; const x = s % W; s = (s * 1103515245 + 12345) >>> 0; g.fillRect(x, (s % 50) + 4, 1, 1); }
+        const sky = Math.max(20, G - 50);
+        for (let i = 0; i < Math.round(W / 22); i++) { s = (s * 1103515245 + 12345) >>> 0; const x = s % W; s = (s * 1103515245 + 12345) >>> 0; g.fillRect(x, (s % sky) + 4, 1, 1); }
         // Two hill layers with parallax while travelling.
-        hills(g, shade(pal[0], -0.25), 64, 18, this.travel * 0.3, 0.035);
-        hills(g, shade(pal[1], -0.35), 82, 12, this.travel * 0.6, 0.06);
-        g.fillStyle = pal[1]; g.fillRect(0, GROUND, W, H - GROUND);
-        g.fillStyle = "#111"; g.fillRect(0, GROUND, W, 2);
+        hills(g, W, G, shade(pal[0], -0.25), G - 36, 18, this.travel * 0.3, 0.035);
+        hills(g, W, G, shade(pal[1], -0.35), G - 18, 12, this.travel * 0.6, 0.06);
+        g.fillStyle = pal[1]; g.fillRect(0, G, W, H - G);
+        g.fillStyle = "#111"; g.fillRect(0, G, W, 2);
         g.fillStyle = shade(pal[1], -0.2);
-        for (let x = -((this.travel * 1.2) % 24); x < W; x += 24) g.fillRect(x, GROUND + 8, 10, 2);
+        for (let x = -((this.travel * 1.2) % 24); x < W; x += 24) g.fillRect(x, G + 8, 10, 2);
     }
 
     private drawFx(f: Fx, pos: [number, number][], now: number): void {
@@ -185,12 +203,12 @@ export class Battle {
         g.lineWidth = 2;
         if (f.kind === "arc") {
             g.strokeStyle = `rgba(255,255,255,${1 - k})`;
-            g.beginPath(); g.arc(HERO_X + 14, GROUND - 14, 22 + k * 20, -1.1, 0.9); g.stroke();
+            g.beginPath(); g.arc(this.HERO_X + 14, this.GROUND - 14, 22 + k * 20, -1.1, 0.9); g.stroke();
             g.strokeStyle = `rgba(255,90,54,${1 - k})`;
-            g.beginPath(); g.arc(HERO_X + 14, GROUND - 14, 18 + k * 20, -1.0, 0.8); g.stroke();
+            g.beginPath(); g.arc(this.HERO_X + 14, this.GROUND - 14, 18 + k * 20, -1.0, 0.8); g.stroke();
         } else if (f.kind === "slam") {
             g.strokeStyle = `rgba(255,194,51,${1 - k})`;
-            g.beginPath(); g.ellipse(HERO_X + 30 + k * 60, GROUND, 10 + k * 90, 4 + k * 6, 0, Math.PI, 0); g.stroke();
+            g.beginPath(); g.ellipse(this.HERO_X + 30 + k * 60, this.GROUND, 10 + k * 90, 4 + k * 6, 0, Math.PI, 0); g.stroke();
         } else if (f.kind === "stab") {
             for (const p of targets.slice(0, 1)) {
                 g.strokeStyle = `rgba(255,255,255,${1 - k})`;
@@ -198,23 +216,23 @@ export class Battle {
                 g.beginPath(); g.moveTo(p[0] + 10, p[1] - 22); g.lineTo(p[0] - 10, p[1] - 8); g.stroke();
             }
         } else if (f.kind === "bolt") {
-            const end = targets[targets.length - 1] ?? [W - 20, GROUND - 14];
-            const x = HERO_X + 10 + (end[0] - HERO_X - 10) * Math.min(1, k * 2), y = GROUND - 14 + (end[1] - 14 - GROUND + 14) * Math.min(1, k * 2);
+            const end = targets[targets.length - 1] ?? [this.W - 20, this.GROUND - 14];
+            const x = this.HERO_X + 10 + (end[0] - this.HERO_X - 10) * Math.min(1, k * 2), y = this.GROUND - 14 + (end[1] - 14 - this.GROUND + 14) * Math.min(1, k * 2);
             g.fillStyle = "#111"; g.fillRect(x - 3, y - 3, 7, 7);
             g.fillStyle = "#ffc233"; g.fillRect(x - 2, y - 2, 5, 5);
         } else if (f.kind === "nova") {
             g.strokeStyle = `rgba(143,211,255,${1 - k})`;
-            g.beginPath(); g.arc(HERO_X, GROUND - 12, 10 + k * 120, 0, Math.PI * 2); g.stroke();
+            g.beginPath(); g.arc(this.HERO_X, this.GROUND - 12, 10 + k * 120, 0, Math.PI * 2); g.stroke();
         }
         g.lineWidth = 1;
     }
 }
 
-function hills(g: CanvasRenderingContext2D, color: string, base: number, amp: number, off: number, freq: number): void {
+function hills(g: CanvasRenderingContext2D, w: number, ground: number, color: string, base: number, amp: number, off: number, freq: number): void {
     g.fillStyle = color;
-    g.beginPath(); g.moveTo(0, GROUND);
-    for (let x = 0; x <= W; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + off) * freq) * Math.cos((x + off) * freq * 0.37)));
-    g.lineTo(W, GROUND); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(0, ground);
+    for (let x = 0; x <= w + 4; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + off) * freq) * Math.cos((x + off) * freq * 0.37)));
+    g.lineTo(w, ground); g.closePath(); g.fill();
 }
 
 function bar(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, f: number, color: string): void {

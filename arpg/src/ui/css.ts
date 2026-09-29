@@ -51,7 +51,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 /* stage + HUD */
 .top { border-bottom: 3px solid var(--line); }
 .stage { position: relative; background: #111; overflow: hidden; min-height: 60px; }
-.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+.stage canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; display: block; }
 .top.nostage { display: none; }
 .hudw { background: #1a1410; border-bottom: 3px solid var(--line); line-height: 0; overflow: hidden; }
 .hudw canvas { display: block; image-rendering: pixelated; }

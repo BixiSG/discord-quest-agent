@@ -16,7 +16,7 @@ import { pointsLeft, ascPointsLeft } from "../core/passives";
 import { atlasPointsLeft } from "../core/maps";
 import type { SaveStore } from "../platform/store";
 import type { KV } from "../platform/kv";
-import { Battle, W as BW, H as BH } from "./battle";
+import { Battle } from "./battle";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { glyph, type GlyphName } from "./glyphs";
@@ -259,7 +259,13 @@ export class GameWindow {
             const inner = box.w - 6;
             hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
             if (this.frame.stage === "off") { this.stage.style.height = ""; return; }
-            this.stage.style.height = Math.round(Math.min(inner * BH / BW, box.h * STAGE_FRAC[this.frame.stage])) + "px";
+            // The scene keeps about 110 logical pixels of height and gets as wide as the window:
+            // whole-number scaling, nothing stretched or letterboxed.
+            const stageH = Math.round(Math.min(inner * 0.5, box.h * STAGE_FRAC[this.frame.stage]));
+            const sc = Math.max(1, Math.round(stageH / 110));
+            this.stage.style.height = stageH + "px";
+            this.battle.resize(Math.ceil(inner / sc), Math.ceil(stageH / sc));
+            Object.assign(this.battle.canvas.style, { width: this.battle.canvas.width * sc + "px", height: this.battle.canvas.height * sc + "px" });
         };
         fit();
         this.refit = fit;

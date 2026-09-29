@@ -3952,11 +3952,117 @@
     return s;
   }
 
+  // src/ui/gfx/pixfont.ts
+  var G = {
+    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
+    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    "2": [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
+    "3": ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
+    "4": ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."],
+    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
+    "6": ["..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."],
+    "7": ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
+    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
+    "9": [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."],
+    A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
+    C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
+    D: ["###..", "#..#.", "#...#", "#...#", "#...#", "#..#.", "###.."],
+    E: ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
+    F: ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
+    G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####"],
+    H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    I: [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    J: ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."],
+    K: ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
+    L: ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
+    M: ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
+    N: ["#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#"],
+    O: [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    P: ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
+    Q: [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"],
+    R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
+    S: [".####", "#....", "#....", ".###.", "....#", "....#", "####."],
+    T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
+    U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    V: ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
+    W: ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#."],
+    X: ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
+    Y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
+    Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
+    ".": ["..", "..", "..", "..", "..", "##", "##"],
+    ",": ["..", "..", "..", "..", ".#", ".#", "#."],
+    ":": ["..", "##", "##", "..", "##", "##", ".."],
+    "/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
+    "%": ["##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##"],
+    "+": [".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."],
+    "-": ["....", "....", "....", "####", "....", "....", "...."],
+    "!": ["#", "#", "#", "#", "#", ".", "#"],
+    "?": [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."],
+    "'": ["#", "#", ".", ".", ".", ".", "."],
+    "(": [".#", "#.", "#.", "#.", "#.", "#.", ".#"],
+    ")": ["#.", ".#", ".#", ".#", ".#", ".#", "#."],
+    "~": [".....", ".....", ".#..#", "#.##.", ".....", ".....", "....."],
+    " ": ["...", "...", "...", "...", "...", "...", "..."]
+  };
+  var GLYPH_H = 7;
+  var glyphOf = (ch) => G[ch] ?? G[ch.toUpperCase()] ?? G["?"];
+  function textWidth(text) {
+    let w2 = 0;
+    for (const ch of text) w2 += glyphOf(ch)[0].length + 1;
+    return Math.max(0, w2 - 1);
+  }
+  var cache2 = /* @__PURE__ */ new Map();
+  function textSprite(text, color, outline = "#111111") {
+    const key = `${color}|${outline}|${text}`;
+    let c = cache2.get(key);
+    if (c) {
+      cache2.delete(key);
+      cache2.set(key, c);
+      return c;
+    }
+    const w2 = textWidth(text) + 2, h2 = GLYPH_H + 2;
+    c = document.createElement("canvas");
+    c.width = Math.max(1, w2);
+    c.height = h2;
+    const g = c.getContext("2d");
+    const ink = (col, ox, oy) => {
+      g.fillStyle = col;
+      let x = 1;
+      for (const ch of text) {
+        const rows = glyphOf(ch);
+        rows.forEach((row, y) => {
+          let i = 0;
+          while (i < row.length) {
+            if (row[i] !== "#") {
+              i++;
+              continue;
+            }
+            let e = i;
+            while (e < row.length && row[e] === "#") e++;
+            g.fillRect(x + i + ox, 1 + y + oy, e - i, 1);
+            i = e;
+          }
+        });
+        x += rows[0].length + 1;
+      }
+    };
+    if (outline) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) ink(outline, ox, oy);
+    ink(color, 0, 0);
+    cache2.set(key, c);
+    if (cache2.size > 300) cache2.delete(cache2.keys().next().value);
+    return c;
+  }
+  function drawText(g, text, x, y, color, align = "left", outline = "#111111") {
+    const s = textSprite(text, color, outline);
+    const dx = align === "center" ? Math.round(x - s.width / 2) : align === "right" ? x - s.width : x;
+    g.drawImage(s, dx, Math.round(y));
+    return s.width;
+  }
+
   // src/ui/battle.ts
   var W = 320;
   var H = 120;
-  var GROUND = 100;
-  var HERO_X = 64;
   var Battle = class {
     canvas;
     g;
@@ -3970,20 +4076,40 @@
     travel = 0;
     /** Set by the app while it is catching up, so bursts of events don't pile up. */
     quiet = false;
+    W = W;
+    H = H;
+    get GROUND() {
+      return this.H - 20;
+    }
+    get HERO_X() {
+      return Math.round(Math.max(48, this.W * 0.2));
+    }
     constructor() {
       this.canvas = document.createElement("canvas");
       this.canvas.width = W;
       this.canvas.height = H;
       this.g = this.canvas.getContext("2d");
     }
+    /** Logical size in scene pixels. */
+    resize(w2, h2) {
+      w2 = Math.max(200, Math.round(w2));
+      h2 = Math.max(90, Math.round(h2));
+      if (w2 === this.W && h2 === this.H) return;
+      this.W = w2;
+      this.H = h2;
+      this.canvas.width = w2;
+      this.canvas.height = h2;
+    }
     positions(state) {
       const run = state.activity.run;
       if (!run) return [];
-      const n = run.monsters.length;
-      if (n === 1 && MONSTERS[run.monsters[0].def]?.boss) return [[236, GROUND]];
+      const n = run.monsters.length, G2 = this.GROUND;
+      if (n === 1 && MONSTERS[run.monsters[0].def]?.boss) return [[Math.round(this.W * 0.72), G2]];
+      const x0 = Math.round(Math.max(this.HERO_X + 90, this.W * 0.55));
+      const step2 = Math.round(Math.min(48, (this.W - 30 - x0) / 3.5));
       return run.monsters.map((_, i) => {
         const row = Math.floor(i / 3), col = i % 3;
-        return [178 + col * 44 + row * 22, GROUND - row * 12];
+        return [x0 + col * step2 + row * Math.round(step2 / 2), G2 - row * 12];
       });
     }
     /** Events to hand to advance() while online. */
@@ -4005,17 +4131,17 @@
         },
         monsterHit: (_i, dmg, avoided) => {
           if (this.quiet) return;
-          if (avoided) this.pushFloat({ x: HERO_X, y: GROUND - 34, text: avoided, color: "#7fd1ff", t: now(), big: false });
+          if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 34, text: avoided, color: "#7fd1ff", t: now(), big: false });
           else {
             this.heroHurt = now();
-            this.pushFloat({ x: HERO_X - 6, y: GROUND - 34, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false });
+            this.pushFloat({ x: this.HERO_X - 6, y: this.GROUND - 34, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false });
           }
         },
         flask: () => {
-          if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 44, text: "+flask", color: "#3fbf5f", t: now(), big: false });
+          if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 44, text: "+flask", color: "#3fbf5f", t: now(), big: false });
         },
         level: (l) => {
-          if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 52, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true });
+          if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 52, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true });
         }
       };
     }
@@ -4065,12 +4191,11 @@
         });
         const boss = run.monsters.find((m4) => MONSTERS[m4.def]?.boss && m4.life > 0);
         if (boss) {
+          const bw = Math.min(180, this.W - 120), bx = Math.round(this.W / 2 - bw / 2);
           g.fillStyle = "#111";
-          g.fillRect(90, 4, 140, 12);
-          g.fillStyle = "#fff";
-          g.font = "bold 8px monospace";
-          g.textAlign = "center";
-          g.fillText(MONSTERS[boss.def].name.toUpperCase(), 160, 13);
+          g.fillRect(bx - 2, 3, bw + 4, 18);
+          drawText(g, MONSTERS[boss.def].name.toUpperCase(), this.W / 2, 3, "#ffffff", "center");
+          bar(g, bx, 14, bw, 4, boss.life / boss.maxLife, "#e5383b");
         }
       }
       const last = this.fx[this.fx.length - 1];
@@ -4080,32 +4205,23 @@
       const dead = run?.phase === "dead";
       const wItem = state.hero.equipment.weapon;
       const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? BASES[wItem.base]?.kind ?? "sword" : "none", shield: !!state.hero.equipment.offhand };
-      drawHero(g, HERO_X + lunge, GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
+      drawHero(g, this.HERO_X + lunge, this.GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
       this.fx = this.fx.filter((f) => now - f.t < 350);
       for (const f of this.fx) this.drawFx(f, pos2, now);
-      g.textAlign = "center";
       this.floats = this.floats.filter((f) => now - f.t < 800);
       for (const f of this.floats) {
         const k = (now - f.t) / 800;
-        g.font = f.big ? "bold 10px monospace" : "bold 8px monospace";
-        g.globalAlpha = 1 - k * k;
-        const y = f.y - k * 16;
-        g.fillStyle = "#111";
-        g.fillText(f.text, f.x + 1, y + 1);
-        g.fillStyle = f.color;
-        g.fillText(f.text, f.x, y);
+        g.globalAlpha = Math.max(0, 1 - k * k);
+        const y = Math.round(f.y - k * 16 - (f.big && k < 0.15 ? 2 : 0));
+        drawText(g, f.text.toUpperCase(), Math.round(f.x), y, f.color, "center");
       }
       g.globalAlpha = 1;
       if (dead && run) {
         g.fillStyle = "rgba(10,10,14,0.6)";
-        g.fillRect(0, 0, W, H);
-        g.fillStyle = "#ff5a36";
-        g.font = "bold 12px monospace";
-        g.textAlign = "center";
-        g.fillText("THE EMBER RELIGHTS", W / 2, 54);
-        g.fillStyle = "#fff";
-        g.font = "bold 8px monospace";
-        g.fillText(`back in ${Math.max(0, run.timer).toFixed(0)}s`, W / 2, 68);
+        g.fillRect(0, 0, this.W, this.H);
+        const cy = Math.round(this.H / 2) - 12;
+        drawText(g, "THE EMBER RELIGHTS", this.W / 2, cy, "#ff5a36", "center");
+        drawText(g, `BACK IN ${Math.max(0, run.timer).toFixed(0)}S`, this.W / 2, cy + 12, "#ffffff", "center");
       }
       if (run) {
         for (let i = 0; i < run.packs + (run.boss ? 1 : 0); i++) {
@@ -4120,25 +4236,27 @@
     }
     background(pal, seedStr) {
       const g = this.g;
+      const W2 = this.W, H2 = this.H, G2 = this.GROUND;
       g.fillStyle = pal[0];
-      g.fillRect(0, 0, W, H);
+      g.fillRect(0, 0, W2, H2);
       let s = 0;
       for (const c of seedStr) s = s * 31 + c.charCodeAt(0) >>> 0;
       g.fillStyle = pal[2];
-      for (let i = 0; i < 14; i++) {
+      const sky = Math.max(20, G2 - 50);
+      for (let i = 0; i < Math.round(W2 / 22); i++) {
         s = s * 1103515245 + 12345 >>> 0;
-        const x = s % W;
+        const x = s % W2;
         s = s * 1103515245 + 12345 >>> 0;
-        g.fillRect(x, s % 50 + 4, 1, 1);
+        g.fillRect(x, s % sky + 4, 1, 1);
       }
-      hills(g, shade(pal[0], -0.25), 64, 18, this.travel * 0.3, 0.035);
-      hills(g, shade(pal[1], -0.35), 82, 12, this.travel * 0.6, 0.06);
+      hills(g, W2, G2, shade(pal[0], -0.25), G2 - 36, 18, this.travel * 0.3, 0.035);
+      hills(g, W2, G2, shade(pal[1], -0.35), G2 - 18, 12, this.travel * 0.6, 0.06);
       g.fillStyle = pal[1];
-      g.fillRect(0, GROUND, W, H - GROUND);
+      g.fillRect(0, G2, W2, H2 - G2);
       g.fillStyle = "#111";
-      g.fillRect(0, GROUND, W, 2);
+      g.fillRect(0, G2, W2, 2);
       g.fillStyle = shade(pal[1], -0.2);
-      for (let x = -(this.travel * 1.2 % 24); x < W; x += 24) g.fillRect(x, GROUND + 8, 10, 2);
+      for (let x = -(this.travel * 1.2 % 24); x < W2; x += 24) g.fillRect(x, G2 + 8, 10, 2);
     }
     drawFx(f, pos2, now) {
       const g = this.g;
@@ -4148,16 +4266,16 @@
       if (f.kind === "arc") {
         g.strokeStyle = `rgba(255,255,255,${1 - k})`;
         g.beginPath();
-        g.arc(HERO_X + 14, GROUND - 14, 22 + k * 20, -1.1, 0.9);
+        g.arc(this.HERO_X + 14, this.GROUND - 14, 22 + k * 20, -1.1, 0.9);
         g.stroke();
         g.strokeStyle = `rgba(255,90,54,${1 - k})`;
         g.beginPath();
-        g.arc(HERO_X + 14, GROUND - 14, 18 + k * 20, -1, 0.8);
+        g.arc(this.HERO_X + 14, this.GROUND - 14, 18 + k * 20, -1, 0.8);
         g.stroke();
       } else if (f.kind === "slam") {
         g.strokeStyle = `rgba(255,194,51,${1 - k})`;
         g.beginPath();
-        g.ellipse(HERO_X + 30 + k * 60, GROUND, 10 + k * 90, 4 + k * 6, 0, Math.PI, 0);
+        g.ellipse(this.HERO_X + 30 + k * 60, this.GROUND, 10 + k * 90, 4 + k * 6, 0, Math.PI, 0);
         g.stroke();
       } else if (f.kind === "stab") {
         for (const p of targets.slice(0, 1)) {
@@ -4172,8 +4290,8 @@
           g.stroke();
         }
       } else if (f.kind === "bolt") {
-        const end = targets[targets.length - 1] ?? [W - 20, GROUND - 14];
-        const x = HERO_X + 10 + (end[0] - HERO_X - 10) * Math.min(1, k * 2), y = GROUND - 14 + (end[1] - 14 - GROUND + 14) * Math.min(1, k * 2);
+        const end = targets[targets.length - 1] ?? [this.W - 20, this.GROUND - 14];
+        const x = this.HERO_X + 10 + (end[0] - this.HERO_X - 10) * Math.min(1, k * 2), y = this.GROUND - 14 + (end[1] - 14 - this.GROUND + 14) * Math.min(1, k * 2);
         g.fillStyle = "#111";
         g.fillRect(x - 3, y - 3, 7, 7);
         g.fillStyle = "#ffc233";
@@ -4181,18 +4299,18 @@
       } else if (f.kind === "nova") {
         g.strokeStyle = `rgba(143,211,255,${1 - k})`;
         g.beginPath();
-        g.arc(HERO_X, GROUND - 12, 10 + k * 120, 0, Math.PI * 2);
+        g.arc(this.HERO_X, this.GROUND - 12, 10 + k * 120, 0, Math.PI * 2);
         g.stroke();
       }
       g.lineWidth = 1;
     }
   };
-  function hills(g, color, base, amp, off, freq) {
+  function hills(g, w2, ground, color, base, amp, off, freq) {
     g.fillStyle = color;
     g.beginPath();
-    g.moveTo(0, GROUND);
-    for (let x = 0; x <= W; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + off) * freq) * Math.cos((x + off) * freq * 0.37)));
-    g.lineTo(W, GROUND);
+    g.moveTo(0, ground);
+    for (let x = 0; x <= w2 + 4; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + off) * freq) * Math.cos((x + off) * freq * 0.37)));
+    g.lineTo(w2, ground);
     g.closePath();
     g.fill();
   }
@@ -4426,7 +4544,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 /* stage + HUD */
 .top { border-bottom: 3px solid var(--line); }
 .stage { position: relative; background: #111; overflow: hidden; min-height: 60px; }
-.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+.stage canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; display: block; }
 .top.nostage { display: none; }
 .hudw { background: #1a1410; border-bottom: 3px solid var(--line); line-height: 0; overflow: hidden; }
 .hudw canvas { display: block; image-rendering: pixelated; }
@@ -4827,114 +4945,6 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     path.setAttribute("fill", "currentColor");
     svg.append(path);
     return svg;
-  }
-
-  // src/ui/gfx/pixfont.ts
-  var G = {
-    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
-    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
-    "2": [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
-    "3": ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
-    "4": ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."],
-    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
-    "6": ["..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."],
-    "7": ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
-    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
-    "9": [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."],
-    A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-    B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
-    C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
-    D: ["###..", "#..#.", "#...#", "#...#", "#...#", "#..#.", "###.."],
-    E: ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
-    F: ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
-    G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####"],
-    H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-    I: [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."],
-    J: ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."],
-    K: ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
-    L: ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
-    M: ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
-    N: ["#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#"],
-    O: [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
-    P: ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
-    Q: [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"],
-    R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
-    S: [".####", "#....", "#....", ".###.", "....#", "....#", "####."],
-    T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
-    U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
-    V: ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
-    W: ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#."],
-    X: ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
-    Y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
-    Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
-    ".": ["..", "..", "..", "..", "..", "##", "##"],
-    ",": ["..", "..", "..", "..", ".#", ".#", "#."],
-    ":": ["..", "##", "##", "..", "##", "##", ".."],
-    "/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
-    "%": ["##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##"],
-    "+": [".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."],
-    "-": ["....", "....", "....", "####", "....", "....", "...."],
-    "!": ["#", "#", "#", "#", "#", ".", "#"],
-    "?": [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."],
-    "'": ["#", "#", ".", ".", ".", ".", "."],
-    "(": [".#", "#.", "#.", "#.", "#.", "#.", ".#"],
-    ")": ["#.", ".#", ".#", ".#", ".#", ".#", "#."],
-    "~": [".....", ".....", ".#..#", "#.##.", ".....", ".....", "....."],
-    " ": ["...", "...", "...", "...", "...", "...", "..."]
-  };
-  var GLYPH_H = 7;
-  var glyphOf = (ch) => G[ch] ?? G[ch.toUpperCase()] ?? G["?"];
-  function textWidth(text) {
-    let w2 = 0;
-    for (const ch of text) w2 += glyphOf(ch)[0].length + 1;
-    return Math.max(0, w2 - 1);
-  }
-  var cache2 = /* @__PURE__ */ new Map();
-  function textSprite(text, color, outline = "#111111") {
-    const key = `${color}|${outline}|${text}`;
-    let c = cache2.get(key);
-    if (c) {
-      cache2.delete(key);
-      cache2.set(key, c);
-      return c;
-    }
-    const w2 = textWidth(text) + 2, h2 = GLYPH_H + 2;
-    c = document.createElement("canvas");
-    c.width = Math.max(1, w2);
-    c.height = h2;
-    const g = c.getContext("2d");
-    const ink = (col, ox, oy) => {
-      g.fillStyle = col;
-      let x = 1;
-      for (const ch of text) {
-        const rows = glyphOf(ch);
-        rows.forEach((row, y) => {
-          let i = 0;
-          while (i < row.length) {
-            if (row[i] !== "#") {
-              i++;
-              continue;
-            }
-            let e = i;
-            while (e < row.length && row[e] === "#") e++;
-            g.fillRect(x + i + ox, 1 + y + oy, e - i, 1);
-            i = e;
-          }
-        });
-        x += rows[0].length + 1;
-      }
-    };
-    if (outline) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) ink(outline, ox, oy);
-    ink(color, 0, 0);
-    cache2.set(key, c);
-    if (cache2.size > 300) cache2.delete(cache2.keys().next().value);
-    return c;
-  }
-  function drawText(g, text, x, y, color, align = "left", outline = "#111111") {
-    const s = textSprite(text, color, outline);
-    const dx = align === "center" ? Math.round(x - s.width / 2) : align === "right" ? x - s.width : x;
-    g.drawImage(s, dx, Math.round(y));
-    return s.width;
   }
 
   // src/ui/icons.ts
@@ -6971,7 +6981,11 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
           this.stage.style.height = "";
           return;
         }
-        this.stage.style.height = Math.round(Math.min(inner * H / W, box2.h * STAGE_FRAC[this.frame.stage])) + "px";
+        const stageH = Math.round(Math.min(inner * 0.5, box2.h * STAGE_FRAC[this.frame.stage]));
+        const sc = Math.max(1, Math.round(stageH / 110));
+        this.stage.style.height = stageH + "px";
+        this.battle.resize(Math.ceil(inner / sc), Math.ceil(stageH / sc));
+        Object.assign(this.battle.canvas.style, { width: this.battle.canvas.width * sc + "px", height: this.battle.canvas.height * sc + "px" });
       };
       fit2();
       this.refit = fit2;
