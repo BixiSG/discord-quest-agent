@@ -156,6 +156,16 @@
     "ico.ring.0": { "files": ["I:/ring/copper.png"], "trim": false },
     "ico.ring.1": { "files": ["I:/ring/silver.png"], "trim": false },
     "ico.ring.2": { "files": ["I:/ring/gold.png"], "trim": false },
-    "ico.ring.3": { "files": ["I:/ring/diamond.png"], "trim": false }
+    "ico.ring.3": { "files": ["I:/ring/diamond.png"], "trim": false },
+    "cur.kindling": { "files": ["I:/misc/runes/rune_gehenna.png"], "trim": false },
+    "cur.reshaper": { "files": ["I:/misc/runes/rune_lom_lobon.png"], "trim": false },
+    "cur.graft": { "files": ["I:/misc/runes/rune_mnoleg.png"], "trim": false },
+    "cur.crownseal": { "files": ["I:/misc/gold_pile.png"], "trim": false },
+    "cur.forgeheart": { "files": ["I:/misc/runes/rune_cerebov.png"], "trim": false },
+    "cur.tempest": { "files": ["I:/misc/runes/rune_cocytus.png"], "trim": false },
+    "cur.starfall": { "files": ["I:/misc/misc_crystal.png"], "trim": false },
+    "cur.salt": { "files": ["I:/misc/runes/rune_tartarus.png"], "trim": false },
+    "cur.unmaker": { "files": ["I:/potion/magenta.png"], "trim": false },
+    "cur.temper": { "files": ["I:/potion/brown.png"], "trim": false }
   }
 }
