@@ -3,7 +3,12 @@
     "P": "assets/.cache/patreon/ gothicvania patreon collection",
     "C": "assets/.cache/church/gothicvania church files/SPRITES",
     "W": "assets/.cache/swamp/Gothicvania Swamp files/Sprites",
-    "M": "assets/.cache/cemetery/gothicvania-cemetery-files/PNG/Sprites"
+    "M": "assets/.cache/cemetery/gothicvania-cemetery-files/PNG/Sprites",
+    "E": "assets/.cache/swamp/Gothicvania Swamp files/Evironment",
+    "Q": "assets/.cache/cemetery/gothicvania-cemetery-files/PNG/Environment",
+    "F": "assets/.cache/forest/parallax_forest_pack/layers",
+    "N": "assets/.cache/mountain/parallax_mountain_pack/layers",
+    "D": "assets/.cache/desert"
   },
   "sprites": {
     "hero.vanguard.idle": { "sheet": "P:/Gothic-hero-Files/PNG/gothic-hero-idle.png", "w": 38, "h": 48 },
@@ -43,6 +48,24 @@
     "fx.death": { "sheet": "C:/fx/enemy-death/enemy-death-spritesheet/enemy-death.png", "w": 81, "h": 66 },
     "fx.blast": { "files": "W:/Enemy-Death/Explosion/Enemy-Death{1-6}.png" },
     "fx.fireball": { "sheet": "C:/fx/fireball/fireball-spritesheet/fireball.png", "w": 26, "h": 26 },
-    "fx.orb": { "sheet": "P:/Hell-Beast-Files/PNG/fire-ball.png", "w": 19, "h": 16 }
+    "fx.orb": { "sheet": "P:/Hell-Beast-Files/PNG/fire-ball.png", "w": 19, "h": 16 },
+    "bg.swamp.0": { "sheet": "E:/mid-layer-01.png", "outline": false, "trim": false, "alpha": true },
+    "bg.swamp.1": { "sheet": "E:/trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.cemetery.0": { "sheet": "Q:/background.png", "outline": false, "trim": false, "alpha": true },
+    "bg.cemetery.1": { "sheet": "Q:/mountains.png", "outline": false, "trim": false, "alpha": true },
+    "bg.cemetery.2": { "sheet": "Q:/graveyard.png", "outline": false, "trim": false, "alpha": true },
+    "bg.forest.0": { "sheet": "F:/parallax-forest-back-trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.forest.1": { "sheet": "F:/parallax-forest-middle-trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.forest.2": { "sheet": "F:/parallax-forest-front-trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.dusk.0": { "sheet": "N:/parallax-mountain-bg.png", "outline": false, "trim": false, "alpha": true },
+    "bg.dusk.1": { "sheet": "N:/parallax-mountain-montain-far.png", "outline": false, "trim": false, "alpha": true },
+    "bg.dusk.2": { "sheet": "N:/parallax-mountain-mountains.png", "outline": false, "trim": false, "alpha": true },
+    "bg.dusk.3": { "sheet": "N:/parallax-mountain-trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.dusk.4": { "sheet": "N:/parallax-mountain-foreground-trees.png", "outline": false, "trim": false, "alpha": true },
+    "bg.castle.0": { "sheet": "P:/Old-dark-Castle-tileset-Files/PNG/old-dark-castle-interior-background.png", "down": 2, "outline": false, "trim": false, "alpha": true },
+    "bg.desert.0": { "sheet": "D:/rocky-far-mountains_0.png", "y": 240, "w": 1280, "h": 600, "frames": 1, "down": 4, "outline": false, "trim": false, "alpha": true },
+    "bg.desert.1": { "sheet": "D:/rocky-nowater-far_0.png", "y": 240, "w": 1280, "h": 600, "frames": 1, "down": 4, "outline": false, "trim": false, "alpha": true },
+    "bg.desert.2": { "sheet": "D:/rocky-nowater-mid_0.png", "y": 240, "w": 1280, "h": 600, "frames": 1, "down": 4, "outline": false, "trim": false, "alpha": true },
+    "bg.desert.3": { "sheet": "D:/rocky-nowater-close_0.png", "y": 240, "w": 1280, "h": 600, "frames": 1, "down": 4, "outline": false, "trim": false, "alpha": true }
   }
 }

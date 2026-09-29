@@ -12,7 +12,7 @@
 //     source:  { "sheet": "P:/a.png", "w": 38, "h": 48, "frames": 4, "x": 0, "y": 0, "dx": 38 }
 //          or  { "files": ["P:/idle1.png", ...] }  or  { "files": "P:/idle{1-6}.png" }
 //     options: "down": 2 (shrink by a whole factor), "faces": "left" (default "right"),
-//              "outline": false, "trim": false
+//              "outline": false, "trim": false, "alpha": true (keep soft alpha: backgrounds)
 // Frames of a sprite are trimmed to their common bounding box, so they stay
 // aligned. Each sprite records its anchor: the middle of its feet in frame 0
 // (ax, ay), which the game puts on the ground.
@@ -54,14 +54,15 @@ const expand = f => {
     return out;
 };
 
-/** RGBA frame as { w, h, px } from a sheet rectangle. */
-function grab(img, x, y, w, h) {
+/** RGBA frame as { w, h, px } from a sheet rectangle. Sprites snap alpha to on/off; backgrounds keep it. */
+function grab(img, x, y, w, h, keepAlpha = false) {
     const px = new Uint8Array(w * h * 4);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
         const sx = x + i, sy = y + j;
         if (sx >= img.width || sy >= img.height) continue;
         const s = (sy * img.width + sx) * 4, d = (j * w + i) * 4;
-        if (img.data[s + 3] > 24) { px[d] = img.data[s]; px[d + 1] = img.data[s + 1]; px[d + 2] = img.data[s + 2]; px[d + 3] = 255; }
+        if (keepAlpha) px.set(img.data.subarray(s, s + 4), d);
+        else if (img.data[s + 3] > 24) { px[d] = img.data[s]; px[d + 1] = img.data[s + 1]; px[d + 2] = img.data[s + 2]; px[d + 3] = 255; }
     }
     return { w, h, px };
 }
@@ -100,12 +101,12 @@ function outline(fr) {
 const cuts = [];
 for (const [name, s] of Object.entries(manifest.sprites)) {
     let frames;
-    if (s.files) frames = expand(s.files).map(f => { const img = sheet(f); return grab(img, 0, 0, img.width, img.height); });
+    if (s.files) frames = expand(s.files).map(f => { const img = sheet(f); return grab(img, 0, 0, img.width, img.height, s.alpha); });
     else {
         const img = sheet(s.sheet), w = s.w ?? img.width, h = s.h ?? img.height;
         const n = s.frames ?? Math.floor((img.width - (s.x ?? 0)) / (s.dx ?? w)), dx = s.dx ?? w;
         frames = [];
-        for (let f = 0; f < n; f++) frames.push(grab(img, (s.x ?? 0) + f * dx, s.y ?? 0, w, h));
+        for (let f = 0; f < n; f++) frames.push(grab(img, (s.x ?? 0) + f * dx, s.y ?? 0, w, h, s.alpha));
     }
     if (s.down > 1) frames = frames.map(fr => down(fr, s.down));
     if (s.trim !== false) {

@@ -10,7 +10,8 @@ import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
 import { drawText } from "./gfx/pixfont";
-import { drawSprite, loadSprites, spriteOf } from "./gfx/sprites";
+import { drawSprite, loadSprites, spriteOf, tileLayer } from "./gfx/sprites";
+import { setFor } from "./gfx/scenes";
 import { HERO_CAST, MONSTER_CAST } from "./gfx/cast";
 
 /** Default logical size; resize() changes it. */
@@ -127,7 +128,7 @@ export class Battle {
 
         g.save();
         if (now - this.shake < 140 && this.shakeAmp) g.translate(Math.round((Math.random() - 0.5) * this.shakeAmp * 2), Math.round((Math.random() - 0.5) * this.shakeAmp));
-        this.background(zone.palette, zone.id);
+        this.background(zone);
         const pos = this.positions(state);
         const G = this.GROUND;
         if (run && (run.phase === "fight" || run.phase === "dead")) {
@@ -248,9 +249,24 @@ export class Battle {
         void sheet;
     }
 
-    private background(pal: [string, string, string], seedStr: string): void {
+    private background(zone: { id: string; name: string; palette: [string, string, string] }): void {
         const g = this.g;
-        const W = this.W, H = this.H, G = this.GROUND;
+        const W = this.W, H = this.H, G = this.GROUND, pal = zone.palette, seedStr = zone.id;
+        const set = setFor(zone.id, zone.name);
+        if (spriteOf(set.layers[0]!.sprite)) {
+            // Parallax art: far layers barely move, near ones follow the road.
+            g.fillStyle = set.sky; g.fillRect(0, 0, W, H);
+            const road = this.travel * 5;
+            for (const l of set.layers) tileLayer(g, l.sprite, W, G + (l.drop ?? 0), road * l.parallax);
+            // The zone's own tone over the shared art.
+            g.globalAlpha = 0.12; g.fillStyle = pal[0]; g.fillRect(0, 0, W, G); g.globalAlpha = 1;
+            g.fillStyle = set.ground; g.fillRect(0, G, W, H - G);
+            g.fillStyle = set.edge; g.fillRect(0, G, W, 1);
+            g.fillStyle = "#111"; g.fillRect(0, G + 1, W, 1);
+            g.fillStyle = set.edge;
+            for (let x = -((this.travel * 1.2) % 24); x < W; x += 24) g.fillRect(Math.round(x), G + 8, 10, 1);
+            return;
+        }
         g.fillStyle = pal[0]; g.fillRect(0, 0, W, H);
         // Stars / motes in the accent colour, as many as the width asks for.
         let s = 0; for (const c of seedStr) s = (s * 31 + c.charCodeAt(0)) >>> 0;

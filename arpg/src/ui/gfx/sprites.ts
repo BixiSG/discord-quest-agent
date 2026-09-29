@@ -75,6 +75,16 @@ export function drawSprite(g: CanvasRenderingContext2D, name: string, f: number,
     return { x: dx, y: dy, w, h };
 }
 
+/** Tiles a background layer across `w` pixels, bottom edge at `bottom`, scrolled left by `offset`. Returns its top, or null. */
+export function tileLayer(g: CanvasRenderingContext2D, name: string, w: number, bottom: number, offset: number): number | null {
+    const fr = spriteOf(name);
+    if (!fr) return null;
+    const top = Math.round(bottom - fr.h);
+    let x = -(((Math.round(offset) % fr.w) + fr.w) % fr.w);
+    for (; x < w; x += fr.w) g.drawImage(img!, fr.x, fr.y, fr.w, fr.h, x, top, fr.w, fr.h);
+    return top;
+}
+
 /** A standalone canvas of one frame (item icons in the DOM). */
 export function spriteCanvas(name: string, f = 0): HTMLCanvasElement | null {
     const fr = spriteOf(name);
