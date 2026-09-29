@@ -6,7 +6,7 @@
 // nothing here changes the game.
 
 import { BASES, CLASSES, COMPANIONS, MONSTERS, ZONES, type MonsterDef } from "../core/data";
-import { runZone, type SimEvents } from "../core/sim/engine";
+import { enrage, runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
 import { drawText } from "./gfx/pixfont";
@@ -185,8 +185,10 @@ export class Battle {
                 // Boss plate: name over a life bar, top centre.
                 const bw = Math.min(200, this.W - 120), bx = Math.round(this.W / 2 - bw / 2);
                 g.fillStyle = "#111"; g.fillRect(bx - 2, 3, bw + 4, 19);
-                drawText(g, monsterName(boss.def).toUpperCase(), this.W / 2, 3, "#ffffff", "center");
-                bar(g, bx, 15, bw, 4, boss.life / boss.maxLife, "#e5383b");
+                // A pinnacle past its patience says so, and its bar burns.
+                const mad = !!run.map?.pinnacle && enrage(run.elapsed) > 1;
+                drawText(g, mad ? `${monsterName(boss.def).toUpperCase()} - ${t("battle.enraged").toUpperCase()}` : monsterName(boss.def).toUpperCase(), this.W / 2, 3, mad ? "#ff8a1f" : "#ffffff", "center");
+                bar(g, bx, 15, bw, 4, boss.life / boss.maxLife, mad ? "#ff8a1f" : "#e5383b");
             }
         }
 

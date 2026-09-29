@@ -228,6 +228,15 @@ instead of 15%. `tools/dawns.ts` (160 h, 3 callings x 2 seeds): first relight
 at 18-36 h for every calling but one weak Strider seed; the loop then slows
 at dawn II-IV (a world 20-40% tougher), where the Hollow Crown waits.
 
+The Hollow Crown answers only from dawn II. It is the hardest fight in the
+game (level 96, life 25, damage 0.52, a third of it chaos); breaking it once
+gives one more dawn perk for good and the name Crownbreaker, kept across
+dawns. Measured with `tools/pinnacles.ts <save> invest level=88` on dawn II-III
+heroes: an invested caster wins 3/3, un-invested heroes lose, and two-handed
+attack builds still fall short (they die before the enrage window closes) -
+the next balance item is attack builds' survival against pinnacles, and the
+Strider overall.
+
 ## Pinnacles: scouting (round 4)
 
 The Atlas can scout a pinnacle: five fights on a copy of the hero, nothing

@@ -2,7 +2,7 @@
 // totals, and the Rekindling.
 
 import { allShards, sunShards, SUN_PINNACLES } from "../core/echoes";
-import { chooseDawnPerk, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
+import { chooseDawnPerk, crownbreaker, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
 import { DAWN_PERKS, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, AFFIXES, CLASSES } from "../core/data";
 import { dawnTitle, perkName, perkText, pinName, storyText, className, groupName, itemName, presetBlurb, presetName } from "../i18n/names";
 import { hint, hintsSeen } from "./hints";
@@ -68,7 +68,8 @@ function rekindleCard(c: Ctx): HTMLElement {
     const st = c.state;
     const held = sunShards(st);
     const dawn = dawnOf(st);
-    const card = h("div", { class: "card col dawncard" }, h("h3", { class: "split" }, h("span", { text: t("dawn.title") }), dawn ? h("span", { class: "tag dawn", text: dawnTitle(dawn) }) : null));
+    const card = h("div", { class: "card col dawncard" }, h("h3", { class: "split" }, h("span", { text: t("dawn.title") }),
+        h("span", { class: "row", style: "gap:4px" }, dawn ? h("span", { class: "tag dawn", text: dawnTitle(dawn) }) : null, crownbreaker(st) ? h("span", { class: "tag asc", text: t("title.crownbreaker") }) : null)));
     card.append(h("div", { class: "shards" }, ...SUN_PINNACLES.map(p => h("span", { class: `shard${held.includes(p) ? " on" : ""}`, title: pinName(p) }, glyph("sun", 18))),
         h("b", { text: t("dawn.shards", { n: held.length, total: SUN_PINNACLES.length }) })));
     card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.note", { pins: SUN_PINNACLES.map(p => pinName(p)).join(t("common.list")) }) }));

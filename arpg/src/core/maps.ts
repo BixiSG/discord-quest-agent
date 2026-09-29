@@ -7,6 +7,8 @@ import { ref } from "../i18n/refs";
 import type { GameState, MapItem, RunMap } from "./state";
 import { pinnacleEcho } from "./echoes";
 import { LANTERN } from "./season";
+import { CROWN_DAWN } from "./data";
+import { crownFalls, dawnOf } from "./dawn";
 import type { DamageType, Mod } from "./types";
 
 /** The endgame opens once the Sunfall is cleared. */
@@ -67,6 +69,7 @@ export function queuePinnacle(state: GameState, id: string): string | null {
     if (!p) return "unknown pinnacle";
     if ((state.sigils[p.sigil] ?? 0) < p.cost) return `needs ${p.cost} ${p.sigilName}s`;
     if (!endgameOpen(state)) return "clear the Sunfall first";
+    if (id === "hollowcrown" && dawnOf(state) < CROWN_DAWN) return "the Hollow Crown answers only from the second dawn";
     state.activity.pinnacle = id;
     if (state.activity.mode !== "map") setMapMode(state, true);
     return null;
@@ -217,6 +220,7 @@ export function completeMap(state: GameState, m: RunMap): void {
         const first = !state.pinnacleKills[m.pinnacle];
         state.pinnacleKills[m.pinnacle] = (state.pinnacleKills[m.pinnacle] ?? 0) + 1;
         if (first) { state.atlas.points += 2; pushLog(state, "boss", "log.pinDefeated", { pin: ref.pinnacle(m.pinnacle), n: 2 }); }
+        if (m.pinnacle === "hollowcrown") crownFalls(state);
         // Its echo and its piece of the sun (the shard is the kill itself).
         pinnacleEcho(state, m.pinnacle);
         return;

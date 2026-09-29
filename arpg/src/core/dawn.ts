@@ -16,8 +16,17 @@ import type { MapEffects } from "./maps";
 
 export const dawnOf = (s: GameState) => s.hero.dawn?.level ?? 0;
 export const hasPerk = (s: GameState, id: string) => !!s.hero.dawn?.perks.includes(id);
-/** Perk picks owed: one per dawn. */
-export const perksToPick = (s: GameState) => Math.max(0, dawnOf(s) - (s.hero.dawn?.perks.length ?? 0));
+/** Perk picks owed: one per dawn, and one for breaking the Hollow Crown. */
+export const perksToPick = (s: GameState) => Math.max(0, dawnOf(s) + (s.hero.dawn?.crown ? 1 : 0) - (s.hero.dawn?.perks.length ?? 0));
+/** Broke the Hollow Crown (in any dawn): the name Crownbreaker. */
+export const crownbreaker = (s: GameState) => !!s.hero.dawn?.crown;
+
+/** The Hollow Crown's first fall: one more perk pick for good, and the name Crownbreaker. */
+export function crownFalls(s: GameState): void {
+    if (!s.hero.dawn || s.hero.dawn.crown) return;
+    s.hero.dawn.crown = true;
+    pushLog(s, "boss", "log.crownFalls");
+}
 
 /** What relighting would carry over, for the confirmation. Heirloom candidates: gear in the stash or worn (not relics - they all stay). */
 export function heirloomCandidates(s: GameState): Item[] {
@@ -45,7 +54,7 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     }
     const fresh = newGame({ name: s.hero.name, cls, now: s.simTo, seed: hashSeed(s.seed, 0xda, dawn) });
     fresh.nextUid = Math.max(fresh.nextUid, s.nextUid);
-    fresh.hero.dawn = { level: dawn, perks: [...(s.hero.dawn?.perks ?? [])] };
+    fresh.hero.dawn = { level: dawn, perks: [...(s.hero.dawn?.perks ?? [])], ...(s.hero.dawn?.crown ? { crown: true } : {}) };
     fresh.hero.bonusPoints = dawn;
     if (s.hero.pet && s.companions[s.hero.pet.id] !== undefined) fresh.hero.pet = { id: s.hero.pet.id, level: companionLevel(s.companions[s.hero.pet.id]!) };
     fresh.relics = relics;

@@ -145,7 +145,10 @@ export function validateState(raw: unknown): GameState {
     if (hero.dawn) {
         const lvl = Number.isInteger(hero.dawn.level) && hero.dawn.level > 0 ? Math.min(99, hero.dawn.level) : 0;
         if (!lvl) delete hero.dawn;
-        else hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, id => !!DAWN_PERK[id]) ?? [])].slice(0, lvl) };
+        else {
+            const crown = hero.dawn.crown === true;
+            hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, id => !!DAWN_PERK[id]) ?? [])].slice(0, lvl + (crown ? 1 : 0)), ...(crown ? { crown: true } : {}) };
+        }
     }
     hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");

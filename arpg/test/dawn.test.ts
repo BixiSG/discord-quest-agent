@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { DAWN_TOUGHER, PINNACLES } from "../src/core/data";
 import { enrage } from "../src/core/sim/engine";
-import { chooseDawnPerk, dawnEffects, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../src/core/dawn";
+import { chooseDawnPerk, crownbreaker, crownFalls, dawnEffects, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../src/core/dawn";
+import { completeMap, queuePinnacle } from "../src/core/maps";
 import { buyStashRoom, newGame, receiveItem, salvage, sheetOf, stashRoomCost } from "../src/core/game";
 import { validateState } from "../src/core/validate";
 import { grantCompanion } from "../src/core/companions";
@@ -111,5 +112,38 @@ describe("pinnacles enrage", () => {
         expect(enrage(90)).toBe(1);
         expect(enrage(140)).toBeCloseTo(2);
         expect(enrage(240)).toBeCloseTo(4);
+    });
+});
+
+describe("the Hollow Crown", () => {
+    const atDawn = (n: number) => {
+        const g = shardsHeld();
+        for (let i = 0; i < n; i++) { for (const p of Object.keys(PINNACLES)) g.pinnacleKills[p] = 1; g.world.clears.a3_sunfall = 1; relightSun(g); chooseDawnPerk(g, ["brightember", "steadyflame", "firstlight"][i]!); }
+        g.world.clears.a3_sunfall = 1; g.hero.level = 80;
+        g.sigils.hollow_sigil = 4;
+        return g;
+    };
+    it("answers only from the second dawn", () => {
+        expect(queuePinnacle(atDawn(0), "hollowcrown")).toMatch(/second dawn/);
+        expect(queuePinnacle(atDawn(1), "hollowcrown")).toMatch(/second dawn/);
+        expect(queuePinnacle(atDawn(2), "hollowcrown")).toBeNull();
+    });
+    it("breaking it gives one more perk for good and the name, kept across dawns and saves", () => {
+        const g = atDawn(2);
+        expect(perksToPick(g)).toBe(0);
+        completeMap(g, { tier: 16, area: "sunscar", mods: [], level: 96, pinnacle: "hollowcrown" });
+        expect(crownbreaker(g)).toBe(true);
+        expect(perksToPick(g)).toBe(1);
+        expect(g.log.some(e => e.key === "log.crownFalls")).toBe(true);
+        expect(chooseDawnPerk(g, "keeneye")).toBeNull();
+        expect(perksToPick(g)).toBe(0);
+        crownFalls(g); // a second kill gives nothing more
+        expect(perksToPick(g)).toBe(0);
+        const saved = validateState(JSON.parse(JSON.stringify(g)));
+        expect(saved.hero.dawn).toEqual({ level: 2, perks: ["brightember", "steadyflame", "keeneye"], crown: true });
+        for (const p of Object.keys(PINNACLES)) g.pinnacleKills[p] = 1;
+        relightSun(g);
+        expect(crownbreaker(g)).toBe(true);
+        expect(perksToPick(g)).toBe(1); // dawn III's own pick
     });
 });

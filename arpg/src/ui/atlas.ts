@@ -1,7 +1,11 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
 import { ACTS, ATLAS, CURRENCIES, MAP_AREAS, MAX_TIER, PINNACLES, ZONES } from "../core/data";
+import { CROWN_DAWN } from "../core/data";
+import { crownbreaker, dawnOf } from "../core/dawn";
+import { ENRAGE_PER, ENRAGE_S } from "../core/sim/engine";
 import { scoutPinnacle, type Scout } from "../core/scout";
+import { dawnTitle } from "../i18n/names";
 import type { GameState } from "../core/state";
 import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
@@ -118,18 +122,22 @@ export function atlasView(c: Ctx): HTMLElement {
         const cast = MONSTER_CAST[p.boss];
         const art = cast ? spriteCanvas(cast.sprite) : null;
         if (art) art.className = "pin-art";
+        // The Hollow Crown: from the second dawn, with its reward spelled out.
+        const crown = p.id === "hollowcrown";
+        const locked = crown && dawnOf(st) < CROWN_DAWN;
         pins.append(h("div", { class: "skill pinnacle", style: "cursor:default" },
             art ? h("div", { class: "pin-frame", style: `background:${p.palette[0]}` }, art) : null,
             h("div", { class: "grow" }, h("div", { class: "nm", text: pinName(p.id) }), h("div", { class: "ds", text: pinText(p.id) }),
                 h("div", { class: "ds muted", text: t("atlas.pinInfo", { level: p.level, sigil: sigilName(p.id), tier: tierName(p.minTier), kills: st.pinnacleKills[p.id] ?? 0 }) }),
+                crown ? h("div", { class: "ds", style: "color:var(--violet)", text: crownbreaker(st) ? t("title.crownbreaker") : t("atlas.crownReward") }) : null,
                 scoutLine(c, p.id),
                 h("div", { class: "row", style: "margin-top:6px;gap:6px" },
-                    h("button", { class: "btn hot", text: queued ? t("atlas.nextRun") : t("atlas.challenge", { have, cost: p.cost }), attrs: have >= p.cost && !queued ? {} : { disabled: "" },
+                    h("button", { class: "btn hot", text: locked ? t("atlas.crownLocked", { dawn: dawnTitle(CROWN_DAWN) }) : queued ? t("atlas.nextRun") : t("atlas.challenge", { have, cost: p.cost }), attrs: have >= p.cost && !queued && !locked ? {} : { disabled: "" },
                         on: { click: () => c.act(s => queuePinnacle(s, p.id), t("atlas.isNext", { name: pinName(p.id) })) } }),
                     h("button", { class: "btn alt", text: t("atlas.scout"), title: t("atlas.scoutTip"),
                         on: { click: () => { scouted.set(scoutKey(st, p.id), scoutPinnacle(st, p.id, 5)); c.rerender(); } } })))));
     }
-    root.append(h("div", { class: "card col" }, h("h3", { text: t("atlas.pinnacles") }), pins));
+    root.append(h("div", { class: "card col" }, h("h3", { text: t("atlas.pinnacles") }), h("div", { class: "muted", style: "font-size:12px", text: t("atlas.enrage", { s: ENRAGE_S, n: ENRAGE_PER * 100 }) }), pins));
     return root;
 }
 

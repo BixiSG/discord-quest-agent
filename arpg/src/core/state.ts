@@ -26,7 +26,7 @@ export interface Hero {
     /** The companion at the hero's side and its level (v6). */
     pet?: { id: string; level: number };
     /** Dawns (v7): how many times the sun was relit, and the perks picked (one per dawn). */
-    dawn?: { level: number; perks: string[] };
+    dawn?: { level: number; perks: string[]; /** The Hollow Crown was broken (round 6): one more perk pick, the name Crownbreaker. */ crown?: boolean };
 }
 
 export interface MonsterState {
