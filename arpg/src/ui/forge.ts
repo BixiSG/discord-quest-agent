@@ -97,14 +97,14 @@ export function forgeView(c: Ctx): HTMLElement {
         const place = placeOf(it);
         for (let i = 0; i < (it.sockets ?? 0); i++) {
             const cur = it.stones?.[i] ?? null;
-            const pick = h("select", { attrs: { "aria-label": t("forge.setStone") } });
+            const pick = h("select", { attrs: { "aria-label": t("forge.socketN", { n: i + 1 }) } });
             pick.append(h("option", { text: cur ? stoneFullName(cur) : t("forge.setStone"), attrs: { value: "" } }));
             for (const { key, n } of pouchList(st)) pick.append(h("option", { text: `${stoneFullName(key)} x${n} - ${stoneLine(key, place)}`, attrs: { value: key } }));
             pick.addEventListener("change", () => { if (pick.value) c.act(s => setStone(s, it.uid, i, pick.value)); });
             const chip = stoneChip(cur, 16);
             if (cur) chip.dataset.tip = t("forge.here", { effect: stoneLine(cur, place) });
             srow.append(h("span", { class: "sock1" }, chip, pick,
-                cur ? h("button", { class: "x", text: "x", title: t("forge.pry"), attrs: { "aria-label": t("forge.pry") }, on: { click: () => c.act(s => setStone(s, it.uid, i, null)) } }) : null));
+                cur ? h("button", { class: "x", text: "x", title: t("forge.pry"), attrs: { "aria-label": t("forge.pryN", { stone: stoneFullName(cur), n: i + 1 }) }, on: { click: () => c.act(s => setStone(s, it.uid, i, null)) } }) : null));
         }
         srow.append(h("button", { class: "btn alt small", text: dc === null ? t("forge.socketsFull") : t("forge.drill", { cost: fmt(dc) }), title: t("forge.drillTip", { n: socketCap(it) }),
             attrs: dc !== null && st.dust >= dc ? {} : { disabled: "" }, on: { click: () => c.act(s => drillSocket(s, it.uid)) } }));

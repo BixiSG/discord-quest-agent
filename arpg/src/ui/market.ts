@@ -19,7 +19,7 @@ import { itemName, monsterName, stoneFullName } from "../i18n/names";
 /** What the Market tab depends on. */
 export function marketSig(s: GameState): string {
     const m = s.market;
-    return `${marketOpen(s)}:${m?.seq ?? 0}:${m?.pedlar.map(o => (o.sold ? 1 : 0)).join("")}:${m?.jeweller.map(o => (o.sold ? 1 : 0)).join("")}:${Math.ceil(nextStockIn(s) / 60e3)}:${Math.floor(s.dust / 50)}:${s.hero.rev}`;
+    return `${marketOpen(s)}:${m?.seq ?? 0}:${m?.pedlar.map(o => (o.sold ? 1 : 0)).join("")}:${m?.jeweller.map(o => (o.sold ? 1 : 0)).join("")}:${Math.ceil(nextStockIn(s) / 60e3)}:${Math.floor(s.dust / 50)}:${s.hero.rev}:${s.stash.length >= s.stashCap}`;
 }
 
 export function marketView(c: Ctx): HTMLElement {
@@ -42,33 +42,40 @@ export function marketView(c: Ctx): HTMLElement {
     const tip = hint(c, "market");
     if (tip) root.append(tip);
 
-    // The Pedlar: gear, each with its price and Buy.
+    // The Pedlar: gear, each with its price and Buy. A full stash only takes what goes straight on
+    // (or a relic, which has its own case): the same rule as buyGear, so Buy is off rather than refused.
     const gear = h("div", { class: "offers" });
+    const full = st.stash.length >= st.stashCap;
     st.market.pedlar.forEach((o, i) => {
         const it = o.item;
         const up = !o.sold && !!upgradeSlot(st, it);
-        const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it) } }, itemIcon(it), socketPips(it));
+        const noRoom = full && !it.relic && !(st.settings.autoEquip && up);
+        // Focusable: the keyboard gets the same item card a hover does.
+        const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it), tabindex: "0" } }, itemIcon(it), socketPips(it));
         withTip(cell, c, () => { const targets = slotsFor(baseOf(it)); return itemCard(it, c, { compareSlot: upgradeSlot(st, it) ?? targets.find(x => !st.hero.equipment[x]) ?? targets[0]! }); });
         gear.append(h("div", { class: `offer${o.sold ? " sold" : ""}` }, cell,
             h("div", { class: "col grow", style: "gap:3px;min-width:0" },
                 h("b", { class: `name ${it.rarity}`, text: itemName(it) }),
                 up ? h("span", { class: "tag up", text: t("market.upgrade") }) : null),
             o.sold ? h("span", { class: "muted", text: t("market.sold") })
-                : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: st.dust >= o.price ? {} : { disabled: "" },
+                : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: { "aria-label": t("market.buyAria", { name: itemName(it), cost: fmt(o.price) }), ...(st.dust >= o.price && !noRoom ? {} : { disabled: "" }) },
+                    ...(noRoom ? { title: t("market.noRoom") } : {}),
                     on: { click: () => c.act(s => buyGear(s, i), t("market.bought", { name: itemName(it) }), "buy") } })));
     });
     root.append(h("div", { class: "card" }, h("h3", { text: t("market.pedlar") }),
-        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.pedlarNote") }), gear));
+        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.pedlarNote") }),
+        full ? h("div", { class: "warnbar", attrs: { role: "status" }, style: "margin-bottom:8px" }, glyph("gear", 14), h("span", { text: t("market.noRoomNote") })) : null,
+        gear));
 
     // The Jeweller: stones.
     const stones = h("div", { class: "offers" });
     st.market.jeweller.forEach((o, i) => {
-        const chip = stoneChip(o.key, 22);
-        chip.dataset.tip = stoneTip(o.key);
-        stones.append(h("div", { class: `offer${o.sold ? " sold" : ""}` }, h("span", { class: "stonebig" }, chip),
+        const big = h("span", { class: "stonebig", attrs: { tabindex: "0", "aria-label": stoneFullName(o.key) } }, stoneChip(o.key, 22));
+        big.dataset.tip = stoneTip(o.key);
+        stones.append(h("div", { class: `offer${o.sold ? " sold" : ""}` }, big,
             h("b", { class: "grow", text: stoneFullName(o.key) }),
             o.sold ? h("span", { class: "muted", text: t("market.sold") })
-                : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: st.dust >= o.price ? {} : { disabled: "" },
+                : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: { "aria-label": t("market.buyAria", { name: stoneFullName(o.key), cost: fmt(o.price) }), ...(st.dust >= o.price ? {} : { disabled: "" }) },
                     on: { click: () => c.act(s => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) }), "buy") } })));
     });
     root.append(h("div", { class: "card" }, h("h3", { text: t("market.jeweller") }),
