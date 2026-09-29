@@ -18,7 +18,7 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
     const seed = opts.seed ?? hashSeed(opts.now, opts.name.length);
     const state: GameState = {
         seed, createdAt: opts.now, simTo: opts.now,
-        hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, rev: 0 },
+        hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, ascNodes: [], ascPoints: 0, rev: 0 },
         stash: [], stashCap: 60, dust: 0, currency: {},
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },

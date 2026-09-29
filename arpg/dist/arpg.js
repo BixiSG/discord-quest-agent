@@ -88,7 +88,7 @@
   }
   function monsterDamage(level) {
     const l = level - 1;
-    return 5 * Math.pow(1.06, l) * (1 + 0.02 * l);
+    return 5 * Math.pow(1.055, l) * (1 + 0.02 * l);
   }
   function monsterDefence(level) {
     const l = level - 1;
@@ -109,10 +109,10 @@
   }
   function spellScale(level) {
     const l = level - 1;
-    return Math.pow(1.075, l) * (1 + 0.025 * l);
+    return Math.pow(1.06, l) * (1 + 0.015 * l);
   }
   function heroBaseLife(level, classLife) {
-    return classLife + 12 * (level - 1);
+    return classLife + 16 * (level - 1);
   }
   function heroBaseMana(level) {
     return 40 + 6 * (level - 1);
@@ -964,6 +964,146 @@
       res: { fire: 30 },
       look: { shape: "tall", body: "#3c3c46", eye: "#ff9a2e", size: 1.05 }
     },
+    // ---- Act 2: the Glass Barrens
+    scorpion: {
+      id: "scorpion",
+      name: "Glass Scorpion",
+      life: 1.2,
+      damage: 1,
+      speed: 1,
+      split: { phys: 0.7, chaos: 0.3 },
+      armour: 1.8,
+      evasion: 0.5,
+      accuracy: 1.1,
+      xp: 1.1,
+      look: { shape: "crab", body: "#9fd8e8", eye: "#ff3b3b", size: 0.95 }
+    },
+    wraith: {
+      id: "wraith",
+      name: "Sand Wraith",
+      life: 0.8,
+      damage: 1.2,
+      speed: 0.8,
+      split: { fire: 0.5, phys: 0.5 },
+      spell: true,
+      armour: 0.3,
+      evasion: 1.4,
+      accuracy: 1,
+      xp: 1.2,
+      look: { shape: "robe", body: "#d9b56b", eye: "#ffffff", size: 1 }
+    },
+    jackal: {
+      id: "jackal",
+      name: "Mirage Jackal",
+      life: 0.7,
+      damage: 0.9,
+      speed: 1.5,
+      split: { phys: 1 },
+      armour: 0.3,
+      evasion: 1.8,
+      accuracy: 1.2,
+      xp: 0.9,
+      look: { shape: "blob", body: "#c4884a", eye: "#fff27a", size: 0.8 }
+    },
+    bleached: {
+      id: "bleached",
+      name: "Bleached Pilgrim",
+      life: 1.1,
+      damage: 1,
+      speed: 0.9,
+      split: { phys: 0.6, lightning: 0.4 },
+      armour: 1,
+      evasion: 0.6,
+      accuracy: 1,
+      xp: 1.1,
+      look: { shape: "tall", body: "#ece3cf", eye: "#3a9bff", size: 1 }
+    },
+    wasp: {
+      id: "wasp",
+      name: "Prism Wasp",
+      life: 0.5,
+      damage: 0.8,
+      speed: 1.8,
+      split: { lightning: 0.7, phys: 0.3 },
+      armour: 0.2,
+      evasion: 2.2,
+      accuracy: 1.3,
+      xp: 0.9,
+      res: { lightning: 30 },
+      look: { shape: "bird", body: "#b8f0ff", eye: "#ff5a36", size: 0.7 }
+    },
+    // ---- Act 3: the Sunfall
+    hound: {
+      id: "hound",
+      name: "Ember Hound",
+      life: 0.9,
+      damage: 1.1,
+      speed: 1.4,
+      split: { fire: 0.6, phys: 0.4 },
+      armour: 0.6,
+      evasion: 1.2,
+      accuracy: 1.2,
+      xp: 1,
+      res: { fire: 40 },
+      look: { shape: "blob", body: "#e2543b", eye: "#ffe066", size: 0.9 }
+    },
+    ashwalker: {
+      id: "ashwalker",
+      name: "Ash Walker",
+      life: 1.4,
+      damage: 1.1,
+      speed: 0.8,
+      split: { phys: 0.5, fire: 0.5 },
+      armour: 1.6,
+      evasion: 0.4,
+      accuracy: 1,
+      xp: 1.2,
+      res: { fire: 30 },
+      look: { shape: "tall", body: "#5b5450", eye: "#ff9a2e", size: 1.1 }
+    },
+    cinderbat: {
+      id: "cinderbat",
+      name: "Cinder Bat",
+      life: 0.5,
+      damage: 0.8,
+      speed: 1.9,
+      split: { fire: 1 },
+      armour: 0.2,
+      evasion: 2,
+      accuracy: 1.3,
+      xp: 0.9,
+      res: { fire: 50 },
+      look: { shape: "bird", body: "#3c2f2f", eye: "#ff5a36", size: 0.75 }
+    },
+    magmacrab: {
+      id: "magmacrab",
+      name: "Magma Carapace",
+      life: 1.8,
+      damage: 0.9,
+      speed: 0.7,
+      split: { fire: 0.5, phys: 0.5 },
+      armour: 2.6,
+      evasion: 0.2,
+      accuracy: 0.9,
+      xp: 1.3,
+      res: { fire: 50, cold: -20 },
+      look: { shape: "crab", body: "#7a2e1f", eye: "#ffc233", size: 1.05 }
+    },
+    sunpriest: {
+      id: "sunpriest",
+      name: "Sunless Priest",
+      life: 0.9,
+      damage: 1.4,
+      speed: 0.6,
+      split: { fire: 0.4, chaos: 0.6 },
+      spell: true,
+      armour: 0.4,
+      evasion: 0.7,
+      accuracy: 1,
+      xp: 1.4,
+      res: { chaos: 30 },
+      look: { shape: "robe", body: "#2b2233", eye: "#ffc233", size: 1.05 }
+    },
     // ---- bosses
     tidewarden: {
       id: "tidewarden",
@@ -994,10 +1134,117 @@
       res: { chaos: 30, fire: 10, cold: 10, lightning: 10 },
       xp: 10,
       look: { shape: "robe", body: "#6b4a7a", eye: "#ffd84a", size: 1.5 }
+    },
+    drownedknight: {
+      id: "drownedknight",
+      name: "The Drowned Knight",
+      boss: true,
+      life: 14,
+      damage: 2,
+      speed: 0.9,
+      split: { phys: 0.8, cold: 0.2 },
+      armour: 2.2,
+      evasion: 0.5,
+      accuracy: 1.2,
+      res: { cold: 30, fire: 15, lightning: 15, chaos: 15 },
+      xp: 10,
+      look: { shape: "tall", body: "#4f6d7a", eye: "#9ff3ff", size: 1.7 }
+    },
+    sandwright: {
+      id: "sandwright",
+      name: "The Sandwright",
+      boss: true,
+      life: 16,
+      damage: 2,
+      speed: 0.7,
+      split: { phys: 0.6, fire: 0.4 },
+      armour: 2,
+      evasion: 0.4,
+      accuracy: 1.1,
+      res: { fire: 30, cold: 15, lightning: 15, chaos: 20 },
+      xp: 12,
+      look: { shape: "giant", body: "#c9a15a", eye: "#fff6d0", size: 1.6 }
+    },
+    mirrorwarden: {
+      id: "mirrorwarden",
+      name: "The Mirror Warden",
+      boss: true,
+      life: 18,
+      damage: 2.2,
+      speed: 0.9,
+      split: { lightning: 0.5, phys: 0.5 },
+      armour: 1,
+      evasion: 1.5,
+      accuracy: 1.3,
+      res: { lightning: 40, fire: 25, cold: 25, chaos: 25 },
+      xp: 14,
+      look: { shape: "tall", body: "#a8e6f5", eye: "#ffffff", size: 1.7 }
+    },
+    glassregent: {
+      id: "glassregent",
+      name: "The Glass Regent",
+      boss: true,
+      life: 28,
+      damage: 2.6,
+      speed: 0.75,
+      split: { lightning: 0.4, fire: 0.3, phys: 0.3 },
+      armour: 1.4,
+      evasion: 1,
+      accuracy: 1.3,
+      res: { lightning: 40, fire: 30, cold: 30, chaos: 25 },
+      xp: 22,
+      look: { shape: "robe", body: "#7fd1ff", eye: "#ffffff", size: 1.9 }
+    },
+    cindermatron: {
+      id: "cindermatron",
+      name: "The Cinder Matron",
+      boss: true,
+      life: 20,
+      damage: 2.4,
+      speed: 0.8,
+      split: { fire: 0.7, chaos: 0.3 },
+      armour: 1.2,
+      evasion: 0.8,
+      accuracy: 1.2,
+      res: { fire: 50, cold: 20, lightning: 25, chaos: 30 },
+      xp: 16,
+      look: { shape: "robe", body: "#b0412a", eye: "#ffe066", size: 1.8 }
+    },
+    emberjudge: {
+      id: "emberjudge",
+      name: "The Ember Judge",
+      boss: true,
+      life: 22,
+      damage: 2.5,
+      speed: 0.85,
+      split: { fire: 0.5, phys: 0.5 },
+      armour: 2,
+      evasion: 0.8,
+      accuracy: 1.3,
+      res: { fire: 40, cold: 30, lightning: 30, chaos: 30 },
+      xp: 18,
+      look: { shape: "tall", body: "#ff9a2e", eye: "#111111", size: 1.8 }
+    },
+    lastdawn: {
+      id: "lastdawn",
+      name: "The Last Dawn",
+      boss: true,
+      life: 34,
+      damage: 2.8,
+      speed: 0.7,
+      split: { fire: 0.5, lightning: 0.2, chaos: 0.3 },
+      armour: 1.6,
+      evasion: 1,
+      accuracy: 1.4,
+      res: { fire: 50, cold: 35, lightning: 35, chaos: 35 },
+      xp: 30,
+      look: { shape: "giant", body: "#ffc233", eye: "#ff3b1f", size: 2 }
     }
   };
 
   // src/core/data/zones.ts
+  var ACT_BOSS_POINTS = 2;
+  var TRIAL_POINTS = 2;
   var ZONES = {
     a1_shore: {
       id: "a1_shore",
@@ -1083,7 +1330,233 @@
       champion: 0.2,
       boss: "tidewarden",
       palette: ["#1f3b45", "#2c4f58", "#dff7ff"],
-      story: "The Tide-Warden was sworn to keep the gate shut. Three hundred years underwater changed what it thinks the oath means."
+      story: "The Tide-Warden was sworn to keep the gate shut. Three hundred years underwater changed what it thinks the oath means.",
+      bossText: "The Warden sinks. For the first time in three centuries, the gate stays shut on its own."
+    },
+    a1_trial: {
+      id: "a1_trial",
+      act: 1,
+      name: "Trial of Salt",
+      level: 11,
+      packs: 4,
+      packSize: [4, 5],
+      monsters: ["drowned", "crab", "eel"],
+      champion: 0.3,
+      boss: "drownedknight",
+      trial: true,
+      palette: ["#2a3b44", "#8f9a93", "#9ff3ff"],
+      story: "Under the chapel is a hall where the drowned order tested its knights. One of them never stopped testing.",
+      bossText: "The Drowned Knight kneels and offers you its oath. Your ember takes it."
+    },
+    // ---- Act 2: the Glass Barrens
+    a2_dunes: {
+      id: "a2_dunes",
+      act: 2,
+      name: "The Glass Dunes",
+      level: 15,
+      packs: 8,
+      packSize: [3, 5],
+      monsters: ["jackal", "scorpion", "bleached"],
+      champion: 0.12,
+      palette: ["#f0c77a", "#e7b465", "#ffffff"],
+      story: "Beyond the gate the sea gives way to sand, and the sand gives way to glass. The sun fell hot here."
+    },
+    a2_mirage: {
+      id: "a2_mirage",
+      act: 2,
+      name: "Mirage Road",
+      level: 17,
+      packs: 8,
+      packSize: [3, 5],
+      monsters: ["jackal", "wraith", "wasp"],
+      champion: 0.12,
+      palette: ["#f4d9a0", "#d9a95b", "#7fd1ff"],
+      story: "The road shows you towns that are not there. The things living in them are real enough."
+    },
+    a2_caravan: {
+      id: "a2_caravan",
+      act: 2,
+      name: "The Last Caravan",
+      level: 19,
+      packs: 7,
+      packSize: [4, 5],
+      monsters: ["bleached", "wraith", "scorpion"],
+      champion: 0.14,
+      boss: "sandwright",
+      palette: ["#d9a066", "#b3773f", "#fff27a"],
+      story: "A caravan still crosses the Barrens, three hundred years late. Its master builds new wagons out of sand and old travellers.",
+      bossText: "The Sandwright's wagons fall apart into dunes. The road ahead is clear."
+    },
+    a2_shards: {
+      id: "a2_shards",
+      act: 2,
+      name: "The Shardfield",
+      level: 21,
+      packs: 9,
+      packSize: [4, 5],
+      monsters: ["wasp", "scorpion", "bleached"],
+      champion: 0.14,
+      palette: ["#bfe6f0", "#9ccfdc", "#ffffff"],
+      story: "Here the glass stands up in blades taller than houses. The wind sings through them."
+    },
+    a2_oasis: {
+      id: "a2_oasis",
+      act: 2,
+      name: "The Dry Oasis",
+      level: 23,
+      packs: 9,
+      packSize: [4, 6],
+      monsters: ["jackal", "wraith", "wasp", "bleached"],
+      champion: 0.15,
+      palette: ["#e8c48a", "#6f8f5a", "#6fd3ff"],
+      story: "Pilgrims still kneel at a spring that dried up before their grandparents were born."
+    },
+    a2_spire: {
+      id: "a2_spire",
+      act: 2,
+      name: "The Prism Spire",
+      level: 25,
+      packs: 9,
+      packSize: [4, 6],
+      monsters: ["wasp", "wraith", "scorpion"],
+      champion: 0.16,
+      palette: ["#a8d8ea", "#7aa9bd", "#ffc233"],
+      story: "A tower grown from one crystal. The light inside it moves on its own."
+    },
+    a2_throne: {
+      id: "a2_throne",
+      act: 2,
+      name: "The Regent's Throne",
+      level: 27,
+      packs: 6,
+      packSize: [4, 6],
+      monsters: ["bleached", "wasp", "wraith"],
+      champion: 0.22,
+      boss: "glassregent",
+      palette: ["#8fc9de", "#5e8fa5", "#ffffff"],
+      story: "The Regent ruled the Barrens in the sun's name. When the sun died, she simply kept ruling.",
+      bossText: "The Regent shatters. In the pieces you can see where the sun came down: north, past the ash."
+    },
+    a2_trial: {
+      id: "a2_trial",
+      act: 2,
+      name: "Trial of Glass",
+      level: 23,
+      packs: 4,
+      packSize: [4, 6],
+      monsters: ["wasp", "scorpion", "bleached"],
+      champion: 0.3,
+      boss: "mirrorwarden",
+      trial: true,
+      palette: ["#d0f0fa", "#a0c8d8", "#ff5a36"],
+      story: "A maze of mirrors where every reflection fights back. The Warden inside has never seen its own face.",
+      bossText: "The Mirror Warden breaks, and for a moment every reflection in the maze bows to you."
+    },
+    // ---- Act 3: the Sunfall
+    a3_ashroad: {
+      id: "a3_ashroad",
+      act: 3,
+      name: "The Ash Road",
+      level: 29,
+      packs: 9,
+      packSize: [4, 5],
+      monsters: ["ashwalker", "hound", "cinderbat"],
+      champion: 0.15,
+      palette: ["#5a5250", "#3f3836", "#ff9a2e"],
+      story: "Ash falls like snow here, and never stops. The walkers on the road have been walking since the sun fell."
+    },
+    a3_emberwood: {
+      id: "a3_emberwood",
+      act: 3,
+      name: "The Emberwood",
+      level: 31,
+      packs: 9,
+      packSize: [4, 6],
+      monsters: ["hound", "cinderbat", "sunpriest"],
+      champion: 0.15,
+      palette: ["#3b2a26", "#5e3a2a", "#ffc233"],
+      story: "A forest that has been burning for three hundred years without burning down."
+    },
+    a3_rim: {
+      id: "a3_rim",
+      act: 3,
+      name: "The Crater Rim",
+      level: 33,
+      packs: 8,
+      packSize: [4, 6],
+      monsters: ["magmacrab", "ashwalker", "hound"],
+      champion: 0.17,
+      boss: "cindermatron",
+      palette: ["#6b3a2a", "#8a4a2a", "#ffe066"],
+      story: "From the rim you can see it: a wound in the world, glowing. The Matron nests on its edge and raises embers like children.",
+      bossText: "The Matron's brood scatters into sparks. The way down into the crater is open."
+    },
+    a3_molten: {
+      id: "a3_molten",
+      act: 3,
+      name: "The Molten Steps",
+      level: 35,
+      packs: 10,
+      packSize: [4, 6],
+      monsters: ["magmacrab", "cinderbat", "sunpriest"],
+      champion: 0.17,
+      palette: ["#2e1a16", "#7a2e1f", "#ff5a36"],
+      story: "Stairs cut into cooling rock lead down. Someone built them, which means someone wanted to go down there."
+    },
+    a3_bellcourt: {
+      id: "a3_bellcourt",
+      act: 3,
+      name: "The Bell Court",
+      level: 37,
+      packs: 10,
+      packSize: [4, 6],
+      monsters: ["sunpriest", "ashwalker", "hound"],
+      champion: 0.18,
+      boss: "emberjudge",
+      palette: ["#3c2f2f", "#6b5a4a", "#ffd84a"],
+      story: "The priests of the dead sun hold court here and judge every ember that comes down the steps.",
+      bossText: "The Judge's bell cracks. The court is adjourned for good."
+    },
+    a3_heart: {
+      id: "a3_heart",
+      act: 3,
+      name: "The Heart of the Crater",
+      level: 39,
+      packs: 10,
+      packSize: [5, 6],
+      monsters: ["magmacrab", "sunpriest", "cinderbat", "hound"],
+      champion: 0.2,
+      palette: ["#1c1010", "#5a1f14", "#ffc233"],
+      story: "Heat and light and a sound like breathing. Every ember in the March came from here."
+    },
+    a3_sunfall: {
+      id: "a3_sunfall",
+      act: 3,
+      name: "The Sunfall",
+      level: 41,
+      packs: 6,
+      packSize: [5, 6],
+      monsters: ["sunpriest", "ashwalker", "hound"],
+      champion: 0.25,
+      boss: "lastdawn",
+      palette: ["#120c0c", "#3a1a10", "#ffffff"],
+      story: "At the bottom lies what is left of the sun. It is not dead. It is waiting for someone to carry it back up.",
+      bossText: "The Last Dawn goes quiet in your hands. Past the crater, the Cinderlands stretch on forever. Maps will lead you there."
+    },
+    a3_trial: {
+      id: "a3_trial",
+      act: 3,
+      name: "Trial of Embers",
+      level: 36,
+      packs: 4,
+      packSize: [5, 6],
+      monsters: ["hound", "magmacrab", "ashwalker"],
+      champion: 0.3,
+      boss: "emberjudge",
+      trial: true,
+      palette: ["#2a1410", "#6a2a1a", "#ffe066"],
+      story: "The priests' old proving ground. Nobody has passed it since the fall.",
+      bossText: "The proving fire dies down. Whatever you are becoming, the ember approves."
     }
   };
   var ACTS = [
@@ -1091,10 +1564,29 @@
       id: 1,
       name: "The Drowned Road",
       zones: ["a1_shore", "a1_saltmire", "a1_chapel", "a1_cliffs", "a1_village", "a1_floodgate", "a1_lock"],
-      intro: "The road inland starts under the sea."
+      trial: "a1_trial",
+      intro: "The road inland starts under the sea.",
+      outro: "The gate is shut and the road is dry. Beyond it, the light is wrong: too bright, too white. Glass."
+    },
+    {
+      id: 2,
+      name: "The Glass Barrens",
+      zones: ["a2_dunes", "a2_mirage", "a2_caravan", "a2_shards", "a2_oasis", "a2_spire", "a2_throne"],
+      trial: "a2_trial",
+      intro: "Where the sun fell hottest, the desert turned to glass.",
+      outro: "The Regent is gone and the Barrens are nobody's now. North, the sky is the colour of ash."
+    },
+    {
+      id: 3,
+      name: "The Sunfall",
+      zones: ["a3_ashroad", "a3_emberwood", "a3_rim", "a3_molten", "a3_bellcourt", "a3_heart", "a3_sunfall"],
+      trial: "a3_trial",
+      intro: "The crater where the sun came down. Every ember started here.",
+      outro: "You hold what is left of the sun. It is not enough to light the March. Not yet. The Cinderlands wait beyond the crater."
     }
   ];
   var ZONE_ORDER = ACTS.flatMap((a) => a.zones);
+  var TRIAL_AFTER = { a1_trial: "a1_chapel", a2_trial: "a2_oasis", a3_trial: "a3_bellcourt" };
 
   // src/core/data/passives.ts
   var m2 = (stat, kind, value, tags) => tags ? { stat, kind, value, tags } : { stat, kind, value };
@@ -1358,40 +1850,137 @@
   ];
   var RELICS = Object.fromEntries(list3.map((x) => [x.id, x]));
 
+  // src/core/data/ascendancies.ts
+  var m3 = (stat, kind, value, tags) => tags ? { stat, kind, value, tags } : { stat, kind, value };
+  var list4 = [
+    {
+      id: "bastion",
+      cls: "vanguard",
+      name: "Bastion",
+      color: "#9aa4b2",
+      blurb: "The wall that walks. Hard to hurt, harder to kill.",
+      nodes: [
+        { id: "bastion_1", name: "Shield Wall", mods: [m3("block", "flat", 8), m3("armour", "inc", 30)] },
+        { id: "bastion_2", name: "Oathbound", mods: [m3("life", "inc", 12)] },
+        { id: "bastion_3", name: "Tidebreaker", mods: [m3("dmgTaken", "more", -10)] },
+        { id: "bastion_4", name: "Salt in the Wound", mods: [m3("lifeRegenPct", "flat", 2)] },
+        { id: "bastion_5", name: "Iron Answer", mods: [m3("damage", "more", 12), m3("armour", "more", 15)] },
+        { id: "bastion_6", name: "Unmoved", mods: [m3("maxRes.fire", "flat", 3), m3("maxRes.cold", "flat", 3), m3("maxRes.lightning", "flat", 3)] }
+      ]
+    },
+    {
+      id: "reaver",
+      cls: "vanguard",
+      name: "Reaver",
+      color: "#e2543b",
+      blurb: "The ember wants blood. Give it some.",
+      nodes: [
+        { id: "reaver_1", name: "Red Harvest", mods: [m3("damage", "more", 15, ["melee"])] },
+        { id: "reaver_2", name: "Thirst", mods: [m3("leech", "flat", 2), m3("lifeOnKill", "flat", 20)] },
+        { id: "reaver_3", name: "Frenzy", mods: [m3("attackSpeed", "more", 12)] },
+        { id: "reaver_4", name: "Executioner", mods: [m3("critChance", "inc", 60), m3("critMulti", "flat", 30)] },
+        { id: "reaver_5", name: "Wide Butchery", mods: [m3("area", "inc", 35)] },
+        { id: "reaver_6", name: "Blood for Ember", mods: [m3("damage", "more", 10), m3("life", "inc", 8)] }
+      ]
+    },
+    {
+      id: "windrunner",
+      cls: "strider",
+      name: "Windrunner",
+      color: "#19b3a3",
+      blurb: "Never where the blow lands.",
+      nodes: [
+        { id: "windrunner_1", name: "Slipstream", mods: [m3("evasion", "more", 25)] },
+        { id: "windrunner_2", name: "Long Road", mods: [m3("moveSpeed", "inc", 20), m3("flaskCharges", "inc", 30)] },
+        { id: "windrunner_3", name: "Arrowstorm", mods: [m3("damage", "more", 15, ["projectile"])] },
+        { id: "windrunner_4", name: "Through and Through", mods: [m3("pierce", "flat", 2)] },
+        { id: "windrunner_5", name: "Tailwind", mods: [m3("attackSpeed", "more", 10), m3("castSpeed", "more", 10)] },
+        { id: "windrunner_6", name: "Gone", mods: [m3("block", "flat", 10), m3("life", "inc", 8)] }
+      ]
+    },
+    {
+      id: "stormcaller",
+      cls: "strider",
+      name: "Stormcaller",
+      color: "#e0b800",
+      blurb: "Carries the squall in a quiver.",
+      nodes: [
+        { id: "stormcaller_1", name: "Charged Air", mods: [m3("damage", "more", 18, ["lightning"])] },
+        { id: "stormcaller_2", name: "Grounded", mods: [m3("res.lightning", "flat", 30), m3("maxRes.lightning", "flat", 5)] },
+        { id: "stormcaller_3", name: "Split the Sky", mods: [m3("pen.lightning", "flat", 20)] },
+        { id: "stormcaller_4", name: "Static Eye", mods: [m3("critChance", "inc", 70)] },
+        { id: "stormcaller_5", name: "Thunderclap", mods: [m3("critMulti", "flat", 40)] },
+        { id: "stormcaller_6", name: "Stormborn", mods: [m3("convert.lightning", "flat", 30), m3("damage", "more", 8)] }
+      ]
+    },
+    {
+      id: "lumen",
+      cls: "arcanist",
+      name: "Lumen",
+      color: "#b9a4ff",
+      blurb: "A lamp that learned to fight.",
+      nodes: [
+        { id: "lumen_1", name: "Halo", mods: [m3("energyShield", "more", 25)] },
+        { id: "lumen_2", name: "Clear Mind", mods: [m3("manaRegen", "flat", 10), m3("manaCost", "inc", -20)] },
+        { id: "lumen_3", name: "Litany of Light", mods: [m3("damage", "more", 15, ["spell"])] },
+        { id: "lumen_4", name: "Quick Tongue", mods: [m3("castSpeed", "more", 12)] },
+        { id: "lumen_5", name: "Radiance", mods: [m3("area", "inc", 30), m3("pierce", "flat", 1)] },
+        { id: "lumen_6", name: "Undimmed", mods: [m3("dmgTaken", "more", -8), m3("energyShield", "inc", 20)] }
+      ]
+    },
+    {
+      id: "hexwright",
+      cls: "arcanist",
+      name: "Hexwright",
+      color: "#8b5cf6",
+      blurb: "Writes curses into the ember's margins.",
+      nodes: [
+        { id: "hexwright_1", name: "Blight Script", mods: [m3("damage", "more", 20, ["chaos"])] },
+        { id: "hexwright_2", name: "Rime Script", mods: [m3("damage", "more", 15, ["cold"]), m3("pen.cold", "flat", 10)] },
+        { id: "hexwright_3", name: "Hollow Ward", mods: [m3("res.chaos", "flat", 40)] },
+        { id: "hexwright_4", name: "Unravel", mods: [m3("pen.fire", "flat", 12), m3("pen.lightning", "flat", 12), m3("pen.chaos", "flat", 12)] },
+        { id: "hexwright_5", name: "Marked for Ruin", mods: [m3("critChance", "inc", 50), m3("damage", "more", 8)] },
+        { id: "hexwright_6", name: "Last Word", mods: [m3("damage", "more", 12, ["spell"]), m3("life", "inc", 8)] }
+      ]
+    }
+  ];
+  var ASCENDANCIES = Object.fromEntries(list4.map((a) => [a.id, a]));
+  var ASC_NODES = Object.fromEntries(list4.flatMap((a) => a.nodes.map((n) => [n.id, { ...n, asc: a.id }])));
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
     constructor(mods = []) {
-      for (const m3 of mods) this.add(m3);
+      for (const m4 of mods) this.add(m4);
     }
-    add(m3) {
-      let list4 = this.by.get(m3.stat);
-      if (!list4) this.by.set(m3.stat, list4 = []);
-      list4.push(m3);
+    add(m4) {
+      let list5 = this.by.get(m4.stat);
+      if (!list5) this.by.set(m4.stat, list5 = []);
+      list5.push(m4);
     }
     addAll(mods) {
-      for (const m3 of mods) this.add(m3);
+      for (const m4 of mods) this.add(m4);
     }
     /** Every modifier for a stat (for breakdowns). */
     mods(stat) {
       return this.by.get(stat) ?? [];
     }
-    static applies(m3, ctx) {
-      if (!m3.tags || m3.tags.length === 0) return true;
+    static applies(m4, ctx) {
+      if (!m4.tags || m4.tags.length === 0) return true;
       if (!ctx) return false;
-      for (const t of m3.tags) if (!ctx.has(t)) return false;
+      for (const t of m4.tags) if (!ctx.has(t)) return false;
       return true;
     }
     /** Sum of flat or inc values. */
     sum(stat, kind, ctx) {
       let s = 0;
-      for (const m3 of this.by.get(stat) ?? []) if (m3.kind === kind && _StatBag.applies(m3, ctx)) s += m3.value;
+      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === kind && _StatBag.applies(m4, ctx)) s += m4.value;
       return s;
     }
     /** Product of (1 + more/100). */
     more(stat, ctx) {
       let p = 1;
-      for (const m3 of this.by.get(stat) ?? []) if (m3.kind === "more" && _StatBag.applies(m3, ctx)) p *= 1 + m3.value / 100;
+      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === "more" && _StatBag.applies(m4, ctx)) p *= 1 + m4.value / 100;
       return p;
     }
     flat(stat, ctx) {
@@ -1489,8 +2078,8 @@
     }
   }
   function pickRarity(rng, bonus = 0) {
-    const m3 = 1 + bonus / 100;
-    const rare = 0.08 * m3, ench = 0.35 * Math.sqrt(m3);
+    const m4 = 1 + bonus / 100;
+    const rare = 0.08 * m4, ench = 0.35 * Math.sqrt(m4);
     const r3 = rng.next();
     if (r3 < rare) return "rare";
     if (r3 < rare + ench) return "enchanted";
@@ -1516,29 +2105,29 @@
     const pool = Object.values(RELICS).filter((r3) => r3.level <= ilvl);
     const def2 = rng.weighted(pool, (r3) => r3.weight);
     if (!def2) return null;
-    return { uid, base: def2.base, ilvl, rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m3) => rng.int(m3.range[0], m3.range[1])) };
+    return { uid, base: def2.base, ilvl, rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m4) => rng.int(m4.range[0], m4.range[1])) };
   }
   function relicLines(item) {
     const def2 = relicOf(item);
     if (!def2) return [];
-    return def2.mods.map((m3, i) => m3.text.replace("{0}", String(item.relicRolls?.[i] ?? m3.range[0])));
+    return def2.mods.map((m4, i) => m4.text.replace("{0}", String(item.relicRolls?.[i] ?? m4.range[0])));
   }
   function rawMods(item) {
     const out = [];
     const b = baseOf(item);
     const src = itemLabel(item);
-    for (const m3 of b.implicit ?? []) out.push({ ...m3, src });
+    for (const m4 of b.implicit ?? []) out.push({ ...m4, src });
     const relic = item.relic ? RELICS[item.relic] : void 0;
-    if (relic) relic.mods.forEach((m3, i) => {
-      const mod = { stat: m3.stat, kind: m3.kind, value: item.relicRolls?.[i] ?? m3.range[0], src };
-      if (m3.tags) mod.tags = m3.tags;
+    if (relic) relic.mods.forEach((m4, i) => {
+      const mod = { stat: m4.stat, kind: m4.kind, value: item.relicRolls?.[i] ?? m4.range[0], src };
+      if (m4.tags) mod.tags = m4.tags;
       out.push(mod);
     });
     for (const a of item.affixes) {
       const def2 = affixOf(a);
-      def2.mods.forEach((m3, i) => {
-        const mod = { stat: m3.stat, kind: m3.kind, value: a.rolls[i] ?? 0, src };
-        if (m3.tags) mod.tags = m3.tags;
+      def2.mods.forEach((m4, i) => {
+        const mod = { stat: m4.stat, kind: m4.kind, value: a.rolls[i] ?? 0, src };
+        if (m4.tags) mod.tags = m4.tags;
         out.push(mod);
       });
     }
@@ -1547,8 +2136,8 @@
   function itemStats(item) {
     const b = baseOf(item);
     const mods = rawMods(item);
-    const local = (stat) => mods.filter((m3) => m3.stat === stat).reduce((s, m3) => s + m3.value, 0);
-    const out = { global: mods.filter((m3) => !m3.stat.startsWith("local.")) };
+    const local = (stat) => mods.filter((m4) => m4.stat === stat).reduce((s, m4) => s + m4.value, 0);
+    const out = { global: mods.filter((m4) => !m4.stat.startsWith("local.")) };
     if (b.weapon) {
       const inc = 1 + local("local.physInc") / 100;
       const added = {};
@@ -1618,7 +2207,32 @@
       if (!n) continue;
       for (const md of n.mods) out.push({ ...md, src: n.name });
     }
+    for (const id of hero.ascNodes ?? []) {
+      const n = ASC_NODES[id];
+      if (!n || n.asc !== hero.asc) continue;
+      for (const md of n.mods) out.push({ ...md, src: n.name });
+    }
     return out;
+  }
+  var ascPointsLeft = (hero) => (hero.ascPoints ?? 0) - (hero.ascNodes?.length ?? 0);
+  function chooseAscendancy(state, id) {
+    const a = ASCENDANCIES[id];
+    if (!a || a.cls !== state.hero.cls) return "not for this calling";
+    if (state.hero.asc) return "already chosen";
+    if ((state.hero.ascPoints ?? 0) <= 0) return "complete a trial first";
+    state.hero.asc = id;
+    state.hero.rev++;
+    return null;
+  }
+  function takeAscNode(state, id) {
+    const hero = state.hero;
+    const n = ASC_NODES[id];
+    if (!n || n.asc !== hero.asc) return "not in your ascendancy";
+    if (hero.ascNodes.includes(id)) return "already taken";
+    if (ascPointsLeft(hero) <= 0) return "no ascendancy points";
+    hero.ascNodes.push(id);
+    hero.rev++;
+    return null;
   }
   function canAllocate(hero, id) {
     const n = PASSIVES[id];
@@ -1800,7 +2414,7 @@
     }
     const bag = new StatBag();
     bag.addAll(allMods(heroBag));
-    for (const m3 of def2.mods ?? []) bag.add(m3);
+    for (const m4 of def2.mods ?? []) bag.add(m4);
     const tags = /* @__PURE__ */ new Set([...def2.tags, def2.kind]);
     const slots = supportSlots(L);
     const used = [];
@@ -1813,7 +2427,7 @@
         continue;
       }
       used.push(id);
-      for (const m3 of sup.mods) bag.add({ ...m3, src: sup.name });
+      for (const m4 of sup.mods) bag.add({ ...m4, src: sup.name });
       manaMult *= sup.manaMult;
       extraTargets += sup.targets ?? 0;
     }
@@ -1978,7 +2592,7 @@
       seed,
       createdAt: opts.now,
       simTo: opts.now,
-      hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, rev: 0 },
+      hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, ascNodes: [], ascPoints: 0, rev: 0 },
       stash: [],
       stashCap: 60,
       dust: 0,
@@ -2288,7 +2902,7 @@
           h2.flaskRate = flaskAmount(state.hero.level, sheet) / FLASK_S;
           ev.flask?.();
         }
-        if (run.monsters.every((m3) => m3.life <= 0)) {
+        if (run.monsters.every((m4) => m4.life <= 0)) {
           run.pack++;
           const last = run.pack > run.packs || run.pack === run.packs && !run.boss;
           run.phase = last ? "done" : "travel";
@@ -2302,16 +2916,16 @@
   function heroAttack(state, run, sheet, rng, ev) {
     const sk = sheet.skill;
     const alive = [];
-    run.monsters.forEach((m3, i) => {
-      if (m3.life > 0) alive.push(i);
+    run.monsters.forEach((m4, i) => {
+      if (m4.life > 0) alive.push(i);
     });
     const targets = alive.slice(0, sk.targets);
     ev.heroUse?.(sk.fx, targets);
     let dealt = 0;
     for (const i of targets) {
-      const m3 = run.monsters[i];
-      const d = MONSTERS[m3.def];
-      if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m3.level) * d.evasion))) {
+      const m4 = run.monsters[i];
+      const d = MONSTERS[m4.def];
+      if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m4.level) * d.evasion))) {
         ev.heroMiss?.(i);
         continue;
       }
@@ -2322,15 +2936,15 @@
         if (hi <= 0) continue;
         let x = rng.range(lo, hi);
         if (crit) x *= sk.critMulti / 100;
-        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m3.level) * d.armour * 0.5, x);
+        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m4.level) * d.armour * 0.5, x);
         else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
         dmg += Math.max(0, x);
       }
       dmg = Math.max(1, dmg);
-      m3.life -= dmg;
+      m4.life -= dmg;
       dealt += dmg;
       ev.heroHit?.(i, dmg, crit);
-      if (m3.life <= 0) sheet = onKill(state, run, m3, sheet, rng, ev);
+      if (m4.life <= 0) sheet = onKill(state, run, m4, sheet, rng, ev);
     }
     if (sk.leech > 0 && dealt > 0) {
       const h2 = run.hero;
@@ -2342,14 +2956,14 @@
   }
   function monstersAct(run, sheet, rng, ev) {
     const h2 = run.hero;
-    run.monsters.forEach((m3, i) => {
-      if (m3.life <= 0 || h2.life <= 0) return;
-      const d = MONSTERS[m3.def];
-      m3.atk -= DT;
-      if (m3.atk > 0) return;
-      m3.atk += rng.range(0.85, 1.15) / d.speed;
+    run.monsters.forEach((m4, i) => {
+      if (m4.life <= 0 || h2.life <= 0) return;
+      const d = MONSTERS[m4.def];
+      m4.atk -= DT;
+      if (m4.atk > 0) return;
+      m4.atk += rng.range(0.85, 1.15) / d.speed;
       if (!d.spell) {
-        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m3.level) * d.accuracy, sheet.evasion));
+        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m4.level) * d.accuracy, sheet.evasion));
         if (rng.chance(evade)) {
           ev.monsterHit?.(i, 0, "evade");
           return;
@@ -2359,7 +2973,7 @@
         ev.monsterHit?.(i, 0, "block");
         return;
       }
-      const base = monsterDamage(m3.level) * d.damage * (m3.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
+      const base = monsterDamage(m4.level) * d.damage * (m4.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
       let dmg = 0;
       for (const t of DAMAGE_TYPES) {
         const share = d.split[t];
@@ -2377,33 +2991,33 @@
       ev.monsterHit?.(i, dmg, null);
     });
   }
-  function onKill(state, run, m3, sheet, rng, ev) {
-    const d = MONSTERS[m3.def];
+  function onKill(state, run, m4, sheet, rng, ev) {
+    const d = MONSTERS[m4.def];
     const hero = state.hero;
-    const xp = Math.round(monsterXp(m3.level) * d.xp * (m3.champion ? 3 : 1) * xpPenalty(hero.level, m3.level) * sheet.xpGain);
+    const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain);
     run.kills++;
     run.xp += xp;
     state.totals.kills++;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
-    ev.kill?.(m3, xp);
+    ev.kill?.(m4, xp);
     let changed = gainXp(state, xp, ev);
     const qty = 1 + sheet.quantity / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
-    else if (rng.chance((m3.champion ? 0.4 : 0.07) * qty)) drops = 1;
+    else if (rng.chance((m4.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-      const bonus = sheet.rarity + (m3.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const bonus = sheet.rarity + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
       const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
-      const relicChance = (d.boss ? 0.04 : m3.champion ? 0.01 : 3e-3) * (1 + sheet.rarity / 200);
-      const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m3.level) || rollItem(rng, state.nextUid, m3.level, opts);
+      const relicChance = (d.boss ? 0.04 : m4.champion ? 0.01 : 3e-3) * (1 + sheet.rarity / 200);
+      const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m4.level) || rollItem(rng, state.nextUid, m4.level, opts);
       state.nextUid++;
       const r3 = receiveItem(state, item);
       if (r3.equipped) changed = true;
       ev.loot?.(item, r3.kept, r3.equipped);
     }
     const cRolls = d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m3.champion ? 0.12 : 0.02) * qty;
+    const cChance = (d.boss ? 0.6 : m4.champion ? 0.12 : 0.02) * qty;
     for (let k = 0; k < cRolls; k++) {
       if (!rng.chance(cChance)) continue;
       const cur = rng.weighted(CURRENCY_ORDER, (id) => CURRENCIES[id].drop);
@@ -2450,11 +3064,40 @@
       }
     }
   }
+  function firstClear(state, zoneId, ev) {
+    const z = zoneOf(zoneId);
+    const hero = state.hero;
+    if (z.bossText) {
+      pushLog(state, "boss", z.bossText);
+      ev.story?.(z.bossText);
+    }
+    if (z.trial) {
+      hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
+      hero.rev++;
+      pushLog(state, "info", `${z.name} passed: +${TRIAL_POINTS} ascendancy points.`);
+    }
+    const actDef = ACTS.find((a) => a.zones[a.zones.length - 1] === zoneId);
+    if (actDef) {
+      hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
+      hero.rev++;
+      pushLog(state, "info", `Act ${actDef.id} complete: +${ACT_BOSS_POINTS} passive points. ${actDef.outro}`);
+      ev.story?.(actDef.outro);
+    }
+    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
+      if (after === zoneId && !state.world.unlocked.includes(trial)) {
+        state.world.unlocked.push(trial);
+        pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+        ev.zone?.(zoneId, trial, "unlock");
+      }
+    }
+  }
   function finishRun(state, ev) {
     const act = state.activity;
     const run = act.run;
     state.totals.runs++;
+    const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
+    if (first) firstClear(state, run.zone, ev);
     act.streak++;
     act.deaths = 0;
     ev.runDone?.(run.zone);
@@ -2465,7 +3108,15 @@
       pushLog(state, "zone", `${zoneOf(next).name} is open.`);
       ev.zone?.(run.zone, next, "unlock");
     }
-    if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
+    const z = zoneOf(run.zone);
+    if (act.autoPush && z.trial && act.zone === run.zone) {
+      const road = [...ZONE_ORDER].reverse().find((id) => state.world.unlocked.includes(id));
+      if (road) {
+        ev.zone?.(act.zone, road, "push");
+        act.zone = road;
+        act.streak = 0;
+      }
+    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
       ev.zone?.(act.zone, next, "push");
       pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
       act.zone = next;
@@ -2492,13 +3143,14 @@
       dust: state.dust,
       equipped: [],
       best: [],
-      zones: []
+      zones: [],
+      story: []
     };
     const events = {
-      kill: (m3, xp) => {
+      kill: (m4, xp) => {
         report.kills++;
         report.xp += xp;
-        if (MONSTERS[m3.def]?.boss) report.bosses++;
+        if (MONSTERS[m4.def]?.boss) report.bosses++;
       },
       death: () => {
         report.deaths++;
@@ -2517,6 +3169,9 @@
       },
       zone: (_from, to, why) => {
         if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to);
+      },
+      story: (text) => {
+        report.story.push(text);
       }
     };
     return {
@@ -2532,7 +3187,7 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 2;
+  var SAVE_VERSION = 3;
   var MIGRATIONS = {
     // v2 (P2): passive bonus points, loot filter rules, crafting counter.
     1: (s) => {
@@ -2544,6 +3199,12 @@
       ];
       s.craftSeq ??= 0;
       s.currency ??= {};
+      return s;
+    },
+    // v3 (P3): ascendancy nodes and points.
+    2: (s) => {
+      s.hero.ascNodes ??= [];
+      s.hero.ascPoints ??= 0;
       return s;
     }
   };
@@ -2560,9 +3221,9 @@
     if (env.v > target) throw new SaveError(`save is from a newer version (${env.v})`);
     let state = env.state;
     for (let v = env.v; v < target; v++) {
-      const m3 = migrations[v];
-      if (!m3) throw new SaveError(`no migration from version ${v}`);
-      state = m3(state);
+      const m4 = migrations[v];
+      if (!m4) throw new SaveError(`no migration from version ${v}`);
+      state = m4(state);
     }
     return { game: "hollowmarch", v: target, savedAt: typeof env.savedAt === "number" ? env.savedAt : 0, state };
   }
@@ -2629,6 +3290,9 @@
     hero.bonusPoints = typeof hero.bonusPoints === "number" && Number.isFinite(hero.bonusPoints) ? hero.bonusPoints : 0;
     if (!SKILLS[hero.skill]) hero.skill = CLASSES[hero.cls].startSkill;
     hero.supports = Array.isArray(hero.supports) ? hero.supports.filter((id) => SUPPORTS[id]) : [];
+    hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
+    if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc].cls !== hero.cls)) delete hero.asc;
+    hero.ascNodes = Array.isArray(hero.ascNodes) ? hero.ascNodes.filter((id) => ASC_NODES[id]?.asc === hero.asc).slice(0, hero.ascPoints) : [];
     hero.passives = Array.isArray(hero.passives) ? hero.passives.filter((id) => PASSIVES[id] && PASSIVES[id].kind !== "start") : [];
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {
@@ -2652,7 +3316,7 @@
       act.run = null;
     }
     if (act.run && (!ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
-    if (act.run && act.run.monsters.some((m3) => !m3 || !MONSTERS[m3.def])) act.run = null;
+    if (act.run && act.run.monsters.some((m4) => !m4 || !MONSTERS[m4.def])) act.run = null;
     num(act.runIndex, "run index", 0);
     act.streak = Number.isFinite(act.streak) ? act.streak : 0;
     act.deaths = Number.isFinite(act.deaths) ? act.deaths : 0;
@@ -2762,23 +3426,23 @@
       this.background(zone.palette, zone.id);
       const pos = this.positions(state);
       if (run && (run.phase === "fight" || run.phase === "dead")) {
-        run.monsters.forEach((m3, i) => {
+        run.monsters.forEach((m4, i) => {
           const p = pos[i];
-          if (m3.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
+          if (m4.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
           const died = this.dying.get(i);
           const fade = died ? 1 - (now - died) / 400 : 1;
           if (fade <= 0) return;
-          const def2 = MONSTERS[m3.def];
+          const def2 = MONSTERS[m4.def];
           const hit = now - (this.flash.get(i) ?? -1e9) < 90;
           g.globalAlpha = Math.max(0, fade);
-          drawMonster(g, def2, p[0], p[1] + (died ? (1 - fade) * 6 : 0), hit, m3.champion, now);
+          drawMonster(g, def2, p[0], p[1] + (died ? (1 - fade) * 6 : 0), hit, m4.champion, now);
           g.globalAlpha = 1;
           if (!died) {
             const w2 = def2.boss ? 40 : 22;
-            bar(g, p[0] - w2 / 2, p[1] - monsterHeight(def2) - 8, w2, 3, m3.life / m3.maxLife, m3.champion ? "#ffc233" : "#e5383b");
+            bar(g, p[0] - w2 / 2, p[1] - monsterHeight(def2) - 8, w2, 3, m4.life / m4.maxLife, m4.champion ? "#ffc233" : "#e5383b");
           }
         });
-        const boss = run.monsters.find((m3) => MONSTERS[m3.def]?.boss && m3.life > 0);
+        const boss = run.monsters.find((m4) => MONSTERS[m4.def]?.boss && m4.life > 0);
         if (boss) {
           g.fillStyle = "#111";
           g.fillRect(90, 4, 140, 12);
@@ -3278,19 +3942,19 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     return NAMES[stat] ?? stat;
   }
-  function modText(m3) {
-    const tags = m3.tags?.length ? ` (${m3.tags.map((t) => TYPES[t] ?? t).join(", ")})` : "";
-    const name = statName(m3.stat);
-    if (m3.kind === "inc") return `${Math.abs(m3.value)}% ${m3.value >= 0 ? "increased" : "reduced"} ${name}${tags}`;
-    if (m3.kind === "more") return `${Math.abs(m3.value)}% ${m3.value >= 0 ? "more" : "less"} ${name}${tags}`;
-    const sign = m3.value >= 0 ? "+" : "";
-    return name.startsWith("%") ? `${sign}${m3.value}${name}${tags}` : `${sign}${m3.value} ${name}${tags}`;
+  function modText(m4) {
+    const tags = m4.tags?.length ? ` (${m4.tags.map((t) => TYPES[t] ?? t).join(", ")})` : "";
+    const name = statName(m4.stat);
+    if (m4.kind === "inc") return `${Math.abs(m4.value)}% ${m4.value >= 0 ? "increased" : "reduced"} ${name}${tags}`;
+    if (m4.kind === "more") return `${Math.abs(m4.value)}% ${m4.value >= 0 ? "more" : "less"} ${name}${tags}`;
+    const sign = m4.value >= 0 ? "+" : "";
+    return name.startsWith("%") ? `${sign}${m4.value}${name}${tags}` : `${sign}${m4.value} ${name}${tags}`;
   }
 
   // src/core/crafting.ts
   var hasRoom = (item) => {
-    const c = countAffixes(item), m3 = MAX_AFFIXES[item.rarity];
-    return c.prefix < m3.prefix || c.suffix < m3.suffix;
+    const c = countAffixes(item), m4 = MAX_AFFIXES[item.rarity];
+    return c.prefix < m4.prefix || c.suffix < m4.suffix;
   };
   var EFFECTS = {
     kindling: (it, rng) => {
@@ -3502,8 +4166,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         const [x1, y1] = toScreen(n, w2, hh);
         for (const l of n.links) {
           if (l < n.id) continue;
-          const m3 = PASSIVES[l];
-          const [x2, y2] = toScreen(m3, w2, hh);
+          const m4 = PASSIVES[l];
+          const [x2, y2] = toScreen(m4, w2, hh);
           const on = (taken.has(n.id) || n.id === start.id) && (taken.has(l) || l === start.id);
           g.strokeStyle = on ? "#ff5a36" : "#b9ad95";
           g.lineWidth = on ? 5 : 3;
@@ -3571,7 +4235,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       }
       const own = taken.has(n.id);
       info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
-      for (const m3 of n.mods) info.append(h("div", { text: modText(m3) }));
+      for (const m4 of n.mods) info.append(h("div", { text: modText(m4) }));
       if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: KEYSTONE_TEXT[n.name] }));
       if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? "Your ember seat." : "Another calling starts here." }));
       const row = h("div", { class: "row", style: "margin-top:6px" });
@@ -3653,8 +4317,56 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       draw();
     }
     showInfo(null);
+    const asc = ascCard(c);
     requestAnimationFrame(draw);
-    return h("div", { class: "col" }, head, canvas, info);
+    return h("div", { class: "col" }, head, canvas, info, asc);
+  }
+  function ascCard(c) {
+    const hero = c.state.hero;
+    const card = h("div", { class: "card col" });
+    const left = ascPointsLeft(hero);
+    card.append(h("h3", { text: `Ascendancy${hero.asc ? `: ${ASCENDANCIES[hero.asc].name}` : ""} (${left} point${left === 1 ? "" : "s"} left)` }));
+    if (!hero.asc) {
+      card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? "Choose your path. This is permanent for this hero." : "Pass a Trial (the first opens in Act 1 after the Sunken Chapel) to earn ascendancy points." }));
+      const row = h("div", { class: "grid2" });
+      for (const a2 of Object.values(ASCENDANCIES).filter((x) => x.cls === hero.cls)) {
+        row.append(h(
+          "div",
+          { class: "skill", style: `border-left:10px solid ${a2.color}` },
+          h(
+            "div",
+            { class: "grow" },
+            h("div", { class: "nm", text: a2.name }),
+            h("div", { class: "ds", text: a2.blurb }),
+            ...a2.nodes.map((n) => h("div", { class: "ds muted", text: `${n.name}: ${n.mods.map(modText).join(", ")}` })),
+            h("button", {
+              class: "btn",
+              style: "margin-top:6px",
+              text: `Become ${a2.name}`,
+              attrs: hero.ascPoints > 0 ? {} : { disabled: "" },
+              on: { click: () => c.act((s) => chooseAscendancy(s, a2.id)) }
+            })
+          )
+        ));
+      }
+      card.append(row);
+      return card;
+    }
+    const a = ASCENDANCIES[hero.asc];
+    const grid = h("div", { class: "grid2" });
+    for (const n of a.nodes) {
+      const own = hero.ascNodes.includes(n.id);
+      grid.append(h(
+        "div",
+        { class: `skill${own ? " on" : ""}`, on: { click: () => {
+          if (!own) c.act((s) => takeAscNode(s, n.id));
+        } } },
+        h("div", { class: "grow" }, h("div", { class: "nm", text: n.name }), ...n.mods.map((md) => h("div", { class: "ds", text: modText(md) }))),
+        h("div", { class: "tag", text: own ? "taken" : left > 0 ? "take" : "locked" })
+      ));
+    }
+    card.append(grid);
+    return card;
   }
 
   // src/ui/views.ts
@@ -3680,7 +4392,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       case "skills":
         return `${s.hero.rev}:${s.hero.level}`;
       case "tree":
-        return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}`;
+        return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
       case "world":
         return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
       case "log":
@@ -3731,10 +4443,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list4 = h("div", { class: "kv" });
-      for (const m3 of mods) list4.append(h("div", { text: m3.src ?? "?" }), h("div", { class: "num", text: `${m3.kind === "flat" ? "+" : ""}${m3.value}${m3.kind === "flat" ? "" : "% " + m3.kind}${m3.tags ? " [" + m3.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list4.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list4, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list5 = h("div", { class: "kv" });
+      for (const m4 of mods) list5.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list5.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list5, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const off = h(
       "div",
@@ -3796,9 +4508,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
     const el = h("div", { class: "col", style: "gap:3px" });
     for (const t of DAMAGE_TYPES) {
-      const m3 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
-      m3.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
-      el.append(m3);
+      const m4 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
+      m4.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
+      el.append(m4);
     }
     return el;
   }
@@ -3834,7 +4546,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     if (b.implicit?.length) {
       card.append(h("hr"));
-      for (const m3 of b.implicit) card.append(h("div", { class: "aff", text: modText(m3) }));
+      for (const m4 of b.implicit) card.append(h("div", { class: "aff", text: modText(m4) }));
     }
     if (item.affixes.length) {
       card.append(h("hr"));
@@ -4058,8 +4770,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       )
     ));
     for (const act of ACTS) {
-      const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: act.intro }));
-      for (const id of act.zones) {
+      if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
+      const done = !!st.world.clears[act.zones[act.zones.length - 1]];
+      const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: done ? act.outro : act.intro }));
+      for (const id of [...act.zones, act.trial]) {
         const z = ZONES[id];
         const open = st.world.unlocked.includes(id);
         const on = st.activity.zone === id;
@@ -4071,7 +4785,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           } } },
           h("div", { class: "tag", text: `L${z.level}` }),
           h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: z.name }), open && z.story ? h("div", { class: "muted", style: "font-size:11px", text: z.story }) : null),
-          z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
+          z.trial ? h("div", { class: "tag", style: "background:var(--violet);color:#fff", text: "trial" }) : z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
           h("div", { class: "tag", text: open ? `${clears} clears` : "locked" })
         );
         card.append(row);
@@ -4228,10 +4942,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   function creationView(onStart) {
     const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
     let cls = Object.keys(CLASSES)[0];
-    const list4 = h("div", { class: "col" });
+    const list5 = h("div", { class: "col" });
     const draw = () => {
-      clear(list4);
-      for (const k of Object.values(CLASSES)) list4.append(h(
+      clear(list5);
+      for (const k of Object.values(CLASSES)) list5.append(h(
         "div",
         { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => {
           cls = k.id;
@@ -4257,7 +4971,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         h("h3", { text: "Name your Kindled" }),
         name,
         h("h3", { text: "Choose a calling" }),
-        list4,
+        list5,
         h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })
       )
     );
@@ -4519,7 +5233,13 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       this.makeCtx();
       this.sig = "";
       this.renderTab(true);
-      const ev = this.battle.events(() => performance.now(), () => this.state);
+      const ev = {
+        ...this.battle.events(() => performance.now(), () => this.state),
+        story: (text) => this.showStory(text),
+        zone: (_from, to, why) => {
+          if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`);
+        }
+      };
       this.timer = window.setInterval(() => {
         if (!this.state || this.busy) return;
         if (Date.now() - this.state.simTo > 3e4) {
@@ -4559,7 +5279,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           this.renderTab(true);
           void this.save();
         },
-        toast: (m3) => this.toast(m3),
+        toast: (m4) => this.toast(m4),
         modal: (el) => this.modal(el),
         sel: {},
         rerender: () => {
@@ -4643,9 +5363,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       setTimeout(() => t.remove(), 2200);
     }
     modal(content) {
-      const m3 = h("div", { class: "modal" }, content);
-      this.win.append(m3);
-      return () => m3.remove();
+      const m4 = h("div", { class: "modal" }, content);
+      this.win.append(m4);
+      return () => m4.remove();
     }
     showCreation() {
       clear(this.body);
@@ -4660,6 +5380,11 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         await this.save();
         this.startLoop();
       }));
+    }
+    showStory(text) {
+      const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), h("div", { class: "story", text }));
+      const close = this.modal(card);
+      card.append(h("button", { class: "btn", text: "Onward", on: { click: () => close() } }));
     }
     showReport(r3) {
       const rows = [
@@ -4677,6 +5402,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       const kvEl = h("div", { class: "kv" });
       for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
       const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
+      for (const t of r3.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
       if (r3.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r3.zones.join(", ")}` }));
       if (r3.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
       if (r3.best.length) {
@@ -4770,15 +5496,15 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     }
   }
   function memoryStore() {
-    const m3 = /* @__PURE__ */ new Map();
+    const m4 = /* @__PURE__ */ new Map();
     return {
       kind: "memory",
-      get: async (key) => structuredClone(m3.get(key)),
+      get: async (key) => structuredClone(m4.get(key)),
       put: async (key, value) => {
-        m3.set(key, structuredClone(value));
+        m4.set(key, structuredClone(value));
       },
       del: async (key) => {
-        m3.delete(key);
+        m4.delete(key);
       }
     };
   }

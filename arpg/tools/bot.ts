@@ -3,8 +3,8 @@
 
 import { buildScore, setSkill, setSupports, sheetOf } from "../src/core/game";
 import { deriveSheet, supportSlots } from "../src/core/character";
-import { PASSIVES, SKILLS, SUPPORTS } from "../src/core/data";
-import { canAllocate, pointsLeft } from "../src/core/passives";
+import { ASCENDANCIES, PASSIVES, SKILLS, SUPPORTS } from "../src/core/data";
+import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
 
 const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
@@ -42,6 +42,22 @@ export function botTune(state: GameState): void {
         }
         hero.passives.push(pick.id);
         hero.rev++;
+    }
+    // Ascendancy: pick the one whose full node set scores best, then take nodes greedily.
+    if (!hero.asc && hero.ascPoints > 0) {
+        let pick = "", ps = -1;
+        for (const a of Object.values(ASCENDANCIES).filter(x => x.cls === hero.cls)) {
+            const v = score({ ...hero, asc: a.id, ascNodes: a.nodes.map(n => n.id) });
+            if (v > ps) { ps = v; pick = a.id; }
+        }
+        chooseAscendancy(state, pick);
+    }
+    while (hero.asc && ascPointsLeft(hero) > 0) {
+        const open = ASCENDANCIES[hero.asc]!.nodes.filter(n => !hero.ascNodes.includes(n.id));
+        if (!open.length) break;
+        let pick = open[0]!, ps = -1;
+        for (const n of open) { const v = score({ ...hero, ascNodes: [...hero.ascNodes, n.id] }); if (v > ps) { ps = v; pick = n; } }
+        takeAscNode(state, pick.id);
     }
     void sheetOf(state);
 }

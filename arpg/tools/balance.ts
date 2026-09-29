@@ -3,7 +3,7 @@
 
 import { advance, type SimEvents } from "../src/core/sim/engine";
 import { newGame, sheetOf } from "../src/core/game";
-import { ZONES } from "../src/core/data";
+import { MONSTERS, ZONES } from "../src/core/data";
 import { botTune } from "./bot";
 
 const HOUR = 3600e3;
@@ -18,7 +18,7 @@ const f = (n: number) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? (n /
 for (let s = 1; s <= seeds; s++) {
     const g = newGame({ name: "Bal", cls, now: 0, seed: 1000 + s });
     let deaths = 0, kills = 0, bossKills = 0;
-    const ev: SimEvents = { death: () => deaths++, kill: m => { kills++; if (m.def in { tidewarden: 1, keeper: 1 }) bossKills++; } };
+    const ev: SimEvents = { death: () => deaths++, kill: m => { kills++; if (MONSTERS[m.def]?.boss) bossKills++; } };
     console.log(`\n== ${cls} seed ${s}`);
     botTune(g);
     console.log("hours  lvl  zone                      dps      pack    life   ehpPhys  ehpCold  deaths  kills  stash dust");

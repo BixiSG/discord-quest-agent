@@ -22,12 +22,13 @@ export interface Report {
     equipped: string[];
     best: Item[];
     zones: string[];
+    story: string[];
 }
 
 export function startReport(state: GameState): { report: Report; events: SimEvents; finish(state: GameState): Report } {
     const report: Report = {
         from: state.simTo, to: state.simTo, levelFrom: state.hero.level, levelTo: state.hero.level, xp: 0,
-        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, dust: state.dust, equipped: [], best: [], zones: [],
+        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, dust: state.dust, equipped: [], best: [], zones: [], story: [],
     };
     const events: SimEvents = {
         kill: (m, xp) => { report.kills++; report.xp += xp; if (MONSTERS[m.def]?.boss) report.bosses++; },
@@ -43,6 +44,7 @@ export function startReport(state: GameState): { report: Report; events: SimEven
             }
         },
         zone: (_from, to, why) => { if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to); },
+        story: text => { report.story.push(text); },
     };
     return {
         report, events,

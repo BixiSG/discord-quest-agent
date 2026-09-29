@@ -2,7 +2,7 @@
 // drag and resize. Owns the game state while open. Closed means closed: no
 // timers, no drawing; the next open catches up from the saved timestamp.
 
-import { advance, STEP_MS } from "../core/sim/engine";
+import { advance, STEP_MS, type SimEvents } from "../core/sim/engine";
 import { startReport, type Report } from "../core/sim/report";
 import { newGame, sheetOf } from "../core/game";
 import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type SaveEnvelope } from "../core/save";
@@ -242,7 +242,11 @@ export class GameWindow {
         this.makeCtx();
         this.sig = "";
         this.renderTab(true);
-        const ev = this.battle.events(() => performance.now(), () => this.state!);
+        const ev: SimEvents = {
+            ...this.battle.events(() => performance.now(), () => this.state!),
+            story: text => this.showStory(text),
+            zone: (_from, to, why) => { if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`); },
+        };
         this.timer = window.setInterval(() => {
             if (!this.state || this.busy) return;
             // A long gap (sleep, throttled background tab) is replayed quietly, with a report.
@@ -380,6 +384,12 @@ export class GameWindow {
         }));
     }
 
+    private showStory(text: string): void {
+        const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), h("div", { class: "story", text }));
+        const close = this.modal(card);
+        card.append(h("button", { class: "btn", text: "Onward", on: { click: () => close() } }));
+    }
+
     private showReport(r: Report): void {
         const rows: [string, string][] = [
             ["Time away", fmtDuration(r.to - r.from)],
@@ -390,6 +400,7 @@ export class GameWindow {
         const kvEl = h("div", { class: "kv" });
         for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
         const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
+        for (const t of r.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
         if (r.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r.zones.join(", ")}` }));
         if (r.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
         if (r.best.length) {

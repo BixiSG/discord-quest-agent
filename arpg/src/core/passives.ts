@@ -1,7 +1,7 @@
 // Passive tree allocation. The allocated set must stay connected to the
 // hero's class start node.
 
-import { CLASSES, PASSIVES, passivePoints } from "./data";
+import { ASCENDANCIES, ASC_NODES, CLASSES, PASSIVES, passivePoints } from "./data";
 import type { GameState, Hero } from "./state";
 import type { Mod } from "./types";
 
@@ -20,7 +20,37 @@ export function passiveMods(hero: Hero): Mod[] {
         if (!n) continue;
         for (const md of n.mods) out.push({ ...md, src: n.name });
     }
+    for (const id of hero.ascNodes ?? []) {
+        const n = ASC_NODES[id];
+        if (!n || n.asc !== hero.asc) continue;
+        for (const md of n.mods) out.push({ ...md, src: n.name });
+    }
     return out;
+}
+
+// ---- ascendancy ---------------------------------------------------------------
+
+export const ascPointsLeft = (hero: Hero) => (hero.ascPoints ?? 0) - (hero.ascNodes?.length ?? 0);
+
+export function chooseAscendancy(state: GameState, id: string): string | null {
+    const a = ASCENDANCIES[id];
+    if (!a || a.cls !== state.hero.cls) return "not for this calling";
+    if (state.hero.asc) return "already chosen";
+    if ((state.hero.ascPoints ?? 0) <= 0) return "complete a trial first";
+    state.hero.asc = id;
+    state.hero.rev++;
+    return null;
+}
+
+export function takeAscNode(state: GameState, id: string): string | null {
+    const hero = state.hero;
+    const n = ASC_NODES[id];
+    if (!n || n.asc !== hero.asc) return "not in your ascendancy";
+    if (hero.ascNodes.includes(id)) return "already taken";
+    if (ascPointsLeft(hero) <= 0) return "no ascendancy points";
+    hero.ascNodes.push(id);
+    hero.rev++;
+    return null;
 }
 
 export function canAllocate(hero: Hero, id: string): string | null {

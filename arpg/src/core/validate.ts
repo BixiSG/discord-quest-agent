@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { AFFIXES, BASES, CLASSES, MONSTERS, PASSIVES, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
@@ -43,6 +43,9 @@ export function validateState(raw: unknown): GameState {
     hero.bonusPoints = typeof hero.bonusPoints === "number" && Number.isFinite(hero.bonusPoints) ? hero.bonusPoints : 0;
     if (!SKILLS[hero.skill]) hero.skill = CLASSES[hero.cls]!.startSkill;
     hero.supports = Array.isArray(hero.supports) ? hero.supports.filter(id => SUPPORTS[id]) : [];
+    hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
+    if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc]!.cls !== hero.cls)) delete hero.asc;
+    hero.ascNodes = Array.isArray(hero.ascNodes) ? hero.ascNodes.filter(id => ASC_NODES[id]?.asc === hero.asc).slice(0, hero.ascPoints) : [];
     hero.passives = Array.isArray(hero.passives) ? hero.passives.filter(id => PASSIVES[id] && PASSIVES[id]!.kind !== "start") : [];
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {

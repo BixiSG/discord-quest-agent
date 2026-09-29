@@ -8,7 +8,7 @@ export function monsterLife(level: number): number {
 }
 export function monsterDamage(level: number): number {
     const l = level - 1;
-    return 5 * Math.pow(1.06, l) * (1 + 0.02 * l);
+    return 5 * Math.pow(1.055, l) * (1 + 0.02 * l);
 }
 /** Monster armour, evasion and accuracy share one curve. */
 export function monsterDefence(level: number): number {
@@ -32,11 +32,11 @@ export function xpPenalty(heroLevel: number, monsterLevel: number): number {
 /** Spell base damage growth with hero level (attacks grow through weapons). */
 export function spellScale(level: number): number {
     const l = level - 1;
-    return Math.pow(1.075, l) * (1 + 0.025 * l);
+    return Math.pow(1.06, l) * (1 + 0.015 * l);
 }
 /** Hero life before modifiers. */
 export function heroBaseLife(level: number, classLife: number): number {
-    return classLife + 12 * (level - 1);
+    return classLife + 16 * (level - 1);
 }
 export function heroBaseMana(level: number): number {
     return 40 + 6 * (level - 1);

@@ -27,7 +27,11 @@ context's tag set (for damage: the skill's tags plus the damage type).
 For each damage type T:
 
 - Attacks: `base_T = weapon_T * effectiveness + added_T(attack) * effectiveness`
-- Spells: `base_T = skill_T(level) + added_T(spell) * effectiveness`
+- Spells: `base_T = skill_T * spellScale(L) + added_T(spell) * effectiveness`,
+  with `spellScale(L) = 1.06^(L-1) * (1 + 0.015 (L-1))` (weapons carry the
+  same growth for attacks through their bases).
+
+Hero life before modifiers is `classLife + 16 (L-1)`.
 
 Unarmed attacks use 2-5 phys at 1.2 attacks per second.
 
@@ -87,7 +91,7 @@ Each monster has an archetype (`brute`, `skirmisher`, `caster`, ...) with
 multipliers over the level tables in `src/core/data/scaling.ts`:
 
     life(L)   = 20 * 1.085^(L-1) * (1 + 0.03 (L-1))
-    damage(L) = 5  * 1.06^(L-1)  * (1 + 0.02 (L-1))
+    damage(L) = 5  * 1.055^(L-1) * (1 + 0.02 (L-1))
     armour(L) = evasion(L) = accuracy(L) = 12 + 9 (L-1) * 1.03^(L-1)
 
 Monster armour counts at half against the hero's hits. Packs have 2-6 normal

@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -23,6 +23,12 @@ export const MIGRATIONS: Record<number, Migration> = {
         ];
         s.craftSeq ??= 0;
         s.currency ??= {};
+        return s;
+    },
+    // v3 (P3): ascendancy nodes and points.
+    2: (s: any) => {
+        s.hero.ascNodes ??= [];
+        s.hero.ascPoints ??= 0;
         return s;
     },
 };

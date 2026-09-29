@@ -16,6 +16,9 @@ export interface Hero {
     /** Passive points from act rewards, on top of one per level. */
     bonusPoints: number;
     asc?: string;
+    /** Ascendancy nodes taken and points earned from trials. */
+    ascNodes: string[];
+    ascPoints: number;
     /** Bumped on every change that affects the stat sheet. */
     rev: number;
 }

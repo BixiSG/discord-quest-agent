@@ -42,7 +42,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
-        case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}`;
+        case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
         case "world": return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
@@ -349,8 +349,10 @@ function worldView(c: Ctx): HTMLElement {
         h("label", { class: "chk" }, (() => { const i = h("input", { attrs: { type: "checkbox" } }); i.checked = st.activity.autoPush; i.addEventListener("change", () => c.act(s => { s.activity.autoPush = i.checked; })); return i; })(),
             "Auto-push: move on after 3 clean clears, fall back after 3 deaths")));
     for (const act of ACTS) {
-        const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: act.intro }));
-        for (const id of act.zones) {
+        if (!act.zones.some(z => st.world.unlocked.includes(z))) continue;
+        const done = !!st.world.clears[act.zones[act.zones.length - 1]!];
+        const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: done ? act.outro : act.intro }));
+        for (const id of [...act.zones, act.trial]) {
             const z = ZONES[id]!;
             const open = st.world.unlocked.includes(id);
             const on = st.activity.zone === id;
@@ -358,7 +360,7 @@ function worldView(c: Ctx): HTMLElement {
             const row = h("div", { class: `zone${on ? " on" : ""}${open ? "" : " locked"}`, on: { click: () => { if (open && !on) c.act(s => setZone(s, id), `Travelling to ${z.name}`); } } },
                 h("div", { class: "tag", text: `L${z.level}` }),
                 h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: z.name }), open && z.story ? h("div", { class: "muted", style: "font-size:11px", text: z.story }) : null),
-                z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
+                z.trial ? h("div", { class: "tag", style: "background:var(--violet);color:#fff", text: "trial" }) : z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
                 h("div", { class: "tag", text: open ? `${clears} clears` : "locked" }));
             card.append(row);
         }

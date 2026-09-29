@@ -2,7 +2,7 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { CURRENCIES, CURRENCY_ORDER, MONSTERS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
+import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
@@ -30,6 +30,7 @@ export interface SimEvents {
     zone?(from: string, to: string, why: "push" | "retreat" | "unlock"): void;
     flask?(): void;
     currency?(id: string): void;
+    story?(text: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -300,11 +301,39 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     }
 }
 
+/** Story beats and rewards for the first clear of a zone. */
+function firstClear(state: GameState, zoneId: string, ev: SimEvents): void {
+    const z = zoneOf(zoneId);
+    const hero = state.hero;
+    if (z.bossText) { pushLog(state, "boss", z.bossText); ev.story?.(z.bossText); }
+    if (z.trial) {
+        hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
+        hero.rev++;
+        pushLog(state, "info", `${z.name} passed: +${TRIAL_POINTS} ascendancy points.`);
+    }
+    const actDef = ACTS.find(a => a.zones[a.zones.length - 1] === zoneId);
+    if (actDef) {
+        hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
+        hero.rev++;
+        pushLog(state, "info", `Act ${actDef.id} complete: +${ACT_BOSS_POINTS} passive points. ${actDef.outro}`);
+        ev.story?.(actDef.outro);
+    }
+    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
+        if (after === zoneId && !state.world.unlocked.includes(trial)) {
+            state.world.unlocked.push(trial);
+            pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+            ev.zone?.(zoneId, trial, "unlock");
+        }
+    }
+}
+
 function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
     const run = act.run!;
     state.totals.runs++;
+    const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
+    if (first) firstClear(state, run.zone, ev);
     act.streak++;
     act.deaths = 0;
     ev.runDone?.(run.zone);
@@ -315,7 +344,12 @@ function finishRun(state: GameState, ev: SimEvents): void {
         pushLog(state, "zone", `${zoneOf(next).name} is open.`);
         ev.zone?.(run.zone, next, "unlock");
     }
-    if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
+    const z = zoneOf(run.zone);
+    if (act.autoPush && z.trial && act.zone === run.zone) {
+        // A finished trial sends the hero back to the furthest open road.
+        const road = [...ZONE_ORDER].reverse().find(id => state.world.unlocked.includes(id));
+        if (road) { ev.zone?.(act.zone, road, "push"); act.zone = road; act.streak = 0; }
+    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
         ev.zone?.(act.zone, next, "push");
         pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
         act.zone = next;

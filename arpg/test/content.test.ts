@@ -81,10 +81,17 @@ describe("scaling matches COMBAT.md", () => {
     it("pins the documented curves", () => {
         expect(monsterLife(1)).toBeCloseTo(20);
         expect(monsterLife(11)).toBeCloseTo(20 * Math.pow(1.085, 10) * 1.3);
-        expect(monsterDamage(11)).toBeCloseTo(5 * Math.pow(1.06, 10) * 1.2);
+        expect(monsterDamage(11)).toBeCloseTo(5 * Math.pow(1.055, 10) * 1.2);
         expect(monsterDefence(11)).toBeCloseTo(12 + 90 * Math.pow(1.03, 10));
         expect(xpToNext(10)).toBe(Math.round(80 * Math.pow(10, 2.8) + 1200));
         expect(xpToNext(70)).toBe(Math.round((80 * Math.pow(70, 2.8) + 120 * 70) * Math.pow(1.07, 10)));
         expect(monsterXp(10)).toBeCloseTo(4 * Math.pow(10, 1.9) + 6);
+    });
+});
+import { spellScale, heroBaseLife } from "../src/core/data";
+describe("hero curves match COMBAT.md", () => {
+    it("pins spell scale and base life", () => {
+        expect(spellScale(11)).toBeCloseTo(Math.pow(1.06, 10) * 1.15);
+        expect(heroBaseLife(11, 60)).toBe(220);
     });
 });

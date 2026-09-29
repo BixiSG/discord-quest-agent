@@ -1,8 +1,8 @@
 // Passive tree view: a canvas with pan (drag) and zoom (wheel, buttons).
 // Click a lit node to take it; click a taken node to see its refund.
 
-import { KEYSTONE_TEXT, PASSIVES, type PassiveNode } from "../core/data";
-import { allocate, canAllocate, canRefund, pointsLeft, refund, refundCost } from "../core/passives";
+import { ASCENDANCIES, KEYSTONE_TEXT, PASSIVES, type PassiveNode } from "../core/data";
+import { allocate, ascPointsLeft, canAllocate, canRefund, chooseAscendancy, pointsLeft, refund, refundCost, takeAscNode } from "../core/passives";
 import { h } from "./dom";
 import { modText } from "./text";
 import type { Ctx } from "./views";
@@ -148,7 +148,38 @@ export function treeView(c: Ctx): HTMLElement {
     function zoom(f: number): void { cam.z = Math.max(0.25, Math.min(1.6, cam.z * f)); draw(); }
 
     showInfo(null);
+    const asc = ascCard(c);
     // Draw once the canvas is in the document and has a size.
     requestAnimationFrame(draw);
-    return h("div", { class: "col" }, head, canvas, info);
+    return h("div", { class: "col" }, head, canvas, info, asc);
+}
+
+function ascCard(c: Ctx): HTMLElement {
+    const hero = c.state.hero;
+    const card = h("div", { class: "card col" });
+    const left = ascPointsLeft(hero);
+    card.append(h("h3", { text: `Ascendancy${hero.asc ? `: ${ASCENDANCIES[hero.asc]!.name}` : ""} (${left} point${left === 1 ? "" : "s"} left)` }));
+    if (!hero.asc) {
+        card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? "Choose your path. This is permanent for this hero." : "Pass a Trial (the first opens in Act 1 after the Sunken Chapel) to earn ascendancy points." }));
+        const row = h("div", { class: "grid2" });
+        for (const a of Object.values(ASCENDANCIES).filter(x => x.cls === hero.cls)) {
+            row.append(h("div", { class: "skill", style: `border-left:10px solid ${a.color}` },
+                h("div", { class: "grow" }, h("div", { class: "nm", text: a.name }), h("div", { class: "ds", text: a.blurb }),
+                    ...a.nodes.map(n => h("div", { class: "ds muted", text: `${n.name}: ${n.mods.map(modText).join(", ")}` })),
+                    h("button", { class: "btn", style: "margin-top:6px", text: `Become ${a.name}`, attrs: hero.ascPoints > 0 ? {} : { disabled: "" },
+                        on: { click: () => c.act(s => chooseAscendancy(s, a.id)) } }))));
+        }
+        card.append(row);
+        return card;
+    }
+    const a = ASCENDANCIES[hero.asc]!;
+    const grid = h("div", { class: "grid2" });
+    for (const n of a.nodes) {
+        const own = hero.ascNodes.includes(n.id);
+        grid.append(h("div", { class: `skill${own ? " on" : ""}`, on: { click: () => { if (!own) c.act(s => takeAscNode(s, n.id)); } } },
+            h("div", { class: "grow" }, h("div", { class: "nm", text: n.name }), ...n.mods.map(md => h("div", { class: "ds", text: modText(md) }))),
+            h("div", { class: "tag", text: own ? "taken" : left > 0 ? "take" : "locked" })));
+    }
+    card.append(grid);
+    return card;
 }
