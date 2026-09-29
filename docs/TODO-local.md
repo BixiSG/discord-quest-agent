@@ -3,19 +3,24 @@
 Branch: `feat/pet-addon-jjbs70`, with both addons plus the launcher change.
 `main` is untouched; do not merge or push `main` until the user signs off.
 
-## >>> NEXT SESSION: start here (Round 6 done 2026-09-29; Round 7 = the open items below)
+## >>> NEXT SESSION: start here (Round 7 done 2026-09-29: Act 4 shipped to the PR)
 
-State (end of round 6): branch `feat/pet-addon-jjbs70`, 83 local commits ahead of origin,
-**nothing pushed** (the user's standing "don't push yet"). Save v7 (new optional fields only),
-225 tests, en/ru/uk. Installed agent (real session): **v1.6.1**, attach-only, resident.
+State: branch `feat/pet-addon-jjbs70` pushed; PR https://github.com/BixiSG/discord-quest-agent/pull/1
+(1.7.0, open, no CI in the repo). Save v8, 229 tests, en/ru/uk. Act 4 (Ashfold) is in.
+
+Live on this PC (2026-09-29 16:10): Discord restarted with port 9222 by the BRANCH agent, started
+hidden by the scheduled task "QA dev branch hidden" (wscript src\launch.vbs -NoUpdate); the Act 4
+build is hot-swapped in (the user's hero: L45 arcanist, v8, past the Sunfall so maps stay open).
+The INSTALLED agent (v1.6.1, attach-only) was stopped to keep it from injecting its old v20 agent
+first; at the next login Vencord Watch starts it again and the branch agent is gone, so Hollowmarch
+disappears until either the PR is merged (the installed agent then updates itself to 1.7.0 at its
+start - the 6-hourly check is new in 1.7.0, 1.6.1 only checks at start) or the branch task is run.
+Repo-root `addons\arpg.js` is a copy of the shipped build (user addons win over src/addons).
 
 Open, needing the user:
-- [ ] Push + PR `feat/pet-addon-jjbs70` -> `main` (release 1.7.0). Asked at the end of round 6.
-- [ ] Live Discord: since 15:23 on 2026-09-29 it runs WITHOUT the debug port (restarted by hand
-      or by Discord itself), so no quest agent and no Hollowmarch in it; round 6 could not be
-      hot-swapped. Needs Discord restarted with the port (the user's OK: no call in progress),
-      then `live-read.mjs` + `live-hotswap.mjs src/addons/arpg.js`. Hollow Night starts Oct 1.
-- [ ] Pick the round 7 content item (E below).
+- [ ] Merge PR #1 (ships 1.7.0 to everyone through the updater).
+- [ ] After the merge: restart the installed agent here (or reboot) so it updates; then delete the
+      tasks "QA dev branch run" and "QA dev branch hidden" and the repo-root `addons\` copy.
 
 Round 7 candidates besides E:
 - [ ] Attack builds vs pinnacles: two-handed Vanguards/Striders die before the enrage window
@@ -80,8 +85,10 @@ Working rules (from memory, repeated so nothing is lost):
 13. [ ] Skill mastery: skills and supports level with use (small % bonus), bars on the Skills tab.
 14. [ ] Feats: lifetime milestones with titles and small rewards (stash room, a perk reroll).
 15. [ ] Build loadouts: save/restore skill + supports + gear (+ passives with a dust respec cost).
-16. [ ] Act 4 between the Sunfall and the Cinderlands (7 zones, trial, boss). Needs new CC0 monster
-        art - every download needs the user's OK (name, source, size).
+16. [x] Act 4, Ashfold (round 7): 7 zones L42-50, Trial of Lanterns, 6 monsters, 3 bosses, 2 relics,
+        companion Wick, spell impacts. Art: Gothicvania Town + Magic Pack 9 (user OK'd, CC0) plus
+        unused cemetery/night-town art. The Lamplighter opens the maps; save v8 keeps them for heroes
+        already past the Sunfall. Round 8 picks from 13-15 or the balance items above.
 
 Orbling (separate project, only if the user asks): section 1's live checklist was never run.
 
