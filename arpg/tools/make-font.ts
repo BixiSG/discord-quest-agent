@@ -1,7 +1,8 @@
 // Builds "Hollow Pixel", the game's bitmap font as a TrueType file, and writes
-// src/ui/gfx/font.gen.ts (base64). Capitals, digits and most punctuation are
-// the 5x7 glyphs the canvas text already uses (gfx/pixfont.ts); lowercase and
-// the rest of printable ASCII are drawn here in the same hand. Every ink pixel
+// src/ui/gfx/font.gen.ts (base64). Capitals (Latin and Cyrillic), digits and
+// most punctuation are the 5x7 glyphs the canvas text already uses
+// (gfx/pixfont.ts); lowercase and the rest of printable ASCII are drawn here
+// in the same hand. Every ink pixel
 // becomes part of a square outline, so the font is pixel art at any size that
 // is a whole multiple of 8px (1 font pixel = 1/8 em).
 //
@@ -70,7 +71,50 @@ const MORE: Record<string, string[]> = {
     "|": ["#", "#", "#", "#", "#", "#", "#", "#"],
     "}": ["#..", ".#.", ".#.", "..#", ".#.", ".#.", "#.."],
     " ": ["..", "..", "..", "..", "..", "..", ".."],
+
+    // ---- Cyrillic small letters (Russian and Ukrainian), same rules as the
+    // Latin ones: x-height 5, marks in the ascender rows, tails below.
+    "а": ["....", "....", ".##.", "...#", ".###", "#..#", ".###"],
+    "б": [".###", "#...", "###.", "#..#", "#..#", "#..#", ".##."],
+    "в": ["....", "....", "###.", "#..#", "###.", "#..#", "###."],
+    "г": ["...", "...", "###", "#..", "#..", "#..", "#.."],
+    "ґ": ["..#", "..#", "###", "#..", "#..", "#..", "#.."],
+    "д": [".....", ".....", "..##.", ".#.#.", ".#.#.", ".#.#.", "#####", "#...#"],
+    "е": ["....", "....", ".##.", "#..#", "####", "#...", ".###"],
+    "ё": ["#..#", "....", ".##.", "#..#", "####", "#...", ".###"],
+    "є": ["....", "....", ".###", "#...", "###.", "#...", ".###"],
+    "ж": [".....", ".....", "#.#.#", ".###.", "..#..", ".###.", "#.#.#"],
+    "з": ["....", "....", "###.", "...#", ".##.", "...#", "###."],
+    "и": ["....", "....", "#..#", "#..#", "#.##", "##.#", "#..#"],
+    "й": [".##.", "....", "#..#", "#..#", "#.##", "##.#", "#..#"],
+    "і": ["#", ".", "#", "#", "#", "#", "#"],
+    "ї": ["#.#", "...", ".#.", ".#.", ".#.", ".#.", ".#."],
+    "к": ["....", "....", "#..#", "#.#.", "##..", "#.#.", "#..#"],
+    "л": ["....", "....", ".###", ".#.#", ".#.#", ".#.#", "#..#"],
+    "м": [".....", ".....", "#...#", "##.##", "#.#.#", "#...#", "#...#"],
+    "н": ["....", "....", "#..#", "#..#", "####", "#..#", "#..#"],
+    "о": ["....", "....", ".##.", "#..#", "#..#", "#..#", ".##."],
+    "п": ["....", "....", "####", "#..#", "#..#", "#..#", "#..#"],
+    "р": ["....", "....", "###.", "#..#", "#..#", "#..#", "###.", "#...", "#..."],
+    "с": ["....", "....", ".###", "#...", "#...", "#...", ".###"],
+    "т": [".....", ".....", "#####", "..#..", "..#..", "..#..", "..#.."],
+    "у": ["....", "....", "#..#", "#..#", "#..#", "#..#", ".###", "...#", ".##."],
+    "ф": ["..#..", "..#..", ".###.", "#.#.#", "#.#.#", "#.#.#", ".###.", "..#..", "..#.."],
+    "х": ["....", "....", "#..#", "#..#", ".##.", "#..#", "#..#"],
+    "ц": [".....", ".....", "#..#.", "#..#.", "#..#.", "#..#.", "#####", "....#"],
+    "ч": ["....", "....", "#..#", "#..#", ".###", "...#", "...#"],
+    "ш": [".....", ".....", "#.#.#", "#.#.#", "#.#.#", "#.#.#", "#####"],
+    "щ": ["......", "......", "#.#.#.", "#.#.#.", "#.#.#.", "#.#.#.", "######", ".....#"],
+    "ъ": ["....", "....", "##..", ".#..", ".##.", ".#.#", ".##."],
+    "ы": ["......", "......", "#....#", "#....#", "###..#", "#..#.#", "###..#"],
+    "ь": ["....", "....", "#...", "#...", "###.", "#..#", "###."],
+    "э": ["....", "....", "###.", "...#", ".###", "...#", "###."],
+    "ю": ["......", "......", "#..##.", "#.#..#", "###..#", "#.#..#", "#..##."],
+    "я": ["....", "....", ".###", "#..#", ".###", ".#.#", "#..#"],
 };
+
+/** Code points past ASCII: the Cyrillic of Russian and Ukrainian (capitals come from gfx/pixfont.ts). */
+export const EXTRA = [..."АБВГҐДЕЁЄЖЗИЙІЇКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгґдеёєжзийіїклмнопрстуфхцчшщъыьэюя"].map(c => c.codePointAt(0)!).sort((a, b) => a - b);
 
 interface Glyph { code: number; rows: string[]; adv: number; rects: [number, number, number, number][] }
 
@@ -109,8 +153,9 @@ function rectsOf(rows: string[]): [number, number, number, number][] {
 }
 
 const glyphs: Glyph[] = [];
-for (let code = 32; code <= 126; code++) {
-    const ch = String.fromCharCode(code);
+const CODES = [...Array.from({ length: 95 }, (_, i) => 32 + i), ...EXTRA];
+for (const code of CODES) {
+    const ch = String.fromCodePoint(code);
     const rows = glyphFor(ch);
     const w = rows[0]!.length;
     glyphs.push({ code, rows, adv: (w + 1) * P, rects: rectsOf(rows) });
@@ -184,12 +229,26 @@ const avg = Math.round(glyphs.reduce((s, g) => s + g.adv, 0) / glyphs.length);
 const os2 = new W().u16(4).i16(avg).u16(400).u16(5).u16(0)
     .i16(5 * P).i16(5 * P).i16(0).i16(P).i16(5 * P).i16(5 * P).i16(0).i16(4 * P) // sub/superscript
     .i16(P).i16(3 * P).i16(0) // strikeout size/position, family class
-    .bytes(new Array(10).fill(0)).u32(1).u32(0).u32(0).u32(0).bytes([78, 79, 78, 69]) // "NONE"
-    .u16(0x0040).u16(32).u16(126).i16(ascender).i16(descender).i16(0).u16(ascender).u16(-descender)
-    .u32(1).u32(0).i16(5 * P).i16(7 * P).u16(0).u16(32).u16(1);
-// cmap: one format-4 segment 32..126 (glyph = code - 31) and the 0xFFFF terminator.
-const sub = new W().u16(4).u16(32).u16(0).u16(4).u16(4).u16(1).u16(0)
-    .u16(126).u16(0xffff).u16(0).u16(32).u16(0xffff).i16(-31).i16(1).u16(0).u16(0);
+    // Unicode ranges: Basic Latin (bit 0) and Cyrillic (bit 9); code pages: Latin 1 (bit 0) and Cyrillic 1251 (bit 2).
+    .bytes(new Array(10).fill(0)).u32(1 | (1 << 9)).u32(0).u32(0).u32(0).bytes([78, 79, 78, 69]) // "NONE"
+    .u16(0x0040).u16(32).u16(CODES[CODES.length - 1]!).i16(ascender).i16(descender).i16(0).u16(ascender).u16(-descender)
+    .u32(1 | 4).u32(0).i16(5 * P).i16(7 * P).u16(0).u16(32).u16(1);
+// cmap, format 4: one segment per run of consecutive codes (glyph ids follow the code order,
+// .notdef is glyph 0), each mapped by its delta, then the 0xFFFF terminator.
+const segs: [number, number, number][] = []; // [start, end, first glyph id]
+CODES.forEach((code, i) => {
+    const last = segs[segs.length - 1];
+    if (last && code === last[1] + 1) last[1] = code;
+    else segs.push([code, code, i + 1]);
+});
+segs.push([0xffff, 0xffff, 0]);
+const segX2 = segs.length * 2, searchRange = 2 * 2 ** Math.floor(Math.log2(segs.length));
+const sub = new W().u16(4).u16(16 + segs.length * 8).u16(0).u16(segX2).u16(searchRange).u16(Math.log2(searchRange / 2)).u16(segX2 - searchRange);
+for (const [, end] of segs) sub.u16(end);
+sub.u16(0);
+for (const [start] of segs) sub.u16(start);
+for (const [start, end, gid] of segs) sub.i16(end === 0xffff ? 1 : gid - start); // code + delta = glyph id
+for (let i = 0; i < segs.length; i++) sub.u16(0);
 const cmap = new W().u16(0).u16(1).u16(3).u16(1).u32(12).bytes(sub.done());
 // name
 const names: [number, string][] = [[1, FAMILY], [2, "Regular"], [3, `${FAMILY} Regular`], [4, FAMILY], [5, "Version 1.0"], [6, "HollowPixel-Regular"]];
@@ -224,6 +283,6 @@ font[headAt + 8] = adj >>> 24; font[headAt + 9] = (adj >>> 16) & 255; font[headA
 
 const b64 = Buffer.from(font).toString("base64");
 writeFileSync(OUT, "// Generated by tools/make-font.ts from the bitmap glyphs (gfx/pixfont.ts plus lowercase). Do not edit.\n"
-    + `/** "${FAMILY}": printable ASCII, 8 pixels to the em. TrueType, base64. */\n`
+    + `/** "${FAMILY}": printable ASCII and Cyrillic (ru, uk), 8 pixels to the em. TrueType, base64. */\n`
     + `export const PIXEL_FONT = "${b64}";\n`);
 console.log(`${FAMILY}: ${all.length} glyphs, ${font.length} bytes, ${(b64.length / 1024).toFixed(1)} KiB base64`);

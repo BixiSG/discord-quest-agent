@@ -5,7 +5,7 @@
 
 import { textSprite } from "./pixfont";
 
-const DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~]+$/;
+const DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~\u0401\u0404\u0406\u0407\u0410-\u042f\u0490]+$/; // Latin and Cyrillic capitals (regex source stays ASCII)
 const SELECTOR = "h3:not(.split), h3.split > span, .btn, .sec, .nav .lbl, .plaque";
 
 /** A pixel-font canvas for `text` at a whole-number scale (big numbers on the sheet). */
