@@ -7,7 +7,7 @@
 import { CLASSES, DAWN_PERK, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from "./data";
 import { allShards } from "./echoes";
 import { ECHOES_PER_POINT } from "./data";
-import { newGame, pushLog } from "./game";
+import { newGame, pushLog, relicRollScore } from "./game";
 import { hashSeed } from "./rng";
 import { returnStones } from "./sockets";
 import type { GameState } from "./state";
@@ -42,18 +42,24 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
     const dawn = dawnOf(s) + 1;
     const heir = opts.heirloom !== undefined ? heirloomCandidates(s).find(x => x.uid === opts.heirloom) : undefined;
-    // Gear left behind gives its stones back to the pouch (the pouch is kept); the heirloom keeps its own.
-    for (const it of [...SLOTS.map(k => s.hero.equipment[k]), ...s.stash]) if (it && it !== heir && !it.relic) returnStones(s, it);
-    // Worn relics go back into the case (all relics stay); the case keeps the better copy.
+    // Worn and stashed relics go back into the case (every relic stays): the better-rolled copy of
+    // each, as the case always keeps. Everything left behind gives its stones back to the pouch (the
+    // pouch is kept); the heirloom and the case's relics keep their own.
     const relics = [...s.relics];
-    for (const k of SLOTS) {
-        const it = s.hero.equipment[k];
-        if (!it?.relic) continue;
-        const old = relics.find(x => x.relic === it.relic);
-        if (!old) relics.push(it);
+    const left: Item[] = [];
+    for (const it of [...SLOTS.map(k => s.hero.equipment[k]), ...s.stash]) {
+        if (!it || it === heir) continue;
+        if (!it.relic) { left.push(it); continue; }
+        const i = relics.findIndex(x => x.relic === it.relic);
+        if (i < 0) relics.push(it);
+        else if (relicRollScore(it) > relicRollScore(relics[i]!)) { left.push(relics[i]!); relics[i] = it; }
+        else left.push(it);
     }
+    for (const it of left) returnStones(s, it);
     const fresh = newGame({ name: s.hero.name, cls, now: s.simTo, seed: hashSeed(s.seed, 0xda, dawn) });
     fresh.nextUid = Math.max(fresh.nextUid, s.nextUid);
+    // The new starter weapon takes a fresh id: a kept item (an old starter as the heirloom) may hold its old one.
+    fresh.hero.equipment.weapon!.uid = fresh.nextUid++;
     fresh.hero.dawn = { level: dawn, perks: [...(s.hero.dawn?.perks ?? [])], ...(s.hero.dawn?.crown ? { crown: true } : {}) };
     fresh.hero.bonusPoints = dawn;
     if (s.hero.pet && s.companions[s.hero.pet.id] !== undefined) fresh.hero.pet = { id: s.hero.pet.id, level: companionLevel(s.companions[s.hero.pet.id]!) };

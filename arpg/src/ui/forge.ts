@@ -5,7 +5,7 @@
 
 import { CURRENCIES, CURRENCY_ORDER } from "../core/data";
 import { applyCurrency, benchCraft, benchDust, benchOptions, BENCH_GRAFTS, buyCurrency, craftUntilUpgrade, findItem, forgeCost, forgeRare, forgeUntilUpgrade, hone, honeCost, MAX_QUALITY, maxIlvl, REROLLS, temperCost, temperRelic } from "../core/crafting";
-import { setLocked } from "../core/game";
+import { setLocked, wearableOffhands } from "../core/game";
 import { baseOf } from "../core/items";
 import { SLOTS, type Item } from "../core/types";
 import type { GameState } from "../core/state";
@@ -151,11 +151,12 @@ export function forgeView(c: Ctx): HTMLElement {
     const smith = h("div", { class: "smith" });
     for (const slot of SLOTS) {
         const slotName = SLOT_NAMES(slot).toLowerCase();
-        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES(slot), title: st.dust >= cost ? t(forgeOpts.until ? "forge.smithUntilTip" : "forge.smithTip", { slot: slotName, cost: fmt(cost) }) : t("forge.needsDust", { cost: fmt(cost) }), attrs: st.dust >= cost ? {} : { disabled: "" },
+        const blocked = slot === "offhand" && !wearableOffhands(st);
+        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES(slot), title: blocked ? t("forge.offhandBlocked") : st.dust >= cost ? t(forgeOpts.until ? "forge.smithUntilTip" : "forge.smithTip", { slot: slotName, cost: fmt(cost) }) : t("forge.needsDust", { cost: fmt(cost) }), attrs: st.dust >= cost && !blocked ? {} : { disabled: "" },
             on: { click: () => c.act(s => {
                 if (forgeOpts.until) {
                     const r = forgeUntilUpgrade(s, slot, 10);
-                    if (!r.err) c.toast(r.item ? t("forge.forgedWearing", { n: r.made, item: itemName(r.item) }) : t("forge.forgedNone", { n: r.made }));
+                    if (!r.err) c.toast(r.item ? t(r.equipped ? "forge.forgedWearing" : "forge.forgedKept", { n: r.made, item: itemName(r.item) }) : t("forge.forgedNone", { n: r.made }));
                     return r.err;
                 }
                 const r = forgeRare(s, slot); if (!r.err && r.item) c.sel = { uid: r.item.uid }; return r.err;

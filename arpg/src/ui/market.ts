@@ -4,7 +4,7 @@
 
 import { slotsFor } from "../core/data";
 import { buyGear, buyStone, marketOpen, nextStockIn, refreshCost, refreshMarket, tickMarket } from "../core/market";
-import { upgradeSlot } from "../core/game";
+import { paidRoom, upgradeSlot } from "../core/game";
 import { baseOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { fmt, fmtDuration, h } from "./dom";
@@ -20,7 +20,9 @@ import { itemName, monsterName, stoneFullName } from "../i18n/names";
 /** What the Market tab depends on. */
 export function marketSig(s: GameState): string {
     const m = s.market;
-    return `${marketOpen(s)}:${m?.seq ?? 0}:${m?.pedlar.map(o => (o.sold ? 1 : 0)).join("")}:${m?.jeweller.map(o => (o.sold ? 1 : 0)).join("")}:${Math.ceil(nextStockIn(s) / 60e3)}:${Math.floor(s.dust / 50)}:${s.hero.rev}:${s.stash.length >= s.stashCap}`;
+    // Each offer's Buy (sold, affordable, room) and the dust as shown: not every grain of dust.
+    const buy = (o: { sold?: boolean; price: number }) => (o.sold ? "s" : s.dust >= o.price ? "y" : "n");
+    return `${marketOpen(s)}:${m?.seq ?? 0}:${m?.pedlar.map(o => buy(o) + (paidRoom(s, o.item) ? 1 : 0)).join("")}:${m?.jeweller.map(buy).join("")}:${Math.ceil(nextStockIn(s) / 60e3)}:${fmt(s.dust)}:${s.dust >= refreshCost(s)}:${s.hero.rev}:${s.stash.length >= s.stashCap}`;
 }
 
 export function marketView(c: Ctx): HTMLElement {
@@ -44,13 +46,13 @@ export function marketView(c: Ctx): HTMLElement {
     if (tip) root.append(tip);
 
     // The Pedlar: gear, each with its price and Buy. A full stash only takes what goes straight on
-    // (or a relic, which has its own case): the same rule as buyGear, so Buy is off rather than refused.
+    // (or a relic the case takes whole): the same rule as buyGear, so Buy is off rather than refused.
     const gear = h("div", { class: "offers" });
     const full = st.stash.length >= st.stashCap;
     st.market.pedlar.forEach((o, i) => {
         const it = o.item;
         const up = !o.sold && !!upgradeSlot(st, it);
-        const noRoom = full && !it.relic && !(st.settings.autoEquip && up);
+        const noRoom = !(st.settings.autoEquip && up) && !paidRoom(st, it);
         // Focusable: the keyboard gets the same item card a hover does.
         const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it), tabindex: "0" } }, itemIcon(it), socketPips(it));
         withTip(cell, c, () => { const targets = slotsFor(baseOf(it)); return itemCard(it, c, { compareSlot: upgradeSlot(st, it) ?? targets.find(x => !st.hero.equipment[x]) ?? targets[0]! }); });

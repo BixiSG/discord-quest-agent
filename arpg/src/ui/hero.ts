@@ -1,6 +1,6 @@
 // The Hero tab: the character sheet with its breakdowns, and the companions.
 
-import { ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, PASSIVES, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, xpToNext, type CompanionDef } from "../core/data";
+import { ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, DAWN_PERKS, PASSIVES, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, dawnName, xpToNext, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
 import { drawPumpkin } from "./gfx/pumpkin";
 import { runZone } from "../core/sim/engine";
@@ -15,7 +15,7 @@ import { glyph } from "./glyphs";
 import { portrait } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
 import { t, tn } from "../i18n";
-import { ascName, ascNodeName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, placeName, skillName, supportName, tagName } from "../i18n/names";
+import { ascName, ascNodeName, dawnTitle, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
 import { tErr } from "../i18n/errors";
 import { TYPE_NAME, kv } from "./common";
 import type { Ctx } from "./views";
@@ -34,7 +34,8 @@ export function heroView(c: Ctx): HTMLElement {
         const list = h("div", { class: "kv" });
         const src = sourceNames(st);
         for (const m of mods) {
-            const v = m.kind === "flat" ? `+${m.value}` : t(m.kind === "more" ? "hero.more" : "hero.inc", { v: m.value });
+            const up = m.value >= 0;
+            const v = m.kind === "flat" ? `${up ? "+" : ""}${m.value}` : t(m.kind === "more" ? (up ? "hero.more" : "hero.less") : (up ? "hero.inc" : "hero.red"), { v: Math.abs(m.value) });
             list.append(h("div", { text: m.src ? src(m.src) : "?" }), h("div", { class: "num", text: `${v}${m.tags ? " [" + m.tags.map(x => tagName(x)).join(", ") + "]" : ""}` }));
         }
         if (!mods.length) list.append(h("div", { text: t("hero.noMods") }), h("div"));
@@ -194,6 +195,8 @@ function sourceNames(st: GameState): (src: string) => string {
     for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
     for (const p of Object.values(COMPANIONS)) add(`Companion: ${p.name}`, `${t("pets.title")}: ${companionName(p.id)}`);
     add("Map", t("atlas.maps"));
+    for (const p of DAWN_PERKS) add(p.name, perkName(p.id));
+    for (let n = 1; n <= (st.hero.dawn?.level ?? 0); n++) add(dawnName(n), dawnTitle(n));
     for (const s of SLOTS) { const it = st.hero.equipment[s]; if (it) add(itemLabel(it), itemName(it)); }
     return src => map.get(src) ?? src;
 }

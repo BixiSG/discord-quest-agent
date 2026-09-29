@@ -864,7 +864,7 @@ export class GameWindow {
             [t("report.away"), fmtDuration(r.to - r.from)],
             [t("report.runs"), fmt(r.runs)], [t("report.kills"), fmt(r.kills)], [t("report.bosses"), fmt(r.bosses)], [t("report.deaths"), fmt(r.deaths)],
             [t("report.levels"), r.levelTo > r.levelFrom ? t("report.levelUp", { from: r.levelFrom, to: r.levelTo }) : t("report.noChange", { level: r.levelTo })],
-            [t("report.xp"), fmt(r.xp)], [t("report.kept"), fmt(r.kept)], [t("report.salvaged"), fmt(r.salvaged)], [t("report.dust"), `+${fmt(r.dust)}`],
+            [t("report.xp"), fmt(r.xp)], [t("report.kept"), fmt(r.kept)], [t("report.salvaged"), fmt(r.salvaged)], [t("report.dust"), `${r.dust >= 0 ? "+" : ""}${fmt(r.dust)}`],
             ...(r.swapped ? [[t("report.swapped"), fmt(r.swapped)] as [string, string]] : []),
         ];
         const kvEl = h("div", { class: "kv" });

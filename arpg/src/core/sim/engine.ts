@@ -353,7 +353,9 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const had = { ...state.companions };
         const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
-        pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
+        // The chronicle keeps 60 lines: a map boss every minute or two would bury everything else,
+        // so only pinnacles and a story boss's first fall are written down.
+        if (run.map ? !!run.map.pinnacle : !state.world.clears[run.zone]) pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
     if (m.lantern && lanternKill(state, rng, m.level, ev)) changed = true;
     return changed ? runSheet(state) : sheet;
@@ -418,7 +420,8 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     state.totals.deaths++;
     const act = state.activity;
     act.streak = 0;
-    act.deaths++;
+    // A pinnacle is not a map: losing one must not count towards lowering the device's tier.
+    if (!run.map?.pinnacle) act.deaths++;
     pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {
@@ -546,6 +549,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
     if (run.map) {
         completeMap(state, run.map);
         if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
+        // A "clear runs" contract taken before the maps opened would never move otherwise.
+        contractEvent(state, "runs");
         // Eight clean maps in a row: earlier failures are forgiven, and a capped device allows one
         // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;

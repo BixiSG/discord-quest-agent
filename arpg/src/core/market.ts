@@ -5,7 +5,7 @@
 
 import { RELICS, STONE_TIERS, parseStone } from "./data";
 import { forgeCost, maxIlvl } from "./crafting";
-import { receiveItem, stashWorth, upgradeSlot } from "./game";
+import { receivePaid, stashWorth, wearableOffhands } from "./game";
 import { rollItem } from "./items";
 import { Rng, hashSeed } from "./rng";
 import { addStone, rollSockets, rollStone, socketCap, fitStones } from "./sockets";
@@ -45,10 +45,11 @@ function gearPrice(s: GameState, it: Item): number {
     return Math.round((base * (3 + 1.5 * it.affixes.length) * (1 + 0.25 * (it.sockets ?? 0))) / 10) * 10;
 }
 
-/** Slot groups where the hero is weakest: empty first, then the lowest-worth worn items. */
+/** Slot groups where the hero is weakest: empty first, then the lowest-worth worn items (never an off-hand the weapon blocks). */
 function weakSlots(s: GameState): string[] {
     const eq = s.hero.equipment;
-    return [...SLOTS].sort((a, b) => (eq[a] ? stashWorth(eq[a]!) : -1) - (eq[b] ? stashWorth(eq[b]!) : -1))
+    const off = wearableOffhands(s);
+    return [...SLOTS].filter(slot => slot !== "offhand" || off).sort((a, b) => (eq[a] ? stashWorth(eq[a]!) : -1) - (eq[b] ? stashWorth(eq[b]!) : -1))
         .map(slot => (slot === "ring1" || slot === "ring2" ? "ring" : slot));
 }
 
@@ -57,12 +58,15 @@ function rollStock(s: GameState): void {
     const rng = new Rng(hashSeed(s.seed, 0x6d6b74, m.seq++));
     const ilvl = maxIlvl(s);
     const weak = weakSlots(s);
+    // Off-hands only of a kind the weapon allows; none behind a two-hander.
+    const off = wearableOffhands(s);
+    const groups = off ? OFFER_SLOTS : OFFER_SLOTS.filter(g => g !== "offhand");
     const pedlar: GearOffer[] = [];
     for (let i = 0; i < GEAR_OFFERS; i++) {
         // Two offers for the weakest slots, the rest anywhere.
-        const group = i < 2 ? weak[i]! : rng.pick(OFFER_SLOTS);
+        const group = i < 2 ? weak[i]! : rng.pick(groups);
         let item: Item;
-        try { item = rollItem(rng, s.nextUid, ilvl, { rarity: "rare", slots: [group], maxBaseLevel: s.hero.level }); } catch { continue; }
+        try { item = rollItem(rng, s.nextUid, ilvl, { rarity: "rare", slots: [group], maxBaseLevel: s.hero.level, ...(group === "offhand" && off ? { kinds: off } : {}) }); } catch { continue; }
         s.nextUid++;
         if (i === GEAR_OFFERS - 1) { item.sockets = Math.min(socketCap(item), rng.chance(0.4) ? 2 : 1); fitStones(item); }
         else rollSockets(rng, item);
@@ -107,21 +111,18 @@ export function refreshMarket(s: GameState): string | null {
     return null;
 }
 
-/** Buys gear: worn at once if it is an upgrade (with auto-equip on), else into the stash (or the relic case). */
+/**
+ * Buys gear: worn at once if it is an upgrade (with auto-equip on), else kept (the stash, or the
+ * relic case) whatever the loot filter says. Nothing is paid when there is no room.
+ */
 export function buyGear(s: GameState, i: number): string | null {
     const o = s.market?.pedlar[i];
     if (!o || o.sold) return "sold out";
     if (s.dust < o.price) return `needs ${o.price} ember dust`;
-    const upgrade = s.settings.autoEquip && !!upgradeSlot(s, o.item);
-    if (!upgrade && !o.item.relic && s.stash.length >= s.stashCap) return "stash full";
+    const r = receivePaid(s, structuredClone(o.item));
+    if (r.err) return r.err;
     s.dust -= o.price;
     o.sold = true;
-    const item = structuredClone(o.item);
-    // Paid for: kept whatever the loot filter says.
-    const filter = s.settings.filter;
-    s.settings.filter = [{ on: true, action: "keep" }];
-    try { receiveItem(s, item); } finally { s.settings.filter = filter; }
-    s.totals.items--; // not a drop
     return null;
 }
 

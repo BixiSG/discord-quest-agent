@@ -129,8 +129,8 @@ export function treeView(c: Ctx): HTMLElement {
         if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? t("tree.yourSeat") : t("tree.otherSeat") }));
         const row = h("div", { class: "row", style: "margin-top:6px" });
         if (own) {
-            const ok = canRefund(hero, n.id);
-            row.append(h("button", { class: "btn alt", text: t("tree.refund", { n: refundCost(hero) }), attrs: ok ? {} : { disabled: "" }, title: ok ? "" : t("tree.depends"),
+            const ok = canRefund(hero, n.id), cost = refundCost(hero), afford = c.state.dust >= cost;
+            row.append(h("button", { class: "btn alt", text: t("tree.refund", { n: cost }), attrs: ok && afford ? {} : { disabled: "" }, title: !ok ? t("tree.depends") : afford ? "" : tErr(`needs ${cost} ember dust`),
                 on: { click: () => c.act(s => refund(s, n.id)) } }));
         } else if (n.kind !== "start") {
             const err = canAllocate(hero, n.id);

@@ -185,7 +185,8 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
         resRaw[t] = Math.round(bag.flat(`res.${t}`));
         res[t] = Math.min(maxRes[t], resRaw[t]);
     }
-    const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
+    // calc, not flat: "less regeneration" (the parched map mod) is a more modifier.
+    const lifeRegen = bag.calc("lifeRegen") + life * bag.calc("lifeRegenPct") / 100;
     const manaRegen = bag.flat("manaRegen") + mana * 0.07;
 
     const skill = calcSkill(hero, bag, problems, manaRegen, link);

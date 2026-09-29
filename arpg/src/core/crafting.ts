@@ -2,9 +2,9 @@
 // seeded by (save seed, craft counter), so crafting is deterministic too.
 
 import { CURRENCIES, ZONES, mapLevel } from "./data";
-import { receiveItem, upgradeSlot } from "./game";
+import { paidRoom, receivePaid, salvageItem, upgradeSlot, wearableOffhands } from "./game";
 import { Rng, hashSeed } from "./rng";
-import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, relicOf, rollAffixes, rollTier, salvageValue } from "./items";
+import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, relicOf, rollAffixes, rollTier } from "./items";
 import { AFFIXES, betterLow, type AffixDef, type RelicDef } from "./data";
 import type { GameState } from "./state";
 import type { Item, Slot } from "./types";
@@ -233,54 +233,61 @@ export const forgeCost = (state: GameState) => Math.round(40 + 6 * state.hero.le
 
 /**
  * The dust sink: forge a random rare for an equipment slot at the highest
- * item level reached. It goes through the same auto-equip and filter path as
- * a drop, so a better item is worn at once.
+ * item level reached. Paid for, so it never meets the loot filter: worn at once
+ * when it is an upgrade (auto-equip on), else kept in the stash.
  */
 export function forgeRare(state: GameState, slot: string): { err: string | null; item?: Item; equipped?: boolean } {
     const cost = forgeCost(state);
     if (state.dust < cost) return { err: `needs ${cost} ember dust` };
-    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
-    const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
-    let item: Item;
-    // A base the hero can wear; the item level (affix tiers) may still run two levels ahead.
-    try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level }); } catch { return { err: "nothing to forge for that slot" }; }
-    item.crafted = true;
-    // A paid-for item never meets the loot filter: it is worn if better, else kept.
-    const upgrade = state.settings.autoEquip && upgradeSlot(state, item);
-    if (!upgrade && state.stash.length >= state.stashCap) return { err: "stash full" };
+    const item = forgeRoll(state, slot);
+    if (!item) return { err: "nothing to forge for that slot" };
+    const r = receivePaid(state, item);
+    if (r.err) return { err: r.err };
     state.nextUid++;
     state.craftSeq++;
     state.dust -= cost;
-    if (upgrade) { const r = receiveItem(state, item); if (r.equipped) return { err: null, item, equipped: true }; }
-    if (state.stash.length < state.stashCap) state.stash.push(item);
-    return { err: null, item, equipped: false };
+    return { err: null, item, equipped: r.equipped };
+}
+
+/** The next forged rare for a slot group (deterministic: the save's seed and the craft counter). */
+function forgeRoll(state: GameState, slot: string): Item | null {
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    // An off-hand the weapon allows (none behind a two-hander).
+    const kinds = slot === "offhand" ? wearableOffhands(state) : undefined;
+    if (kinds === null) return null;
+    const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
+    // A base the hero can wear; the item level (affix tiers) may still run two levels ahead.
+    try {
+        const item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level, ...(kinds ? { kinds } : {}) });
+        item.crafted = true;
+        return item;
+    } catch { return null; }
 }
 
 /**
- * Forges rares for a slot until one is an upgrade (worn at once), up to
- * `tries`; the misses are salvaged on the spot. Returns how many were made.
+ * Forges rares for a slot until one is an upgrade, up to `tries`: it is worn at
+ * once (or, with auto-equip off, kept in the stash) and forging stops; the
+ * misses are salvaged on the spot. Returns how many were made.
  */
-export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): { err: string | null; made: number; item?: Item } {
-    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): { err: string | null; made: number; item?: Item; equipped?: boolean } {
     let made = 0;
     for (; made < tries; ) {
         const cost = forgeCost(state);
         if (state.dust < cost) return { err: made ? null : `needs ${cost} ember dust`, made };
-        const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
-        let item: Item;
-        try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level }); } catch { return { err: "nothing to forge for that slot", made }; }
-        item.crafted = true;
+        const item = forgeRoll(state, slot);
+        if (!item) return { err: "nothing to forge for that slot", made };
+        const up = !!upgradeSlot(state, item);
+        // An upgrade that can be neither worn nor kept: stop before paying for it.
+        if (up && !state.settings.autoEquip && !paidRoom(state, item)) return { err: made ? null : "stash full", made };
         state.nextUid++;
         state.craftSeq++;
         state.dust -= cost;
         made++;
-        if (upgradeSlot(state, item)) {
-            const r = receiveItem(state, item);
-            if (r.equipped) return { err: null, made, item };
+        if (up) {
+            const r = receivePaid(state, item);
+            if (!r.err) return { err: null, made, item, equipped: r.equipped };
         }
-        const v = salvageValue(item);
-        state.dust += v;
-        state.totals.salvaged++;
+        salvageItem(state, item);
     }
     return { err: null, made };
 }

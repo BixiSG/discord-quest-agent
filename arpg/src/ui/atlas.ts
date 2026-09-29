@@ -23,7 +23,7 @@ const RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare:
 
 export function atlasSig(c: Ctx): string {
     const s = c.state;
-    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
+    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}:${JSON.stringify(s.currency)}`;
 }
 
 export function atlasView(c: Ctx): HTMLElement {
