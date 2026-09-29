@@ -2935,8 +2935,9 @@
     if (dropsOffhand(state, item, slot)) out.push(eq.offhand);
     return out;
   }
-  function stashWorth(item) {
-    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0);
+  function stashWorth(item, heroLevel = Infinity) {
+    const far = Math.max(0, levelReq(item) - heroLevel - 2);
+    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0) - 3 * far;
   }
   var guarded = (x) => !!x.locked;
   var upgradeMemo = /* @__PURE__ */ new WeakMap();
@@ -2954,7 +2955,8 @@
     return v;
   }
   function upkeepVictims(state, n, below = Infinity) {
-    const pool = state.stash.filter((x) => !guarded(x) && stashWorth(x) < below).sort((a, b) => stashWorth(a) - stashWorth(b) || a.uid - b.uid);
+    const L = state.hero.level;
+    const pool = state.stash.filter((x) => !guarded(x) && stashWorth(x, L) < below).sort((a, b) => stashWorth(a, L) - stashWorth(b, L) || a.uid - b.uid);
     const out = [];
     for (const x of pool) {
       if (out.length >= n) break;
@@ -3130,7 +3132,7 @@
           return true;
         }
         const v = state.settings.upkeep ? upkeepVictims(state, 1)[0] : void 0;
-        if (v && stashWorth(v) < stashWorth(item)) {
+        if (v && stashWorth(v, state.hero.level) < stashWorth(item, state.hero.level)) {
           giveUp(state, v);
           state.stash.push(item);
           state.stashFull = false;

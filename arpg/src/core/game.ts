@@ -96,10 +96,14 @@ function displacedItems(state: GameState, item: Item, slot: Slot): Item[] {
 /**
  * How much a stash item is worth keeping (upkeep gives up the lowest): item
  * level (affix tiers) and base level (damage, defences) equally, then rarity,
- * affix count and honed quality.
+ * affix count and honed quality. With the hero's level, an item that needs
+ * more than two levels beyond it is worth less per level missing: late,
+ * levels come slowly and the best-rolled drops (which need the most) would
+ * otherwise fill the stash with gear nobody can wear for hours.
  */
-export function stashWorth(item: Item): number {
-    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0);
+export function stashWorth(item: Item, heroLevel = Infinity): number {
+    const far = Math.max(0, levelReq(item) - heroLevel - 2);
+    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0) - 3 * far;
 }
 
 /** Never given up by upkeep, auto-equip or bulk salvage. */
@@ -120,7 +124,8 @@ function isUpgrade(state: GameState, item: Item): boolean {
  * `below`: never locked items or upgrades. Empty when there are fewer.
  */
 function upkeepVictims(state: GameState, n: number, below = Infinity): Item[] {
-    const pool = state.stash.filter(x => !guarded(x) && stashWorth(x) < below).sort((a, b) => stashWorth(a) - stashWorth(b) || a.uid - b.uid);
+    const L = state.hero.level;
+    const pool = state.stash.filter(x => !guarded(x) && stashWorth(x, L) < below).sort((a, b) => stashWorth(a, L) - stashWorth(b, L) || a.uid - b.uid);
     const out: Item[] = [];
     for (const x of pool) {
         if (out.length >= n) break;
@@ -327,7 +332,7 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
             // Upkeep: the cheapest item it may give up goes if the drop is worth more. A drop worth
             // less than everything is simply salvaged; only a stash upkeep can't touch at all is "full".
             const v = state.settings.upkeep ? upkeepVictims(state, 1)[0] : undefined;
-            if (v && stashWorth(v) < stashWorth(item)) { giveUp(state, v); state.stash.push(item); state.stashFull = false; return true; }
+            if (v && stashWorth(v, state.hero.level) < stashWorth(item, state.hero.level)) { giveUp(state, v); state.stash.push(item); state.stashFull = false; return true; }
             if (!v && !state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
         }
     }

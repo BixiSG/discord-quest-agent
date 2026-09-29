@@ -54,6 +54,26 @@ describe("stash upkeep", () => {
         expect(receiveItem(g2, ring(10)).kept).toBe(false);
         expect(g2.stash).toEqual([good]);
     });
+    it("gear far above the hero's level is worth less: a wearable keeper replaces it", () => {
+        const g = g0();
+        g.settings.autoEquip = false;
+        g.hero.level = 40;
+        g.stashCap = 1;
+        const far = { uid: uid++, base: "plate_body8", ilvl: 80, rarity: "rare", name: "F", affixes: [] } as Item; // needs 74
+        g.stash.push(far);
+        const now = { uid: uid++, base: "plate_body5", ilvl: 42, rarity: "rare", name: "N", affixes: [{ id: "life", tier: 0, rolls: [20] }] } as Item;
+        expect(receiveItem(g, now).kept).toBe(true);
+        expect(g.stash).toEqual([now]);
+        // Near the hero's level it would have stayed.
+        const g2 = g0();
+        g2.settings.autoEquip = false;
+        g2.hero.level = 72;
+        g2.stashCap = 1;
+        const soon = { ...far, uid: uid++ };
+        g2.stash.push(soon);
+        expect(receiveItem(g2, { ...now, uid: uid++ }).kept).toBe(false);
+        expect(g2.stash).toEqual([soon]);
+    });
     it("switched off, a full stash salvages the drop as before", () => {
         const g = g0();
         g.settings.autoEquip = false;
