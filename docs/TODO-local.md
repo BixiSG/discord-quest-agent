@@ -3,12 +3,26 @@
 Branch: `feat/pet-addon-jjbs70`, with both addons plus the launcher change.
 `main` is untouched; do not merge or push `main` until the user signs off.
 
-## >>> NEXT SESSION: start here (Round 6 plan, written 2026-09-29)
+## >>> NEXT SESSION: start here (Round 6 done 2026-09-29; Round 7 = the open items below)
 
-State: branch `feat/pet-addon-jjbs70`, ~37 local commits ahead of origin, **nothing pushed**
-(the user's standing "don't push yet"). Hollowmarch save v7, 197 tests, en/ru/uk. The live
-Discord runs this branch's build (hot-swapped); the dev agent is NOT running (its console
-window gets closed) and the installed agent is the old v1.4.3.
+State (end of round 6): branch `feat/pet-addon-jjbs70`, 83 local commits ahead of origin,
+**nothing pushed** (the user's standing "don't push yet"). Save v7 (new optional fields only),
+225 tests, en/ru/uk. Installed agent (real session): **v1.6.1**, attach-only, resident.
+
+Open, needing the user:
+- [ ] Push + PR `feat/pet-addon-jjbs70` -> `main` (release 1.7.0). Asked at the end of round 6.
+- [ ] Live Discord: since 15:23 on 2026-09-29 it runs WITHOUT the debug port (restarted by hand
+      or by Discord itself), so no quest agent and no Hollowmarch in it; round 6 could not be
+      hot-swapped. Needs Discord restarted with the port (the user's OK: no call in progress),
+      then `live-read.mjs` + `live-hotswap.mjs src/addons/arpg.js`. Hollow Night starts Oct 1.
+- [ ] Pick the round 7 content item (E below).
+
+Round 7 candidates besides E:
+- [ ] Attack builds vs pinnacles: two-handed Vanguards/Striders die before the enrage window
+      (survival, chaos res 0); the Hollow Crown is only beaten by invested casters. The Strider is
+      weakest overall (one seed never relights in 160 h). Measure with `tools/dawns.ts` (3 callings
+      x 2 seeds) and `tools/pinnacles.ts <dump> invest level=88`; dumps via `DUMP=dir`.
+- [ ] Stone pouch overflow late (hundreds of Radiants with every socket full): a use for them.
 
 Working rules (from memory, repeated so nothing is lost):
 - `cd arpg && npm run check` after every change (tsc + vitest + build; the build also writes
@@ -52,12 +66,15 @@ Working rules (from memory, repeated so nothing is lost):
        creation) - a pure move, checked with the shots scenario.
 
 ### D. Balance (measure with the tools first)
-10. [ ] Dawn loop: teach the bot to invest (hone, drill, set stones, buy market upgrades) so a probe
-        reaches a relight; check dawns 2-3 (15% tougher per dawn) don't wall the hero, tune.
-11. [ ] Late dust still inflates (~2.4M at 96 h in a bot that doesn't spend). Re-measure with the
-        investing bot; add a sink only if needed (e.g. a relic gamble at the Jeweller).
-12. [ ] The Hollow Crown: unbeatable (dies in seconds). Make it a dawn-2/3 goal with its own reward
-        (an extra perk pick, a title) and tune with `tools/pinnacles.ts invest`.
+10. [x] Dawn loop: the bot invests (hone, drill, temper, stones, market) and goes for missing shards
+        first. Found: tanky casters outlasted pinnacles (dawn VII in 160 h), attack builds never beat
+        the King. Now pinnacles enrage (90 s, +2%/s), the King/Choir are retuned, dawns are 10%
+        tougher: first relight 18-36 h for every calling, the loop slows at dawn II-IV (GDD).
+11. [x] Dust still inflated with investing (11M at 240 h). Sink: Temper relics in the Forge (a roll
+        moves toward its best, never worse; 200 x ilvl x 1.4^n). Also fixed: the relic case kept the
+        worse Voidsinger (a downside roll now scores better low).
+12. [x] The Hollow Crown opens at dawn II; first kill: one more perk for good + Crownbreaker. Tuned to
+        stay harder than the King for every hero measured; an invested dawn II caster wins it.
 
 ### E. Bigger content (one per session, pick with the user)
 13. [ ] Skill mastery: skills and supports level with use (small % bonus), bars on the Skills tab.
