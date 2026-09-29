@@ -173,10 +173,17 @@ Release checklist (for when the user says go):
 User: "think further of features/story/updates/endgame. maybe some traders with items/gems/etc,
 maybe weapon socketing." Design in `arpg/docs/ROADMAP.md`. Built after the localisation merge so
 new text goes into the en/ru/uk tables from the start.
-- [ ] 5a: the Wandering Market (Pedlar, Jeweller; stock rotates every 2 h of hero time) and
-      sockets + ember stones (6 kinds x 5 tiers, effect by slot, pouch, cutting, drilling, auto-set).
-- [ ] 5b: Cartographer, echoes (12 lore pages from map bosses/pinnacles), sun shards.
-- [ ] 5c: the Rekindling - relight the sun (rebirth with dawn bonuses, heirloom, dawn passives).
+- [x] 5a core: sockets + ember stones (6 kinds x 5 tiers, effect by slot; drops tuned to ~27
+      Radiants by 24 h, Radiant only by cutting), the Wandering Market (Pedlar, Jeweller; 2 h rotation).
+- [x] 5b core: 12 echoes (8 from map bosses, 4 from pinnacles), every third an atlas point.
+      Cartographer not built yet (maps are plentiful; low value).
+- [x] 5c core: the Rekindling (three sun shards; new dawn keeps the collection + an heirloom;
+      +10% xp/dust, +1 passive point, world 15% tougher/20% richer per dawn; ten dawn perks).
+- [x] Pinnacle balance: they were unbeatable past the Drowned Sun; now an invested level-85 build
+      wins the Choir 2/3 and nearly the King (tools/pinnacles.ts). The Hollow Crown stays optional.
+- [ ] UI for 5a-5c (Market tab on key 0, sockets on item cards and in the Forge, stone pouch,
+      echoes in the Log, the relight dialog and dawn perk pick, dawn title) - after the localisation
+      merge, with en/ru/uk strings. Then docs, shots, live hot-swap.
 
 ## Next updates (roadmap, 2026-09-29)
 
