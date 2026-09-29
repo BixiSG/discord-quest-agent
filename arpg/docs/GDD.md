@@ -262,9 +262,15 @@ spent, reported as wins, time and a verdict (ready, risky, not yet).
   spark). The Lamplighter opens the Cinderlands; heroes who were past the
   Sunfall before Act 4 keep their maps (save v8, `endgame:early`), and a new
   dawn walks through Ashfold again.
-- **The Cinderlands** (P4): the endgame. Maps are tiers 1-16 with random
-  mods (monster life, damage, extra elements, player curses). Mods raise
-  loot quantity and rarity. Completing a tier grants atlas points. Past
+- **The Cinderlands** (P4): the endgame. Maps are tiers 1-16 in thirteen
+  areas (round 8 added three from Ashfold: the Lantern Lanes, the Hollow
+  Belfry and the Oil Deeps, with its bosses) with random mods: monster life,
+  damage, speed, extra elements, more packs; round 8 added monster armour,
+  evasion and elemental resistance, a monster more in every pack, a map boss
+  with 80% more life and 30% more damage, and skills that cost 40% more
+  mana; the curses on the hero (less regeneration, lower maximum
+  resistances, more damage taken, less damage dealt). Mods raise loot
+  quantity and rarity. Completing a tier grants atlas points. Past
   tier 16 the **Depths** scale forever. Four pinnacle bosses need fragments
   that drop in high tiers.
 

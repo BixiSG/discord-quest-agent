@@ -6,7 +6,7 @@ import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SU
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
-import { DAMAGE_TYPES, type Item } from "../types";
+import { DAMAGE_TYPES, type DamageType, type Item } from "../types";
 import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
@@ -126,7 +126,7 @@ function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null, 
     if (run.pack >= run.packs) {
         if (z.boss) {
             const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
-            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE); }
+            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE * (eff?.bossLife ?? 1)); }
             run.monsters.push(b);
         }
         return;
@@ -199,7 +199,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
             if (h.cd <= 0) {
                 if (h.mana >= sheet.skill.manaCost) {
                     h.mana -= sheet.skill.manaCost;
-                    sheet = heroAttack(state, run, sheet, rng, ev);
+                    sheet = heroAttack(state, run, sheet, rng, ev, eff);
                     h.cd += 1 / Math.max(0.1, sheet.skill.speed);
                 } else h.cd = 0.2;
             }
@@ -224,7 +224,13 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     if (state.activity.run === run) run.rng = rng.state();
 }
 
-function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents): Sheet {
+/** A monster's evasion, armour and resistance to a damage type, with the map's mods (veiled, armoured, warded). */
+export const monsterEvasion = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.evasion * (eff?.evasion ?? 1);
+/** Monster armour counts at half against the hero's hits (COMBAT.md 9). */
+export const monsterArmour = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.armour * 0.5 * (eff?.armour ?? 1);
+export const monsterRes = (m: MonsterState, t: DamageType, eff: MapEffects | null) => (MONSTERS[m.def]!.res?.[t] ?? 0) + (t !== "phys" && t !== "chaos" ? eff?.res ?? 0 : 0);
+
+function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): Sheet {
     const sk = sheet.skill;
     const alive: number[] = [];
     run.monsters.forEach((m, i) => { if (m.life > 0) alive.push(i); });
@@ -233,8 +239,7 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
     let dealt = 0;
     for (const i of targets) {
         const m = run.monsters[i]!;
-        const d = MONSTERS[m.def]!;
-        if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m.level) * d.evasion))) { ev.heroMiss?.(i); continue; }
+        if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterEvasion(m, eff)))) { ev.heroMiss?.(i); continue; }
         const crit = rng.chance(sk.critChance / 100);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
@@ -242,8 +247,8 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
             if (hi <= 0) continue;
             let x = rng.range(lo, hi);
             if (crit) x *= sk.critMulti / 100;
-            if (t === "phys") x *= 1 - armourReduction(monsterDefence(m.level) * d.armour * 0.5, x);
-            else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
+            if (t === "phys") x *= 1 - armourReduction(monsterArmour(m, eff), x);
+            else x *= 1 - (monsterRes(m, t, eff) - sk.pen[t]) / 100;
             dmg += Math.max(0, x);
         }
         dmg = Math.max(1, dmg);
@@ -275,7 +280,7 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
             if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
         }
         if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
-        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE) : 1;
+        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
         const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {

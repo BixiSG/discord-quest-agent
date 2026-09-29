@@ -127,3 +127,79 @@ describe("level-up lines", () => {
         expect(g.log[g.log.length - 1]!.key).toBe("log.levelUp");
     });
 });
+
+describe("Ashfold map areas and round-8 map mods", () => {
+    const setup = async (mods: string[], cls = "vanguard", area = "lanternlanes", tier = 5) => {
+        const { setMapMode } = await import("../src/core/maps");
+        const g = hero(cls, 70);
+        // Real weapons: a starter's hits floor at 1 against level-52 monsters.
+        g.hero.equipment.weapon = { uid: 6999, base: cls === "arcanist" ? "wand7" : "greatsword7", ilvl: 70, rarity: "plain", affixes: [] };
+        g.hero.rev++;
+        g.world.clears.a4_lamphouse = 1;
+        g.maps.push({ uid: 7000, tier, area, mods, rarity: mods.length ? "rare" : "plain" });
+        setMapMode(g, true);
+        return g;
+    };
+    const firstHit = async (mods: string[], cls = "vanguard") => {
+        const { step } = await import("../src/core/sim/engine");
+        const g = await setup(mods, cls);
+        let dmg = 0;
+        for (let i = 0; i < 400 && !dmg; i++) step(g, { heroHit: (_t, d) => { dmg ||= d; } });
+        return dmg;
+    };
+    it("the areas are Ashfold's monsters and bosses, with a backdrop of their own", async () => {
+        const { MAP_AREAS, MONSTERS, ZONES } = await import("../src/core/data");
+        const a4 = new Set(["a4_stair", "a4_gate", "a4_lanes", "a4_square", "a4_belfry", "a4_undercroft", "a4_lamphouse"].flatMap(z => [...ZONES[z]!.monsters, ZONES[z]!.boss ?? ""]));
+        for (const id of ["lanternlanes", "hollowbelfry", "oildeeps"]) {
+            const a = MAP_AREAS[id]!;
+            expect(a.scene).toBeTruthy();
+            for (const m of [...a.monsters, a.boss]) { expect(MONSTERS[m], m).toBeDefined(); expect(a4.has(m), m).toBe(true); }
+        }
+        const { setFor, SETS } = await import("../src/ui/gfx/scenes");
+        const { mapZone } = await import("../src/core/maps");
+        const { emptyAtlas } = await import("../src/core/data");
+        expect(setFor(mapZone({ tier: 3, area: "lanternlanes", mods: [], level: 48 }, emptyAtlas()))).toBe(SETS.ashfold);
+        // Every area keeps one backdrop at every tier (it used to be picked from the tier-suffixed name).
+        for (const a of Object.values(MAP_AREAS)) {
+            expect(SETS[a.scene!], a.id).toBeDefined();
+            expect(setFor(mapZone({ tier: 2, area: a.id, mods: [], level: 46 }, emptyAtlas()))).toBe(setFor(mapZone({ tier: 17, area: a.id, mods: [], level: 75 }, emptyAtlas())));
+        }
+    });
+    it("armoured and warded blunt the first hit; veiled makes attacks miss more", async () => {
+        expect(await firstHit(["armoured"])).toBeLessThan(await firstHit([]));
+        expect(await firstHit(["warded"], "arcanist")).toBeLessThan(await firstHit([], "arcanist"));
+        const { monsterArmour, monsterEvasion, monsterRes } = await import("../src/core/sim/engine");
+        const { mapEffects } = await import("../src/core/maps");
+        const { emptyAtlas } = await import("../src/core/data");
+        const eff = (mods: string[]) => mapEffects({ tier: 5, area: "lanternlanes", mods, level: 52 }, emptyAtlas());
+        const m = { def: "watchman", level: 52, life: 1, maxLife: 1, champion: false, atk: 1 };
+        expect(monsterEvasion(m, eff(["veiled"])) / monsterEvasion(m, eff([]))).toBeCloseTo(1.5);
+        expect(monsterArmour(m, eff(["armoured"])) / monsterArmour(m, eff([]))).toBeCloseTo(1.6);
+        expect(monsterRes(m, "cold", eff(["warded"])) - monsterRes(m, "cold", eff([]))).toBe(20);
+        expect(monsterRes(m, "chaos", eff(["warded"]))).toBe(monsterRes(m, "chaos", eff([])));
+        expect(monsterRes(m, "cold", null)).toBe(30);
+    });
+    it("swarming adds a monster to every pack; draining raises mana cost in the map only", async () => {
+        const { mapZone, mapEffects } = await import("../src/core/maps");
+        const { emptyAtlas } = await import("../src/core/data");
+        expect(mapZone({ tier: 3, area: "oildeeps", mods: ["swarming"], level: 48 }, emptyAtlas()).packSize).toEqual([5, 7]);
+        const { runSheet, step } = await import("../src/core/sim/engine");
+        const g = await setup(["draining"]);
+        const before = sheetOf(g).skill.manaCost;
+        step(g);
+        expect(runSheet(g).skill.manaCost).toBeCloseTo(before * 1.4, 0);
+        expect(mapEffects(g.activity.run!.map!, emptyAtlas()).hero.map(m => m.stat)).toEqual(["manaCost"]);
+    });
+    it("overlord makes the map boss tougher and more dangerous", async () => {
+        const { step } = await import("../src/core/sim/engine");
+        const bossLife = async (mods: string[]) => {
+            const g = await setup(mods);
+            step(g);
+            const run = g.activity.run!;
+            run.pack = run.packs; run.phase = "travel"; run.timer = 0;
+            step(g);
+            return run.monsters[0]!.maxLife;
+        };
+        expect(await bossLife(["overlord"]) / await bossLife([])).toBeCloseTo(1.8, 1);
+    });
+});

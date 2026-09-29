@@ -7,7 +7,7 @@ import { HERO_CAST } from "./cast";
 import { setFor } from "./scenes";
 import { drawSprite, spriteOf, tileLayer } from "./sprites";
 
-type Place = Pick<ZoneDef, "id" | "name" | "palette">;
+type Place = Pick<ZoneDef, "id" | "name" | "palette" | "scene">;
 const cache = new Map<string, HTMLCanvasElement>();
 
 function paint(zone: Place, w: number, h: number, cls: string | null): HTMLCanvasElement {
@@ -16,7 +16,7 @@ function paint(zone: Place, w: number, h: number, cls: string | null): HTMLCanva
     const g = c.getContext("2d")!;
     g.imageSmoothingEnabled = false;
     const G = h - Math.max(6, Math.round(h * 0.12));
-    const set = setFor(zone.id, zone.name);
+    const set = setFor(zone);
     g.fillStyle = set.sky; g.fillRect(0, 0, w, h);
     // Shift each layer a little differently so the crop isn't always the same corner.
     set.layers.forEach((l, i) => tileLayer(g, l.sprite, w, G + (l.drop ?? 0), 40 + i * 37 + (zone.id.length * 13) % 60));
@@ -45,13 +45,26 @@ export function portrait(zone: Place, cls: string, w = 150, h = 112): HTMLCanvas
     return paint(zone, w, h, cls);
 }
 
-/** A small view of a zone's scenery, cached once the atlas has loaded. */
-export function scenery(zone: Place, w: number, h: number): HTMLCanvasElement {
-    const key = `${zone.id}|${zone.name}|${w}x${h}`;
+/**
+ * A small view of a zone's scenery, cached once the atlas has loaded. `zoom` paints it that many
+ * times larger and shrinks it: a thumbnail only a few dozen pixels tall would otherwise show just
+ * the band of sky above the ground line instead of the place.
+ */
+export function scenery(zone: Place, w: number, h: number, zoom = 1): HTMLCanvasElement {
+    const key = `${zone.id}|${zone.name}|${zone.scene ?? ""}|${w}x${h}|${zoom}`;
     let c = cache.get(key);
     if (!c) {
-        c = paint(zone, w, h, null);
-        if (spriteOf(setFor(zone.id, zone.name).layers[0]!.sprite)) cache.set(key, c);
+        const big = paint(zone, w * zoom, h * zoom, null);
+        if (zoom === 1) c = big;
+        else {
+            c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            const g = c.getContext("2d")!;
+            g.imageSmoothingEnabled = true;
+            g.imageSmoothingQuality = "high";
+            g.drawImage(big, 0, 0, w, h);
+        }
+        if (spriteOf(setFor(zone).layers[0]!.sprite)) cache.set(key, c);
     }
     return copy(c);
 }

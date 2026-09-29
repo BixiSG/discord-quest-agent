@@ -105,7 +105,8 @@ multipliers over the level tables in `src/core/data/scaling.ts`:
     damage(L) = 5  * 1.055^(L-1) * (1 + 0.02 (L-1))
     armour(L) = evasion(L) = accuracy(L) = 12 + 9 (L-1) * 1.03^(L-1)
 
-Monster armour counts at half against the hero's hits. Packs have 2-6 normal
+Monster armour counts at half against the hero's hits. Map mods can raise
+monster armour and evasion (more) and add to their elemental resistances. Packs have 2-6 normal
 monsters, sometimes a **champion** (x3 life, x1.5 damage, x3 XP). Bosses
 spawn one level above their zone with their own multipliers in
 `data/monsters.ts` (the Tide-Warden: x25 life, x2.0 damage; the Chapel

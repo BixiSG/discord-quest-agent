@@ -12,7 +12,7 @@ import { hashSeed } from "./rng";
 import { returnStones } from "./sockets";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
-import type { MapEffects } from "./maps";
+import { NO_EFFECTS, type MapEffects } from "./maps";
 
 export const dawnOf = (s: GameState) => s.hero.dawn?.level ?? 0;
 export const hasPerk = (s: GameState, id: string) => !!s.hero.dawn?.perks.includes(id);
@@ -105,7 +105,7 @@ export function dawnEffects(s: GameState, key: object, base: MapEffects | null):
     if (!d) return base;
     const c = wrapped.get(key);
     if (c && c.dawn === d && c.base === base) return c.eff;
-    const b = base ?? { life: 1, damage: 1, speed: 1, extra: [], hero: [], quantity: 0, rarity: 0 };
+    const b = base ?? NO_EFFECTS();
     const eff: MapEffects = { ...b, life: b.life * (1 + (DAWN_TOUGHER * d) / 100), damage: b.damage * (1 + (DAWN_TOUGHER * d) / 100),
         quantity: b.quantity + DAWN_RICHER * d, rarity: b.rarity + DAWN_RICHER * d };
     wrapped.set(key, { dawn: d, base, eff });
