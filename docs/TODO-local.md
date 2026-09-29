@@ -134,6 +134,26 @@ Follow-up loop (2026-09-29 afternoon):
       inject: agent v21, the game reopened in the strip, the save is v5 (level 34, stash 58/60, 4
       relics in the case, 3 contracts running).
 
+## Round 4 (2026-09-29 evening): "do what's best for the project in all aspects"
+
+User: Orbling and Hollowmarch are two separate projects (no crossover), but a pet idea is good for
+Hollowmarch on its own. Pushing stays off until the user says so (standing "don't push yet").
+
+Plan, in order:
+1. [ ] Companions: Hollowmarch's own pets. Nine creatures of the March (small CC0 sprites already in
+   the atlas, tinted), one at the hero's side in battle; each gives one bonus that grows with its
+   level (bond from kills, level 1-20). Act bosses give one each on the first clear (also for old
+   saves), bosses and map bosses rarely drop one, contracts can pay one; a duplicate adds bond.
+   Hero tab card: the active one, level, bonus, the collection (unfound ones as silhouettes). Save v6.
+2. [ ] Late economy: currency exchange at the Forge (10 of a common orb -> 1 of the next rarer) and an
+   ember shrine (dust for a timed blessing: experience, rarity or quantity), priced by level.
+3. [ ] Pinnacles: a readiness estimate (the hero's DPS and EHP against the boss) on the Atlas tab; the
+   bot only queues a pinnacle when ready.
+4. [ ] Loot filter: affix-group rules in the editor ("keep rings with fire resistance") and presets.
+5. [ ] Release prep without pushing: CHANGELOG bullets for Hollowmarch, AGENT_VERSION 22, fresh
+   README shots, a PR description ready to use.
+6. [ ] Localisation (ru/uk) of the game UI, if there is room (a string table).
+
 ## Next updates (roadmap, 2026-09-29)
 
 Ship readiness (next, needs the user's call on the release shape):
@@ -154,13 +174,12 @@ Soon (Hollowmarch 1.x):
 - [ ] Loot filter editor: affix-group rules ("keep rings with fire resistance") and presets.
 - [ ] Build loadouts: save/restore skill, supports and gear sets; a passive respec cost for dust.
 - [ ] Contracts: zone contracts ("clear Act 2 places"), no-death streaks, one bigger weekly contract.
-- [ ] Feats: lifetime milestones with small permanent rewards (a title, stash room, a hat for Orbling).
+- [ ] Feats: lifetime milestones with small permanent rewards (a title, stash room).
 
 Later:
 - [ ] Content: more skills (15) and supports (14), minions or totems as a new archetype; unique map
       bosses and areas (maps reuse act bosses); an Act 4 or a Depths league mechanic.
 - [ ] Seasonal events (October: a Hollow Night relic; Orbling already has the witch hat).
-- [ ] Orbling in Hollowmarch: the pet follows the hero in battle when both addons are on.
 - [ ] Hub windows: resizable, a 2x/3x scale for Orbling.
 
 ## 4. Before shipping
