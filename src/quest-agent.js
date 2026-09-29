@@ -179,6 +179,7 @@
         "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
         "set.addons": "Addons",
         "set.pin": "Button in Discord's title bar", "set.pinDesc": "Opens {name} in one click, next to the quest agent's button.",
+        "win.close": "Close (Esc)",
         "title.stats": "Stats", "head.stats": "Stats and history",
         "stats.perMonth": "orbs / 30 days", "stats.perWeek": "about {n} a week",
         "stats.range": "usually {lo} to {hi} per 30 days", "stats.rangeSoon": "a usual range shows after 6 weeks of history",
@@ -345,6 +346,8 @@
             console.log(`[QuestAgent] Retired the QuestBypass prototype (v${old.version}); one agent from here on.`);
         }
     } catch (e) { console.warn("[QuestAgent] Could not retire the QuestBypass prototype:", e); }
+    // Addon windows an earlier agent left behind (its stop() failed or never ran).
+    try { for (const el of document.querySelectorAll(".qb-aw")) el.remove(); } catch (e) { /* ignore */ }
 
     let ApplicationStreamingStore, RunningGameStore, QuestsStore, ChannelStore, GuildChannelStore, FluxDispatcher, api;
     let NavTransitionTo; // optional: quest rows navigate to the Quests page; agent works without it
@@ -470,6 +473,7 @@
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
+        winPos: {},          // addon id -> { x, y } of its own window, after it was dragged
         reminded: [],        // quest ids already warned about an expiring reward
         goal: 0              // orbs being saved up for (Stats view)
     };
@@ -501,6 +505,11 @@
                 if (m && typeof m === "object") for (const [k, v] of Object.entries(m)) if (typeof v === "boolean" && /^[a-z][a-z0-9-]{1,23}$/.test(k)) SETTINGS[field][k] = v;
             }
             if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
+            if (s.winPos && typeof s.winPos === "object") {
+                for (const [k, v] of Object.entries(s.winPos).slice(0, 32)) {
+                    if (/^[a-z][a-z0-9-]{1,23}$/.test(k) && v && Number.isFinite(v.x) && Number.isFinite(v.y)) SETTINGS.winPos[k] = { x: Math.round(v.x), y: Math.round(v.y) };
+                }
+            }
             if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
             if (Number.isFinite(s.goal) && s.goal >= 0) SETTINGS.goal = Math.min(1e7, Math.round(s.goal));
         } catch (e) { console.warn("[QuestAgent] Could not read saved settings:", e); }
@@ -670,13 +679,20 @@
     // agent down. Each queues a definition on window.__questAgentAddons:
     //   { id, icon: 24px SVG path, strings: { "<id>.key": "English" },
     //     init(api), mount(el, api) -> { unmount() }, destroy(),
+    //     window: { w, h } (optional: the view opens in a floating window of
+    //       its own instead of inside the panel; w is its content width in
+    //       px, h its height (left out: as tall as the content). The header
+    //       button, the title-bar button, addons.open() and switching it on
+    //       all open that window; it has a title bar with the addon's name
+    //       and status, drags by it, keeps its position, closes on Esc, and
+    //       keys typed in it never reach Discord. Takes precedence over launch),
     //     launch(api) (optional: what its title-bar button does instead of
     //     opening the panel view, e.g. a game opening its own window) }
     // Switched-on ones (Settings > Addons) get a header button and a panel
-    // view, and optionally their own button in Discord's title bar. They run
-    // in the page with the agent's own access, which is why only addons
-    // shipped with this project are loaded.
-    const ADDONS = new Map(); // id -> { id, def, api, live, view, attention, listeners }
+    // view (or their window), and optionally their own button in Discord's
+    // title bar. They run in the page with the agent's own access, which is
+    // why only addons shipped with this project are loaded.
+    const ADDONS = new Map(); // id -> { id, def, api, live, view, attention, listeners, win, aw }
     const ADDON_ID = /^[a-z][a-z0-9-]{1,23}$/;
     function addonApi(a) {
         const key = "questAgent.addon." + a.id;
@@ -701,7 +717,8 @@
             },
             /** The Stats view's numbers: orbs per 30 days, waiting to be claimed, earned in total. */
             pace() { const st = orbStats(); return { pace: st.pace, waiting: st.waiting, total: st.total }; },
-            openQuests() { if (openQuestsPage()) togglePanel(false); },
+            /** The Quests page; the panel and the addon's own window get out of the way. */
+            openQuests() { if (openQuestsPage()) { togglePanel(false); closeAddonWindow(a); } },
             /** Ask for the user's attention: a dot on the addon's header button and on the title-bar button. */
             attention(on) {
                 on = !!on;
@@ -717,15 +734,22 @@
                 a.status = text; UI.addonSig = null;
                 syncPinDots(); refreshUI();
             },
-            visible: () => UI.open && UI.view === "addon:" + a.id
+            /** On screen right now: its window is open (windowed addons), else the panel shows its view. */
+            visible: () => a.win ? !!a.aw?.el.isConnected : UI.open && UI.view === "addon:" + a.id
         };
+    }
+    /** def.window, checked: { w, h } in px (h null = as tall as the content), or null for a panel view. */
+    function windowSpec(def) {
+        const w = def.window;
+        if (!w || typeof w !== "object" || !Number.isFinite(w.w) || w.w < 120 || w.w > 1600) return null;
+        return { w: Math.round(w.w), h: Number.isFinite(w.h) && w.h >= 80 && w.h <= 1600 ? Math.round(w.h) : null };
     }
     function registerAddon(def) {
         try {
             if (!def || typeof def !== "object" || !ADDON_ID.test(def.id ?? "") || typeof def.mount !== "function") return false;
             if (ADDONS.has(def.id)) stopAddon(def.id); // injected again (development): the new one replaces it
             for (const [k, v] of Object.entries(def.strings ?? {})) if (k.startsWith(def.id + ".") && typeof v === "string") EN[k] = v;
-            const a = { id: def.id, def, listeners: {}, live: false, view: null, attention: false };
+            const a = { id: def.id, def, listeners: {}, live: false, view: null, attention: false, win: windowSpec(def), aw: null };
             a.api = addonApi(a);
             ADDONS.set(def.id, a);
             if (SETTINGS.addons[def.id] === true) startAddon(def.id);
@@ -747,6 +771,7 @@
     function stopAddon(id) {
         const a = ADDONS.get(id);
         if (!a) return;
+        closeAddonWindow(a, true);
         unmountAddonView(a);
         if (a.live) { try { a.def.destroy?.(); } catch (e) { /* ignore */ } }
         a.live = false; a.listeners = {}; a.attention = false; a.status = "";
@@ -763,10 +788,12 @@
     const pinnedNow = a => a.live && SETTINGS.pins[a.id] === true && UI.mode === "titlebar";
     /** The Auto Quests button's dot: addons with a button of their own show the dot there instead. */
     const addonAttention = () => [...ADDONS.values()].some(a => a.live && a.attention && !pinnedNow(a));
-    /** A title-bar button click: the addon's own launch() if it has one, else its panel view (toggled). */
+    /** A title-bar button click (and addons.open): a windowed addon's window (toggled),
+     *  else the addon's own launch() if it has one, else its panel view (toggled). */
     function openAddon(id) {
         const a = ADDONS.get(id);
         if (!a?.live) return;
+        if (a.win) { toggleAddonWindow(a); return; }
         if (typeof a.def.launch === "function") {
             try { a.def.launch(a.api); } catch (e) { console.warn(`[QuestAgent] Addon "${id}" failed to launch:`, e); }
             return;
@@ -776,6 +803,162 @@
         UI.view = v; UI.sig = null;
         togglePanel(true);
     }
+
+    // ---- Addon windows ------------------------------------------------------
+    // A windowed addon (def.window) gets a floating window of its own, #qb-aw-<id>:
+    // the panel's look (same tokens), a title bar with its icon, name, status and
+    // a close button, and a body its mount() fills. Above the panel (10000) and
+    // our toast (10001), below Hollowmarch's game window (10050). Dragged by the
+    // title bar; the spot is kept per addon (SETTINGS.winPos) and always clamped
+    // into the viewport, under Discord's own title bar.
+    const WIN_STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
+    const winReserve = { at: -1e9, px: 0 };
+    /** How far down Discord's title bar reaches (its window buttons live there): whatever
+     *  sits at the top-right corner, if it is a full-width strip under 64px tall. */
+    function winTopReserve() {
+        const now = performance.now();
+        if (now - winReserve.at < 1500) return winReserve.px;
+        let px = 0;
+        try {
+            const hit = document.elementsFromPoint(window.innerWidth - 12, 3).find(el => !el.closest(".qb-aw,#qb-panel,#qb-toast,#hollowmarch-root"));
+            for (let e = hit ?? null; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+                const b = e.getBoundingClientRect();
+                if (b.top <= 0 && b.height > 0 && b.height <= 64 && b.width >= window.innerWidth * 0.5) { px = Math.round(b.bottom); break; }
+            }
+        } catch (e) { /* measured again next time */ }
+        // Nothing found inside the desktop client: keep clear of a typical title bar anyway.
+        if (!px && typeof DiscordNative !== "undefined") px = 32;
+        winReserve.at = now; winReserve.px = px;
+        return px;
+    }
+    /** Size the body to the addon's width (plus a scrollbar when it needs one) and clamp the window into the viewport. */
+    function fitAddonWindow(a) {
+        const aw = a.aw;
+        if (!aw?.el.isConnected) return;
+        const vw = window.innerWidth, vh = window.innerHeight, top = winTopReserve();
+        aw.el.style.maxHeight = Math.max(120, vh - top - 8) + "px";
+        aw.body.style.width = a.win.w + "px";
+        const sb = aw.body.offsetWidth - aw.body.clientWidth; // a vertical scrollbar takes room from the content
+        if (sb > 0) aw.body.style.width = a.win.w + sb + "px";
+        // Layout size, not getBoundingClientRect: the opening animation scales the window for a moment.
+        const w = aw.el.offsetWidth, h = aw.el.offsetHeight;
+        const x = Math.round(Math.max(0, Math.min(aw.x, vw - w)));
+        const y = Math.round(Math.max(top, Math.min(aw.y, vh - h)));
+        if (aw.el.style.left !== x + "px") aw.el.style.left = x + "px";
+        if (aw.el.style.top !== y + "px") aw.el.style.top = y + "px";
+    }
+    function onWindowResize() {
+        winReserve.at = -1e9;
+        for (const a of ADDONS.values()) if (a.aw) fitAddonWindow(a);
+    }
+    /** Title, theme and language of every open window; (re)mounts the view once per language/theme. */
+    function renderAddonWindows() {
+        for (const a of ADDONS.values()) {
+            const aw = a.aw;
+            if (!aw) continue;
+            if (!aw.el.isConnected) { closeAddonWindow(a, true); continue; } // taken off the page from outside
+            const lang = currentLang(), key = lang + "|" + a.status;
+            if (aw.key !== key) {
+                aw.key = key;
+                aw.el.querySelector(".qb-title").textContent = t(a.id + ".title");
+                aw.el.querySelector(".qb-status").textContent = a.status || "";
+                aw.el.setAttribute("aria-label", addonTitle(a));
+                const x = aw.el.querySelector(".qb-x");
+                x.title = t("win.close"); x.setAttribute("aria-label", t("win.close"));
+            }
+            aw.el.classList.toggle("qb-light", SETTINGS.theme === "light");
+            const sig = lang + ":" + SETTINGS.theme;
+            if (aw.sig !== sig || !a.view) {
+                unmountAddonView(a);
+                aw.body.innerHTML = "";
+                // Claimed before mount(): anything mount() does that redraws the HUD
+                // (attention(), status()) must not start a second copy of the view.
+                aw.sig = sig; a.view = {};
+                try { a.view = a.def.mount(aw.body, a.api) ?? {}; } catch (e) { console.warn(`[QuestAgent] Addon "${a.id}" failed to open:`, e); a.view = {}; }
+            }
+        }
+    }
+    function openAddonWindow(a) {
+        if (!a?.live || !a.win) return;
+        if (a.aw?.el.isConnected) { a.aw.el.focus({ preventScroll: true }); return; }
+        if (a.aw) closeAddonWindow(a, true);
+        ensureStyle();
+        document.getElementById("qb-aw-" + a.id)?.remove();
+        const el = document.createElement("div");
+        el.id = "qb-aw-" + a.id;
+        el.className = "qb-aw";
+        el.setAttribute("role", "dialog");
+        el.tabIndex = -1; // focusable, so Esc reaches it after a click anywhere inside
+        el.innerHTML = `<div class="qb-head"><span class="qb-aw-ic">${svg(a.def.icon || ICON.sparkle, "", 16)}</span>` +
+            `<span class="qb-title"></span><span class="qb-status"></span>` +
+            `<button class="qb-act qb-x">${svg(ICON.close, "", 15)}</button></div><div class="qb-aw-body"></div>`;
+        const head = el.querySelector(".qb-head"), body = el.querySelector(".qb-aw-body");
+        if (a.win.h) body.style.height = a.win.h + "px";
+        const saved = SETTINGS.winPos[a.id];
+        const aw = a.aw = { el, head, body, x: saved?.x ?? 0, y: saved?.y ?? 0, sig: null, key: null, ro: null, raf: 0 };
+        el.style.left = "0px"; el.style.top = "0px"; el.style.visibility = "hidden"; // placed once it has a size
+        document.body.appendChild(el);
+
+        // Keys typed in the window stay there: Discord must not treat them as shortcuts.
+        const stop = e => e.stopPropagation();
+        for (const k of WIN_STOP_EVENTS) el.addEventListener(k, stop);
+        // Esc closes it, unless something inside claimed the key first (preventDefault).
+        el.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); closeAddonWindow(a); } });
+        el.querySelector(".qb-x").onclick = () => closeAddonWindow(a);
+        // Drag by the title bar (not its buttons); pointer capture keeps it smooth outside the window.
+        head.addEventListener("pointerdown", e => {
+            if (e.button !== 0 || e.target.closest("button")) return;
+            e.preventDefault();
+            if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });
+            try { head.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events */ }
+            const dx = e.clientX - (parseFloat(el.style.left) || 0), dy = e.clientY - (parseFloat(el.style.top) || 0);
+            head.classList.add("qb-drag");
+            const move = ev => { aw.x = ev.clientX - dx; aw.y = ev.clientY - dy; fitAddonWindow(a); };
+            const up = () => {
+                head.classList.remove("qb-drag");
+                head.removeEventListener("pointermove", move); head.removeEventListener("pointerup", up); head.removeEventListener("pointercancel", up);
+                if (a.aw !== aw) return;
+                aw.x = parseInt(el.style.left, 10) || 0; aw.y = parseInt(el.style.top, 10) || 0; // where it actually sits
+                SETTINGS.winPos[a.id] = { x: aw.x, y: aw.y }; saveSettings();
+            };
+            head.addEventListener("pointermove", move); head.addEventListener("pointerup", up); head.addEventListener("pointercancel", up);
+        });
+
+        renderAddonWindows(); // title, theme, mount
+        if (a.aw !== aw) return; // mount() closed it again
+        if (!saved) { // first open: beside the panel if it's open, else the top-right corner under the title bar
+            // Layout positions and sizes: either one may still be in its opening animation.
+            const w = el.offsetWidth, p = UI.open && UI.panel?.isConnected ? UI.panel : null;
+            aw.x = p && p.offsetLeft - w - 8 >= 8 ? p.offsetLeft - w - 8 : window.innerWidth - w - 12;
+            aw.y = p ? p.offsetTop : winTopReserve() + 8;
+        }
+        fitAddonWindow(a);
+        el.style.visibility = "";
+        // Content that grows (a tray, the album) may push it past the bottom: clamp again,
+        // a frame later so a resize never loops inside the observer.
+        try {
+            aw.ro = new ResizeObserver(() => { if (!aw.raf) aw.raf = requestAnimationFrame(() => { aw.raf = 0; fitAddonWindow(a); }); });
+            aw.ro.observe(el);
+        } catch (e) { /* no ResizeObserver: the window still clamps on drag and viewport resize */ }
+        window.removeEventListener("resize", onWindowResize);
+        window.addEventListener("resize", onWindowResize);
+        el.focus({ preventScroll: true });
+        UI.addonSig = null; refreshUI(); // its header button shows it open
+    }
+    /** Close (and unmount) an addon's window. quiet: the caller redraws the HUD itself. */
+    function closeAddonWindow(a, quiet) {
+        const aw = a?.aw;
+        if (!aw) return;
+        a.aw = null;
+        unmountAddonView(a);
+        try { aw.ro?.disconnect(); } catch (e) { /* ignore */ }
+        if (aw.raf) cancelAnimationFrame(aw.raf);
+        aw.el.remove();
+        if (![...ADDONS.values()].some(x => x.aw)) window.removeEventListener("resize", onWindowResize);
+        UI.addonSig = null;
+        if (!quiet) refreshUI();
+    }
+    function toggleAddonWindow(a) { if (a.aw) closeAddonWindow(a); else openAddonWindow(a); }
 
     // ---- State ----------------------------------------------------------
     const state = {
@@ -1254,12 +1437,14 @@
                 default: return false;
             }
         },
-        /** Switch an addon on or off; switching on opens it. */
+        /** Switch an addon on or off; switching on opens it (a windowed one in its window, the panel stays put). */
         setAddon(id, on) {
             if (!ADDONS.has(id)) return false;
             on = !!on;
             SETTINGS.addons[id] = on; saveSettings();
-            if (on) { startAddon(id); UI.view = "addon:" + id; } else { stopAddon(id); if (UI.view === "addon:" + id) UI.view = "settings"; }
+            const a = ADDONS.get(id);
+            if (on) { startAddon(id); if (a.win) openAddonWindow(a); else UI.view = "addon:" + id; }
+            else { stopAddon(id); if (UI.view === "addon:" + id) UI.view = "settings"; }
             UI.sig = null; UI.addonSig = null; installPins(); refreshUI(); updateBadge();
             return on;
         },
@@ -1459,36 +1644,43 @@
         const css = `
 /* Fixed palettes (Discord's own dark / light values) so the theme setting
    means the same thing whatever theme the client itself is in. */
-#qb-panel,#qb-toast{--qb-bg:#2b2d31;--qb-bg2:#1e1f22;--qb-bg3:#313338;--qb-hover:rgba(255,255,255,.06);
+#qb-panel,#qb-toast,.qb-aw{--qb-bg:#2b2d31;--qb-bg2:#1e1f22;--qb-bg3:#313338;--qb-hover:rgba(255,255,255,.06);
  --qb-hover2:rgba(255,255,255,.1);--qb-hover3:rgba(255,255,255,.14);--qb-text:#dbdee1;--qb-muted:#949ba4;
  --qb-border:rgba(255,255,255,.08);--qb-scroll:#3b3d44;--qb-knob:#fff;--qb-off:#80848e;
  --qb-brand:#5865f2;--qb-green:#23a55a;--qb-amber:#f0b232;--qb-red:#f23f43;--qb-r:var(--radius-md,12px);--qb-rs:var(--radius-sm,8px)}
-#qb-panel.qb-light,#qb-toast.qb-light{--qb-bg:#ffffff;--qb-bg2:#f2f3f5;--qb-bg3:#e3e5e8;--qb-hover:rgba(0,0,0,.04);
+#qb-panel.qb-light,#qb-toast.qb-light,.qb-aw.qb-light{--qb-bg:#ffffff;--qb-bg2:#f2f3f5;--qb-bg3:#e3e5e8;--qb-hover:rgba(0,0,0,.04);
  --qb-hover2:rgba(0,0,0,.07);--qb-hover3:rgba(0,0,0,.11);--qb-text:#313338;--qb-muted:#5c5e66;--qb-border:rgba(0,0,0,.1);
  --qb-scroll:#c4c9ce;--qb-off:#c4c9ce;--qb-amber:#c98a12}
-#qb-panel{position:fixed;z-index:10000;width:400px;max-height:76vh;display:flex;flex-direction:column;
+#qb-panel,.qb-aw{position:fixed;display:flex;flex-direction:column;
  background:var(--qb-bg);color:var(--qb-text);border:1px solid var(--qb-border);border-radius:var(--qb-r);
  box-shadow:var(--shadow-high,0 12px 24px rgba(0,0,0,.45)),0 0 0 1px rgba(0,0,0,.25);
  font-family:var(--font-primary,"gg sans",sans-serif);font-size:13px;line-height:1.3;overflow:hidden;
  animation:qb-in .16s cubic-bezier(.2,.8,.3,1)}
-#qb-panel *{box-sizing:border-box}
-#qb-panel button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
+#qb-panel{z-index:10000;width:400px;max-height:76vh}
+#qb-panel *,.qb-aw *{box-sizing:border-box}
+#qb-panel button,.qb-aw button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
 @keyframes qb-in{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
-#qb-panel .qb-head{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;cursor:grab;
+#qb-panel .qb-head,.qb-aw .qb-head{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;cursor:grab;
  border-bottom:1px solid var(--qb-border);user-select:none}
-#qb-panel .qb-head.qb-drag{cursor:grabbing}
+#qb-panel .qb-head.qb-drag,.qb-aw .qb-head.qb-drag{cursor:grabbing}
+/* addon windows (the rest of their look is shared with the panel above and below) */
+.qb-aw{z-index:10002}
+.qb-aw:focus{outline:none}
+.qb-aw .qb-head{flex:none;touch-action:none}
+.qb-aw .qb-aw-ic{display:flex;flex:none;color:var(--qb-muted)}
+.qb-aw .qb-aw-body{flex:0 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
 #qb-panel .qb-dot{position:relative;width:8px;height:8px;border-radius:50%;flex:none;background:var(--qb-muted)}
 /* pulse ring: transform + opacity only, so it never repaints the panel */
 #qb-panel .qb-dot.qb-live::after{content:"";position:absolute;inset:0;border-radius:50%;background:inherit;
  animation:qb-pulse 2.2s ease-out infinite;will-change:transform,opacity}
 @keyframes qb-pulse{from{transform:scale(1);opacity:.6}to{transform:scale(2.8);opacity:0}}
-#qb-panel .qb-title{font-weight:600;font-size:14px}
-#qb-panel .qb-status{flex:1;min-width:0;font-size:12px;color:var(--qb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#qb-panel .qb-title,.qb-aw .qb-title{font-weight:600;font-size:14px}
+#qb-panel .qb-status,.qb-aw .qb-status{flex:1;min-width:0;font-size:12px;color:var(--qb-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #qb-panel .qb-status.qb-paused{color:var(--qb-amber)}
-#qb-panel .qb-act{cursor:pointer;color:var(--qb-muted);display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+#qb-panel .qb-act,.qb-aw .qb-act{cursor:pointer;color:var(--qb-muted);display:flex;align-items:center;justify-content:center;width:28px;height:28px;
  border-radius:var(--qb-rs);flex:none;transition:background .12s,color .12s}
-#qb-panel .qb-act:hover{color:var(--qb-text);background:var(--qb-hover2)}
-#qb-panel .qb-act:active{transform:scale(.92)}
+#qb-panel .qb-act:hover,.qb-aw .qb-act:hover{color:var(--qb-text);background:var(--qb-hover2)}
+#qb-panel .qb-act:active,.qb-aw .qb-act:active{transform:scale(.92)}
 #qb-panel .qb-act.qb-on{color:var(--qb-text);background:var(--qb-hover3)}
 #qb-panel .qb-act.qb-warn{color:var(--qb-amber)}
 #qb-panel .qb-act.qb-spin svg{animation:qb-rot .6s ease}
@@ -1556,7 +1748,8 @@
  color:var(--qb-muted);margin-top:4px;font-variant-numeric:tabular-nums}
 #qb-panel .qb-sub .qb-rt.qb-hold{color:var(--qb-amber)}
 #qb-panel .qb-sub .qb-rt.qb-urgent{color:var(--qb-red);font-weight:600}
-#qb-panel .qb-row:focus-visible,#qb-panel button:focus-visible,#qb-panel [tabindex]:focus-visible{outline:2px solid var(--qb-brand);outline-offset:-2px}
+#qb-panel .qb-row:focus-visible,#qb-panel button:focus-visible,#qb-panel [tabindex]:focus-visible,
+.qb-aw button:focus-visible,.qb-aw [tabindex]:focus-visible{outline:2px solid var(--qb-brand);outline-offset:-2px}
 #qb-panel .qb-orb{flex:none}
 #qb-panel .qb-empty{padding:28px 16px;text-align:center;color:var(--qb-muted);font-size:12px;line-height:1.6}
 #qb-panel .qb-empty svg{opacity:.35;margin-bottom:8px}
@@ -1636,8 +1829,8 @@
 #qb-panel .qb-addon-btns{display:contents}
 #qb-panel .qb-nd.qb-att{background:#ff73b3}
 #qb-panel .qb-addon{overflow-y:auto;scrollbar-width:thin}
-#qb-panel .qb-addon::-webkit-scrollbar{width:8px}
-#qb-panel .qb-addon::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+#qb-panel .qb-addon::-webkit-scrollbar,.qb-aw .qb-aw-body::-webkit-scrollbar{width:8px}
+#qb-panel .qb-addon::-webkit-scrollbar-thumb,.qb-aw .qb-aw-body::-webkit-scrollbar-thumb{background:var(--qb-scroll);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
 /* stats view */
 #qb-panel .qb-stat.qb-tap{cursor:pointer;transition:border-color .1s}
 #qb-panel .qb-stat.qb-tap:hover{border-color:rgba(240,178,50,.5)}
@@ -1713,7 +1906,8 @@
  animation:qb-spin .9s linear infinite;pointer-events:none}
 @keyframes qb-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* Windows "show animations" off: keep every state, drop the motion */
-@media (prefers-reduced-motion:reduce){#qb-panel,#qb-panel *,#qb-panel *::before,#qb-panel *::after,#qb-toast,#qb-btn .qb-ring{animation:none!important;transition:none!important}}`;
+@media (prefers-reduced-motion:reduce){#qb-panel,#qb-panel *,#qb-panel *::before,#qb-panel *::after,.qb-aw,.qb-aw *,.qb-aw *::before,.qb-aw *::after,
+ #qb-toast,#qb-btn .qb-ring{animation:none!important;transition:none!important}}`;
         UI.style = document.createElement("style");
         UI.style.id = "qb-style";
         UI.style.textContent = css;
@@ -2054,17 +2248,20 @@
         if (!UI.panel) return;
         const s = snapshot();
         let addon = UI.view.startsWith("addon:") ? ADDONS.get(UI.view.slice(6)) : null;
-        if (UI.view.startsWith("addon:") && !addon?.live) { UI.view = "quests"; addon = null; } // switched off meanwhile
+        // Switched off meanwhile, or a windowed addon (never shown in the panel).
+        if (UI.view.startsWith("addon:") && (!addon?.live || addon.win)) { UI.view = "quests"; addon = null; }
         const quests = UI.view === "quests", settings = UI.view === "settings", log = UI.view === "changelog", stats = UI.view === "stats";
         const show = (sel, on) => { UI.panel.querySelector(sel).style.display = on ? "" : "none"; };
         show(".qb-stats", quests); show(".qb-body", quests); show(".qb-pending", quests);
         show(".qb-set", settings); show(".qb-log", log); show(".qb-stv", stats); show(".qb-addon", !!addon); show(".qb-foot", !quests && !addon);
-        for (const a of ADDONS.values()) if (a.view && a !== addon) unmountAddonView(a); // left an addon view
-        const abKey = [...ADDONS.values()].filter(a => a.live).map(a => a.id + (a.attention ? "!" : "") + (a === addon ? "*" : "") + (a.status ?? "")).join(",") + currentLang();
+        for (const a of ADDONS.values()) if (a.view && a !== addon && !a.win) unmountAddonView(a); // left an addon view
+        // A header button is "on" while its view is shown here, or its window is open.
+        const shown = a => a === addon || !!a.aw;
+        const abKey = [...ADDONS.values()].filter(a => a.live).map(a => a.id + (a.attention ? "!" : "") + (shown(a) ? "*" : "") + (a.status ?? "")).join(",") + currentLang();
         if (UI.addonSig !== abKey) {
             UI.addonSig = abKey;
             UI.panel.querySelector(".qb-addon-btns").innerHTML = [...ADDONS.values()].filter(a => a.live).map(a =>
-                `<button class="qb-act ${a === addon ? "qb-on" : ""}" data-addon="${a.id}" title="${esc(addonTitle(a))}">${svg(a.def.icon || ICON.sparkle, "", 15)}${a.attention ? '<span class="qb-nd qb-att"></span>' : ""}</button>`).join("");
+                `<button class="qb-act ${shown(a) ? "qb-on" : ""}" data-addon="${a.id}" title="${esc(addonTitle(a))}">${svg(a.def.icon || ICON.sparkle, "", 15)}${a.attention ? '<span class="qb-nd qb-att"></span>' : ""}</button>`).join("");
         }
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", settings || log);
         UI.panel.querySelector("#qb-statsbtn").classList.toggle("qb-on", stats);
@@ -2144,9 +2341,10 @@
         updateBadge(s);
     }
 
-    /** Re-render the panel (if open) and badge after a state change. */
+    /** Re-render the panel (if open), badge and addon windows after a state change. */
     function refreshUI() {
         try { if (UI.open) renderPanel(); else updateBadge(); } catch (e) { /* HUD must never break the agent */ }
+        try { renderAddonWindows(); } catch (e) { /* same */ }
     }
 
     /** Navigate the client to the Quests page (where Claim lives).
@@ -2245,6 +2443,8 @@
         p.querySelector(".qb-addon-btns").addEventListener("click", e => {
             const b = e.target.closest("[data-addon]");
             if (!b) return;
+            const a = ADDONS.get(b.dataset.addon);
+            if (a?.win) { toggleAddonWindow(a); return; } // windowed: its own window, the panel stays as it is
             const v = "addon:" + b.dataset.addon;
             UI.view = UI.view === v ? "quests" : v; UI.sig = null; renderPanel();
         });
@@ -2407,7 +2607,7 @@
             }
         } else {
             UI.open = false;
-            for (const a of ADDONS.values()) unmountAddonView(a);
+            for (const a of ADDONS.values()) if (!a.win) unmountAddonView(a); // addon windows stay open
             if (UI.tick != null) { clearInterval(UI.tick); UI.tick = null; }
             if (UI.keyHandler) { document.removeEventListener("keydown", UI.keyHandler); UI.keyHandler = null; }
             UI.panel?.remove();
@@ -2588,11 +2788,18 @@
         UI.observer.observe(document.body, { childList: true, subtree: true });
         // The observer only fires on DOM changes; a quiet client still gets a
         // retry (this is also what promotes the floating button after 20 s).
-        UI.badgeTimer = setInterval(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); else installPins(); if (!UI.open) updateBadge(); }, 5000);
+        // Addon windows follow Discord's language too (Language: Auto) without waiting for a state change.
+        UI.badgeTimer = setInterval(() => {
+            if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); else installPins();
+            if (!UI.open) updateBadge();
+            try { renderAddonWindows(); } catch (e) { /* HUD must never break the agent */ }
+        }, 5000);
     }
 
     function removeUI() {
-        for (const a of ADDONS.values()) unmountAddonView(a);
+        for (const a of ADDONS.values()) { closeAddonWindow(a, true); unmountAddonView(a); }
+        for (const el of document.querySelectorAll(".qb-aw")) el.remove();
+        window.removeEventListener("resize", onWindowResize);
         try { UI.observer?.disconnect(); } catch (e) { /* ignore */ }
         if (UI.tick != null) { clearInterval(UI.tick); UI.tick = null; }
         if (UI.badgeTimer != null) { clearInterval(UI.badgeTimer); UI.badgeTimer = null; }
@@ -2659,7 +2866,11 @@
         addons: { list: () => [...ADDONS.keys()], set: ops.setAddon, pin: ops.setPin, open: openAddon, get: id => ADDONS.get(id)?.api ?? null },
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
-              show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) || /^addon:/.test(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }
+              show(view) {
+                  const a = /^addon:/.test(view) ? ADDONS.get(view.slice(6)) : null;
+                  if (a?.win && a.live) { openAddonWindow(a); return; } // windowed addons open in their own window
+                  UI.view = ["settings", "changelog", "stats"].includes(view) || /^addon:/.test(view) ? view : "quests"; UI.sig = null; togglePanel(true);
+              } }
     };
     console.log(`%c[QuestAgent] Agent v${AGENT_VERSION}${TOOL_VERSION ? " (tool v" + TOOL_VERSION + ")" : ""} installed. Watching for quests...`, "color:#5865f2;font-weight:bold");
     if (SETTINGS.paused) console.log("[QuestAgent] Paused (from saved settings). Resume from the HUD.");

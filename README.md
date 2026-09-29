@@ -165,10 +165,11 @@ wallet.
 </p>
 
 Settings > **Addons** holds optional extras; each is off until you switch it on. The first
-one is **Orbling**, a tamagotchi-style pet that lives in the panel (paw button in the header
-once it's on). It's fed by the agent's work: every orb quest the agent finishes drops a
-*star snack* (under 500 orbs) or an *orb feast* (500+) into its bag, and claiming rewards
-makes it celebrate.
+one is **Orbling**, a tamagotchi-style pet that lives in a small window of its own (the paw
+button in the panel header opens it once it's on; drag it by its title bar, Esc closes it,
+and it reopens where you left it). It's fed by the agent's work: every orb quest the agent
+finishes drops a *star snack* (under 500 orbs) or an *orb feast* (500+) into its bag, and
+claiming rewards makes it celebrate.
 
 - Tap the egg to hatch it, then name it. It grows from baby to kid, teen and adult; how you
   raise it decides the adult form (Gourmet, Sprinter, Dapper, Classic, or the rare Astral).
@@ -184,7 +185,7 @@ makes it celebrate.
   Quests page). A pink dot on the title-bar button means it wants something; an optional
   reminder (at most every 8 hours, never at night) says what.
 
-It's pixel art drawn in code, and it costs nothing while the panel is closed: needs are
+It's pixel art drawn in code, and it costs nothing while its window is closed: needs are
 worked out from timestamps when you look, and the room is only painted while it's on screen.
 Its state lives inside Discord next to the settings.
 

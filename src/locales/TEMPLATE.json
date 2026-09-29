@@ -172,7 +172,7 @@
   "stats.goalPh": "price in orbs",
   "stats.perMonth": "orbs / 30 days",
   "pet.title": "Orbling",
-  "pet.desc": "A pixel pet in the panel. Every orb quest the agent finishes feeds it.",
+  "pet.desc": "A pixel pet in its own window. Every orb quest the agent finishes feeds it.",
   "pet.stage.egg": "Egg",
   "pet.stage.baby": "Baby",
   "pet.stage.child": "Kid",
@@ -285,5 +285,6 @@
   "pet.msg.ateSelf": "Had a {food} on my own!",
   "set.addons": "Addons",
   "set.pin": "Button in Discord's title bar",
-  "set.pinDesc": "Opens {name} in one click, next to the quest agent's button."
+  "set.pinDesc": "Opens {name} in one click, next to the quest agent's button.",
+  "win.close": "Close (Esc)"
 }
