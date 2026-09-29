@@ -10,6 +10,7 @@ import { rollItem } from "./items";
 import { Rng, hashSeed } from "./rng";
 import { addStone, rollSockets, rollStone, socketCap, fitStones } from "./sockets";
 import type { GameState } from "./state";
+import { hasPerk } from "./dawn";
 import { SLOTS, type Item } from "./types";
 
 export interface GearOffer { item: Item; price: number; sold?: boolean }
@@ -35,8 +36,11 @@ export const marketOpen = (s: GameState) => !!s.world.clears.a1_lock;
 /** Slot groups the Pedlar rolls for (rings share one). */
 const OFFER_SLOTS = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
 
+/** The Trader's Mark dawn perk: 20% off everything. */
+const discount = (s: GameState) => (hasPerk(s, "tradersmark") ? 0.8 : 1);
+
 function gearPrice(s: GameState, it: Item): number {
-    const base = forgeCost(s);
+    const base = forgeCost(s) * discount(s);
     if (it.relic) return Math.round(base * 50 / 10) * 10;
     return Math.round((base * (3 + 1.5 * it.affixes.length) * (1 + 0.25 * (it.sockets ?? 0))) / 10) * 10;
 }
@@ -74,7 +78,7 @@ function rollStock(s: GameState): void {
     const jeweller: StoneOffer[] = [];
     for (let i = 0; i < STONE_OFFERS; i++) {
         const key = rollStone(rng, ilvl);
-        jeweller.push({ key, price: STONE_PRICE[parseStone(key)!.tier]! });
+        jeweller.push({ key, price: Math.round(STONE_PRICE[parseStone(key)!.tier]! * discount(s)) });
     }
     m.pedlar = pedlar;
     m.jeweller = jeweller;

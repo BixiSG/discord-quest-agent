@@ -2,8 +2,9 @@
 // hero.rev when the stat sheet changes.
 
 import { returnStones } from "./sockets";
+import { dawnOf, hasPerk } from "./dawn";
 import { deriveSheet, type Sheet } from "./character";
-import { BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
+import { BASES, CLASSES, DAWN_DUST, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
 import { baseOf, itemLabel, levelReq, salvageValue } from "./items";
 import { hashSeed } from "./rng";
 import { DEFAULT_FILTER, keepItem } from "./filter";
@@ -344,7 +345,8 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
 
 function salvageItem(state: GameState, item: Item): void {
     returnStones(state, item);
-    const v = salvageValue(item);
+    const d = dawnOf(state);
+    const v = Math.round(salvageValue(item) * (1 + (DAWN_DUST * d) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1));
     state.dust += v;
     state.totals.salvaged++;
     state.totals.dust += v;
@@ -410,8 +412,9 @@ export function equipUpgrades(state: GameState, only?: (x: Item) => boolean): nu
 export const STASH_BASE = 60, STASH_STEP = 10, STASH_MAX = 150;
 /** Ember dust for the next ten stash slots; null at the maximum. */
 export function stashRoomCost(state: GameState): number | null {
-    if (state.stashCap >= STASH_MAX) return null;
-    const bought = Math.max(0, Math.round((state.stashCap - STASH_BASE) / STASH_STEP));
+    const extra = hasPerk(state, "deeppockets") ? 20 : 0; // the Deep Pockets dawn perk: 20 free, 20 more room
+    if (state.stashCap >= STASH_MAX + extra) return null;
+    const bought = Math.max(0, Math.round((state.stashCap - STASH_BASE - extra) / STASH_STEP));
     return Math.round((250 * Math.pow(2.2, bought)) / 10) * 10;
 }
 
@@ -420,7 +423,7 @@ export function buyStashRoom(state: GameState): string | null {
     if (cost === null) return "the stash is as big as it gets";
     if (state.dust < cost) return `needs ${cost} ember dust`;
     state.dust -= cost;
-    state.stashCap = Math.min(STASH_MAX, state.stashCap + STASH_STEP);
+    state.stashCap = Math.min(STASH_MAX + (hasPerk(state, "deeppockets") ? 20 : 0), state.stashCap + STASH_STEP);
     state.stashFull = false;
     return null;
 }

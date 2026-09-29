@@ -2488,6 +2488,27 @@
   var MAP_ECHOES = list8.filter((e2) => !e2.pinnacle).map((e2) => e2.id);
   var ECHOES_PER_POINT = 3;
 
+  // src/core/data/dawn.ts
+  var DAWN_PERKS = [
+    { id: "firstlight", name: "First Light", text: "20% increased experience gained", mods: [{ stat: "xpGain", kind: "inc", value: 20 }] },
+    { id: "brightember", name: "Bright Ember", text: "15% increased damage", mods: [{ stat: "damage", kind: "inc", value: 15 }] },
+    { id: "steadyflame", name: "Steady Flame", text: "10% increased maximum life", mods: [{ stat: "life", kind: "inc", value: 10 }] },
+    { id: "keeneye", name: "Keen Eye", text: "30% increased rarity of items found", mods: [{ stat: "itemRarity", kind: "inc", value: 30 }] },
+    { id: "oldroads", name: "Old Roads", text: "25% increased movement speed", mods: [{ stat: "moveSpeed", kind: "inc", value: 25 }] },
+    { id: "warmhands", name: "Warm Hands", text: "25% more ember dust from salvage" },
+    { id: "longmemory", name: "Long Memory", text: "Companions gain twice the bond" },
+    { id: "deeppockets", name: "Deep Pockets", text: "20 more stash slots, and room for 20 more" },
+    { id: "stonefinder", name: "Stonefinder", text: "Ember stones drop 50% more often" },
+    { id: "tradersmark", name: "Trader's Mark", text: "The Wandering Market charges 20% less" }
+  ];
+  var DAWN_PERK = Object.fromEntries(DAWN_PERKS.map((p) => [p.id, p]));
+  var DAWN_XP = 10;
+  var DAWN_DUST = 10;
+  var DAWN_TOUGHER = 15;
+  var DAWN_RICHER = 20;
+  var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+  var dawnName = (n) => `Dawn ${ROMAN[n] ?? n}`;
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
@@ -2840,6 +2861,13 @@
   function supportSlots(level) {
     return SUPPORT_SLOT_LEVELS.filter((l) => l <= level).length;
   }
+  function dawnMods(hero) {
+    const d = hero.dawn;
+    if (!d?.level) return [];
+    const out = [{ stat: "xpGain", kind: "inc", value: DAWN_XP * d.level, src: dawnName(d.level) }];
+    for (const id of d.perks) for (const m4 of DAWN_PERK[id]?.mods ?? []) out.push({ ...m4, src: DAWN_PERK[id].name });
+    return out;
+  }
   function petMods(hero) {
     const m4 = hero.pet ? companionMod(hero.pet.id, hero.pet.level) : null;
     return m4 ? [m4] : [];
@@ -2847,7 +2875,7 @@
   function heroMods(hero, extra = []) {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods = [...extra, ...passiveMods(hero), ...petMods(hero)];
+    const mods = [...extra, ...passiveMods(hero), ...petMods(hero), ...dawnMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
@@ -3200,6 +3228,56 @@
       }
     }
     return n;
+  }
+
+  // src/core/echoes.ts
+  function grantEcho(s, id) {
+    if (!ECHOES[id]) return false;
+    s.echoes ??= [];
+    if (s.echoes.includes(id)) return false;
+    s.echoes.push(id);
+    const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
+    s.world.rewards ??= [];
+    for (let k = 1; k <= earned; k++) {
+      const key = `echo:${k}`;
+      if (!s.world.rewards.includes(key)) {
+        s.world.rewards.push(key);
+        s.atlas.points++;
+      }
+    }
+    return true;
+  }
+  function rollMapEcho(s, rng) {
+    const unfound = MAP_ECHOES.filter((id2) => !(s.echoes ?? []).includes(id2));
+    if (!unfound.length || !rng.chance(0.03)) return null;
+    const id = rng.pick(unfound);
+    grantEcho(s, id);
+    return id;
+  }
+  function pinnacleEcho(s, pinnacle) {
+    const e2 = Object.values(ECHOES).find((x) => x.pinnacle === pinnacle);
+    return e2 && grantEcho(s, e2.id) ? e2.id : null;
+  }
+
+  // src/core/dawn.ts
+  var dawnOf = (s) => s.hero.dawn?.level ?? 0;
+  var hasPerk = (s, id) => !!s.hero.dawn?.perks.includes(id);
+  var wrapped = /* @__PURE__ */ new WeakMap();
+  function dawnEffects(s, key, base) {
+    const d = dawnOf(s);
+    if (!d) return base;
+    const c = wrapped.get(key);
+    if (c && c.dawn === d && c.base === base) return c.eff;
+    const b = base ?? { life: 1, damage: 1, speed: 1, extra: [], hero: [], quantity: 0, rarity: 0 };
+    const eff = {
+      ...b,
+      life: b.life * (1 + DAWN_TOUGHER * d / 100),
+      damage: b.damage * (1 + DAWN_TOUGHER * d / 100),
+      quantity: b.quantity + DAWN_RICHER * d,
+      rarity: b.rarity + DAWN_RICHER * d
+    };
+    wrapped.set(key, { dawn: d, base, eff });
+    return eff;
   }
 
   // src/core/filter.ts
@@ -3580,7 +3658,8 @@
   }
   function salvageItem(state, item) {
     returnStones(state, item);
-    const v = salvageValue(item);
+    const d = dawnOf(state);
+    const v = Math.round(salvageValue(item) * (1 + DAWN_DUST * d / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1));
     state.dust += v;
     state.totals.salvaged++;
     state.totals.dust += v;
@@ -3637,8 +3716,9 @@
   var STASH_STEP = 10;
   var STASH_MAX = 150;
   function stashRoomCost(state) {
-    if (state.stashCap >= STASH_MAX) return null;
-    const bought = Math.max(0, Math.round((state.stashCap - STASH_BASE) / STASH_STEP));
+    const extra = hasPerk(state, "deeppockets") ? 20 : 0;
+    if (state.stashCap >= STASH_MAX + extra) return null;
+    const bought = Math.max(0, Math.round((state.stashCap - STASH_BASE - extra) / STASH_STEP));
     return Math.round(250 * Math.pow(2.2, bought) / 10) * 10;
   }
   function buyStashRoom(state) {
@@ -3646,7 +3726,7 @@
     if (cost === null) return "the stash is as big as it gets";
     if (state.dust < cost) return `needs ${cost} ember dust`;
     state.dust -= cost;
-    state.stashCap = Math.min(STASH_MAX, state.stashCap + STASH_STEP);
+    state.stashCap = Math.min(STASH_MAX + (hasPerk(state, "deeppockets") ? 20 : 0), state.stashCap + STASH_STEP);
     state.stashFull = false;
     return null;
   }
@@ -3683,35 +3763,6 @@
     act.runIndex++;
     act.run = null;
     return null;
-  }
-
-  // src/core/echoes.ts
-  function grantEcho(s, id) {
-    if (!ECHOES[id]) return false;
-    s.echoes ??= [];
-    if (s.echoes.includes(id)) return false;
-    s.echoes.push(id);
-    const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
-    s.world.rewards ??= [];
-    for (let k = 1; k <= earned; k++) {
-      const key = `echo:${k}`;
-      if (!s.world.rewards.includes(key)) {
-        s.world.rewards.push(key);
-        s.atlas.points++;
-      }
-    }
-    return true;
-  }
-  function rollMapEcho(s, rng) {
-    const unfound = MAP_ECHOES.filter((id2) => !(s.echoes ?? []).includes(id2));
-    if (!unfound.length || !rng.chance(0.03)) return null;
-    const id = rng.pick(unfound);
-    grantEcho(s, id);
-    return id;
-  }
-  function pinnacleEcho(s, pinnacle) {
-    const e2 = Object.values(ECHOES).find((x) => x.pinnacle === pinnacle);
-    return e2 && grantEcho(s, e2.id) ? e2.id : null;
   }
 
   // src/core/maps.ts
@@ -4225,7 +4276,7 @@
   }
   function petKill(state) {
     const pet = state.hero.pet;
-    return pet ? addBond(state, pet.id, 1) : false;
+    return pet ? addBond(state, pet.id, hasPerk(state, "longmemory") ? 2 : 1) : false;
   }
   function rollCompanionDrop(state, rng, level, chance) {
     if (!rng.chance(chance)) return null;
@@ -4431,8 +4482,9 @@
   var STONE_PRICE = [120, 450, 1500, 4500, 12e3];
   var marketOpen = (s) => !!s.world.clears.a1_lock;
   var OFFER_SLOTS = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+  var discount = (s) => hasPerk(s, "tradersmark") ? 0.8 : 1;
   function gearPrice(s, it) {
-    const base = forgeCost(s);
+    const base = forgeCost(s) * discount(s);
     if (it.relic) return Math.round(base * 50 / 10) * 10;
     return Math.round(base * (3 + 1.5 * it.affixes.length) * (1 + 0.25 * (it.sockets ?? 0)) / 10) * 10;
   }
@@ -4470,7 +4522,7 @@
     const jeweller = [];
     for (let i = 0; i < STONE_OFFERS; i++) {
       const key = rollStone(rng, ilvl);
-      jeweller.push({ key, price: STONE_PRICE[parseStone(key).tier] });
+      jeweller.push({ key, price: Math.round(STONE_PRICE[parseStone(key).tier] * discount(s)) });
     }
     m4.pedlar = pedlar;
     m4.jeweller = jeweller;
@@ -4532,7 +4584,7 @@
   function runZone(state, run) {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
   }
-  var effectsOf = (state, run) => run.map ? mapEffects(run.map, atlasEffects(state)) : null;
+  var effectsOf = (state, run) => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null);
   var mapSheets = /* @__PURE__ */ new WeakMap();
   function runSheet(state) {
     const run = state.activity.run;
@@ -4772,7 +4824,7 @@
       state.currency[cur] = (state.currency[cur] ?? 0) + 1;
       ev.currency?.(cur);
     }
-    if (rng.chance((d.boss ? 0.03 : m4.champion ? 4e-3 : 4e-4) * qty)) {
+    if (rng.chance((d.boss ? 0.03 : m4.champion ? 4e-3 : 4e-4) * qty * (hasPerk(state, "stonefinder") ? 1.5 : 1))) {
       const key = rollStone(rng, m4.level);
       addStone(state, key, 1);
       ev.stone?.(key);
@@ -5304,6 +5356,11 @@
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
     if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc].cls !== hero.cls)) delete hero.asc;
     hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter((id) => ASC_NODES[id]?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
+    if (hero.dawn) {
+      const lvl = Number.isInteger(hero.dawn.level) && hero.dawn.level > 0 ? Math.min(99, hero.dawn.level) : 0;
+      if (!lvl) delete hero.dawn;
+      else hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, (id) => !!DAWN_PERK[id]) ?? [])].slice(0, lvl) };
+    }
     hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {

@@ -14,3 +14,4 @@ export * from "./maps";
 export * from "./companions";
 export * from "./stones";
 export * from "./echoes";
+export * from "./dawn";

@@ -4,6 +4,7 @@
 
 import { COMPANIONS, COMPANION_ORDER, DUPLICATE_BOND, bondFor, companionLevel, COMPANION_MAX_LEVEL } from "./data";
 import { pushLog } from "./game";
+import { hasPerk } from "./dawn";
 import type { Rng } from "./rng";
 import type { GameState } from "./state";
 
@@ -53,7 +54,7 @@ export function addBond(state: GameState, id: string, n: number): boolean {
 /** Every kill while a companion is out adds one bond. Returns true when it levelled up. */
 export function petKill(state: GameState): boolean {
     const pet = state.hero.pet;
-    return pet ? addBond(state, pet.id, 1) : false;
+    return pet ? addBond(state, pet.id, hasPerk(state, "longmemory") ? 2 : 1) : false;
 }
 
 /**

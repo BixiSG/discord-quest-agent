@@ -25,6 +25,8 @@ export interface Hero {
     rev: number;
     /** The companion at the hero's side and its level (v6). */
     pet?: { id: string; level: number };
+    /** Dawns (v7): how many times the sun was relit, and the perks picked (one per dawn). */
+    dawn?: { level: number; perks: string[] };
 }
 
 export interface MonsterState {

@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { COMPANIONS, ECHOES, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, DAWN_PERK, ECHOES, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
@@ -115,6 +115,12 @@ export function validateState(raw: unknown): GameState {
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
     if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc]!.cls !== hero.cls)) delete hero.asc;
     hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter(id => ASC_NODES[id]?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
+    // Dawns (v7): a whole level, known perks, at most one per dawn.
+    if (hero.dawn) {
+        const lvl = Number.isInteger(hero.dawn.level) && hero.dawn.level > 0 ? Math.min(99, hero.dawn.level) : 0;
+        if (!lvl) delete hero.dawn;
+        else hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, id => !!DAWN_PERK[id]) ?? [])].slice(0, lvl) };
+    }
     hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {

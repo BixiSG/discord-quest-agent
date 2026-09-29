@@ -17,6 +17,7 @@ import { blessing, tickShrine } from "../shrine";
 import { addStone, autoSetStones, rollSockets, rollStone } from "../sockets";
 import { tickMarket } from "../market";
 import { pinnacleEcho, rollMapEcho } from "../echoes";
+import { dawnEffects, hasPerk } from "../dawn";
 import { ACT_COMPANION } from "../data";
 
 export const STEP_MS = 100;
@@ -87,7 +88,7 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
 }
 
-const effectsOf = (state: GameState, run: RunState): MapEffects | null => (run.map ? mapEffects(run.map, atlasEffects(state)) : null);
+const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null);
 
 // A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
@@ -324,7 +325,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         ev.currency?.(cur);
     }
     // Ember stones (round 5): like currency, rarer, tier by monster level.
-    if (rng.chance((d.boss ? 0.03 : m.champion ? 0.004 : 0.0004) * qty)) {
+    if (rng.chance((d.boss ? 0.03 : m.champion ? 0.004 : 0.0004) * qty * (hasPerk(state, "stonefinder") ? 1.5 : 1))) {
         const key = rollStone(rng, m.level);
         addStone(state, key, 1);
         ev.stone?.(key);
