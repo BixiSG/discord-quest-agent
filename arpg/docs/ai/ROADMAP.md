@@ -52,7 +52,7 @@ before the next phase starts.
 
 ## P5 - ship
 - [x] Balance pass with the headless simulator
-- [ ] Polish: tooltips, keyboard, perf audit, a11y basics
+- [x] Polish: tooltips, keyboard, perf audit, a11y basics
 - [x] Launcher: user-installed addons from <Root>\addons\*.js
 - [x] Install script for %LOCALAPPDATA%\DiscordQuestAgent\addons\arpg.js
 - [ ] FINAL_REPORT.md + screenshots

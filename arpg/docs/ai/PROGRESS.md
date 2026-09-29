@@ -111,3 +111,20 @@ One entry per loop iteration, newest last.
   - Tree: Vigour ring nodes +15 life and 3% increased life.
   Result at 48 h: Vanguard L73-74 T12-16, Strider L75-78 T13-16, Arcanist
   L79-80 Depth 2-5; deaths down from ~30/h to ~6-35/h depending on class.
+
+## 6 - Polish, mana-honest DPS, pacing
+- Polish: hero sprite holds the equipped weapon kind (bow, staff, wand, axes,
+  maces, daggers, swords) and shows an off-hand; keys 1-9 switch tabs, Esc
+  dismisses the top dialog (never confirms); tabs are role=tab with
+  aria-selected, dialogs role=dialog, visible focus outlines; view signatures
+  checked 4x/s instead of every frame.
+- Perf audit (tools/perf.mjs, headless Chromium): 60 fps, median frame
+  16.7 ms, no long tasks; a 24 h catch-up for a fresh hero takes ~1 s.
+- Sheet DPS is mana-honest (`min(speed, manaRegen / manaCost)`); spell builds
+  were running at a fraction of their shown DPS. Mana cost growth 2%/level.
+  With it the bot picked sustainable builds and progression jumped, so the XP
+  curve is now 3x (story ~8 h, maps over days, Depths after).
+- Strider base life 52 -> 62 (it trailed on survival).
+- Balance at 96 h (1 seed each): Vanguard L71 T17, Strider L63 T10,
+  Arcanist L71 T17. Strider still the weakest; noted for later.
+- Screenshots regenerated into arpg/docs/shots; arpg/README.md written.

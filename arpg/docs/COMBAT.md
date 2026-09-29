@@ -78,7 +78,9 @@ Single-target skills hit one.
 ## 8. Recovery
 
 Mana regenerates 7% of maximum per second plus flat regeneration. Skill mana
-cost grows 3% per hero level and is multiplied by each support's multiplier.
+cost grows 2% per hero level and is multiplied by each support's multiplier.
+Sheet DPS uses `min(speed, manaRegen / manaCost)` uses per second, so a
+mana-starved build shows what it really does.
 
 - Life regeneration: flat per second plus percent of max life.
 - Leech: a share of damage dealt returns as life, at most 10% of max life
@@ -104,7 +106,7 @@ Keeper: x12 life, x1.6 damage) and 10-40% resistances.
 
 ## 10. Experience
 
-    xpToNext(L)  = round((80 * L^2.8 + 120 * L) * (L > 60 ? 1.07^(L-60) : 1))
+    xpToNext(L)  = round(3 * (80 * L^2.8 + 120 * L) * (L > 60 ? 1.07^(L-60) : 1))
     monsterXp(L) = 4 * L^1.9 + 6
 
 Kills more than `3 + floor(L/16)` levels away from the hero give less XP:

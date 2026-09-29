@@ -3,6 +3,7 @@
 import { ATLAS, CURRENCIES, MAP_MODS, MAX_TIER, PINNACLES, tierName } from "../core/data";
 import { atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
+import { MAP_DEATH_XP } from "../core/sim/engine";
 import type { Ctx } from "./views";
 
 const MAP_CRAFTS = ["kindling", "reshaper", "graft", "crownseal", "forgeheart", "tempest", "starfall", "salt"];
@@ -42,7 +43,7 @@ export function atlasView(c: Ctx): HTMLElement {
             h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
             st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
         tierChips(st.atlas.tiers),
-        h("div", { class: "muted", style: "font-size:11px", text: "Dying in a map loses it and 5% of a level's experience. Mods make maps harder and richer." })));
+        h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));
 
     // Map stash.
     const list = h("div", { class: "col", style: "gap:4px" });

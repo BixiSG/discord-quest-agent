@@ -2,7 +2,7 @@
 // It only reads state and a queue of effects fed by the simulation events;
 // nothing here changes the game.
 
-import { CLASSES, MONSTERS, ZONES, type MonsterDef } from "../core/data";
+import { BASES, CLASSES, MONSTERS, ZONES, type MonsterDef } from "../core/data";
 import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
@@ -122,7 +122,9 @@ export class Battle {
         if (last && now - last.t < 160 && (last.kind === "arc" || last.kind === "stab" || last.kind === "slam")) lunge = Math.sin((now - last.t) / 160 * Math.PI) * 14;
         const walking = run?.phase === "travel";
         const dead = run?.phase === "dead";
-        drawHero(g, HERO_X + lunge, GROUND, CLASSES[state.hero.cls]?.color ?? "#e2543b", walking ? now : 0, now - this.heroHurt < 120, dead);
+        const wItem = state.hero.equipment.weapon;
+        const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? (BASES[wItem.base]?.kind ?? "sword") : "none", shield: !!state.hero.equipment.offhand };
+        drawHero(g, HERO_X + lunge, GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
 
         // Skill effects.
         this.fx = this.fx.filter(f => now - f.t < 350);
@@ -290,8 +292,9 @@ function drawMonster(g: CanvasRenderingContext2D, d: MonsterDef, x: number, y: n
     }
 }
 
-function drawHero(g: CanvasRenderingContext2D, x: number, y: number, color: string, walk: number, hurt: boolean, dead: boolean): void {
+function drawHero(g: CanvasRenderingContext2D, x: number, y: number, look: { cape: string; weapon: string; shield: boolean }, walk: number, hurt: boolean, dead: boolean): void {
     if (dead) { box(g, x - 10, y - 5, 20, 5, "#555"); return; }
+    const color = look.cape;
     const step = walk ? Math.round(Math.sin(walk / 90) * 2) : 0;
     const skin = hurt ? "#ffd0c0" : "#f0c9a0";
     const armour = hurt ? "#e5a0a0" : "#6b7280";
@@ -302,8 +305,40 @@ function drawHero(g: CanvasRenderingContext2D, x: number, y: number, color: stri
     box(g, x - 4, y - 25, 9, 3, armour);                                  // helm rim
     g.fillStyle = "#ff5a36"; g.fillRect(x, y - 13, 2, 3);                  // the ember
     g.fillStyle = "#111"; g.fillRect(x + 2, y - 21, 1, 2);                 // eye
-    box(g, x + 6, y - 24, 2, 14, "#c9ced6");                               // blade
-    box(g, x + 4, y - 11, 6, 2, "#ffc233");                                // guard
+    drawWeapon(g, x, y, look.weapon);
+    if (look.shield && look.weapon !== "bow") box(g, x - 9, y - 16, 5, 8, "#8a5a2b");  // off-hand
+}
+
+/** The hero holds what is equipped: blades, hafts, a bow or a caster's rod. */
+function drawWeapon(g: CanvasRenderingContext2D, x: number, y: number, kind: string): void {
+    switch (kind) {
+        case "bow":
+            g.strokeStyle = "#111"; g.lineWidth = 3; g.beginPath(); g.arc(x + 5, y - 15, 9, -1.2, 1.2); g.stroke();
+            g.strokeStyle = "#8a5a2b"; g.lineWidth = 1.5; g.beginPath(); g.arc(x + 5, y - 15, 9, -1.2, 1.2); g.stroke();
+            g.fillStyle = "#e9e4d4"; g.fillRect(x + 8, y - 23, 1, 16);
+            g.lineWidth = 1;
+            break;
+        case "staff":
+            box(g, x + 6, y - 28, 2, 26, "#8a5a2b"); box(g, x + 5, y - 31, 4, 4, "#19b3a3");
+            break;
+        case "wand":
+            box(g, x + 6, y - 20, 2, 10, "#8a5a2b"); box(g, x + 5, y - 23, 4, 3, "#ff5a36");
+            break;
+        case "axe": case "greataxe":
+            box(g, x + 6, y - 26, 2, 16, "#8a5a2b"); box(g, x + 8, y - 26, kind === "greataxe" ? 6 : 4, 6, "#c9ced6");
+            break;
+        case "mace":
+            box(g, x + 6, y - 22, 2, 12, "#8a5a2b"); box(g, x + 4, y - 26, 6, 5, "#9aa4b2");
+            break;
+        case "dagger":
+            box(g, x + 6, y - 18, 2, 8, "#c9ced6"); box(g, x + 4, y - 11, 6, 2, "#ffc233");
+            break;
+        case "none":
+            break;
+        default: // swords
+            box(g, x + 6, y - (kind === "greatsword" ? 30 : 24), kind === "greatsword" ? 3 : 2, kind === "greatsword" ? 20 : 14, "#c9ced6");
+            box(g, x + 4, y - 11, 6, 2, "#ffc233");
+    }
 }
 
 function fmtShort(n: number): string {

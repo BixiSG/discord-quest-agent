@@ -19,6 +19,8 @@ export const CSS = `
 .bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ember); border-bottom: 3px solid var(--line); cursor: move; user-select: none; touch-action: none; }
 .bar .logo { font-weight: 900; letter-spacing: 1px; font-size: 14px; color: #111; text-transform: uppercase; }
 .bar .who { flex: 1; font-weight: 700; color: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
+.win:focus { outline: none; }
 .x { cursor: pointer; background: var(--card); color: var(--text); border: 2px solid var(--line); width: 26px; height: 26px; font-weight: 900; box-shadow: 2px 2px 0 var(--line); }
 .x:hover { background: var(--gold); color: #111; }
 .grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;

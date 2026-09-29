@@ -100,7 +100,7 @@
   function xpToNext(level) {
     if (level >= MAX_LEVEL) return Infinity;
     const late = level > 60 ? Math.pow(1.07, level - 60) : 1;
-    return Math.round((80 * Math.pow(level, 2.8) + 120 * level) * late);
+    return Math.round(3 * (80 * Math.pow(level, 2.8) + 120 * level) * late);
   }
   function xpPenalty(heroLevel, monsterLevel) {
     const safe = 3 + Math.floor(heroLevel / 16);
@@ -144,7 +144,7 @@
       str: 12,
       dex: 24,
       int: 10,
-      life: 52,
+      life: 62,
       startSkill: "twinshot",
       startWeapon: "bow1",
       startNode: "start_strider",
@@ -2484,7 +2484,7 @@
     }
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
     const manaRegen = bag.flat("manaRegen") + mana * 0.07;
-    const skill = calcSkill(hero, bag, problems);
+    const skill = calcSkill(hero, bag, problems, manaRegen);
     const ref = monsterDamage(L) * 1.5;
     const pool = life + es;
     const evade = 1 - Math.max(0.25, hitChance(monsterDefence(L), evasion));
@@ -2525,7 +2525,7 @@
       bag
     };
   }
-  function calcSkill(hero, heroBag, problems) {
+  function calcSkill(hero, heroBag, problems, manaRegen) {
     const L = hero.level;
     let def2 = SKILLS[hero.skill];
     if (!def2 || def2.level > L) {
@@ -2622,13 +2622,14 @@
     let targets = 1;
     if (def2.shape === "area") targets = Math.max(1, Math.floor((def2.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
     else if (def2.shape === "projectile") targets = 1 + (def2.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
-    const manaCost = Math.round(def2.manaCost * (1 + 0.03 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
+    const manaCost = Math.round(def2.manaCost * (1 + 0.02 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
     const pen = zeroes();
     for (const t of DAMAGE_TYPES) pen[t] = bag.flat(`pen.${t}`, ctx);
     let avgHit = 0;
     for (const t of DAMAGE_TYPES) avgHit += (hit[t][0] + hit[t][1]) / 2;
     const critFactor = 1 + critChance / 100 * (critMulti / 100 - 1);
-    const dps = avgHit * critFactor * speed * hc;
+    const sustain = manaCost > 0 ? manaRegen / manaCost : Infinity;
+    const dps = avgHit * critFactor * Math.min(speed, sustain) * hc;
     return {
       id: def2.id,
       name: def2.name,
@@ -2641,6 +2642,7 @@
       critChance,
       critMulti,
       speed,
+      sustain,
       hitChance: hc,
       accuracy,
       targets,
@@ -4072,7 +4074,9 @@
       if (last && now - last.t < 160 && (last.kind === "arc" || last.kind === "stab" || last.kind === "slam")) lunge = Math.sin((now - last.t) / 160 * Math.PI) * 14;
       const walking = run?.phase === "travel";
       const dead = run?.phase === "dead";
-      drawHero(g, HERO_X + lunge, GROUND, CLASSES[state.hero.cls]?.color ?? "#e2543b", walking ? now : 0, now - this.heroHurt < 120, dead);
+      const wItem = state.hero.equipment.weapon;
+      const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? BASES[wItem.base]?.kind ?? "sword" : "none", shield: !!state.hero.equipment.offhand };
+      drawHero(g, HERO_X + lunge, GROUND, look, walking ? now : 0, now - this.heroHurt < 120, dead);
       this.fx = this.fx.filter((f) => now - f.t < 350);
       for (const f of this.fx) this.drawFx(f, pos2, now);
       g.textAlign = "center";
@@ -4296,11 +4300,12 @@
       }
     }
   }
-  function drawHero(g, x, y, color, walk, hurt, dead) {
+  function drawHero(g, x, y, look, walk, hurt, dead) {
     if (dead) {
       box(g, x - 10, y - 5, 20, 5, "#555");
       return;
     }
+    const color = look.cape;
     const step2 = walk ? Math.round(Math.sin(walk / 90) * 2) : 0;
     const skin = hurt ? "#ffd0c0" : "#f0c9a0";
     const armour = hurt ? "#e5a0a0" : "#6b7280";
@@ -4314,8 +4319,53 @@
     g.fillRect(x, y - 13, 2, 3);
     g.fillStyle = "#111";
     g.fillRect(x + 2, y - 21, 1, 2);
-    box(g, x + 6, y - 24, 2, 14, "#c9ced6");
-    box(g, x + 4, y - 11, 6, 2, "#ffc233");
+    drawWeapon(g, x, y, look.weapon);
+    if (look.shield && look.weapon !== "bow") box(g, x - 9, y - 16, 5, 8, "#8a5a2b");
+  }
+  function drawWeapon(g, x, y, kind) {
+    switch (kind) {
+      case "bow":
+        g.strokeStyle = "#111";
+        g.lineWidth = 3;
+        g.beginPath();
+        g.arc(x + 5, y - 15, 9, -1.2, 1.2);
+        g.stroke();
+        g.strokeStyle = "#8a5a2b";
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(x + 5, y - 15, 9, -1.2, 1.2);
+        g.stroke();
+        g.fillStyle = "#e9e4d4";
+        g.fillRect(x + 8, y - 23, 1, 16);
+        g.lineWidth = 1;
+        break;
+      case "staff":
+        box(g, x + 6, y - 28, 2, 26, "#8a5a2b");
+        box(g, x + 5, y - 31, 4, 4, "#19b3a3");
+        break;
+      case "wand":
+        box(g, x + 6, y - 20, 2, 10, "#8a5a2b");
+        box(g, x + 5, y - 23, 4, 3, "#ff5a36");
+        break;
+      case "axe":
+      case "greataxe":
+        box(g, x + 6, y - 26, 2, 16, "#8a5a2b");
+        box(g, x + 8, y - 26, kind === "greataxe" ? 6 : 4, 6, "#c9ced6");
+        break;
+      case "mace":
+        box(g, x + 6, y - 22, 2, 12, "#8a5a2b");
+        box(g, x + 4, y - 26, 6, 5, "#9aa4b2");
+        break;
+      case "dagger":
+        box(g, x + 6, y - 18, 2, 8, "#c9ced6");
+        box(g, x + 4, y - 11, 6, 2, "#ffc233");
+        break;
+      case "none":
+        break;
+      default:
+        box(g, x + 6, y - (kind === "greatsword" ? 30 : 24), kind === "greatsword" ? 3 : 2, kind === "greatsword" ? 20 : 14, "#c9ced6");
+        box(g, x + 4, y - 11, 6, 2, "#ffc233");
+    }
   }
   function fmtShort(n) {
     if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
@@ -4342,6 +4392,8 @@
 .bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ember); border-bottom: 3px solid var(--line); cursor: move; user-select: none; touch-action: none; }
 .bar .logo { font-weight: 900; letter-spacing: 1px; font-size: 14px; color: #111; text-transform: uppercase; }
 .bar .who { flex: 1; font-weight: 700; color: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
+.win:focus { outline: none; }
 .x { cursor: pointer; background: var(--card); color: var(--text); border: 2px solid var(--line); width: 26px; height: 26px; font-weight: 900; box-shadow: 2px 2px 0 var(--line); }
 .x:hover { background: var(--gold); color: #111; }
 .grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
@@ -5076,7 +5128,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
       ),
       tierChips(st.atlas.tiers),
-      h("div", { class: "muted", style: "font-size:11px", text: "Dying in a map loses it and 5% of a level's experience. Mods make maps harder and richer." })
+      h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
     ));
     const list6 = h("div", { class: "col", style: "gap:4px" });
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
@@ -5278,9 +5330,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         [sk.kind === "attack" ? "Attacks per second" : "Casts per second", sk.speed.toFixed(2), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")],
         ...sk.kind === "attack" ? [["Hit chance (vs same level)", pct(sk.hitChance), breakdown("accuracy", "Accuracy")]] : [],
         ["Mana cost", fmt(sk.manaCost)],
+        ...sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`]] : [],
         ...sk.leech ? [["Life leech", `${sk.leech}%`]] : []
       ]),
-      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${sk.speed.toFixed(2)}/s${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` })
+      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${Math.min(sk.speed, sk.sustain).toFixed(2)}/s${sk.sustain < sk.speed ? " (mana-limited)" : ""}${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` })
     );
     const pool = s.life + s.es;
     const def2 = h(
@@ -5903,8 +5956,28 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         g.w += dx;
         g.h += dy;
       });
+      this.tabs.setAttribute("role", "tablist");
+      this.win.tabIndex = -1;
+      this.win.addEventListener("keydown", (e) => {
+        const t = e.target;
+        if (t.closest("input, textarea, select")) return;
+        if (e.key === "Escape") {
+          const modals = this.win.querySelectorAll(".modal");
+          const top = modals[modals.length - 1];
+          if (top && !top.querySelector(".progress")) {
+            top.remove();
+            e.preventDefault();
+          }
+          return;
+        }
+        const n = Number(e.key);
+        if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          this.tabs.children[n - 1]?.click();
+          e.preventDefault();
+        }
+      });
       for (const v of VIEWS) {
-        this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => {
+        this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${VIEWS.indexOf(v) + 1})` }, on: { click: () => {
           this.view = v.id;
           this.sig = "";
           if (this.ctx) this.ctx.sel = {};
@@ -6117,12 +6190,22 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         storeKind: this.store.kind
       };
     }
+    lastSigCheck = 0;
     renderTab(force) {
       if (!this.state || !this.ctx) return;
+      if (!force) {
+        const t = performance.now();
+        if (t - this.lastSigCheck < 250) return;
+        this.lastSigCheck = t;
+      }
       const sig = this.view + ":" + viewSig(this.view, this.ctx);
       if (!force && sig === this.sig) return;
       this.sig = sig;
-      for (const b of this.tabs.querySelectorAll("button")) b.classList.toggle("on", b.getAttribute("data-v") === this.view);
+      for (const b of this.tabs.querySelectorAll("button")) {
+        const on = b.getAttribute("data-v") === this.view;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-selected", String(on));
+      }
       const top = this.body.scrollTop;
       clear(this.body);
       this.body.append(renderView(this.view, this.ctx));
@@ -6169,7 +6252,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       setTimeout(() => t.remove(), 2200);
     }
     modal(content) {
-      const m4 = h("div", { class: "modal" }, content);
+      const m4 = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
       this.win.append(m4);
       return () => m4.remove();
     }

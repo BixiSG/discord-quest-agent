@@ -107,9 +107,10 @@ function heroView(c: Ctx): HTMLElement {
             [sk.kind === "attack" ? "Attacks per second" : "Casts per second", sk.speed.toFixed(2), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")],
             ...(sk.kind === "attack" ? [["Hit chance (vs same level)", pct(sk.hitChance), breakdown("accuracy", "Accuracy")] as [string, string, () => void]] : []),
             ["Mana cost", fmt(sk.manaCost)],
+            ...(sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`] as [string, string]] : []),
             ...(sk.leech ? [["Life leech", `${sk.leech}%`] as [string, string]] : []),
         ]),
-        h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${sk.speed.toFixed(2)}/s${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` }),
+        h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${Math.min(sk.speed, sk.sustain).toFixed(2)}/s${sk.sustain < sk.speed ? " (mana-limited)" : ""}${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` }),
     );
 
     const pool = s.life + s.es;

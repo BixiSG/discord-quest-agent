@@ -124,8 +124,27 @@ export class GameWindow {
         this.dragger(bar, (dx, dy, g) => { g.x += dx; g.y += dy; });
         this.dragger(grip, (dx, dy, g) => { g.w += dx; g.h += dy; });
 
+        this.tabs.setAttribute("role", "tablist");
+        this.win.tabIndex = -1;
+        // Keyboard: Esc closes the top window inside the game, 1-9 switch tabs.
+        this.win.addEventListener("keydown", e => {
+            const t = e.target as HTMLElement;
+            if (t.closest("input, textarea, select")) return;
+            if (e.key === "Escape") {
+                const modals = this.win.querySelectorAll(".modal");
+                const top = modals[modals.length - 1] as HTMLElement | undefined;
+                // Closing never confirms anything: the window is just dismissed (the catch-up one stays).
+                if (top && !top.querySelector(".progress")) { top.remove(); e.preventDefault(); }
+                return;
+            }
+            const n = Number(e.key);
+            if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                (this.tabs.children[n - 1] as HTMLElement | undefined)?.click();
+                e.preventDefault();
+            }
+        });
         for (const v of VIEWS) {
-            this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => {
+            this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${VIEWS.indexOf(v) + 1})` }, on: { click: () => {
                 this.view = v.id; this.sig = ""; if (this.ctx) this.ctx.sel = {};
                 this.renderTab(true); this.body.scrollTop = 0;
             } } }));
@@ -314,12 +333,19 @@ export class GameWindow {
         };
     }
 
+    private lastSigCheck = 0;
     private renderTab(force: boolean): void {
         if (!this.state || !this.ctx) return;
+        // Signatures are cheap but not free (some stringify state): check four times a second.
+        if (!force) { const t = performance.now(); if (t - this.lastSigCheck < 250) return; this.lastSigCheck = t; }
         const sig = this.view + ":" + viewSig(this.view, this.ctx);
         if (!force && sig === this.sig) return;
         this.sig = sig;
-        for (const b of this.tabs.querySelectorAll("button")) b.classList.toggle("on", b.getAttribute("data-v") === this.view);
+        for (const b of this.tabs.querySelectorAll("button")) {
+            const on = b.getAttribute("data-v") === this.view;
+            b.classList.toggle("on", on);
+            b.setAttribute("aria-selected", String(on));
+        }
         const top = this.body.scrollTop;
         clear(this.body);
         this.body.append(renderView(this.view, this.ctx));
@@ -370,7 +396,7 @@ export class GameWindow {
     }
 
     modal(content: HTMLElement): () => void {
-        const m = h("div", { class: "modal" }, content);
+        const m = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
         this.win.append(m);
         return () => m.remove();
     }

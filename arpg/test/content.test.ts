@@ -83,8 +83,8 @@ describe("scaling matches COMBAT.md", () => {
         expect(monsterLife(11)).toBeCloseTo(20 * Math.pow(1.085, 10) * 1.3);
         expect(monsterDamage(11)).toBeCloseTo(5 * Math.pow(1.055, 10) * 1.2);
         expect(monsterDefence(11)).toBeCloseTo(12 + 90 * Math.pow(1.03, 10));
-        expect(xpToNext(10)).toBe(Math.round(80 * Math.pow(10, 2.8) + 1200));
-        expect(xpToNext(70)).toBe(Math.round((80 * Math.pow(70, 2.8) + 120 * 70) * Math.pow(1.07, 10)));
+        expect(xpToNext(10)).toBe(Math.round(3 * (80 * Math.pow(10, 2.8) + 1200)));
+        expect(xpToNext(70)).toBe(Math.round(3 * (80 * Math.pow(70, 2.8) + 120 * 70) * Math.pow(1.07, 10)));
         expect(monsterXp(10)).toBeCloseTo(4 * Math.pow(10, 1.9) + 6);
     });
 });

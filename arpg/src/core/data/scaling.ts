@@ -21,7 +21,7 @@ export function monsterXp(level: number): number {
 export function xpToNext(level: number): number {
     if (level >= MAX_LEVEL) return Infinity;
     const late = level > 60 ? Math.pow(1.07, level - 60) : 1;
-    return Math.round((80 * Math.pow(level, 2.8) + 120 * level) * late);
+    return Math.round(3 * (80 * Math.pow(level, 2.8) + 120 * level) * late);
 }
 /** XP multiplier for a kill `monsterLevel` by a hero of `heroLevel`. */
 export function xpPenalty(heroLevel: number, monsterLevel: number): number {

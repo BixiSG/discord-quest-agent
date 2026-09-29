@@ -22,8 +22,10 @@ export interface SkillCalc {
     avgHit: number;
     critChance: number;
     critMulti: number;
-    /** Uses per second. */
+    /** Uses per second the skill's speed allows. */
     speed: number;
+    /** Uses per second mana regeneration can pay for (Infinity when free). */
+    sustain: number;
     hitChance: number;
     accuracy: number;
     targets: number;
@@ -133,7 +135,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
     const manaRegen = bag.flat("manaRegen") + mana * 0.07;
 
-    const skill = calcSkill(hero, bag, problems);
+    const skill = calcSkill(hero, bag, problems, manaRegen);
 
     // EHP (COMBAT.md 7): pool over the share of a reference hit that gets through.
     const ref = monsterDamage(L) * 1.5;
@@ -155,7 +157,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     };
 }
 
-function calcSkill(hero: Hero, heroBag: StatBag, problems: string[]): SkillCalc {
+function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: number): SkillCalc {
     const L = hero.level;
     let def = SKILLS[hero.skill];
     if (!def || def.level > L) { problems.push("skill not available"); def = SKILLS.crescent!; }
@@ -245,17 +247,19 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[]): SkillCalc 
     let targets = 1;
     if (def.shape === "area") targets = Math.max(1, Math.floor((def.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
     else if (def.shape === "projectile") targets = 1 + (def.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
-    const manaCost = Math.round(def.manaCost * (1 + 0.03 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
+    const manaCost = Math.round(def.manaCost * (1 + 0.02 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
     const pen = zeroes();
     for (const t of DAMAGE_TYPES) pen[t] = bag.flat(`pen.${t}`, ctx);
 
     let avgHit = 0;
     for (const t of DAMAGE_TYPES) avgHit += (hit[t][0] + hit[t][1]) / 2;
     const critFactor = 1 + (critChance / 100) * (critMulti / 100 - 1);
-    const dps = avgHit * critFactor * speed * hc;
+    // Sustained DPS: a skill can't be used faster than mana regeneration pays for it.
+    const sustain = manaCost > 0 ? manaRegen / manaCost : Infinity;
+    const dps = avgHit * critFactor * Math.min(speed, sustain) * hc;
     return {
         id: def.id, name: def.name, kind: def.kind, shape: def.shape, fx: def.fx, tags: [...tags],
-        hit, avgHit, critChance, critMulti, speed, hitChance: hc, accuracy, targets, manaCost,
+        hit, avgHit, critChance, critMulti, speed, sustain, hitChance: hc, accuracy, targets, manaCost,
         leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: used,
     };
 }

@@ -21,7 +21,7 @@ export const CLASSES: Record<string, ClassDef> = {
     strider: {
         id: "strider", name: "Strider",
         blurb: "A lamplighter who walked the drowned roads for a living. Quick feet, a bow, and a good eye.",
-        str: 12, dex: 24, int: 10, life: 52,
+        str: 12, dex: 24, int: 10, life: 62,
         startSkill: "twinshot", startWeapon: "bow1", startNode: "start_strider", color: "#19b3a3",
     },
     arcanist: {
