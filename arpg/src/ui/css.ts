@@ -1,7 +1,8 @@
 // Neo-brutalist look: warm paper (or night ink), black 3px lines, hard offset
 // shadows, loud flat colours, condensed caps for anything that is a label.
-// Everything is scoped to the game's shadow root. No web fonts (Discord's
-// CSP): Bahnschrift ships with Windows 10+, the rest are fallbacks.
+// Everything is scoped to the game's shadow root. All text is the game's own
+// pixel font (gfx/webfont.ts, registered from bytes so Discord's CSP allows
+// it); Bahnschrift and Segoe UI are only fallbacks.
 
 export const CSS = `
 :host { all: initial; }
