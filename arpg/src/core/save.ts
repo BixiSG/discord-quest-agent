@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -71,6 +71,13 @@ export const MIGRATIONS: Record<number, Migration> = {
         s.companions ??= {};
         s.blessings ??= {};
         s.shrine ??= { keep: [], orbs: true };
+        return s;
+    },
+    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use).
+    6: (s: any) => {
+        s.stones ??= {};
+        s.settings.autoStones ??= true;
+        s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
         return s;
     },
 };

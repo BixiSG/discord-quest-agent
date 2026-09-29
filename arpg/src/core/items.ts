@@ -1,7 +1,7 @@
 // Item generation and item stats. Pure: randomness comes from the Rng passed in.
 
 import { Rng } from "./rng";
-import { AFFIXES, AFFIX_ILVLS, BASES, RARE_NAMES_A, RARE_NAMES_B, RELICS, type AffixDef, type BaseDef, type DefenceStats, type RelicDef, type WeaponStats } from "./data";
+import { AFFIXES, AFFIX_ILVLS, BASES, RARE_NAMES_A, RARE_NAMES_B, RELICS, stoneMods, type AffixDef, type BaseDef, type DefenceStats, type RelicDef, type StonePlace, type WeaponStats } from "./data";
 import type { AffixRoll, DamageType, Item, Mod, Rarity } from "./types";
 
 export const MAX_AFFIXES: Record<Rarity, { prefix: number; suffix: number }> = {
@@ -171,7 +171,16 @@ export function rawMods(item: Item): Mod[] {
             out.push(mod);
         });
     }
+    if (item.stones) { const place = placeOf(item); for (const k of item.stones) if (k) out.push(...stoneMods(k, place, src)); }
     return out;
+}
+
+/** Where a stone in this item counts as sitting: weapons (and quivers, foci), armour (and shields), jewellery. */
+export function placeOf(item: Item): StonePlace {
+    const b = baseOf(item);
+    if (b.slot === "ring" || b.slot === "amulet" || b.slot === "belt") return "jewel";
+    if (b.slot === "weapon" || b.kind === "quiver" || b.kind === "focus") return "weapon";
+    return "armour";
 }
 
 export interface ItemStats {

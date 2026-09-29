@@ -44,6 +44,8 @@ for (let t = start, next = every; t < start + hours * HOUR;) {
             + ` | stash ${g.stash.length}/${g.stashCap} (behind ${behind}, need level ${locked}) case ${g.relics.length} codex ${Object.keys(g.codex).length}`
             + ` | swapped ${g.totals.swapped ?? 0} dust ${Math.round(g.dust)} | ${cur}`);
         console.log(`    deaths ${g.totals.deaths}: ${Object.entries(deaths).map(([k, v]) => `${k}:${v}`).join(" ") || "none"}`);
+        const worn = Object.values(g.hero.equipment).flatMap(x => x?.stones ?? []);
+        console.log(`    stones: pouch ${Object.values(g.stones ?? {}).reduce((a, b) => a + b, 0)} (${Object.entries(g.stones ?? {}).map(([k, v]) => `${k}x${v}`).join(" ")}), worn ${worn.filter(Boolean).length}/${worn.length} [${worn.join(",")}] market seq ${g.market?.seq ?? 0}`);
         for (const k in deaths) delete deaths[k];
     }
 }

@@ -9,6 +9,9 @@ import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLe
 import { setCompanion } from "../src/core/companions";
 import { BLESSINGS, setKeep } from "../src/core/shrine";
 import { scoutPinnacle } from "../src/core/scout";
+import { buyGear, tickMarket } from "../src/core/market";
+import { autoSetStones, cutStones } from "../src/core/sockets";
+import { upgradeSlot } from "../src/core/game";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
@@ -74,6 +77,11 @@ export function botTune(state: GameState): void {
     if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
     // Shrine: from level 20, keep every blessing up (spare orbs pay first).
     if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
+    // Market: buy what would be worn at once (keeping a reserve for the shrine); cut stones up.
+    tickMarket(state);
+    state.market.pedlar.forEach((o, i) => { if (!o.sold && state.dust >= o.price * 2 && upgradeSlot(state, o.item)) buyGear(state, i); });
+    for (const k of Object.keys(state.stones)) while ((state.stones[k] ?? 0) >= 3 && !cutStones(state, k)) { /* cut */ }
+    autoSetStones(state);
     // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
     for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
         const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))

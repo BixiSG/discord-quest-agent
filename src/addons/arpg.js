@@ -2359,6 +2359,63 @@
     return m4 ? COMPANIONS[id].bonus.text.replace("{0}", String(m4.value)) : "";
   };
 
+  // src/core/data/stones.ts
+  var STONE_TIERS = ["Chipped", "Flawed", "Clear", "Flawless", "Radiant"];
+  var STONE_TIER_LEVEL = [1, 20, 38, 55, 70];
+  var e = (mods, values, text) => ({ mods, values, text });
+  var DMG = [10, 16, 24, 34, 46];
+  var RES = [6, 9, 12, 16, 20];
+  var list7 = [
+    { id: "ruby", name: "Ruby", color: "#e5383b", effects: {
+      weapon: e([{ stat: "damage", kind: "inc", tags: ["fire"] }], DMG, "{0}% increased fire damage"),
+      armour: e([{ stat: "res.fire", kind: "flat" }], RES, "+{0}% fire resistance"),
+      jewel: e([{ stat: "life", kind: "flat" }], [12, 24, 40, 60, 85], "+{0} to maximum life")
+    } },
+    { id: "sapphire", name: "Sapphire", color: "#3a7bff", effects: {
+      weapon: e([{ stat: "damage", kind: "inc", tags: ["cold"] }], DMG, "{0}% increased cold damage"),
+      armour: e([{ stat: "res.cold", kind: "flat" }], RES, "+{0}% cold resistance"),
+      jewel: e([{ stat: "manaRegen", kind: "flat" }], [1, 2, 3, 5, 7], "{0} mana regenerated per second")
+    } },
+    { id: "topaz", name: "Topaz", color: "#e0b800", effects: {
+      weapon: e([{ stat: "damage", kind: "inc", tags: ["lightning"] }], DMG, "{0}% increased lightning damage"),
+      armour: e([{ stat: "res.lightning", kind: "flat" }], RES, "+{0}% lightning resistance"),
+      jewel: e([{ stat: "itemRarity", kind: "inc" }], [4, 7, 10, 14, 18], "{0}% increased rarity of items found")
+    } },
+    { id: "emerald", name: "Emerald", color: "#2f9e4f", effects: {
+      weapon: e([{ stat: "critChance", kind: "inc" }], [8, 13, 19, 26, 34], "{0}% increased critical chance"),
+      armour: e([{ stat: "evasion", kind: "inc" }], [6, 10, 15, 21, 28], "{0}% increased evasion"),
+      jewel: e([{ stat: "dex", kind: "flat" }], [4, 8, 12, 17, 23], "+{0} to Grace")
+    } },
+    { id: "onyx", name: "Onyx", color: "#6b5a7a", effects: {
+      weapon: e([{ stat: "pen.fire", kind: "flat" }, { stat: "pen.cold", kind: "flat" }, { stat: "pen.lightning", kind: "flat" }], [2, 3, 5, 7, 9], "Hits ignore {0}% elemental resistance"),
+      armour: e([{ stat: "res.chaos", kind: "flat" }], [5, 8, 11, 15, 19], "+{0}% chaos resistance"),
+      jewel: e([{ stat: "leech", kind: "flat" }], [0.4, 0.6, 0.9, 1.2, 1.6], "{0}% of damage leeched as life")
+    } },
+    { id: "diamond", name: "Diamond", color: "#dff6ff", effects: {
+      weapon: e([{ stat: "attackSpeed", kind: "inc" }, { stat: "castSpeed", kind: "inc" }], [3, 5, 7, 9, 12], "{0}% increased attack and cast speed"),
+      armour: e([{ stat: "armour", kind: "inc" }, { stat: "energyShield", kind: "inc" }], [6, 10, 15, 21, 28], "{0}% increased armour and energy shield"),
+      jewel: e([{ stat: "res.fire", kind: "flat" }, { stat: "res.cold", kind: "flat" }, { stat: "res.lightning", kind: "flat" }], [3, 4, 6, 8, 10], "+{0}% to all elemental resistances")
+    } }
+  ];
+  var STONES = Object.fromEntries(list7.map((s) => [s.id, s]));
+  var STONE_ORDER = list7.map((s) => s.id);
+  var stoneKey = (id, tier) => `${id}:${tier}`;
+  function parseStone(key) {
+    const [id, t] = key.split(":");
+    const tier = Number(t);
+    return id && STONES[id] && Number.isInteger(tier) && tier >= 0 && tier < STONE_TIERS.length ? { id, tier } : null;
+  }
+  function stoneMods(key, place, src) {
+    const p = parseStone(key);
+    if (!p) return [];
+    const eff = STONES[p.id].effects[place];
+    return eff.mods.map((m4) => {
+      const mod = { stat: m4.stat, kind: m4.kind, value: eff.values[p.tier], ...src ? { src } : {} };
+      if (m4.tags) mod.tags = m4.tags;
+      return mod;
+    });
+  }
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
@@ -2366,9 +2423,9 @@
       for (const m4 of mods) this.add(m4);
     }
     add(m4) {
-      let list7 = this.by.get(m4.stat);
-      if (!list7) this.by.set(m4.stat, list7 = []);
-      list7.push(m4);
+      let list8 = this.by.get(m4.stat);
+      if (!list8) this.by.set(m4.stat, list8 = []);
+      list8.push(m4);
     }
     addAll(mods) {
       for (const m4 of mods) this.add(m4);
@@ -2543,7 +2600,17 @@
         out.push(mod);
       });
     }
+    if (item.stones) {
+      const place = placeOf(item);
+      for (const k of item.stones) if (k) out.push(...stoneMods(k, place, src));
+    }
     return out;
+  }
+  function placeOf(item) {
+    const b = baseOf(item);
+    if (b.slot === "ring" || b.slot === "amulet" || b.slot === "belt") return "jewel";
+    if (b.slot === "weapon" || b.kind === "quiver" || b.kind === "focus") return "weapon";
+    return "armour";
   }
   function itemStats(item) {
     const b = baseOf(item);
@@ -2964,6 +3031,105 @@
     ...DAMAGE_TYPES.flatMap((t) => [`addMin.${t}`, `addMax.${t}`, `pen.${t}`, `convert.${t}`])
   ];
 
+  // src/core/sockets.ts
+  function socketCap(item) {
+    const b = baseOf(item);
+    if (placeOf(item) === "jewel") return 1;
+    if (b.slot === "body" || b.weapon?.hands === 2) return 3;
+    return 2;
+  }
+  function fitStones(item) {
+    const n = item.sockets ?? 0;
+    if (!n) {
+      delete item.sockets;
+      delete item.stones;
+      return;
+    }
+    const s = (item.stones ?? []).slice(0, n);
+    while (s.length < n) s.push(null);
+    item.stones = s;
+  }
+  function rollSockets(rng, item) {
+    const r3 = rng.next();
+    const n = Math.min(socketCap(item), r3 < 0.55 ? 0 : r3 < 0.88 ? 1 : 2);
+    if (n) {
+      item.sockets = n;
+      fitStones(item);
+    }
+  }
+  function returnStones(state, item) {
+    for (const k of item.stones ?? []) if (k) addStone(state, k, 1);
+    if (item.stones) item.stones = item.stones.map(() => null);
+  }
+  function addStone(state, key, n) {
+    state.stones ??= {};
+    const v = (state.stones[key] ?? 0) + n;
+    if (v > 0) state.stones[key] = v;
+    else delete state.stones[key];
+  }
+  function rollStone(rng, level) {
+    let tier = 0;
+    while (tier + 1 < STONE_TIERS.length - 1 && STONE_TIER_LEVEL[tier + 1] <= level) tier++;
+    if (tier > 0 && rng.chance(0.3)) tier--;
+    return stoneKey(rng.pick(STONE_ORDER), tier);
+  }
+  function findItem(state, uid) {
+    const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
+    if (s) return { item: s };
+    for (const slot of SLOTS) {
+      const it = state.hero.equipment[slot];
+      if (it?.uid === uid) return { item: it, slot };
+    }
+    return null;
+  }
+  function setStone(state, uid, i, key) {
+    const f = findItem(state, uid);
+    if (!f) return "item not found";
+    const it = f.item;
+    if (!it.sockets || i < 0 || i >= it.sockets) return "no such socket";
+    fitStones(it);
+    if (key !== null) {
+      if (!parseStone(key)) return "unknown stone";
+      if ((state.stones?.[key] ?? 0) <= 0) return "none in the pouch";
+      addStone(state, key, -1);
+    }
+    const old = it.stones[i];
+    if (old) addStone(state, old, 1);
+    it.stones[i] = key;
+    if (f.slot) state.hero.rev++;
+    return null;
+  }
+  function autoSetStones(state) {
+    if (!state.stones || !Object.keys(state.stones).length) return 0;
+    let n = 0;
+    for (const slot of SLOTS) {
+      const it = state.hero.equipment[slot];
+      if (!it?.sockets) continue;
+      fitStones(it);
+      for (let i = 0; i < it.sockets; i++) {
+        const cur = it.stones[i];
+        const curP = cur ? parseStone(cur) : null;
+        const keys = Object.keys(state.stones).filter((k) => (state.stones[k] ?? 0) > 0 && (!curP || parseStone(k)?.id === curP.id && parseStone(k).tier > curP.tier));
+        if (!keys.length) continue;
+        let best = null, bestScore = buildScore(sheetOf(state));
+        for (const k of keys) {
+          const hero = structuredClone(state.hero);
+          hero.equipment[slot].stones[i] = k;
+          const sc = buildScore(deriveSheet(hero));
+          if (sc > bestScore * 1.001 || curP && !best) {
+            best = k;
+            bestScore = Math.max(bestScore, sc);
+          }
+        }
+        if (best) {
+          setStone(state, it.uid, i, best);
+          n++;
+        }
+      }
+    }
+    return n;
+  }
+
   // src/core/filter.ts
   var DEFAULT_FILTER = [
     { on: true, action: "keep", rarity: ["relic"] },
@@ -3067,13 +3233,15 @@
       atlas: { points: 0, nodes: [], tiers: [] },
       sigils: {},
       pinnacleKills: {},
-      settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
+      settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true },
       relics: [],
       codex: {},
       contracts: { list: [], seq: 0, done: 0 },
       companions: {},
       blessings: {},
       shrine: { keep: [], orbs: true },
+      stones: {},
+      market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] },
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -3338,6 +3506,7 @@
     return false;
   }
   function salvageItem(state, item) {
+    returnStones(state, item);
     const v = salvageValue(item);
     state.dust += v;
     state.totals.salvaged++;
@@ -3446,13 +3615,13 @@
   // src/core/maps.ts
   var endgameOpen = (state) => !!state.world.clears.a3_sunfall;
   function atlasEffects(state) {
-    const e = emptyAtlas();
+    const e2 = emptyAtlas();
     for (const id of state.atlas?.nodes ?? []) {
       const n = ATLAS[id];
       if (!n) continue;
-      for (const [k, v] of Object.entries(n.eff)) e[k] += v ?? 0;
+      for (const [k, v] of Object.entries(n.eff)) e2[k] += v ?? 0;
     }
-    return e;
+    return e2;
   }
   var atlasPointsLeft = (state) => state.atlas.points - state.atlas.nodes.length;
   function canTakeAtlas(state, id) {
@@ -3632,25 +3801,25 @@
     const c = effCache.get(m4);
     if (c) return c;
     const depth = depthMult(m4.tier);
-    const e = { life: depth, damage: depth, speed: 1, extra: [], hero: [], quantity: atlas.quantity, rarity: atlas.rarity };
+    const e2 = { life: depth, damage: depth, speed: 1, extra: [], hero: [], quantity: atlas.quantity, rarity: atlas.rarity };
     const reward = 1 + atlas.modEffect / 100;
     for (const id of m4.mods) {
       const d = MAP_MODS[id];
       if (!d) continue;
-      if (d.life) e.life *= 1 + d.life / 100;
-      if (d.damage) e.damage *= 1 + d.damage / 100;
-      if (d.speed) e.speed *= 1 + d.speed / 100;
-      if (d.extra) e.extra.push(d.extra);
-      if (d.hero) e.hero.push(...d.hero.map((x) => ({ ...x, src: "Map" })));
-      e.quantity += d.qty * reward;
-      e.rarity += d.rarity * reward;
+      if (d.life) e2.life *= 1 + d.life / 100;
+      if (d.damage) e2.damage *= 1 + d.damage / 100;
+      if (d.speed) e2.speed *= 1 + d.speed / 100;
+      if (d.extra) e2.extra.push(d.extra);
+      if (d.hero) e2.hero.push(...d.hero.map((x) => ({ ...x, src: "Map" })));
+      e2.quantity += d.qty * reward;
+      e2.rarity += d.rarity * reward;
     }
     if (m4.tier > MAX_TIER) {
-      e.quantity += (m4.tier - MAX_TIER) * 3;
-      e.rarity += (m4.tier - MAX_TIER) * 4;
+      e2.quantity += (m4.tier - MAX_TIER) * 3;
+      e2.rarity += (m4.tier - MAX_TIER) * 4;
     }
-    effCache.set(m4, e);
-    return e;
+    effCache.set(m4, e2);
+    return e2;
   }
   function completeMap(state, m4) {
     if (m4.pinnacle) {
@@ -3750,7 +3919,7 @@
       return null;
     }
   };
-  function findItem(state, uid) {
+  function findItem2(state, uid) {
     const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
     if (s) return { item: s };
     for (const slot of SLOTS) {
@@ -3763,7 +3932,7 @@
     const eff = EFFECTS[currency];
     if (!eff || !CURRENCIES[currency]) return "unknown currency";
     if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
-    const found = findItem(state, uid);
+    const found = findItem2(state, uid);
     if (!found) return "item not found";
     const copy2 = structuredClone(found.item);
     const rng = new Rng(hashSeed(state.seed, 25458, state.craftSeq));
@@ -3787,7 +3956,7 @@
       const err = applyCurrency(state, currency, uid);
       if (err) return { err: used ? null : err, used, upgrade: false };
       used++;
-      const it = findItem(state, uid).item;
+      const it = findItem2(state, uid).item;
       if (upgradeSlot(state, it)) return { err: null, used, upgrade: true };
     }
     return { err: null, used, upgrade: false };
@@ -3801,7 +3970,7 @@
     return Math.round((20 + item.ilvl * 2) * (1 + q * 0.5));
   }
   function hone(state, uid) {
-    const found = findItem(state, uid);
+    const found = findItem2(state, uid);
     if (!found) return "item not found";
     const b = baseOf(found.item);
     if (!b.weapon && !b.defence) return "only weapons and armour take quality";
@@ -3823,7 +3992,7 @@
     return eligibleAffixes(copy2);
   }
   function benchCraft(state, uid, affixId) {
-    const found = findItem(state, uid);
+    const found = findItem2(state, uid);
     if (!found) return "item not found";
     const item = found.item;
     if (item.rarity !== "enchanted" && item.rarity !== "rare") return "needs an enchanted or rare item";
@@ -4152,6 +4321,66 @@
     s.shrine.keep = on ? [.../* @__PURE__ */ new Set([...s.shrine.keep, id])] : s.shrine.keep.filter((x) => x !== id);
   }
 
+  // src/core/market.ts
+  var ROTATION_MS = 2 * 36e5;
+  var GEAR_OFFERS = 6;
+  var STONE_OFFERS = 5;
+  var STONE_PRICE = [120, 450, 1500, 4500, 12e3];
+  var marketOpen = (s) => !!s.world.clears.a1_lock;
+  var OFFER_SLOTS = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+  function gearPrice(s, it) {
+    const base = forgeCost(s);
+    if (it.relic) return Math.round(base * 50 / 10) * 10;
+    return Math.round(base * (3 + 1.5 * it.affixes.length) * (1 + 0.25 * (it.sockets ?? 0)) / 10) * 10;
+  }
+  function weakSlots(s) {
+    const eq = s.hero.equipment;
+    return [...SLOTS].sort((a, b) => (eq[a] ? stashWorth(eq[a]) : -1) - (eq[b] ? stashWorth(eq[b]) : -1)).map((slot) => slot === "ring1" || slot === "ring2" ? "ring" : slot);
+  }
+  function rollStock(s) {
+    const m4 = s.market;
+    const rng = new Rng(hashSeed(s.seed, 7170932, m4.seq++));
+    const ilvl = maxIlvl(s);
+    const weak = weakSlots(s);
+    const pedlar = [];
+    for (let i = 0; i < GEAR_OFFERS; i++) {
+      const group = i < 2 ? weak[i] : rng.pick(OFFER_SLOTS);
+      let item;
+      try {
+        item = rollItem(rng, s.nextUid, ilvl, { rarity: "rare", slots: [group], maxBaseLevel: s.hero.level });
+      } catch {
+        continue;
+      }
+      s.nextUid++;
+      if (i === GEAR_OFFERS - 1) {
+        item.sockets = Math.min(socketCap(item), rng.chance(0.4) ? 2 : 1);
+        fitStones(item);
+      } else rollSockets(rng, item);
+      pedlar.push({ item, price: gearPrice(s, item) });
+    }
+    const missing = Object.values(RELICS).filter((r3) => r3.level <= ilvl && !s.codex[r3.id]);
+    if (missing.length && rng.chance(0.25) && pedlar.length) {
+      const def2 = rng.pick(missing);
+      const item = { uid: s.nextUid++, base: def2.base, ilvl, rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((x) => rng.int(x.range[0], x.range[1])) };
+      pedlar[pedlar.length - 2] = { item, price: gearPrice(s, item) };
+    }
+    const jeweller = [];
+    for (let i = 0; i < STONE_OFFERS; i++) {
+      const key = rollStone(rng, ilvl);
+      jeweller.push({ key, price: STONE_PRICE[parseStone(key).tier] });
+    }
+    m4.pedlar = pedlar;
+    m4.jeweller = jeweller;
+  }
+  function tickMarket(s) {
+    if (!marketOpen(s)) return;
+    s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
+    if (s.market.pedlar.length && s.simTo < s.market.rolledAt + ROTATION_MS) return;
+    s.market.rolledAt = s.simTo;
+    s.market.refreshes = 0;
+    rollStock(s);
+  }
+
   // src/core/sim/engine.ts
   var STEP_MS = 100;
   var DT = STEP_MS / 1e3;
@@ -4424,7 +4653,10 @@
       const relicChance = pin && k === 0 ? 1 : (d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m4.champion ? 0.01 : 3e-3) * (1 + bonus / 200);
       const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m4.level) || rollItem(rng, state.nextUid, m4.level, opts);
       state.nextUid++;
-      if (item.rarity === "rare") contractEvent(state, "rares");
+      if (item.rarity === "rare") {
+        contractEvent(state, "rares");
+        rollSockets(rng, item);
+      }
       const r3 = receiveItem(state, item);
       if (r3.equipped) changed = true;
       ev.loot?.(item, r3.kept, r3.equipped);
@@ -4436,6 +4668,12 @@
       const cur = rng.weighted(CURRENCY_ORDER, (id) => CURRENCIES[id].drop);
       state.currency[cur] = (state.currency[cur] ?? 0) + 1;
       ev.currency?.(cur);
+    }
+    if (rng.chance((d.boss ? 0.03 : m4.champion ? 4e-3 : 4e-4) * qty)) {
+      const key = rollStone(rng, m4.level);
+      addStone(state, key, 1);
+      ev.stone?.(key);
+      if (state.settings.autoStones && autoSetStones(state)) changed = true;
     }
     endgameDrops(state, run, m4, rng);
     if (d.boss) {
@@ -4597,6 +4835,9 @@
   function finishRun(state, ev) {
     const act = state.activity;
     tickShrine(state);
+    tickMarket(state);
+    if (state.settings.autoStones && autoSetStones(state)) {
+    }
     const run = act.run;
     state.totals.runs++;
     if (run.map) {
@@ -4721,7 +4962,7 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 6;
+  var SAVE_VERSION = 7;
   var MIGRATIONS = {
     // v2 (P2): passive bonus points, loot filter rules, crafting counter.
     1: (s) => {
@@ -4779,6 +5020,13 @@
       s.companions ??= {};
       s.blessings ??= {};
       s.shrine ??= { keep: [], orbs: true };
+      return s;
+    },
+    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use).
+    6: (s) => {
+      s.stones ??= {};
+      s.settings.autoStones ??= true;
+      s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
       return s;
     }
   };
@@ -4863,6 +5111,12 @@
       if (i.affixes.length) throw new SaveError("relic with affixes");
     } else if (i.relic !== void 0 || i.relicRolls !== void 0) throw new SaveError("relic data on a non-relic item");
     if (i.locked !== true) delete i.locked;
+    if (i.sockets !== void 0 || i.stones !== void 0) {
+      const n = Number.isInteger(i.sockets) ? Math.max(0, Math.min(socketCap(i), i.sockets)) : 0;
+      i.sockets = n;
+      i.stones = Array.isArray(i.stones) ? i.stones.map((k) => typeof k === "string" && parseStone(k) ? k : null) : [];
+      fitStones(i);
+    }
     if (i.quality !== void 0) {
       const q = Number.isFinite(i.quality) ? Math.max(0, Math.min(20, Math.round(i.quality))) : 0;
       if (q) i.quality = q;
@@ -4990,6 +5244,7 @@
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r3) => !!r3) : structuredClone(DEFAULT_FILTER);
     set.upkeep = set.upkeep !== false;
+    set.autoStones = set.autoStones !== false;
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
     act.autoCap = Number.isInteger(act.autoCap) && act.autoCap > 0 ? act.autoCap : 0;
@@ -5017,6 +5272,24 @@
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === void 0)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]) };
+    s.stones = Object.fromEntries(Object.entries(counts(s.stones)).filter(([k, v]) => parseStone(k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
+    const mk = s.market && typeof s.market === "object" ? s.market : {};
+    const okGear = (o) => {
+      try {
+        const x = o;
+        checkItem(x.item);
+        return Number.isFinite(x.price) && x.price > 0;
+      } catch {
+        return false;
+      }
+    };
+    s.market = {
+      seq: Number.isInteger(mk.seq) && mk.seq >= 0 ? mk.seq : 0,
+      rolledAt: Number.isFinite(mk.rolledAt) ? mk.rolledAt : 0,
+      refreshes: Number.isInteger(mk.refreshes) && mk.refreshes >= 0 ? mk.refreshes : 0,
+      pedlar: Array.isArray(mk.pedlar) && mk.pedlar.every(okGear) ? mk.pedlar.map((o) => ({ item: o.item, price: o.price, ...o.sold ? { sold: true } : {} })) : [],
+      jeweller: Array.isArray(mk.jeweller) && mk.jeweller.every((o) => o && parseStone(o.key) && Number.isFinite(o.price)) ? mk.jeweller.map((o) => ({ key: o.key, price: o.price, ...o.sold ? { sold: true } : {} })) : []
+    };
     s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => BLESSING[k]));
     const shr = s.shrine && typeof s.shrine === "object" ? s.shrine : { keep: [], orbs: true };
     s.shrine = { keep: [...new Set(strs(shr.keep, (k) => !!BLESSING[k]) ?? [])], orbs: shr.orbs !== false };
@@ -5115,10 +5388,10 @@
               i++;
               continue;
             }
-            let e = i;
-            while (e < row.length && row[e] === "#") e++;
-            g.fillRect(x + i + ox, 1 + y + oy, e - i, 1);
-            i = e;
+            let e2 = i;
+            while (e2 < row.length && row[e2] === "#") e2++;
+            g.fillRect(x + i + ox, 1 + y + oy, e2 - i, 1);
+            i = e2;
           }
         });
         x += rows[0].length + 1;
@@ -7347,18 +7620,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         tip.style.top = Math.round(Math.max(4, y)) + "px";
       }, delay);
     };
-    scope.addEventListener("pointerover", (e) => {
-      const el = find(e.target);
+    scope.addEventListener("pointerover", (e2) => {
+      const el = find(e2.target);
       if (el && scope.contains(el)) show(el, 380);
       else hide();
     });
-    scope.addEventListener("pointerout", (e) => {
-      if (owner && !owner.contains(e.relatedTarget)) hide();
+    scope.addEventListener("pointerout", (e2) => {
+      if (owner && !owner.contains(e2.relatedTarget)) hide();
     });
     scope.addEventListener("pointerdown", hide);
     scope.addEventListener("wheel", hide, { passive: true });
-    scope.addEventListener("focusin", (e) => {
-      const t = e.target;
+    scope.addEventListener("focusin", (e2) => {
+      const t = e2.target;
       const el = find(t);
       if (el && t.matches(":focus-visible")) show(el, 200);
     });
@@ -7385,8 +7658,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         await face.load();
         document.fonts.add(face);
         return true;
-      } catch (e) {
-        console.warn("[Hollowmarch] pixel font unavailable, using system fonts:", e);
+      } catch (e2) {
+        console.warn("[Hollowmarch] pixel font unavailable, using system fonts:", e2);
         return false;
       }
     })();
@@ -7548,10 +7821,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
       return cell;
     };
-    const group = (label, list7, worn = false) => {
-      if (!list7.length) return;
-      rack.append(h("div", { class: "gridsep", text: `${label} (${list7.length})` }));
-      for (const it of list7) {
+    const group = (label, list8, worn = false) => {
+      if (!list8.length) return;
+      rack.append(h("div", { class: "gridsep", text: `${label} (${list8.length})` }));
+      for (const it of list8) {
         const cell = cellFor(it);
         if (worn) markWorn(cell, SLOTS.find((s) => st.hero.equipment[s] === it));
         rack.append(cell);
@@ -7560,7 +7833,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     group("Worn", SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), true);
     group("Stash", st.stash);
     group("Relic case", st.relics);
-    const found = c.sel.uid !== void 0 ? findItem(st, c.sel.uid) : null;
+    const found = c.sel.uid !== void 0 ? findItem2(st, c.sel.uid) : null;
     const inStash = !!found && !found.slot;
     const anvil = h("div", { class: "card anvilcard" }, h("h3", { text: "On the anvil" }));
     if (found) {
@@ -7624,8 +7897,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const have = st.currency[id] ?? 0;
       const art = spriteCanvas(`cur.${id}`) ?? h("span", { style: `display:block;width:24px;height:24px;background:${def2.color};border:2px solid #111` });
       const reroll = REROLLS.includes(id);
-      const buy = (e) => {
-        const n = e.shiftKey ? 10 : 1;
+      const buy = (e2) => {
+        const n = e2.shiftKey ? 10 : 1;
         c.act((s) => buyCurrency(s, id, n), n > 1 ? `Bought ${n} ${def2.name}` : void 0);
       };
       shelf.append(h(
@@ -7914,25 +8187,25 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       return best;
     };
     let drag2 = null;
-    canvas.addEventListener("pointerdown", (e) => {
-      drag2 = { x: e.clientX, y: e.clientY, moved: 0 };
-      canvas.setPointerCapture(e.pointerId);
+    canvas.addEventListener("pointerdown", (e2) => {
+      drag2 = { x: e2.clientX, y: e2.clientY, moved: 0 };
+      canvas.setPointerCapture(e2.pointerId);
       canvas.style.cursor = "grabbing";
     });
-    canvas.addEventListener("pointermove", (e) => {
+    canvas.addEventListener("pointermove", (e2) => {
       if (drag2) {
-        const dx = e.clientX - drag2.x, dy = e.clientY - drag2.y;
+        const dx = e2.clientX - drag2.x, dy = e2.clientY - drag2.y;
         drag2.moved += Math.abs(dx) + Math.abs(dy);
         cam.x += dx / cam.z;
         cam.y += dy / cam.z;
-        drag2.x = e.clientX;
-        drag2.y = e.clientY;
+        drag2.x = e2.clientX;
+        drag2.y = e2.clientY;
         draw2();
         const shown = hover ?? selected;
         if (shown && !info.hidden) place(shown);
         return;
       }
-      const n = pick(e);
+      const n = pick(e2);
       if (n !== hover) {
         hover = n;
         showInfo(n ?? selected);
@@ -7940,12 +8213,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         canvas.style.cursor = n ? "pointer" : "grab";
       }
     });
-    canvas.addEventListener("pointerup", (e) => {
+    canvas.addEventListener("pointerup", (e2) => {
       const wasClick = drag2 && drag2.moved < 6;
       drag2 = null;
       canvas.style.cursor = "grab";
       if (!wasClick) return;
-      const n = pick(e);
+      const n = pick(e2);
       selected = n;
       if (n && isOpen(n) && !canAllocate(hero, n.id)) {
         c.act((s) => allocate(s, n.id));
@@ -7961,9 +8234,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         draw2();
       }
     });
-    canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      zoom(e.deltaY < 0 ? 1.12 : 0.89);
+    canvas.addEventListener("wheel", (e2) => {
+      e2.preventDefault();
+      zoom(e2.deltaY < 0 ? 1.12 : 0.89);
     }, { passive: false });
     function zoom(f) {
       cam.z = Math.max(0.25, Math.min(1.6, cam.z * f));
@@ -8147,14 +8420,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       tierChips(st.atlas.tiers),
       h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
     ));
-    const list7 = h("div", { class: "col", style: "gap:4px" });
+    const list8 = h("div", { class: "col", style: "gap:4px" });
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
     for (const m4 of maps.slice(0, 40)) {
       const on = c.sel.uid === m4.uid;
       const area = MAP_AREAS[m4.area];
       const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
       if (thumb) thumb.className = "mthumb";
-      list7.append(h(
+      list8.append(h(
         "div",
         { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
           c.sel = { uid: m4.uid };
@@ -8169,7 +8442,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         )
       ));
     }
-    if (!maps.length) list7.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    if (!maps.length) list8.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
     const sel = st.maps.find((m4) => m4.uid === c.sel.uid);
     const bench = h("div", { class: "row", style: "gap:4px" });
     if (sel) {
@@ -8188,7 +8461,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "card col" },
       h("h3", { text: "Maps" }),
-      list7,
+      list8,
       sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null
     ));
     const left = atlasPointsLeft(st);
@@ -8357,10 +8630,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list7 = h("div", { class: "kv" });
-      for (const m4 of mods) list7.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list7.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list7, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list8 = h("div", { class: "kv" });
+      for (const m4 of mods) list8.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list8.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list8, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const run = st.activity.run;
     const zone = run ? runZone(st, run) : ZONES[st.activity.zone];
@@ -8699,7 +8972,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       drag = null;
       c.hold = false;
       root.classList.remove("dragging");
-      root.querySelectorAll(".drop-ok, .over").forEach((e) => e.classList.remove("drop-ok", "over"));
+      root.querySelectorAll(".drop-ok, .over").forEach((e2) => e2.classList.remove("drop-ok", "over"));
     };
     for (const uid of [...gearOpts.marks]) if (!st.stash.some((x) => x.uid === uid)) gearOpts.marks.delete(uid);
     const doll = h("div", { class: "doll" });
@@ -8738,32 +9011,32 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
       cell.addEventListener("mouseleave", () => {
         root.classList.remove("slotpick");
-        root.querySelectorAll(".fits").forEach((e) => e.classList.remove("fits"));
+        root.querySelectorAll(".fits").forEach((e2) => e2.classList.remove("fits"));
       });
       if (it) {
         if (it.locked) cell.append(lockBadge());
         withTip(cell, c, () => itemCard(it, c));
         cell.draggable = true;
-        cell.addEventListener("dragstart", (e) => {
+        cell.addEventListener("dragstart", (e2) => {
           drag = { slot: s };
           c.hold = true;
           hideTip();
           root.classList.add("dragging");
-          e.dataTransfer?.setData("text/plain", "slot:" + s);
-          if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+          e2.dataTransfer?.setData("text/plain", "slot:" + s);
+          if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
         });
         cell.addEventListener("dragend", endDrag);
       }
-      cell.addEventListener("dragover", (e) => {
+      cell.addEventListener("dragover", (e2) => {
         const it2 = drag?.uid !== void 0 ? ownedItem(st, drag.uid) : void 0;
         if (it2 && slotsFor(baseOf(it2)).includes(s) && !canEquip(st, it2, s)) {
-          e.preventDefault();
+          e2.preventDefault();
           cell.classList.add("over");
         }
       });
       cell.addEventListener("dragleave", () => cell.classList.remove("over"));
-      cell.addEventListener("drop", (e) => {
-        e.preventDefault();
+      cell.addEventListener("drop", (e2) => {
+        e2.preventDefault();
         const uid = drag?.uid;
         endDrag();
         if (uid !== void 0) c.act((x) => {
@@ -8780,9 +9053,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         c.rerender();
       });
       if (markable) {
-        cell.addEventListener("click", (e) => {
-          if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return;
-          e.stopImmediatePropagation();
+        cell.addEventListener("click", (e2) => {
+          if (!e2.shiftKey && !e2.ctrlKey && !e2.metaKey) return;
+          e2.stopImmediatePropagation();
           if (it.locked) {
             c.toast("Locked items can't be marked for salvage");
             return;
@@ -8800,7 +9073,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const cmp = upgradeOf(st, it) ?? targets.find((t) => !eq[t]) ?? targets[0];
         root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
       });
-      cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e) => e.classList.remove("cmp")));
+      cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e2) => e2.classList.remove("cmp")));
       if (it.locked) cell.append(lockBadge());
       if (upgradeOf(st, it)) cell.classList.add("upg");
       else if (levelReq(it) > st.hero.level) cell.classList.add("req");
@@ -8816,14 +9089,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         );
       });
       cell.draggable = true;
-      cell.addEventListener("dragstart", (e) => {
+      cell.addEventListener("dragstart", (e2) => {
         drag = { uid: it.uid };
         c.hold = true;
         hideTip();
         root.classList.add("dragging");
         for (const t of slotsFor(baseOf(it))) if (!canEquip(st, it, t)) root.querySelector(`.doll [data-slot="${t}"]`)?.classList.add("drop-ok");
-        e.dataTransfer?.setData("text/plain", "stash:" + it.uid);
-        if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        e2.dataTransfer?.setData("text/plain", "stash:" + it.uid);
+        if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
       });
       cell.addEventListener("dragend", endDrag);
       return cell;
@@ -8891,15 +9164,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
       else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
     }
-    grid.addEventListener("dragover", (e) => {
+    grid.addEventListener("dragover", (e2) => {
       if (drag?.slot) {
-        e.preventDefault();
+        e2.preventDefault();
         grid.classList.add("over");
       }
     });
     grid.addEventListener("dragleave", () => grid.classList.remove("over"));
-    grid.addEventListener("drop", (e) => {
-      e.preventDefault();
+    grid.addEventListener("drop", (e2) => {
+      e2.preventDefault();
       const s = drag?.slot;
       endDrag();
       if (s) c.act((x) => unequip(x, s));
@@ -8974,15 +9247,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       }) }
     });
     const anvil = h("div", { class: "anvil", title: "Drop a stash item here to salvage it", attrs: { "aria-label": "Salvage: drop a stash item here" } }, glyph("forge", 18), h("span", { text: "Salvage" }));
-    anvil.addEventListener("dragover", (e) => {
+    anvil.addEventListener("dragover", (e2) => {
       if (drag?.uid !== void 0) {
-        e.preventDefault();
+        e2.preventDefault();
         anvil.classList.add("over");
       }
     });
     anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
-    anvil.addEventListener("drop", (e) => {
-      e.preventDefault();
+    anvil.addEventListener("drop", (e2) => {
+      e2.preventDefault();
       const uid = drag?.uid;
       endDrag();
       if (uid !== void 0) c.act((x) => {
@@ -9042,9 +9315,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           attrs: { ...err ? { disabled: "" } : {}, ...i === 0 ? { "data-key": "e" } : {} },
           title: err ?? (i === 0 ? "Equip (E)" : ""),
           on: { click: () => c.act((s) => {
-            const e = equip(s, selItem.uid, t);
-            if (!e) c.sel = { slot: t };
-            return e;
+            const e2 = equip(s, selItem.uid, t);
+            if (!e2) c.sel = { slot: t };
+            return e2;
           }) }
         }));
       });
@@ -9075,8 +9348,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     });
     const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), doll);
     root.append(equipped, h("div", { class: "col" }, stashCard, tools));
-    root.addEventListener("click", (e) => {
-      if ((c.sel.uid !== void 0 || c.sel.slot) && !e.target.closest(".cell, .gpop, button, select, .anvil")) {
+    root.addEventListener("click", (e2) => {
+      if ((c.sel.uid !== void 0 || c.sel.slot) && !e2.target.closest(".cell, .gpop, button, select, .anvil")) {
         c.sel = {};
         c.rerender();
       }
@@ -9455,7 +9728,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var logFilter = "all";
   function logView(c) {
     const log = c.state.log;
-    const n = (k) => log.filter((e) => e.kind === k).length;
+    const n = (k) => log.filter((e2) => e2.kind === k).length;
     const filter = chips(
       [["all", "All", log.length], ...Object.entries(LOG_KINDS).filter(([k]) => n(k)).map(([k, [label]]) => [k, label, n(k)])],
       logFilter,
@@ -9466,15 +9739,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     );
     const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }), h("div", { style: "margin-bottom:8px" }, filter));
     const now = Date.now();
-    for (const e of [...log].reverse()) {
-      if (logFilter !== "all" && e.kind !== logFilter) continue;
-      const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
+    for (const e2 of [...log].reverse()) {
+      if (logFilter !== "all" && e2.kind !== logFilter) continue;
+      const [label, color] = LOG_KINDS[e2.kind] ?? [e2.kind, "var(--paper2)"];
       el.append(h(
         "div",
-        { class: `entry k-${e.kind}` },
-        h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)),
-        h("span", { class: "grow", text: e.text }),
-        h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })
+        { class: `entry k-${e2.kind}` },
+        h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e2.kind] ?? "log", 14)),
+        h("span", { class: "grow", text: e2.text }),
+        h("span", { class: "muted num when", text: e2.t > 1e12 ? `${fmtAgo(now - e2.t)}` : "" })
       ));
     }
     return el;
@@ -9549,7 +9822,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         out,
         inp,
         h("div", { class: "row" }, h("button", { class: "btn alt", text: "Import", on: { click: () => {
-          void c.importSave(inp.value).then((e) => c.toast(e ?? "Save loaded"));
+          void c.importSave(inp.value).then((e2) => c.toast(e2 ?? "Save loaded"));
         } } }))
       ),
       h("div", { class: "card" }, h("h3", { text: "Totals" }), kv([
@@ -9681,9 +9954,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
     let cls = Object.keys(CLASSES)[0];
     const start = () => onStart(name.value.replace(/[^ -~]/g, "").trim().slice(0, 20) || "Ashling", cls);
-    name.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
+    name.addEventListener("keydown", (e2) => {
+      if (e2.key === "Enter") {
+        e2.preventDefault();
         start();
       }
     });
@@ -9879,7 +10152,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const style = document.createElement("style");
       style.textContent = CSS;
       this.root.append(style);
-      this.stopKeys = (e) => e.stopPropagation();
+      this.stopKeys = (e2) => e2.stopPropagation();
       for (const k of STOP_EVENTS) host.addEventListener(k, this.stopKeys);
       const f = this.kv.get(UI_KEY);
       if (f && typeof f === "object") {
@@ -9909,8 +10182,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         this.who,
         h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x"))
       );
-      bar2.addEventListener("dblclick", (e) => {
-        if (!e.target.closest("button")) this.setMax(!this.frame.max);
+      bar2.addEventListener("dblclick", (e2) => {
+        if (!e2.target.closest("button")) this.setMax(!this.frame.max);
       });
       this.miniLast = h("div", { class: "mlast", attrs: { "aria-live": "polite" } });
       this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
@@ -9918,8 +10191,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
       this.stage = h("div", { class: "stage" }, this.battle.canvas, this.miniBox);
       this.top = h("div", { class: "top" }, this.stage);
-      this.stage.addEventListener("dblclick", (e) => {
-        if (this.frame.mini && !e.target.closest("button")) this.setMini(false);
+      this.stage.addEventListener("dblclick", (e2) => {
+        if (this.frame.mini && !e2.target.closest("button")) this.setMini(false);
       });
       this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
       this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
@@ -9955,49 +10228,49 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         g.h += dy;
       });
       this.win.tabIndex = -1;
-      this.win.addEventListener("keydown", (e) => {
-        const t = e.target;
+      this.win.addEventListener("keydown", (e2) => {
+        const t = e2.target;
         if (t.closest("input, textarea, select")) return;
-        if ((e.key === "Enter" || e.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") {
+        if ((e2.key === "Enter" || e2.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") {
           t.click();
-          e.preventDefault();
+          e2.preventDefault();
           return;
         }
-        if (e.key === "Escape") {
+        if (e2.key === "Escape") {
           if (this.frame.mini) return;
           const modals = this.win.querySelectorAll(".modal");
           const top = modals[modals.length - 1];
           if (top) {
             if (!top.querySelector(".progress")) {
               top.remove();
-              e.preventDefault();
+              e2.preventDefault();
             }
             return;
           }
           const esc = this.body.querySelector("[data-esc]");
           if (esc) {
             esc.click();
-            e.preventDefault();
+            e2.preventDefault();
           }
           return;
         }
-        if (e.ctrlKey || e.altKey || e.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
-        const n = Number(e.key);
+        if (e2.ctrlKey || e2.altKey || e2.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
+        const n = Number(e2.key);
         if (n >= 1 && n <= VIEWS.length) {
           this.nav.children[n - 1]?.click();
-          e.preventDefault();
+          e2.preventDefault();
           return;
         }
-        if (e.key === "m" || e.key === "M") {
+        if (e2.key === "m" || e2.key === "M") {
           this.setSound(!this.frame.sfx);
-          e.preventDefault();
+          e2.preventDefault();
           return;
         }
-        const k = e.key.length === 1 ? e.key.toLowerCase() : "";
+        const k = e2.key.length === 1 ? e2.key.toLowerCase() : "";
         const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector(`[data-key="${k}"]:not([disabled])`) : null;
         if (hot) {
           hot.click();
-          e.preventDefault();
+          e2.preventDefault();
         }
       });
       this.applyFrame();
@@ -10069,8 +10342,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (now - this.reserve.at < 1500) return this.reserve.px;
       let px = 0;
       const hit = document.elementsFromPoint(window.innerWidth - 12, 3).find((el) => el !== this.host && !this.host?.contains(el));
-      for (let e = hit ?? null; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
-        const b = e.getBoundingClientRect();
+      for (let e2 = hit ?? null; e2 && e2 !== document.body && e2 !== document.documentElement; e2 = e2.parentElement) {
+        const b = e2.getBoundingClientRect();
         if (b.top <= 0 && b.height > 0 && b.height <= 64 && b.width >= window.innerWidth * 0.5) {
           px = Math.round(b.bottom);
           break;
@@ -10139,17 +10412,17 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.win.classList.add("flash");
     }
     dragger(handle, apply, when = () => true) {
-      handle.addEventListener("pointerdown", (e) => {
-        if (e.target.closest("button") || e.button !== 0 || !when()) return;
+      handle.addEventListener("pointerdown", (e2) => {
+        if (e2.target.closest("button") || e2.button !== 0 || !when()) return;
         if (this.frame.max && handle !== this.win.querySelector(".grip")) {
           this.frame.max = false;
           this.saveFrame();
           this.applyFrame();
         }
         if (this.frame.max) return;
-        e.preventDefault();
-        handle.setPointerCapture(e.pointerId);
-        let lx = e.clientX, ly = e.clientY;
+        e2.preventDefault();
+        handle.setPointerCapture(e2.pointerId);
+        let lx = e2.clientX, ly = e2.clientY;
         const move = (ev) => {
           apply(ev.clientX - lx, ev.clientY - ly, this.geo);
           lx = ev.clientX;
@@ -10180,8 +10453,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       try {
         const q = this.kv.get(QUICK_KEY);
         if (q) quick = _GameWindow.accept(q);
-      } catch (e) {
-        console.warn("[Hollowmarch] quick save unusable:", e);
+      } catch (e2) {
+        console.warn("[Hollowmarch] quick save unusable:", e2);
       }
       for (const key of ["main", "backup"]) {
         try {
@@ -10191,8 +10464,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           this.state = quick && quick.savedAt > env.savedAt ? quick.state : env.state;
           this.lastBackup = Date.now();
           return true;
-        } catch (e) {
-          console.warn(`[Hollowmarch] save "${key}" unusable:`, e);
+        } catch (e2) {
+          console.warn(`[Hollowmarch] save "${key}" unusable:`, e2);
         }
       }
       if (quick) {
@@ -10213,8 +10486,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }
         await this.store.put("main", wrap(s, Date.now()));
         if (this.kv.get(QUICK_KEY)) this.kv.del(QUICK_KEY);
-      } catch (e) {
-        console.warn("[Hollowmarch] save failed:", e);
+      } catch (e2) {
+        console.warn("[Hollowmarch] save failed:", e2);
       }
       this.hooks.summary?.(summaryOf(s));
     }
@@ -10376,8 +10649,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
             this.sig = "";
             this.renderTab(true);
             return null;
-          } catch (e) {
-            return e instanceof SaveError ? e.message : "could not read that save";
+          } catch (e2) {
+            return e2 instanceof SaveError ? e2.message : "could not read that save";
           }
         },
         resetGame: () => {
@@ -10563,8 +10836,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (hadFocus && !this.focusModal()) this.win.focus();
         this.syncMini();
       };
-      m4.addEventListener("click", (e) => {
-        if (e.target === m4 && !m4.querySelector(".progress")) close();
+      m4.addEventListener("click", (e2) => {
+        if (e2.target === m4 && !m4.querySelector(".progress")) close();
       });
       this.win.append(m4);
       this.syncMini();
@@ -10790,8 +11063,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           await req(tx("readwrite").delete(key));
         }
       };
-    } catch (e) {
-      console.warn("[Hollowmarch] IndexedDB unavailable, progress will not persist:", e);
+    } catch (e2) {
+      console.warn("[Hollowmarch] IndexedDB unavailable, progress will not persist:", e2);
       return memoryStore();
     }
   }

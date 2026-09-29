@@ -1,6 +1,7 @@
 // Game setup and player actions. Actions mutate state in place and bump
 // hero.rev when the stat sheet changes.
 
+import { returnStones } from "./sockets";
 import { deriveSheet, type Sheet } from "./character";
 import { BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
 import { baseOf, itemLabel, levelReq, salvageValue } from "./items";
@@ -23,8 +24,9 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
-        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
-        relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true }, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true },
+        relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true },
+        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", `${opts.name} wakes on the shore.`);
@@ -341,6 +343,7 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
 }
 
 function salvageItem(state: GameState, item: Item): void {
+    returnStones(state, item);
     const v = salvageValue(item);
     state.dust += v;
     state.totals.salvaged++;

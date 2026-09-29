@@ -14,6 +14,8 @@ import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
 import { blessing, tickShrine } from "../shrine";
+import { addStone, autoSetStones, rollSockets, rollStone } from "../sockets";
+import { tickMarket } from "../market";
 import { ACT_COMPANION } from "../data";
 
 export const STEP_MS = 100;
@@ -46,6 +48,8 @@ export interface SimEvents {
     story?(text: string): void;
     /** A companion joined (new) or added bond to one owned (duplicate). */
     companion?(id: string, isNew: boolean): void;
+    /** An ember stone went into the pouch. */
+    stone?(key: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -302,7 +306,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
         const item = (rng.chance(relicChance) && rollRelic(rng, state.nextUid, m.level)) || rollItem(rng, state.nextUid, m.level, opts);
         state.nextUid++;
-        if (item.rarity === "rare") contractEvent(state, "rares");
+        if (item.rarity === "rare") { contractEvent(state, "rares"); rollSockets(rng, item); }
         const r = receiveItem(state, item);
         if (r.equipped) changed = true;
         ev.loot?.(item, r.kept, r.equipped);
@@ -315,6 +319,13 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
         state.currency[cur] = (state.currency[cur] ?? 0) + 1;
         ev.currency?.(cur);
+    }
+    // Ember stones (round 5): like currency, rarer, tier by monster level.
+    if (rng.chance((d.boss ? 0.03 : m.champion ? 0.004 : 0.0004) * qty)) {
+        const key = rollStone(rng, m.level);
+        addStone(state, key, 1);
+        ev.stone?.(key);
+        if (state.settings.autoStones && autoSetStones(state)) changed = true;
     }
     endgameDrops(state, run, m, rng);
     // Companions: rarely from bosses, more often from map bosses, often from pinnacles.
@@ -495,6 +506,9 @@ function tryTrial(state: GameState, ev: SimEvents): boolean {
 function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
     tickShrine(state);
+    tickMarket(state);
+    // New gear may have empty sockets: fill them from the pouch.
+    if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;
     state.totals.runs++;
     if (run.map) {

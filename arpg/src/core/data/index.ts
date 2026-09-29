@@ -12,3 +12,4 @@ export * from "./relics";
 export * from "./ascendancies";
 export * from "./maps";
 export * from "./companions";
+export * from "./stones";

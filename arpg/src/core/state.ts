@@ -4,6 +4,7 @@ import type { RngState } from "./rng";
 import type { Item, Slot } from "./types";
 import type { FilterRule } from "./filter";
 import type { ContractBoard } from "./contracts";
+import type { MarketState } from "./market";
 
 export interface Hero {
     name: string;
@@ -134,6 +135,8 @@ export interface GameState {
         filter: FilterRule[];
         /** A full stash swaps its least-worth unlocked item for a better keeper (v5). */
         upkeep: boolean;
+        /** Fill empty sockets in worn gear with the best stone in the pouch (v7). */
+        autoStones: boolean;
     };
     /** Relic case: the best copy of each relic, outside the stash (v5). */
     relics: Item[];
@@ -147,6 +150,10 @@ export interface GameState {
     blessings: Record<string, number>;
     /** Shrine settings (v6): blessings kept up automatically, and whether spare orbs pay first. */
     shrine: { keep: string[]; orbs: boolean };
+    /** Ember stone pouch (v7): "ruby:2" -> count. */
+    stones: Record<string, number>;
+    /** The Wandering Market (v7). */
+    market: MarketState;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */

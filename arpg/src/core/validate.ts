@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { COMPANIONS, companionLevel, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
@@ -11,6 +11,7 @@ import { reconcileRewards } from "./sim/engine";
 import { relicRollScore } from "./game";
 import { cleanContracts } from "./contracts";
 import { BLESSING } from "./shrine";
+import { fitStones, socketCap } from "./sockets";
 import { endgameOpen } from "./maps";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
@@ -45,6 +46,13 @@ function checkItem(it: unknown): Item {
         if (i.affixes.length) throw new SaveError("relic with affixes");
     } else if (i.relic !== undefined || i.relicRolls !== undefined) throw new SaveError("relic data on a non-relic item");
     if (i.locked !== true) delete i.locked;
+    // Sockets (v7): within the item's cap, stones known or empty.
+    if (i.sockets !== undefined || i.stones !== undefined) {
+        const n = Number.isInteger(i.sockets) ? Math.max(0, Math.min(socketCap(i), i.sockets!)) : 0;
+        i.sockets = n;
+        i.stones = Array.isArray(i.stones) ? i.stones.map(k => (typeof k === "string" && parseStone(k) ? k : null)) : [];
+        fitStones(i);
+    }
     if (i.quality !== undefined) {
         const q = Number.isFinite(i.quality) ? Math.max(0, Math.min(20, Math.round(i.quality))) : 0;
         if (q) i.quality = q; else delete i.quality;
@@ -151,6 +159,7 @@ export function validateState(raw: unknown): GameState {
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
     set.upkeep = set.upkeep !== false;
+    set.autoStones = set.autoStones !== false;
     // ---- endgame (v4)
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
@@ -182,6 +191,18 @@ export function validateState(raw: unknown): GameState {
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
+    // Stone pouch (v7): known stones, whole counts.
+    s.stones = Object.fromEntries(Object.entries(counts(s.stones)).filter(([k, v]) => parseStone(k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
+    // Market (v7): offers must be sound, else the stock is rolled again on the next tick.
+    const mk = s.market && typeof s.market === "object" ? s.market : ({} as GameState["market"]);
+    const okGear = (o: unknown) => { try { const x = o as { item: Item; price: number }; checkItem(x.item); return Number.isFinite(x.price) && x.price > 0; } catch { return false; } };
+    s.market = {
+        seq: Number.isInteger(mk.seq) && mk.seq >= 0 ? mk.seq : 0,
+        rolledAt: Number.isFinite(mk.rolledAt) ? mk.rolledAt : 0,
+        refreshes: Number.isInteger(mk.refreshes) && mk.refreshes >= 0 ? mk.refreshes : 0,
+        pedlar: Array.isArray(mk.pedlar) && mk.pedlar.every(okGear) ? mk.pedlar.map(o => ({ item: o.item, price: o.price, ...(o.sold ? { sold: true } : {}) })) : [],
+        jeweller: Array.isArray(mk.jeweller) && mk.jeweller.every(o => o && parseStone(o.key) && Number.isFinite(o.price)) ? mk.jeweller.map(o => ({ key: o.key, price: o.price, ...(o.sold ? { sold: true } : {}) })) : [],
+    };
     // Shrine: known blessings with a finite end time; kept-up ones must be known.
     s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => BLESSING[k]));
     const shr = s.shrine && typeof s.shrine === "object" ? s.shrine : { keep: [], orbs: true };
