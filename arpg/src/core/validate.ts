@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, companionLevel, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
@@ -176,6 +176,10 @@ export function validateState(raw: unknown): GameState {
     const counts = (o: unknown) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0)) as Record<string, number>;
     s.sigils = counts(s.sigils);
     s.pinnacleKills = counts(s.pinnacleKills);
+    // Companions: known ids, whole non-negative bond; the one out must be owned, its level from its bond.
+    s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
+    if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
+    else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;

@@ -56,7 +56,7 @@ export function drawSprite(g: CanvasRenderingContext2D, name: string, f: number,
     if (!fr) return null;
     const i = ((Math.floor(f) % fr.n) + fr.n) % fr.n;
     const sx = fr.x + i * (fr.w + 1), s = o.scale ?? 1;
-    const w = fr.w * s, h = fr.h * s;
+    const w = Math.round(fr.w * s), h = Math.round(fr.h * s);
     const flip = !!o.left !== (fr.f === 1);
     const dx = Math.round(x - (flip ? fr.w - fr.ax : fr.ax) * s), dy = Math.round(y - fr.ay * s);
     let src: CanvasImageSource = img!, rx = sx, ry = fr.y;

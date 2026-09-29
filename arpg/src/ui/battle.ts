@@ -5,7 +5,7 @@
 // It only reads state and a queue of effects fed by the simulation events;
 // nothing here changes the game.
 
-import { BASES, CLASSES, MONSTERS, ZONES, type MonsterDef } from "../core/data";
+import { BASES, CLASSES, COMPANIONS, MONSTERS, ZONES, type MonsterDef } from "../core/data";
 import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
@@ -187,6 +187,19 @@ export class Battle {
         const dead = run?.phase === "dead";
         const hc = HERO_CAST[state.hero.cls];
         let drew = false;
+
+        // The companion trots behind the hero (fliers bob above it) and hops when the hero strikes.
+        const pet = state.hero.pet ? COMPANIONS[state.hero.pet.id] : undefined;
+        if (pet && spriteOf(pet.sprite)) {
+            const px = this.HERO_X - 24;
+            const since = now - this.heroAtk;
+            const hop = !walking && !dead && since < 260 ? Math.round(Math.sin((since / 260) * Math.PI) * 4) : 0;
+            const lift = (pet.hover ?? 0) + (pet.hover ? Math.round(Math.sin(now / 320) * 2) : 0);
+            shadow(g, px, G, pet.hover ? 5 : 7, pet.hover ?? 0);
+            const fps = (pet.fps ?? 8) * (walking ? 1.5 : 1);
+            drawSprite(g, pet.sprite, dead ? 0 : (now * fps) / 1000, px, G - lift - hop,
+                { scale: pet.scale ?? 1, ...(dead ? { tint: "#1a1410", strength: 0.5 } : pet.tint ? { tint: pet.tint, strength: pet.strength ?? 0.4 } : {}) });
+        }
         if (hc && spriteOf(hc.idle)) {
             const hurt = now - this.heroHurt < HURT_MS;
             const atk = now - this.heroAtk;

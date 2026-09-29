@@ -1,6 +1,6 @@
 // "While you were away": collects what happened during a catch-up.
 
-import { MONSTERS, ZONES } from "../data";
+import { COMPANIONS, MONSTERS, ZONES } from "../data";
 import { itemLabel } from "../items";
 import type { GameState } from "../state";
 import type { Item } from "../types";
@@ -22,6 +22,8 @@ export interface Report {
     swapped: number;
     /** Relics found for the first time. */
     newRelics: string[];
+    /** Companions that joined. */
+    newCompanions: string[];
     dust: number;
     equipped: string[];
     best: Item[];
@@ -32,7 +34,7 @@ export interface Report {
 export function startReport(state: GameState): { report: Report; events: SimEvents; finish(state: GameState): Report } {
     const report: Report = {
         from: state.simTo, to: state.simTo, levelFrom: state.hero.level, levelTo: state.hero.level, xp: 0,
-        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, swapped: state.totals.swapped ?? 0, newRelics: [], dust: state.dust, equipped: [], best: [], zones: [], story: [],
+        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, swapped: state.totals.swapped ?? 0, newRelics: [], newCompanions: [], dust: state.dust, equipped: [], best: [], zones: [], story: [],
     };
     const seen = new Set(Object.keys(state.codex ?? {}));
     const events: SimEvents = {
@@ -51,6 +53,7 @@ export function startReport(state: GameState): { report: Report; events: SimEven
         },
         zone: (_from, to, why) => { if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to); },
         story: text => { report.story.push(text); },
+        companion: (id, isNew) => { if (isNew) report.newCompanions.push(COMPANIONS[id]?.name ?? id); },
     };
     return {
         report, events,

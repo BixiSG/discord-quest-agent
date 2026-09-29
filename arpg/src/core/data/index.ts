@@ -11,3 +11,4 @@ export * from "./currency";
 export * from "./relics";
 export * from "./ascendancies";
 export * from "./maps";
+export * from "./companions";

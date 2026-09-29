@@ -9,6 +9,7 @@ import { endgameOpen, addMap, rollMap } from "./maps";
 import { maxIlvl } from "./crafting";
 import { pushLog, receiveItem } from "./game";
 import { Rng, hashSeed } from "./rng";
+import { grantCompanion, missingCompanions } from "./companions";
 import type { GameState } from "./state";
 
 export type ContractKind = "kills" | "champions" | "bosses" | "runs" | "maps" | "rares";
@@ -21,8 +22,8 @@ export interface Contract {
     tier?: number;
     dust: number;
     currency?: [string, number];
-    /** An extra: a relic the codex is missing, a few maps, or a sigil. */
-    extra?: "relic" | "maps" | "sigil";
+    /** An extra: a relic the codex is missing, a companion not found yet, a few maps, or a sigil. */
+    extra?: "relic" | "companion" | "maps" | "sigil";
 }
 
 export interface ContractBoard { list: Contract[]; seq: number; done: number }
@@ -44,6 +45,7 @@ export function rewardText(c: Contract): string {
     const parts = [`${c.dust} dust`];
     if (c.currency) parts.push(`${c.currency[1]} ${CURRENCIES[c.currency[0]]?.name ?? c.currency[0]}`);
     if (c.extra === "relic") parts.push("a relic not in your codex");
+    if (c.extra === "companion") parts.push("a companion you haven't met");
     if (c.extra === "maps") parts.push("3 maps");
     if (c.extra === "sigil") parts.push("a sigil");
     return parts.join(", ");
@@ -77,6 +79,7 @@ function rollContract(s: GameState, rng: Rng): Contract {
     c.currency = [cur, rare ? 1 + Math.floor(rng.next() * 3) : 3 + Math.floor(rng.next() * 6)];
     const r = rng.next();
     if (r < 0.3 && missingRelics(s).length) c.extra = "relic";
+    else if (r < 0.4 && missingCompanions(s, maxIlvl(s)).length) c.extra = "companion";
     else if (r < 0.5 && endgame) c.extra = rng.chance(0.5) && deepest(s) >= 6 ? "sigil" : "maps";
     return c;
 }
@@ -122,6 +125,11 @@ export function claimContract(s: GameState, i: number): string | null {
             pushLog(s, "loot", `Contract reward: ${def.name}.`);
         } else s.dust += c.dust; // the codex filled up meanwhile: double dust instead
     }
+    if (c.extra === "companion") {
+        const pool = missingCompanions(s, maxIlvl(s));
+        if (pool.length) grantCompanion(s, rng.pick(pool));
+        else s.dust += c.dust;
+    }
     if (c.extra === "maps") for (let k = 0; k < 3; k++) addMap(s, rollMap(rng, s.nextUid++, Math.min(MAX_TIER, deepest(s))));
     if (c.extra === "sigil") {
         const open = Object.values(PINNACLES).filter(p => deepest(s) >= p.minTier);
@@ -164,7 +172,7 @@ export function cleanContracts(s: GameState): void {
             const out: Contract = { kind: c.kind, target: Math.round(c.target), n: Math.min(Math.round(c.n), Math.round(c.target)), dust: Math.round(c.dust) };
             if (c.kind === "maps") out.tier = ok(c.tier, 1) ? Math.round(c.tier!) : 1;
             if (Array.isArray(c.currency) && CURRENCIES[c.currency[0]] && ok(c.currency[1], 1)) out.currency = [c.currency[0], Math.round(c.currency[1])];
-            if (c.extra === "relic" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
+            if (c.extra === "relic" || c.extra === "companion" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
             return out;
         });
     b.seq = ok(b.seq) ? Math.round(b.seq) : 0;

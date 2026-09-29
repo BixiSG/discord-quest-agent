@@ -545,6 +545,21 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 @keyframes cmpglow { from { outline-color: #ffc233; } to { outline-color: #ff8a3a; } }
 .gear.slotpick .stash .cell[data-uid]:not(.fits) { opacity: .3; }
 .gear.slotpick .stash .cell.fits { outline: 2px solid var(--teal); outline-offset: 1px; }
+/* companions (Hero tab) */
+.pet-now { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.pet-stage { flex: none; width: 104px; height: 104px; display: grid; place-items: end center; padding-bottom: 8px; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; background: radial-gradient(ellipse at 50% 85%, rgba(255,194,51,.25), transparent 65%); }
+.petart { image-rendering: pixelated; }
+.pet-stage .petart { max-width: 84px; max-height: 84px; object-fit: contain; }
+.pet-bonus { font-weight: 700; color: var(--teal); } .hm.dark .pet-bonus { color: #6fe0cf; }
+.pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.pet { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 5px; min-width: 0; font: inherit; color: var(--text); text-align: center; cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.pet .pic { height: 40px; display: grid; place-items: end center; }
+.pet .pic .petart { max-height: 40px; max-width: 64px; width: auto !important; height: auto !important; }
+.pet b { font-size: 12px; line-height: 1.1; } .pet span:last-child { font-size: 11px; color: var(--muted); }
+.pet.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; } .pet.on span:last-child { color: #4d4030; }
+.pet.unknown { cursor: default; opacity: .6; } .pet.unknown .q { font: 700 22px/1 var(--display); color: var(--muted); }
+.pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }

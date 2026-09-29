@@ -2220,6 +2220,145 @@
     ["hollowcrown", "The Hollow Crown", "p_hollowcrown", "hollow_sigil", "Hollow Sigil", 4, 96, 18, ["#0a0a0f", "#2a2233", "#b9a4ff"], "At the bottom of the Depths, the thing that ate the sun's light waits to be fed again."]
   ].map(([id, name, boss, sigil, sigilName, cost, level, minTier, palette, text]) => [id, { id, name, boss, sigil, sigilName, cost, level, minTier, palette, text }]));
 
+  // src/core/data/companions.ts
+  var COMPANION_MAX_LEVEL = 20;
+  var bondFor = (level) => 120 * (level - 1) * (level - 1) + 180 * (level - 1);
+  var DUPLICATE_BOND = 4e3;
+  function companionLevel(bond) {
+    let l = 1;
+    while (l < COMPANION_MAX_LEVEL && bond >= bondFor(l + 1)) l++;
+    return l;
+  }
+  var list6 = [
+    {
+      id: "saltcrab",
+      name: "Salt Crab",
+      blurb: "It found you on the shore and decided you were its rock.",
+      where: "Act 1: the Tide-Warden",
+      level: 1,
+      bonus: { stat: "armour", kind: "inc", per: 2, text: "{0}% increased armour" },
+      sprite: "mon.spider",
+      tint: "#e0703a",
+      strength: 0.5,
+      fps: 9
+    },
+    {
+      id: "bogimp",
+      name: "Bog Imp",
+      blurb: "Steals shiny things. Mostly for you.",
+      where: "Bosses from level 10",
+      level: 10,
+      bonus: { stat: "itemQuantity", kind: "inc", per: 0.5, text: "{0}% increased quantity of items found" },
+      sprite: "mon.flyer",
+      hover: 8,
+      fps: 10,
+      scale: 0.5
+    },
+    {
+      id: "lanternwisp",
+      name: "Lantern Wisp",
+      blurb: "A flame that forgot which lamp it belonged to.",
+      where: "Bosses from level 14",
+      level: 14,
+      bonus: { stat: "itemRarity", kind: "inc", per: 1.5, text: "{0}% increased rarity of items found" },
+      sprite: "fx.orb",
+      tint: "#ffd84a",
+      strength: 0.35,
+      hover: 14,
+      fps: 10
+    },
+    {
+      id: "dunepup",
+      name: "Dune Pup",
+      blurb: "Runs ahead, runs back, runs ahead again.",
+      where: "Act 2: the Glass Regent",
+      level: 20,
+      bonus: { stat: "moveSpeed", kind: "inc", per: 1, text: "{0}% increased movement speed" },
+      sprite: "mon.wolf",
+      tint: "#e0bf7f",
+      strength: 0.35,
+      fps: 11,
+      scale: 0.5
+    },
+    {
+      id: "prismlynx",
+      name: "Prism Lynx",
+      blurb: "It watches the weak spot until you see it too.",
+      where: "Bosses from level 24",
+      level: 24,
+      bonus: { stat: "critChance", kind: "inc", per: 2, text: "{0}% increased critical chance" },
+      sprite: "mon.gato",
+      tint: "#9fe3ff",
+      strength: 0.45,
+      fps: 8,
+      scale: 0.5
+    },
+    {
+      id: "drowned",
+      name: "Little Drowned",
+      blurb: "It does not breathe. It does keep you breathing.",
+      where: "Bosses from level 30",
+      level: 30,
+      bonus: { stat: "life", kind: "inc", per: 0.5, text: "{0}% increased maximum life" },
+      sprite: "mon.thing",
+      tint: "#5fb3a6",
+      strength: 0.3,
+      fps: 6,
+      scale: 0.5
+    },
+    {
+      id: "ashpup",
+      name: "Ash Pup",
+      blurb: "Born in the Sunfall. Still warm.",
+      where: "Act 3: the Last Dawn",
+      level: 40,
+      bonus: { stat: "attackSpeed", kind: "inc", per: 0.5, text: "{0}% increased attack speed" },
+      sprite: "mon.hound",
+      fps: 12,
+      scale: 0.5
+    },
+    {
+      id: "cinderskull",
+      name: "Cinder Skull",
+      blurb: "A head that kept burning after the rest of it stopped.",
+      where: "Bosses from level 45",
+      level: 45,
+      bonus: { stat: "castSpeed", kind: "inc", per: 0.5, text: "{0}% increased cast speed" },
+      sprite: "mon.skull",
+      hover: 10,
+      fps: 10,
+      scale: 0.5
+    },
+    {
+      id: "whisperskull",
+      name: "Whispering Skull",
+      blurb: "It tells you what the dead learned. Some of it is useful.",
+      where: "Map bosses",
+      level: 50,
+      bonus: { stat: "xpGain", kind: "inc", per: 0.5, text: "{0}% increased experience gained" },
+      sprite: "mon.skull2",
+      tint: "#b9a4ff",
+      strength: 0.4,
+      hover: 8,
+      fps: 8,
+      scale: 0.5
+    }
+  ];
+  var COMPANIONS = Object.fromEntries(list6.map((c) => [c.id, c]));
+  var COMPANION_ORDER = list6.map((c) => c.id);
+  var ACT_COMPANION = { 1: "saltcrab", 2: "dunepup", 3: "ashpup" };
+  function companionMod(id, level) {
+    const c = COMPANIONS[id];
+    if (!c) return null;
+    const mod = { stat: c.bonus.stat, kind: c.bonus.kind, value: Math.round(c.bonus.per * level * 10) / 10, src: `Companion: ${c.name}` };
+    if (c.bonus.tags) mod.tags = c.bonus.tags;
+    return mod;
+  }
+  var companionText = (id, level) => {
+    const m4 = companionMod(id, level);
+    return m4 ? COMPANIONS[id].bonus.text.replace("{0}", String(m4.value)) : "";
+  };
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
@@ -2227,9 +2366,9 @@
       for (const m4 of mods) this.add(m4);
     }
     add(m4) {
-      let list6 = this.by.get(m4.stat);
-      if (!list6) this.by.set(m4.stat, list6 = []);
-      list6.push(m4);
+      let list7 = this.by.get(m4.stat);
+      if (!list7) this.by.set(m4.stat, list7 = []);
+      list7.push(m4);
     }
     addAll(mods) {
       for (const m4 of mods) this.add(m4);
@@ -2562,10 +2701,14 @@
   function supportSlots(level) {
     return SUPPORT_SLOT_LEVELS.filter((l) => l <= level).length;
   }
+  function petMods(hero) {
+    const m4 = hero.pet ? companionMod(hero.pet.id, hero.pet.level) : null;
+    return m4 ? [m4] : [];
+  }
   function heroMods(hero, extra = []) {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods = [...extra, ...passiveMods(hero)];
+    const mods = [...extra, ...passiveMods(hero), ...petMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
@@ -2884,6 +3027,7 @@
       relics: [],
       codex: {},
       contracts: { list: [], seq: 0, done: 0 },
+      companions: {},
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -3721,6 +3865,61 @@
     return null;
   }
 
+  // src/core/companions.ts
+  function grantCompanion(state, id) {
+    const def2 = COMPANIONS[id];
+    if (!def2) return false;
+    state.companions ??= {};
+    const owned = state.companions[id] !== void 0;
+    if (!owned) {
+      state.companions[id] = 0;
+      pushLog(state, "loot", `A ${def2.name} joins you.`);
+      if (!state.hero.pet) setCompanion(state, id);
+      return true;
+    }
+    addBond(state, id, DUPLICATE_BOND);
+    pushLog(state, "loot", `Another ${def2.name}: your ${def2.name} grows closer.`);
+    return false;
+  }
+  function setCompanion(state, id) {
+    if (id === null) {
+      if (state.hero.pet) {
+        delete state.hero.pet;
+        state.hero.rev++;
+      }
+      return null;
+    }
+    if (!COMPANIONS[id]) return "unknown companion";
+    if (state.companions?.[id] === void 0) return "not found yet";
+    state.hero.pet = { id, level: companionLevel(state.companions[id]) };
+    state.hero.rev++;
+    return null;
+  }
+  function addBond(state, id, n) {
+    const bond = (state.companions[id] ?? 0) + n;
+    state.companions[id] = bond;
+    const pet = state.hero.pet;
+    if (!pet || pet.id !== id || pet.level >= COMPANION_MAX_LEVEL || bond < bondFor(pet.level + 1)) return false;
+    pet.level = companionLevel(bond);
+    state.hero.rev++;
+    pushLog(state, "level", `${COMPANIONS[id].name} reached level ${pet.level}.`);
+    return true;
+  }
+  function petKill(state) {
+    const pet = state.hero.pet;
+    return pet ? addBond(state, pet.id, 1) : false;
+  }
+  function rollCompanionDrop(state, rng, level, chance) {
+    if (!rng.chance(chance)) return null;
+    const pool = COMPANION_ORDER.filter((id2) => COMPANIONS[id2].level <= level);
+    if (!pool.length) return null;
+    const unfound = pool.filter((id2) => state.companions?.[id2] === void 0);
+    const id = unfound.length && rng.chance(0.7) ? rng.pick(unfound) : rng.pick(pool);
+    grantCompanion(state, id);
+    return id;
+  }
+  var missingCompanions = (state, level) => COMPANION_ORDER.filter((id) => COMPANIONS[id].level <= level && state.companions?.[id] === void 0);
+
   // src/core/contracts.ts
   var BOARD_SIZE = 3;
   var KIND_TEXT = {
@@ -3736,6 +3935,7 @@
     const parts = [`${c.dust} dust`];
     if (c.currency) parts.push(`${c.currency[1]} ${CURRENCIES[c.currency[0]]?.name ?? c.currency[0]}`);
     if (c.extra === "relic") parts.push("a relic not in your codex");
+    if (c.extra === "companion") parts.push("a companion you haven't met");
     if (c.extra === "maps") parts.push("3 maps");
     if (c.extra === "sigil") parts.push("a sigil");
     return parts.join(", ");
@@ -3761,6 +3961,7 @@
     c.currency = [cur, rare ? 1 + Math.floor(rng.next() * 3) : 3 + Math.floor(rng.next() * 6)];
     const r3 = rng.next();
     if (r3 < 0.3 && missingRelics(s).length) c.extra = "relic";
+    else if (r3 < 0.4 && missingCompanions(s, maxIlvl(s)).length) c.extra = "companion";
     else if (r3 < 0.5 && endgame) c.extra = rng.chance(0.5) && deepest(s) >= 6 ? "sigil" : "maps";
     return c;
   }
@@ -3799,6 +4000,11 @@
         pushLog(s, "loot", `Contract reward: ${def2.name}.`);
       } else s.dust += c.dust;
     }
+    if (c.extra === "companion") {
+      const pool = missingCompanions(s, maxIlvl(s));
+      if (pool.length) grantCompanion(s, rng.pick(pool));
+      else s.dust += c.dust;
+    }
     if (c.extra === "maps") for (let k = 0; k < 3; k++) addMap(s, rollMap(rng, s.nextUid++, Math.min(MAX_TIER, deepest(s))));
     if (c.extra === "sigil") {
       const open = Object.values(PINNACLES).filter((p2) => deepest(s) >= p2.minTier);
@@ -3834,7 +4040,7 @@
       const out = { kind: c.kind, target: Math.round(c.target), n: Math.min(Math.round(c.n), Math.round(c.target)), dust: Math.round(c.dust) };
       if (c.kind === "maps") out.tier = ok(c.tier, 1) ? Math.round(c.tier) : 1;
       if (Array.isArray(c.currency) && CURRENCIES[c.currency[0]] && ok(c.currency[1], 1)) out.currency = [c.currency[0], Math.round(c.currency[1])];
-      if (c.extra === "relic" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
+      if (c.extra === "relic" || c.extra === "companion" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
       return out;
     });
     b.seq = ok(b.seq) ? Math.round(b.seq) : 0;
@@ -4090,6 +4296,7 @@
     const d = MONSTERS[m4.def];
     const hero = state.hero;
     const atlas = run.map ? atlasEffects(state) : null;
+    let changed0 = false;
     const eff = effectsOf(state, run);
     const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
     run.kills++;
@@ -4098,10 +4305,11 @@
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m4, xp);
+    if (petKill(state)) changed0 = true;
     contractEvent(state, "kills");
     if (m4.champion) contractEvent(state, "champions");
     if (d.boss) contractEvent(state, "bosses");
-    let changed = gainXp(state, xp, ev);
+    let changed = gainXp(state, xp, ev) || changed0;
     const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
@@ -4127,7 +4335,15 @@
       ev.currency?.(cur);
     }
     endgameDrops(state, run, m4, rng);
-    if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
+    if (d.boss) {
+      const had = { ...state.companions };
+      const pet = rollCompanionDrop(state, rng, m4.level, run.map?.pinnacle ? 0.15 : run.map ? 4e-3 : 3e-3);
+      if (pet) {
+        ev.companion?.(pet, had[pet] === void 0);
+        changed = true;
+      }
+      pushLog(state, "boss", `${d.name} falls.`);
+    }
     return changed ? runSheet(state) : sheet;
   }
   function endgameDrops(state, run, m4, rng) {
@@ -4227,6 +4443,14 @@
         hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
         hero.rev++;
         pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
+      }
+      const petKey = `pet:act${a.id}`, pet = ACT_COMPANION[a.id];
+      if (pet && cleared(a.zones[a.zones.length - 1]) && !w2.rewards.includes(petKey)) {
+        w2.rewards.push(petKey);
+        state.companions ??= {};
+        const isNew = state.companions[pet] === void 0;
+        grantCompanion(state, pet);
+        ev.companion?.(pet, isNew);
       }
     }
     for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
@@ -4334,6 +4558,7 @@
       salvaged: 0,
       swapped: state.totals.swapped ?? 0,
       newRelics: [],
+      newCompanions: [],
       dust: state.dust,
       equipped: [],
       best: [],
@@ -4371,6 +4596,9 @@
       },
       story: (text) => {
         report.story.push(text);
+      },
+      companion: (id, isNew) => {
+        if (isNew) report.newCompanions.push(COMPANIONS[id]?.name ?? id);
       }
     };
     return {
@@ -4387,7 +4615,7 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 5;
+  var SAVE_VERSION = 6;
   var MIGRATIONS = {
     // v2 (P2): passive bonus points, loot filter rules, crafting counter.
     1: (s) => {
@@ -4438,6 +4666,11 @@
         s.relics.push(...s.stash.filter((it) => it?.rarity === "relic"));
         s.stash = s.stash.filter((it) => it?.rarity !== "relic");
       }
+      return s;
+    },
+    // v6 (round 4): companions. Act companions are granted by reconcileRewards on load.
+    5: (s) => {
+      s.companions ??= {};
       return s;
     }
   };
@@ -4672,6 +4905,9 @@
     const counts = (o) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0));
     s.sigils = counts(s.sigils);
     s.pinnacleKills = counts(s.pinnacleKills);
+    s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
+    if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === void 0)) delete hero.pet;
+    else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]) };
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
@@ -4991,7 +5227,7 @@
     if (!fr) return null;
     const i = (Math.floor(f) % fr.n + fr.n) % fr.n;
     const sx = fr.x + i * (fr.w + 1), s = o.scale ?? 1;
-    const w2 = fr.w * s, h2 = fr.h * s;
+    const w2 = Math.round(fr.w * s), h2 = Math.round(fr.h * s);
     const flip = !!o.left !== (fr.f === 1);
     const dx = Math.round(x - (flip ? fr.w - fr.ax : fr.ax) * s), dy = Math.round(y - fr.ay * s);
     let src = img, rx = sx, ry = fr.y;
@@ -5315,6 +5551,23 @@
       const dead = run?.phase === "dead";
       const hc = HERO_CAST[state.hero.cls];
       let drew = false;
+      const pet = state.hero.pet ? COMPANIONS[state.hero.pet.id] : void 0;
+      if (pet && spriteOf(pet.sprite)) {
+        const px = this.HERO_X - 24;
+        const since = now - this.heroAtk;
+        const hop = !walking && !dead && since < 260 ? Math.round(Math.sin(since / 260 * Math.PI) * 4) : 0;
+        const lift = (pet.hover ?? 0) + (pet.hover ? Math.round(Math.sin(now / 320) * 2) : 0);
+        shadow(g, px, G2, pet.hover ? 5 : 7, pet.hover ?? 0);
+        const fps = (pet.fps ?? 8) * (walking ? 1.5 : 1);
+        drawSprite(
+          g,
+          pet.sprite,
+          dead ? 0 : now * fps / 1e3,
+          px,
+          G2 - lift - hop,
+          { scale: pet.scale ?? 1, ...dead ? { tint: "#1a1410", strength: 0.5 } : pet.tint ? { tint: pet.tint, strength: pet.strength ?? 0.4 } : {} }
+        );
+      }
       if (hc && spriteOf(hc.idle)) {
         const hurt = now - this.heroHurt < HURT_MS;
         const atk = now - this.heroAtk;
@@ -6215,6 +6468,21 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 @keyframes cmpglow { from { outline-color: #ffc233; } to { outline-color: #ff8a3a; } }
 .gear.slotpick .stash .cell[data-uid]:not(.fits) { opacity: .3; }
 .gear.slotpick .stash .cell.fits { outline: 2px solid var(--teal); outline-offset: 1px; }
+/* companions (Hero tab) */
+.pet-now { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.pet-stage { flex: none; width: 104px; height: 104px; display: grid; place-items: end center; padding-bottom: 8px; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; background: radial-gradient(ellipse at 50% 85%, rgba(255,194,51,.25), transparent 65%); }
+.petart { image-rendering: pixelated; }
+.pet-stage .petart { max-width: 84px; max-height: 84px; object-fit: contain; }
+.pet-bonus { font-weight: 700; color: var(--teal); } .hm.dark .pet-bonus { color: #6fe0cf; }
+.pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.pet { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px 5px; min-width: 0; font: inherit; color: var(--text); text-align: center; cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.pet .pic { height: 40px; display: grid; place-items: end center; }
+.pet .pic .petart { max-height: 40px; max-width: 64px; width: auto !important; height: auto !important; }
+.pet b { font-size: 12px; line-height: 1.1; } .pet span:last-child { font-size: 11px; color: var(--muted); }
+.pet.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; } .pet.on span:last-child { color: #4d4030; }
+.pet.unknown { cursor: default; opacity: .6; } .pet.unknown .q { font: 700 22px/1 var(--display); color: var(--muted); }
+.pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
@@ -7166,10 +7434,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
       return cell;
     };
-    const group = (label, list6, worn = false) => {
-      if (!list6.length) return;
-      rack.append(h("div", { class: "gridsep", text: `${label} (${list6.length})` }));
-      for (const it of list6) {
+    const group = (label, list7, worn = false) => {
+      if (!list7.length) return;
+      rack.append(h("div", { class: "gridsep", text: `${label} (${list7.length})` }));
+      for (const it of list7) {
         const cell = cellFor(it);
         if (worn) markWorn(cell, SLOTS.find((s) => st.hero.equipment[s] === it));
         rack.append(cell);
@@ -7732,14 +8000,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       tierChips(st.atlas.tiers),
       h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
     ));
-    const list6 = h("div", { class: "col", style: "gap:4px" });
+    const list7 = h("div", { class: "col", style: "gap:4px" });
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
     for (const m4 of maps.slice(0, 40)) {
       const on = c.sel.uid === m4.uid;
       const area = MAP_AREAS[m4.area];
       const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
       if (thumb) thumb.className = "mthumb";
-      list6.append(h(
+      list7.append(h(
         "div",
         { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
           c.sel = { uid: m4.uid };
@@ -7754,7 +8022,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         )
       ));
     }
-    if (!maps.length) list6.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    if (!maps.length) list7.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
     const sel = st.maps.find((m4) => m4.uid === c.sel.uid);
     const bench = h("div", { class: "row", style: "gap:4px" });
     if (sel) {
@@ -7773,7 +8041,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "card col" },
       h("h3", { text: "Maps" }),
-      list6,
+      list7,
       sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null
     ));
     const left = atlasPointsLeft(st);
@@ -7856,7 +8124,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const s = c.state;
     switch (id) {
       case "hero":
-        return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}`;
+        return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
       case "gear":
         return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
       case "forge":
@@ -7920,10 +8188,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list6 = h("div", { class: "kv" });
-      for (const m4 of mods) list6.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list6.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list6, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list7 = h("div", { class: "kv" });
+      for (const m4 of mods) list7.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list7.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list7, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const run = st.activity.run;
     const zone = run ? runZone(st, run) : ZONES[st.activity.zone];
@@ -8017,7 +8285,67 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       ehpBars(s),
       kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", codexRarity(st) ? `+${s.rarity + codexRarity(st)}% (codex +${codexRarity(st)}%)` : `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]])
     );
-    return h("div", { class: "sheet" }, who, h("div", { class: "col", style: "gap:14px" }, off, res), def2);
+    return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res), def2);
+  }
+  function petArt(def2, size = 1) {
+    const fr = spriteOf(def2.sprite);
+    if (!fr) return h("span", { class: "q", text: "?" });
+    const cv = h("canvas", { class: "petart", attrs: { width: String(fr.w), height: String(fr.h), "aria-hidden": "true" } });
+    const g = cv.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    drawSprite(g, def2.sprite, 0, fr.f === 1 ? fr.w - fr.ax : fr.ax, fr.ay, def2.tint ? { tint: def2.tint, strength: def2.strength ?? 0.4 } : {});
+    cv.style.width = fr.w * size + "px";
+    cv.style.height = fr.h * size + "px";
+    return cv;
+  }
+  function companionCard(c) {
+    const st = c.state;
+    const pet = st.hero.pet;
+    const owned = COMPANION_ORDER.filter((id) => st.companions[id] !== void 0);
+    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: "Companion" }), h("span", { class: "num", text: `${owned.length} / ${COMPANION_ORDER.length} found` })));
+    if (pet && COMPANIONS[pet.id]) {
+      const def2 = COMPANIONS[pet.id];
+      const bond = st.companions[pet.id] ?? 0;
+      const max = pet.level >= COMPANION_MAX_LEVEL;
+      const lo = bondFor(pet.level), hi = bondFor(pet.level + 1);
+      card.append(h(
+        "div",
+        { class: "pet-now" },
+        h("div", { class: "pet-stage" }, petArt(def2, 2)),
+        h(
+          "div",
+          { class: "col grow", style: "gap:4px;min-width:0" },
+          h("div", { class: "row", style: "gap:6px" }, h("b", { text: def2.name }), h("span", { class: "tag lv", text: `Level ${pet.level}` })),
+          h("span", { class: "pet-bonus", text: companionText(pet.id, pet.level) }),
+          h("div", { class: "xpbar", title: max ? "Fully bonded" : `${fmt(bond - lo)} / ${fmt(hi - lo)} bond: every kill while it is out` }, h("i", { style: `width:${max ? 100 : Math.min(100, (bond - lo) / (hi - lo) * 100).toFixed(1)}%` })),
+          h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: def2.blurb })
+        )
+      ));
+    } else {
+      card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? "No companion out: pick one below." : "No companion yet. The Tide-Warden guards the first one; bosses sometimes bring others." }));
+    }
+    const grid = h("div", { class: "pet-grid" });
+    for (const id of COMPANION_ORDER) {
+      const def2 = COMPANIONS[id];
+      const has = st.companions[id] !== void 0;
+      const out = pet?.id === id;
+      const lvl = has ? companionLevel(st.companions[id]) : 0;
+      const tile = h(
+        has ? "button" : "div",
+        {
+          class: `pet${out ? " on" : ""}${has ? "" : " unknown"}`,
+          attrs: has ? { "aria-pressed": String(out), "aria-label": `${def2.name}, level ${lvl}` } : { role: "img", "aria-label": `Not found yet: ${def2.where}` },
+          on: has && !out ? { click: () => c.act((s) => setCompanion(s, id), `${def2.name} walks with you`) } : {}
+        },
+        h("span", { class: "pic" }, has ? petArt(def2, 1) : h("span", { class: "q", text: "?" })),
+        h("b", { text: has ? def2.name : "Unknown" }),
+        h("span", { text: has ? `Lv ${lvl}${out ? " - out" : ""}` : def2.where })
+      );
+      tile.dataset.tip = has ? `${def2.name}, level ${lvl}: ${companionText(id, lvl)}.${out ? " At your side now." : " Click to send it out."}` : `Not found yet. ${def2.where}.`;
+      grid.append(tile);
+    }
+    card.append(grid);
+    return card;
   }
   function ehpBars(s) {
     const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
@@ -9729,6 +10057,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         death: () => {
           this.lastEvent = "Died. The ember relights.";
           sfx("death");
+        },
+        companion: (id, isNew) => {
+          const name = COMPANIONS[id]?.name ?? id;
+          this.toast(isNew ? `Companion: ${name} joins you` : `${name} grows closer`, "relic");
+          this.lastEvent = isNew ? `${name} joined` : `${name} grew closer`;
+          sfx("level", true);
         }
       };
       this.timer = window.setInterval(() => {
@@ -10061,6 +10395,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       for (const t of r3.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
       if (r3.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r3.zones.join(", ")}` }));
       if (r3.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
+      if (r3.newCompanions.length) card.append(h("div", { class: "tag gold", text: `New companion${r3.newCompanions.length > 1 ? "s" : ""}: ${r3.newCompanions.join(", ")}` }));
       if (r3.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: `New in the codex: ${r3.newRelics.join(", ")}` }));
       if (r3.best.length) {
         const best = r3.best[r3.best.length - 1];

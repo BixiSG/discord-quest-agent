@@ -1,7 +1,8 @@
 // Tab views. Each returns a fresh element; the app swaps it in when the view's
 // signature changes, so scroll position and selection survive sim ticks.
 
-import { ACTS, ASCENDANCIES, BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
+import { ACTS, ASCENDANCIES, BASES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, RELICS, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, companionText, xpToNext, slotsFor, type CompanionDef } from "../core/data";
+import { setCompanion } from "../core/companions";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
@@ -10,7 +11,7 @@ import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
 import { clear, fmt, h, pct } from "./dom";
 import { itemIcon } from "./gfx/itemart";
-import { drawSprite, loadSprites, spriteCanvas } from "./gfx/sprites";
+import { drawSprite, loadSprites, spriteCanvas, spriteOf } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
 import { glyph } from "./glyphs";
 import { portrait, scenery } from "./gfx/portrait";
@@ -49,7 +50,7 @@ export const VIEWS: { id: ViewId; label: string }[] = [
 export function viewSig(id: ViewId, c: Ctx): string {
     const s = c.state;
     switch (id) {
-        case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}`;
+        case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
@@ -173,7 +174,61 @@ function heroView(c: Ctx): HTMLElement {
         ehpBars(s),
         kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", codexRarity(st) ? `+${s.rarity + codexRarity(st)}% (codex +${codexRarity(st)}%)` : `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]]));
 
-    return h("div", { class: "sheet" }, who, h("div", { class: "col", style: "gap:14px" }, off, res), def);
+    return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res), def);
+}
+
+/** A companion's art at `size` times its atlas size (frame 0, its tint), or a "?" when the art isn't in yet. */
+function petArt(def: CompanionDef, size = 1): HTMLElement {
+    const fr = spriteOf(def.sprite);
+    if (!fr) return h("span", { class: "q", text: "?" });
+    const cv = h("canvas", { class: "petart", attrs: { width: String(fr.w), height: String(fr.h), "aria-hidden": "true" } }) as HTMLCanvasElement;
+    const g = cv.getContext("2d")!;
+    g.imageSmoothingEnabled = false;
+    // Feet at the anchor: place it so the whole frame lands on the canvas.
+    drawSprite(g, def.sprite, 0, fr.f === 1 ? fr.w - fr.ax : fr.ax, fr.ay, def.tint ? { tint: def.tint, strength: def.strength ?? 0.4 } : {});
+    cv.style.width = fr.w * size + "px";
+    cv.style.height = fr.h * size + "px";
+    return cv;
+}
+
+/** The companion at the hero's side (level, bond, bonus) and the collection; unfound ones say where they wait. */
+function companionCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const pet = st.hero.pet;
+    const owned = COMPANION_ORDER.filter(id => st.companions[id] !== undefined);
+    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: "Companion" }), h("span", { class: "num", text: `${owned.length} / ${COMPANION_ORDER.length} found` })));
+    if (pet && COMPANIONS[pet.id]) {
+        const def = COMPANIONS[pet.id]!;
+        const bond = st.companions[pet.id] ?? 0;
+        const max = pet.level >= COMPANION_MAX_LEVEL;
+        const lo = bondFor(pet.level), hi = bondFor(pet.level + 1);
+        card.append(h("div", { class: "pet-now" },
+            h("div", { class: "pet-stage" }, petArt(def, 2)),
+            h("div", { class: "col grow", style: "gap:4px;min-width:0" },
+                h("div", { class: "row", style: "gap:6px" }, h("b", { text: def.name }), h("span", { class: "tag lv", text: `Level ${pet.level}` })),
+                h("span", { class: "pet-bonus", text: companionText(pet.id, pet.level) }),
+                h("div", { class: "xpbar", title: max ? "Fully bonded" : `${fmt(bond - lo)} / ${fmt(hi - lo)} bond: every kill while it is out` }, h("i", { style: `width:${max ? 100 : Math.min(100, ((bond - lo) / (hi - lo)) * 100).toFixed(1)}%` })),
+                h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: def.blurb }))));
+    } else {
+        card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? "No companion out: pick one below." : "No companion yet. The Tide-Warden guards the first one; bosses sometimes bring others." }));
+    }
+    const grid = h("div", { class: "pet-grid" });
+    for (const id of COMPANION_ORDER) {
+        const def = COMPANIONS[id]!;
+        const has = st.companions[id] !== undefined;
+        const out = pet?.id === id;
+        const lvl = has ? companionLevel(st.companions[id]!) : 0;
+        const tile = h(has ? "button" : "div", { class: `pet${out ? " on" : ""}${has ? "" : " unknown"}`,
+            attrs: has ? { "aria-pressed": String(out), "aria-label": `${def.name}, level ${lvl}` } : { role: "img", "aria-label": `Not found yet: ${def.where}` },
+            on: has && !out ? { click: () => c.act(s => setCompanion(s, id), `${def.name} walks with you`) } : {} },
+            h("span", { class: "pic" }, has ? petArt(def, 1) : h("span", { class: "q", text: "?" })),
+            h("b", { text: has ? def.name : "Unknown" }),
+            h("span", { text: has ? `Lv ${lvl}${out ? " - out" : ""}` : def.where }));
+        tile.dataset.tip = has ? `${def.name}, level ${lvl}: ${companionText(id, lvl)}.${out ? " At your side now." : " Click to send it out."}` : `Not found yet. ${def.where}.`;
+        grid.append(tile);
+    }
+    card.append(grid);
+    return card;
 }
 
 function ehpBars(s: Sheet): HTMLElement {

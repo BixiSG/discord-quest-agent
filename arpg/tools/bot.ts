@@ -5,7 +5,8 @@ import { RARITY_RANK, buildScore, salvage, setSkill, setSupports, sheetOf } from
 import { forgeCost, forgeRare } from "../src/core/crafting";
 import { SLOTS } from "../src/core/types";
 import { deriveSheet, supportSlots } from "../src/core/character";
-import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS } from "../src/core/data";
+import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
+import { setCompanion } from "../src/core/companions";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
@@ -62,6 +63,13 @@ export function botTune(state: GameState): void {
         for (const n of open) { const v = score({ ...hero, ascNodes: [...hero.ascNodes, n.id] }); if (v > ps) { ps = v; pick = n; } }
         takeAscNode(state, pick.id);
     }
+    // Companion: the one whose bonus scores best.
+    let petPick: string | null = hero.pet?.id ?? null, petScore = score(hero);
+    for (const id of Object.keys(state.companions ?? {})) {
+        const v = score({ ...hero, pet: { id, level: companionLevel(state.companions[id]!) } });
+        if (v > petScore * 1.001) { petScore = v; petPick = id; }
+    }
+    if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
     // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
     for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
         const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))

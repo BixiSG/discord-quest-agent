@@ -24,7 +24,7 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
         settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
-        relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", `${opts.name} wakes on the shore.`);

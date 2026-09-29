@@ -2,7 +2,7 @@
 // Never saved; recomputed when hero.rev changes.
 
 import { StatBag, tagSet } from "./stats";
-import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
+import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, companionMod, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
 import { itemStats, levelReq } from "./items";
 import { passiveMods } from "./passives";
 import type { Hero } from "./state";
@@ -70,11 +70,17 @@ export function supportSlots(level: number): number {
     return SUPPORT_SLOT_LEVELS.filter(l => l <= level).length;
 }
 
+/** The companion at the hero's side: its one bonus. */
+function petMods(hero: Hero): Mod[] {
+    const m = hero.pet ? companionMod(hero.pet.id, hero.pet.level) : null;
+    return m ? [m] : [];
+}
+
 /** Everything that modifies the hero, except the skill and its supports. */
 export function heroMods(hero: Hero, extra: Mod[] = []): { mods: Mod[]; armour: number; evasion: number; es: number; block: number; problems: string[] } {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods: Mod[] = [...extra, ...passiveMods(hero)];
+    const mods: Mod[] = [...extra, ...passiveMods(hero), ...petMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems: string[] = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });

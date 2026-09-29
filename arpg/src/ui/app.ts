@@ -9,7 +9,7 @@ import { newGame, sheetOf } from "../core/game";
 import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type SaveEnvelope } from "../core/save";
 import { validateState } from "../core/validate";
 import type { GameState } from "../core/state";
-import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
+import { ZONES, CLASSES, COMPANIONS, SUPPORTS, xpToNext } from "../core/data";
 import { deriveSheet, supportSlots } from "../core/character";
 import { baseOf, itemLabel } from "../core/items";
 import { pointsLeft, ascPointsLeft } from "../core/passives";
@@ -487,6 +487,12 @@ export class GameWindow {
                 else if (item.rarity === "rare" || item.rarity === "relic") { this.toast(`${item.rarity === "relic" ? "Relic" : "Rare"}: ${name}`, item.rarity); this.lastEvent = `Found ${name}`; }
             },
             death: () => { this.lastEvent = "Died. The ember relights."; sfx("death"); },
+            companion: (id, isNew) => {
+                const name = COMPANIONS[id]?.name ?? id;
+                this.toast(isNew ? `Companion: ${name} joins you` : `${name} grows closer`, "relic");
+                this.lastEvent = isNew ? `${name} joined` : `${name} grew closer`;
+                sfx("level", true);
+            },
         };
         this.timer = window.setInterval(() => {
             if (!this.state || this.busy) return;
@@ -789,6 +795,7 @@ export class GameWindow {
         for (const t of r.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
         if (r.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r.zones.join(", ")}` }));
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
+        if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: `New companion${r.newCompanions.length > 1 ? "s" : ""}: ${r.newCompanions.join(", ")}` }));
         if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: `New in the codex: ${r.newRelics.join(", ")}` }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;

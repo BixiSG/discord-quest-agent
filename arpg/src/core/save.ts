@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -64,6 +64,11 @@ export const MIGRATIONS: Record<number, Migration> = {
             s.relics.push(...s.stash.filter((it: any) => it?.rarity === "relic"));
             s.stash = s.stash.filter((it: any) => it?.rarity !== "relic");
         }
+        return s;
+    },
+    // v6 (round 4): companions. Act companions are granted by reconcileRewards on load.
+    5: (s: any) => {
+        s.companions ??= {};
         return s;
     },
 };

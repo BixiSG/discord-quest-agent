@@ -12,6 +12,8 @@ import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
 import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
+import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
+import { ACT_COMPANION } from "../data";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -41,6 +43,8 @@ export interface SimEvents {
     flask?(): void;
     currency?(id: string): void;
     story?(text: string): void;
+    /** A companion joined (new) or added bond to one owned (duplicate). */
+    companion?(id: string, isNew: boolean): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -271,6 +275,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     const d = MONSTERS[m.def]!;
     const hero = state.hero;
     const atlas = run.map ? atlasEffects(state) : null;
+    let changed0 = false;
     const eff = effectsOf(state, run);
     const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
     run.kills++; run.xp += xp;
@@ -278,10 +283,11 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m, xp);
+    if (petKill(state)) changed0 = true;
     contractEvent(state, "kills");
     if (m.champion) contractEvent(state, "champions");
     if (d.boss) contractEvent(state, "bosses");
-    let changed = gainXp(state, xp, ev);
+    let changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
     const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
@@ -310,7 +316,13 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         ev.currency?.(cur);
     }
     endgameDrops(state, run, m, rng);
-    if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
+    // Companions: rarely from bosses, more often from map bosses, often from pinnacles.
+    if (d.boss) {
+        const had = { ...state.companions };
+        const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
+        if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
+        pushLog(state, "boss", `${d.name} falls.`);
+    }
     return changed ? runSheet(state) : sheet;
 }
 
@@ -424,6 +436,15 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
             hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
             hero.rev++;
             pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
+        }
+        // Each act boss gives a companion on its first clear (saves from before companions get theirs on load).
+        const petKey = `pet:act${a.id}`, pet = ACT_COMPANION[a.id];
+        if (pet && cleared(a.zones[a.zones.length - 1]!) && !w.rewards.includes(petKey)) {
+            w.rewards.push(petKey);
+            state.companions ??= {};
+            const isNew = state.companions[pet] === undefined;
+            grantCompanion(state, pet);
+            ev.companion?.(pet, isNew);
         }
     }
     for (const [trial, after] of Object.entries(TRIAL_AFTER)) {

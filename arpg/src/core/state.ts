@@ -22,6 +22,8 @@ export interface Hero {
     ascPoints: number;
     /** Bumped on every change that affects the stat sheet. */
     rev: number;
+    /** The companion at the hero's side and its level (v6). */
+    pet?: { id: string; level: number };
 }
 
 export interface MonsterState {
@@ -137,6 +139,8 @@ export interface GameState {
     codex: Record<string, number>;
     /** The contract board (v5): three standing goals with rewards. */
     contracts: ContractBoard;
+    /** Companions found (v6): id -> bond (kills while out, plus duplicates). */
+    companions: Record<string, number>;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */
