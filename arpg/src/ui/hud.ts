@@ -15,6 +15,8 @@ export interface HudData {
     flask: number; flaskMax: number; level: number; xpFrac: number; eta: string;
     /** 0..1: how far through the current attack/cast the hero is (1 = ready). */
     ready: number; skillName: string; weaponKind: string | null; spell: boolean;
+    /** The equipped weapon's own item art (atlas icon), and its rarity colour for the slot's rim. */
+    weaponArt?: HTMLCanvasElement | null; weaponRim?: string;
     zone: string; zoneLevel: number; packDps: number; dead: boolean;
     /** Seconds until the ember relights, while dead. */
     respawn?: number;
@@ -151,8 +153,18 @@ export class Hud {
     private skill(x: number, y: number, d: HudData): void {
         const g = this.g;
         this.box(x, y, 28, 28, d.spell ? "#3b2a52" : "#4a2a1f");
-        const icon = iconFor(d.weaponKind ?? (d.spell ? "focus" : "sword"), "weapon");
-        g.drawImage(icon, x + 2, y + 2, 24, 24);
+        const art = d.weaponArt;
+        if (art && art.width && art.height) {
+            // The weapon actually worn, as big as fits in the slot (whole-pixel scale when it can be).
+            const fit = Math.min(24 / art.width, 24 / art.height);
+            const sc = fit >= 1 ? Math.floor(fit) : fit;
+            const w = Math.round(art.width * sc), h = Math.round(art.height * sc);
+            g.drawImage(art, x + 2 + Math.floor((24 - w) / 2), y + 2 + Math.floor((24 - h) / 2), w, h);
+            if (d.weaponRim) { g.fillStyle = d.weaponRim; g.fillRect(x + 1, y + 1, 26, 1); g.fillRect(x + 1, y + 1, 1, 26); }
+        } else {
+            const icon = iconFor(d.weaponKind ?? (d.spell ? "focus" : "sword"), "weapon");
+            g.drawImage(icon, x + 2, y + 2, 24, 24);
+        }
         // cooldown: a dark pie over the part of the swing still to come
         const left = 1 - clamp01(d.ready);
         if (left > 0.02) {

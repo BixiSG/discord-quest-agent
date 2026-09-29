@@ -3,6 +3,8 @@
 // Closed means closed: no timers, no drawing; the next open catches up from
 // the saved timestamp. Mini mode is still open: the hero keeps fighting.
 
+import { iconName, itemIcon } from "./gfx/itemart";
+import type { Item } from "../core/types";
 import { parseStone } from "../core/data";
 import { allShards } from "../core/echoes";
 import { perksToPick } from "../core/dawn";
@@ -77,6 +79,8 @@ export interface AppHooks {
 const STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
 
 const NAV_GLYPH: Record<ViewId, GlyphName> = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu", market: "market" };
+/** Rarity colours for the HUD weapon slot's rim. */
+const RIM: Record<string, string> = { plain: "#c9c3b5", enchanted: "#5aa9ff", rare: "#ffd23f", relic: "#ff8a3a" };
 /** Tab keys: 1-9, then 0 for the tenth. */
 const navKey = (i: number) => String((i + 1) % 10);
 
@@ -704,6 +708,7 @@ export class GameWindow {
             flask: hh?.flask ?? 30, flaskMax: 30, level: s.hero.level, xpFrac: xpF, eta: eta.replace(/^~/, "~ "),
             ready: run?.phase === "fight" ? (now - this.lastUse) / (1000 / speed) : 1,
             skillName: skillName(sh.skill.id), weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
+            weaponArt: w ? this.weaponArt(w) : null, weaponRim: w ? RIM[w.rarity] : undefined,
             zone: placeName(s), zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead", respawn: run?.phase === "dead" ? run.timer : 0,
         }, now);
 
@@ -737,6 +742,16 @@ export class GameWindow {
     }
 
     /** "~12m to go" from the kill XP of the last few minutes; blank until there is enough to go on. */
+    /** The worn weapon's item art, made once per weapon (again once the atlas is in, if it wasn't). */
+    private wart: { uid: number; atlas: boolean; c: HTMLCanvasElement } | null = null;
+    private weaponArt(w: Item): HTMLCanvasElement | null {
+        if (!this.wart || this.wart.uid !== w.uid || (!this.wart.atlas && iconName(w))) {
+            const c = itemIcon(w);
+            this.wart = { uid: w.uid, atlas: c.classList.contains("ic"), c };
+        }
+        return this.wart.atlas ? this.wart.c : null;
+    }
+
     private eta(left: number): string {
         const now = Date.now();
         while (this.xpLog.length && now - this.xpLog[0]![0] > XP_WINDOW_MS) this.xpLog.shift();
