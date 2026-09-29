@@ -3,6 +3,69 @@
 Branch: `feat/pet-addon-jjbs70`, with both addons plus the launcher change.
 `main` is untouched; do not merge or push `main` until the user signs off.
 
+## >>> NEXT SESSION: start here (Round 6 plan, written 2026-09-29)
+
+State: branch `feat/pet-addon-jjbs70`, ~37 local commits ahead of origin, **nothing pushed**
+(the user's standing "don't push yet"). Hollowmarch save v7, 197 tests, en/ru/uk. The live
+Discord runs this branch's build (hot-swapped); the dev agent is NOT running (its console
+window gets closed) and the installed agent is the old v1.4.3.
+
+Working rules (from memory, repeated so nothing is lost):
+- `cd arpg && npm run check` after every change (tsc + vitest + build; the build also writes
+  `src/addons/arpg.js`). Commit as BixiSG, **no Co-Authored-By trailer**. No push without the user.
+- All game text goes through `arpg/src/i18n` (en source, ru/uk complete - tests enforce parity);
+  core errors need an `err.*` key or a pattern in `i18n/errors.ts`; `pushLog` takes a key.
+- Screens: `arpg/tools/cdp/` (README there) - headless Chrome shots, one small JPEG sheet.
+- Live deploy: `arpg/tools/cdp/live-read.mjs` (check), then `live-hotswap.mjs` - never a plain
+  reload while the dev agent is down. Balance: `tools/probe.ts`, `tools/pinnacles.ts`.
+- Orbling and Hollowmarch are separate projects: no crossovers.
+
+### A. Ship readiness (first; the push itself needs the user's yes)
+1. [ ] Addon size: the build is not minified and ships at 1.39 MB (Cyrillic escaped), injected into
+       every Discord start even with Hollowmarch off. Minify the shipped `src/addons/arpg.js` (keep
+       `dist/` readable), measure inject time; consider loading the translation tables only for the
+       active language.
+2. [ ] Why the installed agent (v1.4.3, `%LOCALAPPDATA%`, attach-only) never updates ("Up to date"
+       while main is 1.6.1): read the update path in `src/QuestAgent.ps1` for `-AttachOnly`. Decide
+       with the user how this PC runs after 1.7.0 (installed agent updated vs the branch agent).
+3. [ ] Release pass: harness run (hub + Orbling window + Hollowmarch card), `dev/test-addons.ps1`
+       on PS 5.1, CHANGELOG 1.7.0 date, README shots for round 5 (Market, sockets, echoes,
+       Rekindling; a ru shot for README.ru). Then ask: open the PR `feat/pet-addon-jjbs70` -> `main`.
+
+### B. Timely content: October
+4. [ ] "Hollow Night" (October 1-31, local date): a themed map mod, a seasonal relic, jack-o'-lantern
+       tint on some monsters, a contract kind, a limited companion (Pumpkin Wisp?). Date-gated in
+       core (sim time -> local date), all strings en/ru/uk. Small, visible, fun - and it's tomorrow.
+
+### C. Polish what round 5 added
+5. [ ] First-time hints (one line, dismissible, once each): Market, sockets, stone pouch, echoes,
+       the Rekindling; Menu > "Show hints again".
+6. [ ] Sounds for stone found (good tiers), echo heard, market buy, relight (synth in `ui/sfx.ts`).
+7. [ ] Gear tab: socket pips on item cells (filled/empty), a "has empty sockets" filter, and a text
+       search over names and affix lines (works in all three languages).
+8. [ ] Keyboard: Market buy/refresh and Forge socket controls reachable and labelled; focus kept.
+9. [ ] Split `ui/views.ts` (1,260 lines) into per-tab modules (hero, gear, skills, world, log, menu,
+       creation) - a pure move, checked with the shots scenario.
+
+### D. Balance (measure with the tools first)
+10. [ ] Dawn loop: teach the bot to invest (hone, drill, set stones, buy market upgrades) so a probe
+        reaches a relight; check dawns 2-3 (15% tougher per dawn) don't wall the hero, tune.
+11. [ ] Late dust still inflates (~2.4M at 96 h in a bot that doesn't spend). Re-measure with the
+        investing bot; add a sink only if needed (e.g. a relic gamble at the Jeweller).
+12. [ ] The Hollow Crown: unbeatable (dies in seconds). Make it a dawn-2/3 goal with its own reward
+        (an extra perk pick, a title) and tune with `tools/pinnacles.ts invest`.
+
+### E. Bigger content (one per session, pick with the user)
+13. [ ] Skill mastery: skills and supports level with use (small % bonus), bars on the Skills tab.
+14. [ ] Feats: lifetime milestones with titles and small rewards (stash room, a perk reroll).
+15. [ ] Build loadouts: save/restore skill + supports + gear (+ passives with a dust respec cost).
+16. [ ] Act 4 between the Sunfall and the Cinderlands (7 zones, trial, boss). Needs new CC0 monster
+        art - every download needs the user's OK (name, source, size).
+
+Orbling (separate project, only if the user asks): section 1's live checklist was never run.
+
+Recommended order: A1-A3 (ask about the push), B4, then C5-C9, D10-D12, then pick from E.
+
 ## 0. Run the branch on this PC
 - [x] Close the installed agent.
 - [x] Check out `feat/pet-addon-jjbs70` in a working copy (used the repo folder itself: a new folder
