@@ -41,8 +41,14 @@ const KIND_TEXT: Record<ContractKind, (c: Contract) => string> = {
 
 export const contractText = (c: Contract) => KIND_TEXT[c.kind](c);
 
-export function rewardText(c: Contract): string {
-    const parts = [`${c.dust} dust`];
+/**
+ * Dust a contract pays: what it was rolled with, or more if the hero has grown
+ * since (a contract left waiting for levels must not pay like a level-1 one).
+ */
+export const contractDust = (s: GameState, c: Contract) => Math.max(c.dust, Math.round((60 + 25 * s.hero.level) * 0.9));
+
+export function rewardText(c: Contract, s?: GameState): string {
+    const parts = [`${s ? contractDust(s, c) : c.dust} dust`];
     if (c.currency) parts.push(`${c.currency[1]} ${CURRENCIES[c.currency[0]]?.name ?? c.currency[0]}`);
     if (c.extra === "relic") parts.push("a relic not in your codex");
     if (c.extra === "companion") parts.push("a companion you haven't met");
@@ -113,7 +119,8 @@ export function claimContract(s: GameState, i: number): string | null {
     if (!c) return "no such contract";
     if (c.n < c.target) return "not finished yet";
     const rng = new Rng(hashSeed(s.seed, 0x636c6169, s.contracts.done));
-    s.dust += c.dust;
+    const dust = contractDust(s, c);
+    s.dust += dust;
     if (c.currency) s.currency[c.currency[0]] = (s.currency[c.currency[0]] ?? 0) + c.currency[1];
     if (c.extra === "relic") {
         const pool = missingRelics(s);
@@ -123,19 +130,19 @@ export function claimContract(s: GameState, i: number): string | null {
             const item = { uid: s.nextUid++, base: def.base, ilvl: Math.max(def.level, maxIlvl(s)), rarity: "relic" as const, affixes: [], relic: def.id, relicRolls: def.mods.map(m => rng.int(m.range[0], m.range[1])) };
             receiveItem(s, item);
             pushLog(s, "loot", `Contract reward: ${def.name}.`);
-        } else s.dust += c.dust; // the codex filled up meanwhile: double dust instead
+        } else s.dust += dust; // the codex filled up meanwhile: double dust instead
     }
     if (c.extra === "companion") {
         const pool = missingCompanions(s, maxIlvl(s));
         if (pool.length) grantCompanion(s, rng.pick(pool));
-        else s.dust += c.dust;
+        else s.dust += dust;
     }
     if (c.extra === "maps") for (let k = 0; k < 3; k++) addMap(s, rollMap(rng, s.nextUid++, Math.min(MAX_TIER, deepest(s))));
     if (c.extra === "sigil") {
         const open = Object.values(PINNACLES).filter(p => deepest(s) >= p.minTier);
         const p = open.length ? rng.pick(open) : undefined;
         if (p) s.sigils[p.sigil] = (s.sigils[p.sigil] ?? 0) + 1;
-        else s.dust += c.dust;
+        else s.dust += dust;
     }
     s.contracts.list.splice(i, 1);
     s.contracts.done++;

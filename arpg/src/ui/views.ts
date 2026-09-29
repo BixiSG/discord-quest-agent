@@ -878,7 +878,7 @@ function contractBoard(c: Ctx): HTMLElement {
             h("div", { class: "grow col", style: "gap:3px;min-width:0" },
                 h("b", { text: contractText(k) }),
                 h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, (k.n / k.target) * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
-                h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k)}` })),
+                h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k, st)}` })),
             done ? h("button", { class: "btn small", text: "Claim", on: { click: () => c.act(s => claimContract(s, i), "Contract claimed") } })
                 : h("button", { class: "btn alt small", text: `Reroll ${fmt(cost)}`, title: `A different contract for ${fmt(cost)} ember dust; progress on this one is lost`, attrs: st.dust >= cost ? {} : { disabled: "" },
                     on: { click: () => c.act(s => rerollContract(s, i)) } })));

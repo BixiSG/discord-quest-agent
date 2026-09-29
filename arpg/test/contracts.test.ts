@@ -85,3 +85,16 @@ describe("contract board", () => {
         expect(validateState(g2).contracts.list.length).toBe(BOARD_SIZE);
     });
 });
+
+import { contractDust } from "../src/core/contracts";
+describe("contract rewards follow the hero", () => {
+    it("a contract rolled at level 1 pays by the level it is claimed at", () => {
+        const g = newGame({ name: "T", cls: "vanguard", now: 0, seed: 12 });
+        ensureContracts(g);
+        const c = g.contracts.list[0]!;
+        const low = c.dust;
+        g.hero.level = 70;
+        expect(contractDust(g, c)).toBeGreaterThan(low * 10);
+        expect(rewardText(c, g)).toContain(String(contractDust(g, c)));
+    });
+});
