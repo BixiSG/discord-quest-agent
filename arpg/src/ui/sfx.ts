@@ -1,6 +1,7 @@
 // Sound effects synthesised with WebAudio: no sound files to ship, nothing
 // for Discord's CSP to block. Every sound is a few oscillators or a noise
-// burst with a short envelope, retro on purpose. Quiet by default, throttled
+// burst with a short envelope, retro on purpose. Off until the player turns it
+// on (title-bar speaker or M), quiet when on, throttled
 // so a fast attack speed doesn't turn into a buzz.
 
 export type Sfx = "hit" | "crit" | "kill" | "hurt" | "loot1" | "loot2" | "loot3" | "level" | "death" | "flask" | "boss" | "click";

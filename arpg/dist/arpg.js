@@ -7908,7 +7908,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     soundBtn;
     hudWrap;
     hud = new Hud();
-    sound = new Sound({ on: true, volume: 0.35 });
+    sound = new Sound({ on: false, volume: 0.35 });
     /** When the hero last swung or cast (performance.now()), for the skill slot's cooldown sweep. */
     lastUse = 0;
     nav;
@@ -7928,7 +7928,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     busy = false;
     ctx;
     stopKeys = null;
-    frame = { stage: "m", mini: false, max: false, sound: true, volume: 0.35 };
+    frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35 };
     xpLog = [];
     lastEvent = "";
     onUnload = () => {
@@ -8000,10 +8000,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (f.stage === "l" || f.stage === "m" || f.stage === "off") this.frame.stage = f.stage;
         this.frame.mini = f.mini === true;
         this.frame.max = f.max === true;
-        this.frame.sound = f.sound !== false;
+        this.frame.sfx = f.sfx === true;
         if (typeof f.volume === "number" && f.volume >= 0 && f.volume <= 1) this.frame.volume = f.volume;
       }
-      this.sound.set(this.frame.sound, this.frame.volume);
+      this.sound.set(this.frame.sfx, this.frame.volume);
       const dark = this.hooks.theme?.() === "dark";
       const shell = h("div", { class: `hm${dark ? " dark" : ""}` });
       for (const [k, v] of Object.entries(frameVars(dark))) shell.style.setProperty(k, v);
@@ -8015,7 +8015,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
       this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
       this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
-      this.soundBtn = ctl("sound", "Sound on (click to mute)", () => this.setSound(!this.frame.sound), "snd");
+      this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
       const bar2 = h(
         "div",
         { class: "bar" },
@@ -8078,7 +8078,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           return;
         }
         if (e.key === "m" || e.key === "M") {
-          this.setSound(!this.frame.sound);
+          this.setSound(!this.frame.sfx);
           e.preventDefault();
           return;
         }
@@ -8158,8 +8158,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       };
       setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
       setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-      setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
-      this.soundBtn.classList.toggle("off", !f.sound);
+      setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+      this.soundBtn.classList.toggle("off", !f.sfx);
       this.refit();
     }
     saveFrame() {
@@ -8186,7 +8186,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.applyFrame();
     }
     setSound(on) {
-      this.frame.sound = on;
+      this.frame.sfx = on;
       this.saveFrame();
       this.sound.set(on, this.frame.volume);
       this.applyFrame();

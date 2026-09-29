@@ -45,7 +45,8 @@ const STAGE_FRAC: Record<Exclude<StageSize, "off">, number> = { l: 0.42, m: 0.28
 const STAGE_NEXT: Record<StageSize, StageSize> = { m: "l", l: "off", off: "m" };
 const STAGE_TITLE: Record<StageSize, string> = { m: "Battle view: normal (click for large)", l: "Battle view: large (click to hide)", off: "Battle view: hidden (click to show)" };
 
-interface Frame { stage: StageSize; mini: boolean; max: boolean; sound: boolean; volume: number }
+/** `sfx` replaced an older `sound` flag that defaulted to on: sound starts muted, even for old saves. */
+interface Frame { stage: StageSize; mini: boolean; max: boolean; sfx: boolean; volume: number }
 
 export interface Summary { name: string; cls: string; level: number; zone: string; savedAt: number; xpFrac: number }
 
@@ -72,7 +73,7 @@ export class GameWindow {
     private soundBtn!: HTMLButtonElement;
     private hudWrap!: HTMLDivElement;
     private hud = new Hud();
-    private sound = new Sound({ on: true, volume: 0.35 });
+    private sound = new Sound({ on: false, volume: 0.35 });
     /** When the hero last swung or cast (performance.now()), for the skill slot's cooldown sweep. */
     private lastUse = 0;
     private nav!: HTMLDivElement;
@@ -92,7 +93,7 @@ export class GameWindow {
     private busy = false;
     private ctx!: Ctx;
     private stopKeys: ((e: Event) => void) | null = null;
-    private frame: Frame = { stage: "m", mini: false, max: false, sound: true, volume: 0.35 };
+    private frame: Frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35 };
     private xpLog: [number, number][] = [];
     private lastEvent = "";
     private onUnload = () => {
@@ -157,10 +158,10 @@ export class GameWindow {
             if (f.stage === "l" || f.stage === "m" || f.stage === "off") this.frame.stage = f.stage;
             this.frame.mini = f.mini === true;
             this.frame.max = f.max === true;
-            this.frame.sound = f.sound !== false;
+            this.frame.sfx = f.sfx === true;
             if (typeof f.volume === "number" && f.volume >= 0 && f.volume <= 1) this.frame.volume = f.volume;
         }
-        this.sound.set(this.frame.sound, this.frame.volume); // open() is a click: audio may start
+        this.sound.set(this.frame.sfx, this.frame.volume); // open() is a click: audio may start
 
         const dark = this.hooks.theme?.() === "dark";
         const shell = h("div", { class: `hm${dark ? " dark" : ""}` });
@@ -173,7 +174,7 @@ export class GameWindow {
         this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
         this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
         this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
-        this.soundBtn = ctl("sound", "Sound on (click to mute)", () => this.setSound(!this.frame.sound), "snd");
+        this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
         const bar = h("div", { class: "bar" }, h("span", { class: "logo", text: "Hollowmarch" }), this.who,
             h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x")));
         bar.addEventListener("dblclick", e => { if (!(e.target as HTMLElement).closest("button")) this.setMax(!this.frame.max); });
@@ -224,7 +225,7 @@ export class GameWindow {
                 e.preventDefault();
                 return;
             }
-            if (e.key === "m" || e.key === "M") { this.setSound(!this.frame.sound); e.preventDefault(); return; }
+            if (e.key === "m" || e.key === "M") { this.setSound(!this.frame.sfx); e.preventDefault(); return; }
             // Views mark their own shortcuts: <button data-key="e">.
             const k = e.key.length === 1 ? e.key.toLowerCase() : "";
             const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector<HTMLButtonElement>(`[data-key="${k}"]:not([disabled])`) : null;
@@ -291,15 +292,15 @@ export class GameWindow {
         const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.title = title; b.setAttribute("aria-label", title); };
         setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
         setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-        setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
-        this.soundBtn.classList.toggle("off", !f.sound);
+        setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+        this.soundBtn.classList.toggle("off", !f.sfx);
         this.refit();
     }
     private saveFrame(): void { this.kv.set(UI_KEY, { ...this.frame }); }
     setMini(on: boolean): void { this.frame.mini = on; this.saveFrame(); this.applyFrame(); if (!on) { this.sig = ""; this.renderTab(true); } }
     private setMax(on: boolean): void { if (this.frame.mini) return; this.frame.max = on; this.saveFrame(); this.applyFrame(); }
     private setStage(s: StageSize): void { this.frame.stage = s; this.saveFrame(); this.applyFrame(); }
-    private setSound(on: boolean): void { this.frame.sound = on; this.saveFrame(); this.sound.set(on, this.frame.volume); this.applyFrame(); if (on) this.sound.play("click"); }
+    private setSound(on: boolean): void { this.frame.sfx = on; this.saveFrame(); this.sound.set(on, this.frame.volume); this.applyFrame(); if (on) this.sound.play("click"); }
     /** A short pulse on the frame, so a click on the launcher visibly finds the window. */
     private flash(): void { this.win.classList.remove("flash"); void this.win.offsetWidth; this.win.classList.add("flash"); }
 
