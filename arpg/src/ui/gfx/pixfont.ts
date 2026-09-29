@@ -95,10 +95,11 @@ const G: Record<string, string[]> = {
     "Э": [".###.", "#...#", "....#", ".####", "....#", "#...#", ".###."],
     "Ю": ["#..##.", "#.#..#", "#.#..#", "###..#", "#.#..#", "#.#..#", "#..##."],
     "Я": [".####", "#...#", "#...#", ".####", "..#.#", ".#..#", "#...#"],
+    // Guillemets, the quotation marks of Russian and Ukrainian text.
+    "«": [".....", "..#.#", ".#.#.", "#.#..", ".#.#.", "..#.#", "....."],
+    "»": [".....", "#.#..", ".#.#.", "..#.#", ".#.#.", "#.#..", "....."],
 };
 
-/** Every capital the canvas font draws beyond ASCII (tests check translations against it). */
-export const CYRILLIC_CAPS = "АБВГҐДЕЁЄЖЗИЙІЇКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
 
 /** The glyph bitmaps, also the source of the "Hollow Pixel" web font (tools/make-font.ts). */
 export const GLYPHS: Readonly<Record<string, string[]>> = G;

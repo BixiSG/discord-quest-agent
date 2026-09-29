@@ -1,7 +1,6 @@
 // "While you were away": collects what happened during a catch-up.
 
-import { COMPANIONS, MONSTERS, ZONES } from "../data";
-import { itemLabel } from "../items";
+import { MONSTERS } from "../data";
 import type { GameState } from "../state";
 import type { Item } from "../types";
 import type { SimEvents } from "./engine";
@@ -20,14 +19,17 @@ export interface Report {
     salvaged: number;
     /** Stash items upkeep gave up for better drops. */
     swapped: number;
-    /** Relics found for the first time. */
+    /** Relics found for the first time (relic ids). */
     newRelics: string[];
-    /** Companions that joined. */
+    /** Companions that joined (ids). */
     newCompanions: string[];
     dust: number;
-    equipped: string[];
+    /** Items put on. */
+    equipped: Item[];
     best: Item[];
+    /** Zones opened (ids). */
     zones: string[];
+    /** Story beats (string keys). */
     story: string[];
 }
 
@@ -42,8 +44,8 @@ export function startReport(state: GameState): { report: Report; events: SimEven
         death: () => { report.deaths++; },
         runDone: () => { report.runs++; },
         loot: (item, kept, equipped) => {
-            if (item.relic && !seen.has(item.relic)) { seen.add(item.relic); report.newRelics.push(itemLabel(item)); }
-            if (equipped) report.equipped.push(itemLabel(item));
+            if (item.relic && !seen.has(item.relic)) { seen.add(item.relic); report.newRelics.push(item.relic); }
+            if (equipped) report.equipped.push(item);
             else if (kept) report.kept++;
             else report.salvaged++;
             if (kept && (item.rarity === "rare" || item.rarity === "relic")) {
@@ -51,9 +53,9 @@ export function startReport(state: GameState): { report: Report; events: SimEven
                 if (report.best.length > 6) report.best.shift();
             }
         },
-        zone: (_from, to, why) => { if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to); },
-        story: text => { report.story.push(text); },
-        companion: (id, isNew) => { if (isNew) report.newCompanions.push(COMPANIONS[id]?.name ?? id); },
+        zone: (_from, to, why) => { if (why === "unlock") report.zones.push(to); },
+        story: key => { report.story.push(key); },
+        companion: (id, isNew) => { if (isNew) report.newCompanions.push(id); },
     };
     return {
         report, events,

@@ -113,8 +113,8 @@ const MORE: Record<string, string[]> = {
     "я": ["....", "....", ".###", "#..#", ".###", ".#.#", "#..#"],
 };
 
-/** Code points past ASCII: the Cyrillic of Russian and Ukrainian (capitals come from gfx/pixfont.ts). */
-export const EXTRA = [..."АБВГҐДЕЁЄЖЗИЙІЇКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгґдеёєжзийіїклмнопрстуфхцчшщъыьэюя"].map(c => c.codePointAt(0)!).sort((a, b) => a - b);
+/** Code points past ASCII: the Cyrillic of Russian and Ukrainian and their guillemets (capitals and guillemets come from gfx/pixfont.ts). */
+export const EXTRA = [..."«»АБВГҐДЕЁЄЖЗИЙІЇКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгґдеёєжзийіїклмнопрстуфхцчшщъыьэюя"].map(c => c.codePointAt(0)!).sort((a, b) => a - b);
 
 interface Glyph { code: number; rows: string[]; adv: number; rects: [number, number, number, number][] }
 

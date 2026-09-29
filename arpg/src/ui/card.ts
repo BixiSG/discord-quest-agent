@@ -13,10 +13,14 @@ import { loadSprites } from "./gfx/sprites";
 import { installTips } from "./tips";
 import { loadPixelFont } from "./gfx/webfont";
 import type { Summary } from "./app";
+import { setLang, t } from "../i18n";
+import { className, zoneName } from "../i18n/names";
 
 export interface CardApi {
     t(key: string, params?: Record<string, unknown>): string;
     theme(): string;
+    /** The hub's language: class and zone names follow it (the card's own lines are the hub's strings). */
+    lang?(): string;
 }
 
 /** What the game window is doing. */
@@ -54,6 +58,7 @@ const CARD_CSS = `
 
 export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null, status: CardStatus, act: CardActions): { unmount(): void } {
     void loadPixelFont();
+    if (api.lang) setLang(api.lang());
     const holder = document.createElement("div");
     const root = holder.attachShadow({ mode: "open" });
     const style = document.createElement("style");
@@ -65,7 +70,7 @@ export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null
 
     const stateText = status === "open" ? api.t("card.stateOpen") : status === "mini" ? api.t("card.stateMini") : "";
     const bar = h("div", { class: "bar" }, h("span", { class: "logo", text: api.t("title") }),
-        stateText ? h("span", { class: "state live", text: stateText }) : h("span", { class: "state", text: "idle arpg" }));
+        stateText ? h("span", { class: "state live", text: stateText }) : h("span", { class: "state", text: t("card.idle") }));
     const inner = h("div", { class: "in" });
     const card = h("div", { class: `hc${summary ? "" : " new"}` }, bar, inner);
 
@@ -84,14 +89,15 @@ export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null
     void loadSprites().then(() => { if (holder.isConnected) paint(); });
 
     if (summary) {
-        const zone = ZONES[summary.zone]?.name ?? summary.zone;
+        // The summary keeps the place's name as it was saved; a story zone is named again in today's language.
+        const zone = summary.zoneId && ZONES[summary.zoneId] ? zoneName(summary.zoneId) : summary.zone;
         const xp = Math.max(0, Math.min(1, summary.xpFrac));
         const seen = status === "closed" ? api.t("card.away", { time: fmtDuration(Math.max(0, Date.now() - summary.savedAt)) }) : status === "mini" ? api.t("card.inMini") : api.t("card.inWindow");
         inner.append(h("div", { class: "chero" }, pic, h("div", { class: "facts" },
             h("div", { class: "name", text: summary.name }),
-            h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls]?.name ?? summary.cls, zone }) }),
+            h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls] ? className(summary.cls) : summary.cls, zone }) }),
             h("div", { class: "xpbar", title: `${(xp * 100).toFixed(1)}%` }, h("i", { style: `width:${(xp * 100).toFixed(1)}%` })),
-            h("div", { class: "xpl", text: `${(xp * 100).toFixed(0)}% XP` }),
+            h("div", { class: "xpl", text: t("card.xp", { n: (xp * 100).toFixed(0) }) }),
             h("div", { class: "muted", text: seen }))));
     } else {
         inner.append(h("div", { class: "chero" }, pic, h("div", { class: "story", text: api.t("card.new") })));

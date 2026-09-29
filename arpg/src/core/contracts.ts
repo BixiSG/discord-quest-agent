@@ -8,6 +8,8 @@ import { CURRENCIES, CURRENCY_ORDER, MAX_TIER, PINNACLES, RELICS } from "./data"
 import { endgameOpen, addMap, rollMap } from "./maps";
 import { maxIlvl } from "./crafting";
 import { pushLog, receiveItem } from "./game";
+import { ref } from "../i18n/refs";
+import { contractGoal } from "../i18n/names";
 import { Rng, hashSeed } from "./rng";
 import { grantCompanion, missingCompanions } from "./companions";
 import type { GameState } from "./state";
@@ -30,16 +32,10 @@ export interface ContractBoard { list: Contract[]; seq: number; done: number }
 
 export const BOARD_SIZE = 3;
 
-const KIND_TEXT: Record<ContractKind, (c: Contract) => string> = {
-    kills: c => `Slay ${c.target} monsters`,
-    champions: c => `Slay ${c.target} champions`,
-    bosses: c => `Defeat ${c.target} bosses`,
-    runs: c => `Clear ${c.target} runs on the road`,
-    maps: c => `Complete ${c.target} maps of tier ${c.tier ?? 1} or deeper`,
-    rares: c => `Find ${c.target} rare items`,
-};
+const KINDS: ContractKind[] = ["kills", "champions", "bosses", "runs", "maps", "rares"];
 
-export const contractText = (c: Contract) => KIND_TEXT[c.kind](c);
+/** What a contract asks, in English ("Slay 1800 monsters"); the UI uses i18n/names contractGoal. */
+export const contractText = (c: Contract) => contractGoal(c.kind, c.target, c.tier, "en");
 
 /**
  * Dust a contract pays: what it was rolled with, or more if the hero has grown
@@ -107,7 +103,7 @@ export function contractEvent(s: GameState, kind: ContractKind, tier = 0): void 
         if (c.kind !== kind || c.n >= c.target) continue;
         if (kind === "maps" && tier < (c.tier ?? 1)) continue;
         c.n++;
-        if (c.n >= c.target) pushLog(s, "info", `Contract done: ${contractText(c)}. Claim it on the World tab.`);
+        if (c.n >= c.target) pushLog(s, "info", "log.contractDone", { goal: ref.contract(c.kind, c.target, c.tier) });
     }
 }
 
@@ -129,7 +125,7 @@ export function claimContract(s: GameState, i: number): string | null {
         if (def) {
             const item = { uid: s.nextUid++, base: def.base, ilvl: Math.max(def.level, maxIlvl(s)), rarity: "relic" as const, affixes: [], relic: def.id, relicRolls: def.mods.map(m => rng.int(m.range[0], m.range[1])) };
             receiveItem(s, item);
-            pushLog(s, "loot", `Contract reward: ${def.name}.`);
+            pushLog(s, "loot", "log.contractRelic", { relic: ref.relic(def.id) });
         } else s.dust += dust; // the codex filled up meanwhile: double dust instead
     }
     if (c.extra === "companion") {
@@ -172,7 +168,7 @@ export function rerollContract(s: GameState, i: number): string | null {
 export function cleanContracts(s: GameState): void {
     const raw = s.contracts as unknown;
     const b = raw && typeof raw === "object" ? (raw as ContractBoard) : { list: [], seq: 0, done: 0 };
-    const kinds = Object.keys(KIND_TEXT);
+    const kinds: string[] = KINDS;
     const ok = (v: unknown, min = 0) => typeof v === "number" && Number.isFinite(v) && v >= min;
     b.list = (Array.isArray(b.list) ? b.list : []).filter(c => c && kinds.includes(c.kind) && ok(c.target, 1) && ok(c.n) && ok(c.dust)).slice(0, BOARD_SIZE)
         .map(c => {

@@ -8,6 +8,9 @@ import { modText } from "./text";
 import { textSprite } from "./gfx/pixfont";
 import { pixelize } from "./gfx/pix";
 import type { Ctx } from "./views";
+import { t, tn } from "../i18n";
+import { ascBlurb, ascName, ascNodeName, className, keystoneText, nodeName } from "../i18n/names";
+import { tErr } from "../i18n/errors";
 
 // Pan and zoom survive re-renders of the view.
 const cam = { x: 0, y: 0, z: 0.55, centred: "" };
@@ -28,13 +31,13 @@ export function treeView(c: Ctx): HTMLElement {
     const wrap = h("div", { class: "treewrap" }, canvas, info);
     const pts = pointsLeft(hero);
     const head = h("div", { class: "row" },
-        h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: `${pts} point${pts === 1 ? "" : "s"} left` }),
-        h("span", { class: "tag", text: `${hero.passives.length} taken` }),
-        h("span", { class: "muted", style: "font-size:12px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
+        h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: tn("tree.left", pts) }),
+        h("span", { class: "tag", text: t("tree.taken", { n: hero.passives.length }) }),
+        h("span", { class: "muted", style: "font-size:12px", text: t("tree.help") }),
         h("span", { class: "grow" }),
         h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
         h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
-        h("button", { class: "btn alt", text: "Centre", on: { click: () => { cam.centred = ""; centre(); draw(); } } }));
+        h("button", { class: "btn alt", text: t("tree.centre"), on: { click: () => { cam.centred = ""; centre(); draw(); } } }));
 
     const taken = new Set(hero.passives);
     const start = PASSIVES[`start_${hero.cls}`]!;
@@ -105,7 +108,7 @@ export function treeView(c: Ctx): HTMLElement {
             if (n.kind === "start") gem(x, y, r * 0.5, n.cls === hero.cls ? "#ff5a36" : "#6b5d4b", "#000000");
             if (n === hover || n === selected) { g.strokeStyle = "#ff5a36"; g.lineWidth = 2; g.strokeRect(Math.round(x - r - 6), Math.round(y - r - 6), Math.round(2 * r + 12), Math.round(2 * r + 12)); }
             if ((n.kind === "notable" || n.kind === "keystone" || n.kind === "start") && cam.z > 0.45) {
-                const label = n.kind === "start" ? (n.cls ?? "").toUpperCase() : n.name.toUpperCase();
+                const label = (n.kind === "start" ? (n.cls ? className(n.cls) : "") : nodeName(n)).toUpperCase();
                 const t = textSprite(label, own ? "#ffc233" : "#e6d9b8", "#000000");
                 g.drawImage(t, Math.round(x - t.width), Math.round(y + r + 6), t.width * 2, t.height * 2);
             }
@@ -119,23 +122,24 @@ export function treeView(c: Ctx): HTMLElement {
         const pinned = n === selected;
         info.classList.toggle("pinned", pinned);
         const own = taken.has(n.id);
-        info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
+        const name = n.kind === "start" && n.cls ? `${nodeName(n)} - ${className(n.cls)}` : nodeName(n);
+        info.append(h("h3", { text: n.kind === "notable" ? t("tree.notable", { name }) : n.kind === "keystone" ? t("tree.keystone", { name }) : name }));
         for (const m of n.mods) info.append(h("div", { text: modText(m) }));
-        if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: KEYSTONE_TEXT[n.name]! }));
-        if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? "Your ember seat." : "Another calling starts here." }));
+        if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: keystoneText(n.name) }));
+        if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? t("tree.yourSeat") : t("tree.otherSeat") }));
         const row = h("div", { class: "row", style: "margin-top:6px" });
         if (own) {
             const ok = canRefund(hero, n.id);
-            row.append(h("button", { class: "btn alt", text: `Refund (${refundCost(hero)} dust)`, attrs: ok ? {} : { disabled: "" }, title: ok ? "" : "Other taken nodes depend on it",
+            row.append(h("button", { class: "btn alt", text: t("tree.refund", { n: refundCost(hero) }), attrs: ok ? {} : { disabled: "" }, title: ok ? "" : t("tree.depends"),
                 on: { click: () => c.act(s => refund(s, n.id)) } }));
         } else if (n.kind !== "start") {
             const err = canAllocate(hero, n.id);
-            row.append(h("button", { class: "btn", text: "Take", attrs: err ? { disabled: "" } : {}, title: err ?? "", on: { click: () => c.act(s => allocate(s, n.id)) } }));
-            if (err) row.append(h("span", { class: "muted", text: err }));
+            row.append(h("button", { class: "btn", text: t("tree.take"), attrs: err ? { disabled: "" } : {}, title: err ? tErr(err) : "", on: { click: () => c.act(s => allocate(s, n.id)) } }));
+            if (err) row.append(h("span", { class: "muted", text: tErr(err) }));
         }
         if (pinned) info.append(row);
-        else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
-        else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: "Click to pin it (refund)." }));
+        else if (!own && n.kind !== "start") { const e = canAllocate(hero, n.id); info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: e ? tErr(e) : t("tree.clickTake") })); }
+        else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: t("tree.clickPin") }));
         pixelize(info);
         place(n);
     }
@@ -218,16 +222,16 @@ function ascCard(c: Ctx): HTMLElement {
     const hero = c.state.hero;
     const card = h("div", { class: "card col" });
     const left = ascPointsLeft(hero);
-    card.append(h("h3", { text: `Ascendancy${hero.asc ? `: ${ASCENDANCIES[hero.asc]!.name}` : ""} (${left} point${left === 1 ? "" : "s"} left)` }));
+    card.append(h("h3", { text: hero.asc && ASCENDANCIES[hero.asc] ? tn("asc.titleNamed", left, { name: ascName(hero.asc) }) : tn("asc.title", left) }));
     if (!hero.asc) {
-        card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? "Choose your path. This is permanent for this hero." : "Pass a Trial (the first opens in Act 1 after the Sunken Chapel) to earn ascendancy points." }));
+        card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? t("asc.choose") : t("asc.earn") }));
         const row = h("div", { class: "grid2" });
         for (const a of Object.values(ASCENDANCIES).filter(x => x.cls === hero.cls)) {
             row.append(h("div", { class: "skill" },
                 h("span", { style: `flex:none;width:12px;align-self:stretch;background:${a.color};border:2px solid #1a1410` }),
-                h("div", { class: "grow" }, h("div", { class: "nm", text: a.name }), h("div", { class: "ds", text: a.blurb }),
-                    ...a.nodes.map(n => h("div", { class: "ds muted", text: `${n.name}: ${n.mods.map(modText).join(", ")}` })),
-                    h("button", { class: "btn", style: "margin-top:6px", text: `Become ${a.name}`, attrs: hero.ascPoints > 0 ? {} : { disabled: "" },
+                h("div", { class: "grow" }, h("div", { class: "nm", text: ascName(a.id) }), h("div", { class: "ds", text: ascBlurb(a.id) }),
+                    ...a.nodes.map(n => h("div", { class: "ds muted", text: t("asc.node", { name: ascNodeName(n.id), mods: n.mods.map(m => modText(m)).join(t("common.list")) }) })),
+                    h("button", { class: "btn", style: "margin-top:6px", text: t("asc.become", { name: ascName(a.id) }), attrs: hero.ascPoints > 0 ? {} : { disabled: "" },
                         on: { click: () => c.act(s => chooseAscendancy(s, a.id)) } }))));
         }
         card.append(row);
@@ -238,8 +242,8 @@ function ascCard(c: Ctx): HTMLElement {
     for (const n of a.nodes) {
         const own = hero.ascNodes.includes(n.id);
         grid.append(h("div", { class: `skill${own ? " on" : ""}`, on: { click: () => { if (!own) c.act(s => takeAscNode(s, n.id)); } } },
-            h("div", { class: "grow" }, h("div", { class: "nm", text: n.name }), ...n.mods.map(md => h("div", { class: "ds", text: modText(md) }))),
-            h("div", { class: "tag", text: own ? "taken" : left > 0 ? "take" : "locked" })));
+            h("div", { class: "grow" }, h("div", { class: "nm", text: ascNodeName(n.id) }), ...n.mods.map(md => h("div", { class: "ds", text: modText(md) }))),
+            h("div", { class: "tag", text: own ? t("asc.taken") : left > 0 ? t("asc.take") : t("asc.locked") })));
     }
     card.append(grid);
     return card;

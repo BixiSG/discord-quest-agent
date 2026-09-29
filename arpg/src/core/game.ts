@@ -2,8 +2,11 @@
 // hero.rev when the stat sheet changes.
 
 import { deriveSheet, type Sheet } from "./character";
-import { BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
-import { baseOf, itemLabel, levelReq, salvageValue } from "./items";
+import { CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
+import { baseOf, levelReq, salvageValue } from "./items";
+import { logLine } from "../i18n/names";
+import { ref } from "../i18n/refs";
+import type { Params } from "../i18n";
 import { hashSeed } from "./rng";
 import { DEFAULT_FILTER, keepItem } from "./filter";
 import { newTotals, type GameState, type LogEntry } from "./state";
@@ -27,7 +30,7 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true }, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
-    pushLog(state, "info", `${opts.name} wakes on the shore.`);
+    pushLog(state, "info", "log.wake", { name: opts.name });
     return state;
 }
 
@@ -42,8 +45,14 @@ export function sheetOf(state: GameState): Sheet {
     return sheet;
 }
 
-export function pushLog(state: GameState, kind: LogEntry["kind"], text: string): void {
-    state.log.push({ t: state.simTo, kind, text });
+/**
+ * Adds a chronicle line: a string key and params (content as references, i18n/refs.ts), with the
+ * English text alongside for exports and older readers.
+ */
+export function pushLog(state: GameState, kind: LogEntry["kind"], key: string, params?: Params): void {
+    const e: LogEntry = { t: state.simTo, kind, text: logLine(key, params, "en"), key };
+    if (params) e.params = params;
+    state.log.push(e);
     if (state.log.length > LOG_MAX) state.log.splice(0, state.log.length - LOG_MAX);
 }
 
@@ -306,7 +315,7 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
     if (state.settings.autoEquip) {
         const slot = upgradeSlot(state, item);
         if (slot && equipWithRoom(state, item, slot)) {
-            pushLog(state, "loot", `Equipped a new ${BASES[item.base]!.name}.`);
+            pushLog(state, "loot", "log.equippedNew", { base: ref.base(item.base) });
             return { kept: true, equipped: true };
         }
     }
@@ -333,7 +342,7 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
             // less than everything is simply salvaged; only a stash upkeep can't touch at all is "full".
             const v = state.settings.upkeep ? upkeepVictims(state, 1)[0] : undefined;
             if (v && stashWorth(v, state.hero.level) < stashWorth(item, state.hero.level)) { giveUp(state, v); state.stash.push(item); state.stashFull = false; return true; }
-            if (!v && !state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
+            if (!v && !state.stashFull) { state.stashFull = true; pushLog(state, "loot", "log.stashFull"); }
         }
     }
     salvageItem(state, item);
@@ -398,7 +407,7 @@ export function equipUpgrades(state: GameState, only?: (x: Item) => boolean): nu
         const home = state.stash.includes(best.item) ? state.stash : state.relics;
         takeOut(state, best.item);
         if (!equipWithRoom(state, best.item, best.slot)) { home.push(best.item); break; }
-        pushLog(state, "loot", `Equipped ${itemLabel(best.item)} from the ${home === state.stash ? "stash" : "relic case"}.`);
+        pushLog(state, "loot", home === state.stash ? "log.equippedFromStash" : "log.equippedFromCase", { item: ref.item(best.item) });
         n++;
     }
     return n;

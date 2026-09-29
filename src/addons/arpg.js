@@ -5,12 +5,12 @@
   function splitmix32(a) {
     return () => {
       a = a + 2654435769 | 0;
-      let t = a ^ a >>> 16;
-      t = Math.imul(t, 569420461);
-      t ^= t >>> 15;
-      t = Math.imul(t, 1935289751);
-      t ^= t >>> 15;
-      return t >>> 0;
+      let t2 = a ^ a >>> 16;
+      t2 = Math.imul(t2, 569420461);
+      t2 ^= t2 >>> 15;
+      t2 = Math.imul(t2, 1935289751);
+      t2 ^= t2 >>> 15;
+      return t2 >>> 0;
     };
   }
   function hashSeed(...parts) {
@@ -35,14 +35,14 @@
     /** Uniform uint32. */
     u32() {
       let [a, b, c, d] = this.s;
-      const t = (a + b | 0) + d | 0;
+      const t2 = (a + b | 0) + d | 0;
       d = d + 1 | 0;
       a = b ^ b >>> 9;
       b = c + (c << 3) | 0;
       c = c << 21 | c >>> 11;
-      c = c + t | 0;
+      c = c + t2 | 0;
       this.s = [a >>> 0, b >>> 0, c >>> 0, d >>> 0];
-      return t >>> 0;
+      return t2 >>> 0;
     }
     /** Uniform float in [0, 1). */
     next() {
@@ -689,7 +689,7 @@
       level: lvl,
       implicit: [{ stat: "damage", kind: "inc", value: 10 + 2 * i, tags: ["projectile"] }]
     }));
-    const JEWELS = [
+    const JEWELS3 = [
       ["amulet_might", "amulet", "Iron Torc", 1, [{ stat: "str", kind: "flat", value: 20 }]],
       ["amulet_grace", "amulet", "Shell Pendant", 1, [{ stat: "dex", kind: "flat", value: 20 }]],
       ["amulet_wit", "amulet", "Pearl Locket", 1, [{ stat: "int", kind: "flat", value: 20 }]],
@@ -707,7 +707,7 @@
       ["belt_chain", "belt", "Chain Belt", 25, [{ stat: "energyShield", kind: "flat", value: 20 }]],
       ["belt_plate", "belt", "Plated Sash", 45, [{ stat: "flaskHeal", kind: "inc", value: 25 }]]
     ];
-    for (const [id, slot, name, level, implicit] of JEWELS) add({ id, name, slot, kind: slot, level, implicit });
+    for (const [id, slot, name, level, implicit] of JEWELS3) add({ id, name, slot, kind: slot, level, implicit });
     return out;
   }
   var BASES = build();
@@ -1795,7 +1795,7 @@
     return nodes;
   }
   var PASSIVES = build2();
-  var KEYSTONE_TEXT = Object.fromEntries(KEYSTONES.map(([n, , t]) => [n, t]));
+  var KEYSTONE_TEXT = Object.fromEntries(KEYSTONES.map(([n, , t2]) => [n, t2]));
   function passivePoints(level, bonus) {
     return level - 1 + bonus;
   }
@@ -2187,7 +2187,7 @@
     { id: "rotting", text: "Monsters deal 25% extra damage as chaos", extra: ["chaos", 0.25], qty: 8, rarity: 10 },
     { id: "crowded", text: "40% more monster packs", packs: 40, qty: 12, rarity: 6 },
     { id: "parched", text: "You regenerate 60% less life", hero: [{ stat: "lifeRegen", kind: "more", value: -60 }, { stat: "lifeRegenPct", kind: "more", value: -60 }], qty: 6, rarity: 8 },
-    { id: "exposed", text: "-12% to all maximum resistances", hero: ["fire", "cold", "lightning"].map((t) => ({ stat: `maxRes.${t}`, kind: "flat", value: -12 })), qty: 10, rarity: 12 },
+    { id: "exposed", text: "-12% to all maximum resistances", hero: ["fire", "cold", "lightning"].map((t2) => ({ stat: `maxRes.${t2}`, kind: "flat", value: -12 })), qty: 10, rarity: 12 },
     { id: "brittle", text: "You take 15% more damage", hero: [{ stat: "dmgTaken", kind: "more", value: 15 }], qty: 9, rarity: 10 },
     { id: "dulled", text: "You deal 15% less damage", hero: [{ stat: "damage", kind: "more", value: -15 }], qty: 9, rarity: 10 }
   ];
@@ -2218,7 +2218,7 @@
     ["glasschoir", "The Glass Choir", "p_glasschoir", "prism_sigil", "Prism Sigil", 3, 84, 10, ["#a8e6f5", "#6fa3b8", "#ffffff"], "A thousand shards singing one note. The note is your name."],
     ["ashenking", "The Ashen King", "p_ashenking", "ash_sigil", "Ash Sigil", 3, 88, 14, ["#1c1414", "#4a2a20", "#ff5a36"], "He was crowned the day the sun fell and has ruled the ash since."],
     ["hollowcrown", "The Hollow Crown", "p_hollowcrown", "hollow_sigil", "Hollow Sigil", 4, 96, 18, ["#0a0a0f", "#2a2233", "#b9a4ff"], "At the bottom of the Depths, the thing that ate the sun's light waits to be fed again."]
-  ].map(([id, name, boss, sigil, sigilName, cost, level, minTier, palette, text]) => [id, { id, name, boss, sigil, sigilName, cost, level, minTier, palette, text }]));
+  ].map(([id, name, boss, sigil, sigilName2, cost, level, minTier, palette, text]) => [id, { id, name, boss, sigil, sigilName: sigilName2, cost, level, minTier, palette, text }]));
 
   // src/core/data/companions.ts
   var COMPANION_MAX_LEVEL = 20;
@@ -2354,10 +2354,6 @@
     if (c.bonus.tags) mod.tags = c.bonus.tags;
     return mod;
   }
-  var companionText = (id, level) => {
-    const m4 = companionMod(id, level);
-    return m4 ? COMPANIONS[id].bonus.text.replace("{0}", String(m4.value)) : "";
-  };
 
   // src/core/stats.ts
   var StatBag = class _StatBag {
@@ -2380,7 +2376,7 @@
     static applies(m4, ctx) {
       if (!m4.tags || m4.tags.length === 0) return true;
       if (!ctx) return false;
-      for (const t of m4.tags) if (!ctx.has(t)) return false;
+      for (const t2 of m4.tags) if (!ctx.has(t2)) return false;
       return true;
     }
     /** Sum of flat or inc values. */
@@ -2412,7 +2408,7 @@
   };
   var tagSet = (...groups) => {
     const s = /* @__PURE__ */ new Set();
-    for (const g of groups) if (g) for (const t of g) s.add(t);
+    for (const g of groups) if (g) for (const t2 of g) s.add(t2);
     return s;
   };
 
@@ -2461,7 +2457,7 @@
     return Object.values(AFFIXES).filter((a) => (!type || a.type === type) && counts[a.type] < max[a.type] && !groups.has(a.group) && a.tiers[0].ilvl <= item.ilvl && a.domains.some((x) => dom.has(x)));
   }
   function rollTier(rng, def2, ilvl) {
-    const allowed = def2.tiers.map((t, i) => ({ t, i })).filter((x) => x.t.ilvl <= ilvl);
+    const allowed = def2.tiers.map((t2, i) => ({ t: t2, i })).filter((x) => x.t.ilvl <= ilvl);
     const pick = rng.weighted(allowed, (x) => Math.pow(0.62, x.i)) ?? allowed[0];
     return { id: def2.id, tier: pick.i, rolls: pick.t.ranges.map(([lo, hi]) => rng.int(lo, hi)) };
   }
@@ -2519,11 +2515,6 @@
     if (!def2) return null;
     return { uid, base: def2.base, ilvl, rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m4) => rng.int(m4.range[0], m4.range[1])) };
   }
-  function relicLines(item) {
-    const def2 = relicOf(item);
-    if (!def2) return [];
-    return def2.mods.map((m4, i) => m4.text.replace("{0}", String(item.relicRolls?.[i] ?? m4.range[0])));
-  }
   function rawMods(item) {
     const out = [];
     const b = baseOf(item);
@@ -2553,9 +2544,9 @@
     if (b.weapon) {
       const inc = 1 + (local("local.physInc") + (item.quality ?? 0)) / 100;
       const added = {};
-      for (const t of ["fire", "cold", "lightning"]) {
-        const lo = local(`local.addMin.${t}`), hi = local(`local.addMax.${t}`);
-        if (lo || hi) added[t] = [lo, hi];
+      for (const t2 of ["fire", "cold", "lightning"]) {
+        const lo = local(`local.addMin.${t2}`), hi = local(`local.addMax.${t2}`);
+        if (lo || hi) added[t2] = [lo, hi];
       }
       out.weapon = {
         ...b.weapon,
@@ -2587,10 +2578,6 @@
       return [p ? affixOf(p).label : "", b.name, s ? affixOf(s).label : ""].filter(Boolean).join(" ");
     }
     return b.name;
-  }
-  function affixText(a) {
-    const def2 = affixOf(a);
-    return def2.text.replace(/\{(\d)\}/g, (_, i) => String(a.rolls[+i] ?? "?"));
   }
   function tierLabel(a) {
     return affixOf(a).tiers.length - a.tier;
@@ -2709,7 +2696,7 @@
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
     const mods = [...extra, ...passiveMods(hero), ...petMods(hero)];
-    let armour = 0, evasion = 0, es = 0, block = 0;
+    let armour3 = 0, evasion = 0, es = 0, block = 0;
     const problems = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
     mods.push({ stat: "dex", kind: "flat", value: cls.dex, src: cls.name });
@@ -2724,13 +2711,13 @@
       const st = itemStats(it);
       mods.push(...st.global);
       if (st.defence) {
-        armour += st.defence.armour;
+        armour3 += st.defence.armour;
         evasion += st.defence.evasion;
         es += st.defence.energyShield;
         block += st.defence.block ?? 0;
       }
     }
-    return { mods, armour, evasion, es, block, problems };
+    return { mods, armour: armour3, evasion, es, block, problems };
   }
   function zeroes() {
     return { phys: 0, fire: 0, cold: 0, lightning: 0, chaos: 0 };
@@ -2738,9 +2725,9 @@
   function zeroRanges() {
     return { phys: [0, 0], fire: [0, 0], cold: [0, 0], lightning: [0, 0], chaos: [0, 0] };
   }
-  function armourReduction(armour, hit) {
+  function armourReduction(armour3, hit) {
     if (hit <= 0) return 0;
-    return Math.min(0.85, armour / (armour + 8 * hit));
+    return Math.min(0.85, armour3 / (armour3 + 8 * hit));
   }
   function hitChance(acc, eva) {
     if (acc + eva <= 0) return 1;
@@ -2751,7 +2738,7 @@
     const bag = new StatBag(base.mods);
     const problems = [...base.problems];
     const cls = CLASSES[hero.cls];
-    const L = hero.level;
+    const L2 = hero.level;
     const str = Math.round(bag.calc("str")), dex = Math.round(bag.calc("dex")), int = Math.round(bag.calc("int"));
     bag.add({ stat: "life", kind: "flat", value: Math.floor(str / 2), src: "Might" });
     bag.add({ stat: "damage", kind: "inc", value: Math.floor(str / 5), tags: ["melee", "phys"], src: "Might" });
@@ -2759,33 +2746,33 @@
     bag.add({ stat: "evasion", kind: "inc", value: Math.floor(dex / 5), src: "Grace" });
     bag.add({ stat: "mana", kind: "flat", value: Math.floor(int / 2), src: "Wit" });
     bag.add({ stat: "energyShield", kind: "inc", value: Math.floor(int / 5), src: "Wit" });
-    const life = Math.max(1, Math.round(bag.calc("life", heroBaseLife(L, cls.life))));
-    const mana = Math.max(1, Math.round(bag.calc("mana", heroBaseMana(L))));
+    const life = Math.max(1, Math.round(bag.calc("life", heroBaseLife(L2, cls.life))));
+    const mana = Math.max(1, Math.round(bag.calc("mana", heroBaseMana(L2))));
     const es = Math.round(bag.calc("energyShield", base.es));
-    const armour = Math.round(bag.calc("armour", base.armour));
-    const evasion = Math.round(bag.calc("evasion", base.evasion + 15 + 3 * L));
+    const armour3 = Math.round(bag.calc("armour", base.armour));
+    const evasion = Math.round(bag.calc("evasion", base.evasion + 15 + 3 * L2));
     const block = Math.min(50, bag.calc("block", base.block));
     const maxRes = zeroes(), res = zeroes(), resRaw = zeroes();
-    for (const t of DAMAGE_TYPES) {
-      maxRes[t] = Math.min(90, 75 + bag.flat(`maxRes.${t}`));
-      resRaw[t] = Math.round(bag.flat(`res.${t}`));
-      res[t] = Math.min(maxRes[t], resRaw[t]);
+    for (const t2 of DAMAGE_TYPES) {
+      maxRes[t2] = Math.min(90, 75 + bag.flat(`maxRes.${t2}`));
+      resRaw[t2] = Math.round(bag.flat(`res.${t2}`));
+      res[t2] = Math.min(maxRes[t2], resRaw[t2]);
     }
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
     const manaRegen = bag.flat("manaRegen") + mana * 0.07;
     const skill = calcSkill(hero, bag, problems, manaRegen);
-    const ref = monsterDamage(L) * 1.5;
+    const ref2 = monsterDamage(L2) * 1.5;
     const pool = life + es;
-    const evade = 1 - Math.max(0.25, hitChance(monsterDefence(L), evasion));
+    const evade = 1 - Math.max(0.25, hitChance(monsterDefence(L2), evasion));
     const blk = block / 100;
     const dmgTaken = bag.incMult("dmgTaken") * bag.more("dmgTaken");
     const ehp = zeroes();
-    for (const t of DAMAGE_TYPES) {
-      const through = t === "phys" ? (1 - armourReduction(armour, ref)) * (1 - evade) : 1 - res[t] / 100;
-      ehp[t] = Math.round(pool / Math.max(0.01, through * (1 - blk) * dmgTaken));
+    for (const t2 of DAMAGE_TYPES) {
+      const through = t2 === "phys" ? (1 - armourReduction(armour3, ref2)) * (1 - evade) : 1 - res[t2] / 100;
+      ehp[t2] = Math.round(pool / Math.max(0.01, through * (1 - blk) * dmgTaken));
     }
     return {
-      level: L,
+      level: L2,
       str,
       dex,
       int,
@@ -2794,7 +2781,7 @@
       es,
       lifeRegen,
       manaRegen,
-      armour,
+      armour: armour3,
       evasion,
       block,
       res,
@@ -2815,14 +2802,14 @@
     };
   }
   function calcSkill(hero, heroBag, problems, manaRegen) {
-    const L = hero.level;
+    const L2 = hero.level;
     let def2 = SKILLS[hero.skill];
-    if (!def2 || def2.level > L) {
+    if (!def2 || def2.level > L2) {
       problems.push("skill not available");
       def2 = SKILLS.crescent;
     }
     const weaponItem = hero.equipment.weapon;
-    const wst = weaponItem && levelReq(weaponItem) <= L ? itemStats(weaponItem).weapon : void 0;
+    const wst = weaponItem && levelReq(weaponItem) <= L2 ? itemStats(weaponItem).weapon : void 0;
     const wkind = wst ? BASES[weaponItem.base].kind : "unarmed";
     let usable = true;
     if (def2.kind === "attack" && def2.weapons && def2.weapons.length && !def2.weapons.includes(wkind)) {
@@ -2833,13 +2820,13 @@
     bag.addAll(allMods(heroBag));
     for (const m4 of def2.mods ?? []) bag.add(m4);
     const tags = /* @__PURE__ */ new Set([...def2.tags, def2.kind]);
-    const slots = supportSlots(L);
+    const slots = supportSlots(L2);
     const used = [];
     let manaMult = 1, extraTargets = 0;
     for (const id of hero.supports.slice(0, slots)) {
       const sup = SUPPORTS[id];
-      if (!sup || sup.level > L) continue;
-      if (sup.requires.length && !sup.requires.some((t) => tags.has(t))) {
+      if (!sup || sup.level > L2) continue;
+      if (sup.requires.length && !sup.requires.some((t2) => tags.has(t2))) {
         problems.push(`${sup.name} does not support ${def2.name}`);
         continue;
       }
@@ -2855,32 +2842,32 @@
     if (def2.kind === "attack") {
       const w2 = wst ?? { ...UNARMED, added: {} };
       baseDmg.phys = [w2.phys[0], w2.phys[1]];
-      for (const t of ELEMENTS) {
-        const a = w2.added[t];
-        if (a) baseDmg[t] = [a[0], a[1]];
+      for (const t2 of ELEMENTS) {
+        const a = w2.added[t2];
+        if (a) baseDmg[t2] = [a[0], a[1]];
       }
       crit = w2.crit;
       speed = w2.aps * (def2.speedMult ?? 1);
     } else {
-      const sc = spellScale(L);
-      for (const t of DAMAGE_TYPES) {
-        const d = def2.damage?.[t];
-        if (d) baseDmg[t] = [d[0] * sc, d[1] * sc];
+      const sc = spellScale(L2);
+      for (const t2 of DAMAGE_TYPES) {
+        const d = def2.damage?.[t2];
+        if (d) baseDmg[t2] = [d[0] * sc, d[1] * sc];
       }
       crit = def2.crit ?? 6;
       speed = 1 / (def2.castTime ?? 1);
     }
     const ctx = tagSet([...tags]);
-    for (const t of DAMAGE_TYPES) {
-      const c = tagSet([...tags, t]);
-      const lo = bag.flat(`addMin.${t}`, c), hi = bag.flat(`addMax.${t}`, c);
-      baseDmg[t] = isSpell ? [baseDmg[t][0] + lo * eff, baseDmg[t][1] + hi * eff] : [(baseDmg[t][0] + lo) * eff, (baseDmg[t][1] + hi) * eff];
+    for (const t2 of DAMAGE_TYPES) {
+      const c = tagSet([...tags, t2]);
+      const lo = bag.flat(`addMin.${t2}`, c), hi = bag.flat(`addMax.${t2}`, c);
+      baseDmg[t2] = isSpell ? [baseDmg[t2][0] + lo * eff, baseDmg[t2][1] + hi * eff] : [(baseDmg[t2][0] + lo) * eff, (baseDmg[t2][1] + hi) * eff];
     }
     const conv = zeroes();
     let convTotal = 0;
-    for (const t of ELEMENTS) {
-      conv[t] = Math.max(0, bag.flat(`convert.${t}`, ctx));
-      convTotal += conv[t];
+    for (const t2 of ELEMENTS) {
+      conv[t2] = Math.max(0, bag.flat(`convert.${t2}`, ctx));
+      convTotal += conv[t2];
     }
     conv.chaos = Math.max(0, bag.flat("convert.chaos", ctx));
     convTotal += conv.chaos;
@@ -2896,26 +2883,26 @@
     };
     const physKeep = 1 - Math.min(1, convTotal * scale / 100);
     addPortion("phys", ["phys"], baseDmg.phys[0] * physKeep, baseDmg.phys[1] * physKeep);
-    for (const t of ["fire", "cold", "lightning", "chaos"]) {
-      const share = conv[t] * scale / 100;
-      if (share > 0) addPortion(t, ["phys", t], baseDmg.phys[0] * share, baseDmg.phys[1] * share);
-      addPortion(t, [t], baseDmg[t][0], baseDmg[t][1]);
+    for (const t2 of ["fire", "cold", "lightning", "chaos"]) {
+      const share = conv[t2] * scale / 100;
+      if (share > 0) addPortion(t2, ["phys", t2], baseDmg.phys[0] * share, baseDmg.phys[1] * share);
+      addPortion(t2, [t2], baseDmg[t2][0], baseDmg[t2][1]);
     }
-    for (const t of DAMAGE_TYPES) hit[t] = [Math.round(hit[t][0] * 10) / 10, Math.round(hit[t][1] * 10) / 10];
+    for (const t2 of DAMAGE_TYPES) hit[t2] = [Math.round(hit[t2][0] * 10) / 10, Math.round(hit[t2][1] * 10) / 10];
     const critChance = Math.min(95, (crit + bag.flat("baseCrit", ctx)) * bag.incMult("critChance", ctx) * bag.more("critChance", ctx));
     const critMulti = 150 + bag.flat("critMulti", ctx);
     if (def2.kind === "attack") speed *= bag.incMult("attackSpeed", ctx) * bag.more("attackSpeed", ctx);
     else speed *= bag.incMult("castSpeed", ctx) * bag.more("castSpeed", ctx);
-    const accuracy = Math.round(bag.calc("accuracy", heroBaseAccuracy(L), ctx));
-    const hc = def2.kind === "spell" ? 1 : hitChance(accuracy, monsterDefence(L));
+    const accuracy = Math.round(bag.calc("accuracy", heroBaseAccuracy(L2), ctx));
+    const hc = def2.kind === "spell" ? 1 : hitChance(accuracy, monsterDefence(L2));
     let targets = 1;
     if (def2.shape === "area") targets = Math.max(1, Math.floor((def2.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
     else if (def2.shape === "projectile") targets = 1 + (def2.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
-    const manaCost = Math.round(def2.manaCost * (1 + 0.02 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
+    const manaCost = Math.round(def2.manaCost * (1 + 0.02 * (L2 - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
     const pen = zeroes();
-    for (const t of DAMAGE_TYPES) pen[t] = bag.flat(`pen.${t}`, ctx);
+    for (const t2 of DAMAGE_TYPES) pen[t2] = bag.flat(`pen.${t2}`, ctx);
     let avgHit = 0;
-    for (const t of DAMAGE_TYPES) avgHit += (hit[t][0] + hit[t][1]) / 2;
+    for (const t2 of DAMAGE_TYPES) avgHit += (hit[t2][0] + hit[t2][1]) / 2;
     const critFactor = 1 + critChance / 100 * (critMulti / 100 - 1);
     const sustain = manaCost > 0 ? manaRegen / manaCost / FIGHT_SHARE : Infinity;
     const dps = avgHit * critFactor * Math.min(speed, sustain) * hc;
@@ -2961,7 +2948,7 @@
     "manaCost",
     "baseCrit",
     "skillEffect",
-    ...DAMAGE_TYPES.flatMap((t) => [`addMin.${t}`, `addMax.${t}`, `pen.${t}`, `convert.${t}`])
+    ...DAMAGE_TYPES.flatMap((t2) => [`addMin.${t2}`, `addMax.${t2}`, `pen.${t2}`, `convert.${t2}`])
   ];
 
   // src/core/filter.ts
@@ -3013,7 +3000,6 @@
     if (!a) return group;
     return a.text.replace(/\{\d\}/g, "").replace(/^Adds\s+to\s+/i, "added ").replace(/[+%]/g, "").replace(/\s+/g, " ").trim().replace(/^(to|increased)\s+/i, "").replace(/^maximum\s+/i, "maximum ");
   }
-  var AFFIX_GROUPS = () => [...new Set(Object.values(AFFIXES).map((a) => a.group))].map((group) => ({ group, label: groupLabel(group) })).sort((a, b) => a.label.localeCompare(b.label));
   function ruleMatches(r3, item, heroLevel) {
     const b = BASES[item.base];
     if (!b) return false;
@@ -3030,16 +3016,4435 @@
     for (const r3 of state.settings.filter ?? []) if (r3.on && ruleMatches(r3, item, state.hero.level)) return r3.action === "keep";
     return RANK[item.rarity] >= RANK[state.settings.keep];
   }
-  function describeRule(r3) {
-    const parts = [];
-    parts.push(r3.rarity?.length ? r3.rarity.join("/") : "any rarity");
-    if (r3.slots?.length) parts.push(r3.slots.join("/"));
-    if (r3.minIlvl) parts.push(`ilvl ${r3.minIlvl}+`);
-    if (r3.behind) parts.push(`base ${r3.behind}+ levels behind`);
-    if (r3.minAffixes) parts.push(`${r3.minAffixes}+ affixes`);
-    if (r3.group) parts.push(`with ${groupLabel(r3.group)}`);
-    return `${r3.action === "keep" ? "Keep" : "Salvage"} ${parts.join(", ")}`;
+
+  // src/core/shrine.ts
+  var BLESSINGS = [
+    { id: "insight", name: "Insight", text: "{0}% more experience", value: 20 },
+    { id: "fortune", name: "Fortune", text: "{0}% increased item rarity", value: 40 },
+    { id: "plenty", name: "Plenty", text: "{0}% increased item quantity", value: 15 },
+    { id: "hoard", name: "Hoard", text: "{0}% more currency found", value: 30 }
+  ];
+  var BLESSING = Object.fromEntries(BLESSINGS.map((b) => [b.id, b]));
+  var BLESSING_MS = 36e5;
+  var ORB_RESERVE = 50;
+  var blessingCost = (s) => Math.round((100 + 25 * Math.pow(s.hero.level, 1.3)) / 10) * 10;
+  function blessing(s, id) {
+    const until = s.blessings?.[id] ?? 0;
+    return until > s.simTo ? BLESSING[id]?.value ?? 0 : 0;
   }
+  function spareOrbValue(s) {
+    let v = 0;
+    for (const id of CURRENCY_ORDER) v += Math.max(0, (s.currency[id] ?? 0) - ORB_RESERVE) * CURRENCIES[id].cost;
+    return v;
+  }
+  function pay(s, cost, orbs) {
+    if ((orbs ? spareOrbValue(s) : 0) + s.dust < cost) return false;
+    let left = cost;
+    if (orbs) {
+      const kinds = CURRENCY_ORDER.filter((id) => (s.currency[id] ?? 0) > ORB_RESERVE).sort((a, b) => (s.currency[b] ?? 0) - (s.currency[a] ?? 0));
+      for (const id of kinds) {
+        const price = CURRENCIES[id].cost;
+        const n = Math.min((s.currency[id] ?? 0) - ORB_RESERVE, Math.ceil(left / price));
+        if (n <= 0) continue;
+        s.currency[id] -= n;
+        left -= n * price;
+        if (left <= 0) break;
+      }
+    }
+    if (left > 0) s.dust -= left;
+    return true;
+  }
+  function bless(s, id, orbs = s.shrine?.orbs ?? true) {
+    if (!BLESSING[id]) return "unknown blessing";
+    const cost = blessingCost(s);
+    if (!pay(s, cost, orbs)) return `needs ${cost} ember dust${orbs ? " (or spare orbs)" : ""}`;
+    s.blessings ??= {};
+    s.blessings[id] = Math.max(s.simTo, s.blessings[id] ?? 0) + BLESSING_MS;
+    return null;
+  }
+  function tickShrine(s) {
+    const keep = s.shrine?.keep;
+    if (!keep?.length) return;
+    for (const id of keep) if ((s.blessings?.[id] ?? 0) <= s.simTo) bless(s, id);
+  }
+  function setKeep(s, id, on) {
+    s.shrine ??= { keep: [], orbs: true };
+    s.shrine.keep = on ? [.../* @__PURE__ */ new Set([...s.shrine.keep, id])] : s.shrine.keep.filter((x) => x !== id);
+  }
+
+  // src/i18n/en.ts
+  var slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  var TYPE_EN = { phys: "physical", fire: "fire", cold: "cold", lightning: "lightning", chaos: "chaos" };
+  var STAT_EN = {
+    life: "maximum life",
+    mana: "maximum mana",
+    energyShield: "maximum energy shield",
+    lifeRegen: "life regenerated per second",
+    lifeRegenPct: "of life regenerated per second",
+    manaRegen: "mana regenerated per second",
+    armour: "armour",
+    evasion: "evasion",
+    block: "chance to block",
+    str: "Might",
+    dex: "Grace",
+    int: "Wit",
+    accuracy: "accuracy",
+    damage: "damage",
+    critChance: "critical chance",
+    critMulti: "critical multiplier",
+    attackSpeed: "attack speed",
+    castSpeed: "cast speed",
+    area: "area of effect",
+    pierce: "projectile pierce",
+    leech: "of damage leeched as life",
+    flaskHeal: "flask healing",
+    flaskCharges: "flask charges gained",
+    moveSpeed: "movement speed",
+    itemRarity: "rarity of items found",
+    itemQuantity: "quantity of items found",
+    xpGain: "experience gained",
+    manaCost: "mana cost",
+    dmgTaken: "damage taken",
+    lifeOnKill: "life gained per kill",
+    baseCrit: "base critical chance",
+    skillEffect: "skill effect"
+  };
+  for (const t2 of DAMAGE_TYPES) {
+    STAT_EN[`res.${t2}`] = `${TYPE_EN[t2]} resistance`;
+    STAT_EN[`maxRes.${t2}`] = `maximum ${TYPE_EN[t2]} resistance`;
+    STAT_EN[`pen.${t2}`] = `${TYPE_EN[t2]} penetration`;
+    STAT_EN[`convert.${t2}`] = `of physical damage converted to ${TYPE_EN[t2]}`;
+    STAT_EN[`addMin.${t2}`] = `minimum added ${TYPE_EN[t2]} damage`;
+    STAT_EN[`addMax.${t2}`] = `maximum added ${TYPE_EN[t2]} damage`;
+  }
+  var PCT_STATS = /* @__PURE__ */ new Set([
+    "lifeRegenPct",
+    "block",
+    "critMulti",
+    "leech",
+    "baseCrit",
+    ...DAMAGE_TYPES.flatMap((t2) => [`res.${t2}`, `maxRes.${t2}`, `pen.${t2}`, `convert.${t2}`])
+  ]);
+  var TAGS = {
+    attack: "attack",
+    spell: "spell",
+    melee: "melee",
+    projectile: "projectile",
+    area: "area",
+    strike: "strike",
+    slam: "slam",
+    bow: "bow",
+    phys: "physical",
+    fire: "fire",
+    cold: "cold",
+    lightning: "lightning",
+    chaos: "chaos",
+    elemental: "elemental"
+  };
+  function content() {
+    const o = {};
+    for (const c of Object.values(CLASSES)) {
+      o[`class.${c.id}.name`] = c.name;
+      o[`class.${c.id}.blurb`] = c.blurb;
+    }
+    for (const s of Object.values(SKILLS)) {
+      o[`skill.${s.id}.name`] = s.name;
+      o[`skill.${s.id}.blurb`] = s.blurb;
+    }
+    for (const s of Object.values(SUPPORTS)) {
+      o[`support.${s.id}.name`] = s.name;
+      o[`support.${s.id}.blurb`] = s.blurb;
+    }
+    for (const m4 of Object.values(MONSTERS)) o[`monster.${m4.id}.name`] = m4.name;
+    for (const z of Object.values(ZONES)) {
+      o[`zone.${z.id}.name`] = z.name;
+      if (z.story) o[`zone.${z.id}.story`] = z.story;
+      if (z.bossText) o[`zone.${z.id}.bossText`] = z.bossText;
+    }
+    for (const a of ACTS) {
+      o[`act.${a.id}.name`] = a.name;
+      o[`act.${a.id}.intro`] = a.intro;
+      o[`act.${a.id}.outro`] = a.outro;
+    }
+    for (const b of Object.values(BASES)) o[`base.${b.id}.name`] = b.name;
+    for (const a of Object.values(AFFIXES)) {
+      o[`affix.${a.id}.label`] = a.label;
+      o[`affix.${a.id}.text`] = a.text;
+      o[`group.${a.group}`] = groupLabel(a.group);
+    }
+    for (const w2 of RARE_NAMES_A) o[`rare.a.${slug(w2)}`] = w2;
+    for (const w2 of RARE_NAMES_B) o[`rare.b.${slug(w2)}`] = w2;
+    for (const n of Object.values(PASSIVES)) o[`node.${slug(n.name)}`] = n.name;
+    for (const [name, text] of Object.entries(KEYSTONE_TEXT)) o[`keystone.${slug(name)}`] = text;
+    for (const a of Object.values(ASCENDANCIES)) {
+      o[`asc.${a.id}.name`] = a.name;
+      o[`asc.${a.id}.blurb`] = a.blurb;
+      for (const n of a.nodes) o[`ascnode.${n.id}.name`] = n.name;
+    }
+    for (const c of Object.values(CURRENCIES)) {
+      o[`currency.${c.id}.name`] = c.name;
+      o[`currency.${c.id}.blurb`] = c.blurb;
+    }
+    for (const r3 of Object.values(RELICS)) {
+      o[`relic.${r3.id}.name`] = r3.name;
+      o[`relic.${r3.id}.flavour`] = r3.flavour;
+      r3.mods.forEach((m4, i) => {
+        o[`relic.${r3.id}.mod${i}`] = m4.text;
+      });
+    }
+    for (const c of Object.values(COMPANIONS)) {
+      o[`companion.${c.id}.name`] = c.name;
+      o[`companion.${c.id}.blurb`] = c.blurb;
+      o[`companion.${c.id}.where`] = c.where;
+      o[`companion.${c.id}.bonus`] = c.bonus.text;
+    }
+    for (const b of BLESSINGS) {
+      o[`blessing.${b.id}.name`] = b.name;
+      o[`blessing.${b.id}.text`] = b.text;
+    }
+    for (const a of Object.values(MAP_AREAS)) o[`mapArea.${a.id}.name`] = a.name;
+    for (const m4 of Object.values(MAP_MODS)) o[`mapMod.${m4.id}.text`] = m4.text;
+    for (const n of Object.values(ATLAS)) {
+      o[`atlas.${n.id}.name`] = n.name;
+      o[`atlas.${n.id}.text`] = n.text;
+    }
+    for (const p of Object.values(PINNACLES)) {
+      o[`pinnacle.${p.id}.name`] = p.name;
+      o[`pinnacle.${p.id}.text`] = p.text;
+      o[`pinnacle.${p.id}.sigil`] = p.sigilName;
+    }
+    for (const p of FILTER_PRESETS) {
+      o[`preset.${p.id}.name`] = p.name;
+      o[`preset.${p.id}.blurb`] = p.blurb;
+    }
+    for (const [k, v] of Object.entries(STAT_EN)) o[`stat.${k}`] = v;
+    for (const [k, v] of Object.entries(TAGS)) o[`tag.${k}`] = v;
+    return o;
+  }
+  var UI = {
+    // ---- shared words
+    "common.close": "Close",
+    "common.cancel": "Cancel",
+    "common.level": "Level {n}",
+    "common.or": " or ",
+    "common.list": ", ",
+    "common.count": "{label} ({n})",
+    // ---- modifier lines, time, tiers, maps
+    "mod.inc": "{v}% increased {stat}",
+    "mod.red": "{v}% reduced {stat}",
+    "mod.more": "{v}% more {stat}",
+    "mod.less": "{v}% less {stat}",
+    "mod.flat": "{v} {stat}",
+    "time.dh": "{d}d {h}h",
+    "time.hm": "{h}h {m}m",
+    "time.m": "{m}m",
+    "time.s": "{s}s",
+    "ago.now": "now",
+    "ago.m": "{n}m",
+    "ago.h": "{n}h",
+    "ago.d": "{n}d",
+    "tier.outskirts": "Outskirts",
+    "tier.tier": "Tier {n}",
+    "tier.depth": "Depth {n}",
+    "map.label": "{area} ({tier})",
+    "map.zone": "{area} - {tier}",
+    "item.rareName": "{a} {b}",
+    // ---- names of things the UI lists
+    "slot.weapon": "Weapon",
+    "slot.offhand": "Off-hand",
+    "slot.helmet": "Helm",
+    "slot.body": "Body",
+    "slot.gloves": "Gloves",
+    "slot.boots": "Boots",
+    "slot.belt": "Belt",
+    "slot.amulet": "Amulet",
+    "slot.ring": "Ring",
+    "slot.ring1": "Ring",
+    "slot.ring2": "Ring 2",
+    "kind.sword": "sword",
+    "kind.axe": "axe",
+    "kind.mace": "mace",
+    "kind.dagger": "dagger",
+    "kind.greatsword": "greatsword",
+    "kind.greataxe": "greataxe",
+    "kind.staff": "staff",
+    "kind.bow": "bow",
+    "kind.wand": "wand",
+    "kind.plate": "plate",
+    "kind.leather": "leather",
+    "kind.silk": "silk",
+    "kind.brigand": "brigand",
+    "kind.shield": "shield",
+    "kind.buckler": "buckler",
+    "kind.focus": "focus",
+    "kind.quiver": "quiver",
+    "rarity.plain": "plain",
+    "rarity.enchanted": "enchanted",
+    "rarity.rare": "rare",
+    "rarity.relic": "relic",
+    "type.phys": "Physical",
+    "type.fire": "Fire",
+    "type.cold": "Cold",
+    "type.lightning": "Lightning",
+    "type.chaos": "Chaos",
+    "dmg.phys": "Physical damage",
+    "dmg.fire": "Fire damage",
+    "dmg.cold": "Cold damage",
+    "dmg.lightning": "Lightning damage",
+    "dmg.chaos": "Chaos damage",
+    "res.fire": "Fire resistance",
+    "res.cold": "Cold resistance",
+    "res.lightning": "Lightning resistance",
+    "res.chaos": "Chaos resistance",
+    "attr.str": "Might",
+    "attr.dex": "Grace",
+    "attr.int": "Wit",
+    // ---- the window
+    "nav.hero": "Hero",
+    "nav.gear": "Gear",
+    "nav.forge": "Forge",
+    "nav.skills": "Skills",
+    "nav.tree": "Tree",
+    "nav.world": "World",
+    "nav.atlas": "Atlas",
+    "nav.log": "Log",
+    "nav.menu": "Menu",
+    "app.sections": "Game sections",
+    "app.hudLabel": "Hero status",
+    "app.stage.m": "Battle view: normal (click for large)",
+    "app.stage.l": "Battle view: large (click to hide)",
+    "app.stage.off": "Battle view: hidden (click to show)",
+    "app.mini": "Mini mode: keeps playing in a small strip",
+    "app.unmini": "Back to the full window",
+    "app.max": "Maximize (double-click the title)",
+    "app.restore": "Restore size (double-click the title)",
+    "app.soundOff": "Sound off (click or M to unmute)",
+    "app.soundOn": "Sound on (click or M to mute)",
+    "app.close": "Close (the road keeps going; it is replayed on open)",
+    "app.openBtn": "Open Hollowmarch",
+    "app.replaying": "Replaying {time}... {pct}%",
+    "app.who": "Level {level} {cls}",
+    "app.newKindled": "A new Kindled",
+    "badge.support": "A free support slot would add damage",
+    "badge.tree": "{n} passive point to spend|{n} passive points to spend",
+    "badge.atlas": "{n} atlas point to spend|{n} atlas points to spend",
+    "badge.stash": "Stash is full: drops are being salvaged",
+    "badge.contracts": "{n} contract to claim|{n} contracts to claim",
+    "toast.newRoad": "New road: {zone}",
+    "toast.level": "Level {level}",
+    "toast.equipped": "Equipped: {item}",
+    "toast.rare": "Rare: {item}",
+    "toast.relic": "Relic: {item}",
+    "toast.petJoins": "Companion: {pet} joins you",
+    "toast.petCloser": "{pet} grows closer",
+    "event.level": "Reached level {level}",
+    "event.equipped": "Equipped {item}",
+    "event.found": "Found {item}",
+    "event.died": "Died. The ember relights.",
+    "event.petJoined": "{pet} joined",
+    "event.petCloser": "{pet} grew closer",
+    "mini.message": "A message",
+    "mini.tip": "{title}: open the full window to read it",
+    "mini.waiting": "{n} waiting - open|{n} waiting - open",
+    "mini.open": "Open",
+    "hud.aria": "Life {life} of {lifeMax}{es}, mana {mana} of {manaMax}, flask {flask} of 30. Level {level}, {xp}% experience{eta}. {zone}, area level {area}. {dps} pack DPS.",
+    "hud.ariaEs": ", energy shield {es} of {esMax}",
+    "hud.ariaDead": "Dead: back in {n} seconds. ",
+    "hud.eta": "~{time} to level",
+    "hud.dead": "DEAD",
+    "hud.secs": "{n}S",
+    "hud.area": "AREA {n}",
+    "hud.dps": "{dps} DPS",
+    "hud.xp": "{n}% XP",
+    "hud.lv": "LV",
+    "battle.miss": "miss",
+    "battle.evade": "evade",
+    "battle.block": "block",
+    "battle.flask": "+flask",
+    "battle.level": "LEVEL {n}",
+    "battle.relights": "THE EMBER RELIGHTS",
+    "battle.backIn": "BACK IN {n}S",
+    "story.title": "The road remembers",
+    "story.onward": "Onward",
+    "report.title": "While you were away",
+    "report.away": "Time away",
+    "report.runs": "Runs cleared",
+    "report.kills": "Monsters slain",
+    "report.bosses": "Bosses",
+    "report.deaths": "Deaths",
+    "report.levels": "Levels",
+    "report.levelUp": "{from} -> {to}",
+    "report.noChange": "{level} (no change)",
+    "report.xp": "Experience",
+    "report.kept": "Items kept",
+    "report.salvaged": "Salvaged",
+    "report.dust": "Ember dust",
+    "report.swapped": "Swapped out by upkeep",
+    "report.roads": "New roads: {list}",
+    "report.equipped": "Equipped: {list}",
+    "report.pets": "New companion: {list}|New companions: {list}",
+    "report.relics": "New in the codex: {list}",
+    "report.best": "Best find:",
+    "report.back": "Back to it",
+    "card.idle": "idle arpg",
+    "card.xp": "{n}% XP",
+    // ---- hero
+    "hero.noMods": "No modifiers",
+    "hero.inc": "{v}% inc",
+    "hero.more": "{v}% more",
+    "hero.xpTitle": "{xp} / {need} experience",
+    "hero.maxLevel": "max level",
+    "hero.hit": "Hit",
+    "hero.crit": "Crit",
+    "hero.attacks": "Attacks",
+    "hero.casts": "Casts",
+    "hero.hitChance": "Hit chance",
+    "hero.dps": "DPS",
+    "hero.perSec": "{n}/s",
+    "hero.bdDamage": "Damage modifiers",
+    "hero.bdCrit": "Critical chance",
+    "hero.bdSpeed": "Speed",
+    "hero.bdAccuracy": "Accuracy",
+    "hero.bdCritMulti": "Critical multiplier",
+    "hero.offence": "Offence - {skill}",
+    "hero.single": "Single target",
+    "hero.singleNote": "damage per second",
+    "hero.packs": "Against packs",
+    "hero.targets": "{n} target hit|{n} targets hit",
+    "hero.critChance": "Critical chance",
+    "hero.critMulti": "Critical multiplier",
+    "hero.manaCost": "Mana cost",
+    "hero.manaLimited": "Mana-limited to",
+    "hero.leech": "Life leech",
+    "hero.resistances": "Resistances",
+    "hero.whereTip": "{name} - click for where it comes from",
+    "hero.overCap": "over cap ({n})",
+    "hero.max": "max {n}",
+    "hero.defence": "Defence",
+    "hero.life": "Life",
+    "hero.es": "Energy shield",
+    "hero.regen": "Life regen",
+    "hero.armour": "Armour",
+    "hero.evasion": "Evasion",
+    "hero.block": "Block",
+    "hero.ehp": "Effective HP against each type (pool {n})",
+    "hero.ehpPhys": "Against a typical hit: armour, evasion and block",
+    "hero.ehpEle": "Resistance and block",
+    "hero.move": "Movement speed",
+    "hero.rarity": "Item rarity",
+    "hero.rarityCodex": "+{total}% (codex +{codex}%)",
+    "hero.flask": "Flask healing",
+    "hero.score": "Build score",
+    "pets.title": "Companion",
+    "pets.found": "{n} / {total} found",
+    "pets.fullBond": "Fully bonded",
+    "pets.bond": "{have} / {need} bond: every kill while it is out",
+    "pets.noneOut": "No companion out: pick one below.",
+    "pets.none": "No companion yet. The Tide-Warden guards the first one; bosses sometimes bring others.",
+    "pets.aria": "{name}, level {level}",
+    "pets.notFoundAria": "Not found yet: {where}",
+    "pets.walks": "{name} walks with you",
+    "pets.unknown": "Unknown",
+    "pets.lv": "Lv {n}",
+    "pets.lvOut": "Lv {n} - out",
+    "pets.tipOut": "{name}, level {level}: {bonus}. At your side now.",
+    "pets.tipIn": "{name}, level {level}: {bonus}. Click to send it out.",
+    "pets.tipUnknown": "Not found yet. {where}.",
+    // ---- gear
+    "gear.slotEmpty": "{slot}: empty",
+    "gear.empty": "empty",
+    "gear.worn": "worn",
+    "gear.wornAria": "{label} (worn)",
+    "gear.wornAriaSlot": "{label} (worn, {slot})",
+    "gear.wornSep": "Worn",
+    "gear.inStash": "In the stash ({n})",
+    "gear.quiverOnly": "Quiver",
+    "gear.twoHand": "2-hand",
+    "gear.quiverTip": "Only a quiver fits beside a bow",
+    "gear.twoHandTip": "{base} takes both hands",
+    "gear.offhandAria": "Off-hand: {why}",
+    "gear.noMarkLocked": "Locked items can't be marked for salvage",
+    "gear.equippedLbl": "Equipped",
+    "gear.ghostAria": "{name}: found {n}, none kept",
+    "gear.unknownRelicAria": "A relic not found yet",
+    "gear.unknownRelic": "Unknown relic",
+    "gear.foundTimes": "Found {n} time; none kept. Relics that roll better replace the case's copy.|Found {n} times; none kept. Relics that roll better replace the case's copy.",
+    "gear.dropsFrom": "Drops from monsters of level {n} and up.",
+    "gear.stashEmpty": "The stash is empty. Drops the loot filter keeps land here.",
+    "gear.noUpgrades": "Nothing in the stash beats what is equipped.",
+    "gear.noneHere": "None of these in the stash.",
+    "gear.sortAria": "Sort the stash",
+    "gear.sortRarity": "Sort: rarity",
+    "gear.sortLevel": "Sort: item level",
+    "gear.sortSlot": "Sort: slot",
+    "gear.roomBtn": "+{n} slots",
+    "gear.roomTip": "Ten more stash slots for {cost} ember dust (up to {max})",
+    "gear.roomToast": "Stash: {n} slots",
+    "gear.codex": "Relic codex",
+    "gear.codexTip": "Every different relic found adds 1% item rarity",
+    "gear.codexCount": "{found} / {total} found, +{n}% rarity",
+    "gear.stash": "Stash",
+    "gear.caseNote": "The relic case keeps the best-rolled copy of every relic, outside the stash. Drag one onto a slot to wear it.",
+    "gear.fullUpkeep": "Stash full of locked items and upgrades: new keepers are salvaged. Unlock, salvage or buy room.",
+    "gear.fullNoUpkeep": "Stash full: new drops are salvaged into dust. Salvage, buy room, or switch on upkeep (Menu).",
+    "gear.fullNote": "Stash full: upkeep swaps the least-worth unlocked item for each better keeper. Lock what you want to keep.",
+    "gear.all": "All",
+    "gear.upgrades": "Upgrades",
+    "gear.weapons": "Weapons",
+    "gear.armour": "Armour",
+    "gear.jewellery": "Jewellery",
+    "gear.relics": "Relics",
+    "gear.salvaged": "Salvaged for dust: {n}",
+    "gear.anvilTip": "Drop a stash item here to salvage it",
+    "gear.anvilAria": "Salvage: drop a stash item here",
+    "gear.salvage": "Salvage",
+    "gear.lockedNoSalvage": "locked items can't be salvaged",
+    "gear.dust": "Ember dust {n}",
+    "gear.equipUps": "Equip upgrades ({n})",
+    "gear.equipUpsTip": "Wear every stash item that raises the build score, the best first",
+    "gear.equippedN": "Equipped {n} upgrade|Equipped {n} upgrades",
+    "gear.nothingToEquip": "Nothing to equip",
+    "gear.salvageOutdated": "Salvage outdated",
+    "gear.salvageOutdatedTip": "Unlocked items on a base 10+ levels behind the hero that are not upgrades",
+    "gear.salvagePlain": "Salvage plain",
+    "gear.salvagePlainTip": "Every unlocked plain item in the stash",
+    "gear.salvageEnchanted": "Salvage enchanted",
+    "gear.salvageEnchantedTip": "Every unlocked enchanted item in the stash",
+    "gear.salvageMarked": "Salvage marked",
+    "gear.salvageMarkedTip": "The items you shift-clicked",
+    "gear.clearMarks": "Clear marks",
+    "gear.putBack": "Put it back (Esc)",
+    "gear.lock": "Lock",
+    "gear.unlock": "Unlock",
+    "gear.lockTip": "Keep it: upkeep, auto-equip and bulk salvage leave it alone (L)",
+    "gear.unlockTip": "Let upkeep and bulk salvage take it again (L)",
+    "gear.equip": "Equip",
+    "gear.equipLeft": "Equip left",
+    "gear.equipRight": "Equip right",
+    "gear.equipKey": "Equip (E)",
+    "gear.salvageFor": "Salvage +{n}",
+    "gear.unlockFirst": "Unlock it first",
+    "gear.salvageTip": "Salvage into ember dust (S)",
+    "gear.unequip": "Unequip",
+    "gear.toCase": "Back to the relic case",
+    "gear.toStash": "Back to the stash",
+    "gear.helpAria": "How gear works",
+    "gear.help": "Hover an item to compare it with what you wear; click it to pin its card with Equip, Lock and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nShift-click stash items to mark them, then Salvage marked.\nA green corner marks an upgrade; faded items need a higher level; a lock keeps an item safe from upkeep and bulk salvage.\nKeys: E equips the picked item, L locks it, S salvages it, Esc puts it back.",
+    "gear.equippedHead": "Equipped",
+    "item.levels": "ilvl {ilvl}, needs level {req}",
+    "item.quality": "Quality +{n}%",
+    "item.locked": "Locked",
+    "item.physical": "Physical",
+    "item.aps": "Attacks per second",
+    "item.crit": "Critical chance",
+    "item.hands": "Hands",
+    "item.armour": "Armour",
+    "item.evasion": "Evasion",
+    "item.es": "Energy shield",
+    "item.block": "Block",
+    "item.benchTip": "Added at the bench",
+    "item.bench": "Bench",
+    "item.prefix": "P",
+    "item.suffix": "S",
+    "item.tier": "T{n}",
+    "item.cantEquip": "can't equip",
+    "cmp.dps": "DPS",
+    "cmp.packDps": "Pack DPS",
+    "cmp.life": "Life",
+    "cmp.es": "Energy shield",
+    "cmp.ehpPhys": "EHP physical",
+    "cmp.ehpEle": "EHP elemental",
+    "cmp.new": "new",
+    "cmp.score": "Build score",
+    // ---- skills
+    "skills.levelTag": "level {n}",
+    "skills.dps": "{dps} dps",
+    "skills.unlocksAt": "Unlocks at level {n}",
+    "skills.main": "Your main skill",
+    "skills.packTip": "Pack DPS with your current gear and supports",
+    "skills.selected": "{name} selected",
+    "skills.eff": "{n}% eff.",
+    "skills.noFit": "no fit",
+    "skills.needs": "Needs a {tags} skill",
+    "skills.slotted": "slotted",
+    "skills.worth": "worth {pct}",
+    "skills.clickRemove": "Click to remove: {pct} pack DPS",
+    "skills.for": "for {name}",
+    "skills.clickSwap": "Click to swap out {name}: {pct} pack DPS",
+    "skills.clickAdd": "Click to add: {pct} pack DPS",
+    "skills.removed": "{name} removed",
+    "skills.added": "{name} added",
+    "skills.swapped": "{out} swapped for {name}",
+    "skills.needsShort": "Needs: {tags}.",
+    "skills.sockTip": "{name}: {blurb} Click to take it out.",
+    "skills.sockWorth": "Worth {pct} pack DPS.",
+    "skills.emptyTip": "An empty socket: pick a support below",
+    "skills.empty": "Empty",
+    "skills.opensAt": "Opens at level {n}",
+    "skills.links": "Skill links",
+    "skills.mainSkill": "Main skill",
+    "skills.supports": "Supports",
+    "skills.nextSlot": "next slot at level {n}",
+    // ---- world
+    "world.autoPush": "Auto-push",
+    "world.autoPushNote": "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled.",
+    "world.inMaps": "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one.",
+    "world.act": "Act {n} - {name}",
+    "world.cleared": "Cleared",
+    "world.folded": "{places} places, {clears} clears. Open it to go back and farm.",
+    "world.openRoad": "Open road",
+    "world.foldRoad": "Fold road",
+    "world.stopAria": "{name}, area level {level}, {clears} clears",
+    "world.stopAriaLocked": "{name}, area level {level}, locked",
+    "world.notReached": "Not reached yet",
+    "world.travelling": "Travelling to {zone}",
+    "world.boss": "Boss",
+    "world.trial": "Trial",
+    "world.lvl": "L{n}",
+    "world.clears": "{n} clear|{n} clears",
+    "world.locked": "locked",
+    "world.offRoad": "Off the road",
+    "contract.kills": "Slay {n} monster|Slay {n} monsters",
+    "contract.champions": "Slay {n} champion|Slay {n} champions",
+    "contract.bosses": "Defeat {n} boss|Defeat {n} bosses",
+    "contract.runs": "Clear {n} run on the road|Clear {n} runs on the road",
+    "contract.maps": "Complete {n} map of tier {tier} or deeper|Complete {n} maps of tier {tier} or deeper",
+    "contract.rares": "Find {n} rare item|Find {n} rare items",
+    "contracts.title": "Contract board",
+    "contracts.done": "{n} done",
+    "contracts.reward": "Reward: {text}",
+    "contracts.claim": "Claim",
+    "contracts.claimed": "Contract claimed",
+    "contracts.reroll": "Reroll {cost}",
+    "contracts.rerollTip": "A different contract for {cost} ember dust; progress on this one is lost",
+    "reward.dust": "{n} dust",
+    "reward.currency": "{n} {name}",
+    "reward.relic": "a relic not in your codex",
+    "reward.companion": "a companion you haven't met",
+    "reward.maps": "3 maps",
+    "reward.sigil": "a sigil",
+    "shrine.title": "Ember shrine",
+    "shrine.cost": "{cost} dust / hour",
+    "shrine.note": "Blessings run on the hero's time, so they count while you are away too.",
+    "shrine.line": "{name}: {text}",
+    "shrine.left": "{time} left",
+    "shrine.leftKept": "{time} left, kept up",
+    "shrine.keptUp": "Kept up: renews when it can be paid",
+    "shrine.notRunning": "Not running",
+    "shrine.keepTip": "Offer again on its own whenever it runs out (while it can be paid)",
+    "shrine.keep": "Keep up",
+    "shrine.hour": "+1 h",
+    "shrine.hourTip": "An hour of {name} for {cost} dust",
+    "shrine.hourTipOrbs": "An hour of {name} for {cost} dust (spare orbs pay first)",
+    "shrine.blessed": "{name} blessed",
+    "shrine.orbs": "Spare orbs pay first",
+    "shrine.orbsNote": "Orbs above {n} of a kind count at their shop price (now worth {v} dust).",
+    // ---- log
+    "log.title": "Chronicle",
+    "log.all": "All",
+    "logkind.level": "Level",
+    "logkind.loot": "Loot",
+    "logkind.death": "Death",
+    "logkind.zone": "Road",
+    "logkind.boss": "Boss",
+    "logkind.info": "Note",
+    "log.wake": "{name} wakes on the shore.",
+    "log.equippedNew": "Equipped a new {base}.",
+    "log.stashFull": "Stash full: items the filter keeps are being salvaged.",
+    "log.equippedFromStash": "Equipped {item} from the stash.",
+    "log.equippedFromCase": "Equipped {item} from the relic case.",
+    "log.petJoins": "A {pet} joins you.",
+    "log.petDuplicate": "Another {pet}: your {pet} grows closer.",
+    "log.petLevel": "{pet} reached level {level}.",
+    "log.contractDone": "Contract done: {goal}. Claim it on the World tab.",
+    "log.contractRelic": "Contract reward: {relic}.",
+    "log.pinOpens": "The way to {pin} opens.",
+    "log.pinDefeated": "{pin} is defeated: +{n} atlas point.|{pin} is defeated: +{n} atlas points.",
+    "log.tierFirst": "{tier} completed for the first time: +{n} atlas point.|{tier} completed for the first time: +{n} atlas points.",
+    "log.bossFalls": "{monster} falls.",
+    "log.sigilFound": "Found a {sigil}.",
+    "log.levelUp": "Reached level {level}.",
+    "log.died": "Died in {place}.",
+    "log.tooDeep": "Too deep: running {tier} and below for now.",
+    "log.fellBack": "Fell back to {zone}.",
+    "log.actDone": "Act {act} complete: +{n} passive point.|Act {act} complete: +{n} passive points.",
+    "log.zoneOpen": "{zone} is open.",
+    "log.trialPassed": "{zone} passed: +{n} ascendancy point.|{zone} passed: +{n} ascendancy points.",
+    "log.attempting": "Attempting {zone}.",
+    "log.pushDeeper": "Pushing deeper: {tier} and below.",
+    "log.pushedOn": "Pushed on to {zone}.",
+    // ---- menu
+    "menu.keepAll": "Keep everything",
+    "menu.keepEnchanted": "Keep enchanted and better",
+    "menu.keepRares": "Keep rares only",
+    "menu.autoEquip": "Equip upgrades",
+    "menu.autoEquipNote": "Wear a drop straight away when it raises the build score; on level-ups, the stash's too.",
+    "menu.upkeep": "Stash upkeep",
+    "menu.upkeepNote": "When the stash is full, a better keeper replaces its least-worth unlocked item instead of being salvaged.",
+    "menu.exportPh": "Press Export",
+    "menu.importPh": "Paste an HM1: export here",
+    "menu.loot": "Loot",
+    "menu.otherwise": "Otherwise",
+    "menu.rulesNote": "Rules run top to bottom; the first match decides. Salvaged items become ember dust.",
+    "menu.save": "Save",
+    "menu.savedIdb": "Saved in this Discord profile (IndexedDB).",
+    "menu.savedMem": "Saved in memory only: export to keep it.",
+    "menu.export": "Export",
+    "menu.copy": "Copy",
+    "menu.copied": "Copied",
+    "menu.copyByHand": "Select and copy it by hand",
+    "menu.import": "Import",
+    "menu.loaded": "Save loaded",
+    "menu.totals": "Totals",
+    "menu.runs": "Runs",
+    "menu.kills": "Kills",
+    "menu.deaths": "Deaths",
+    "menu.items": "Items found",
+    "menu.salvaged": "Salvaged",
+    "menu.swapped": "Swapped out by upkeep",
+    "menu.time": "Time simulated",
+    "menu.hours": "{n} h",
+    "menu.danger": "Danger",
+    "menu.newHero": "Start a new hero",
+    "menu.startOver": "Start over?",
+    "menu.startOverNote": "This deletes the current hero. Export first if you want to keep it.",
+    "menu.deleteStart": "Delete and start over",
+    "filter.moveUp": "Move up",
+    "filter.delete": "Delete",
+    "filter.deleteAria": "Delete rule: {rule}",
+    "filter.keep": "keep",
+    "filter.salvage": "salvage",
+    "filter.anyRarity": "any rarity",
+    "filter.anySlot": "any slot",
+    "filter.anyAffixes": "any affixes",
+    "filter.minAffixes": "{n}+ affixes",
+    "filter.behindAria": "Base level behind the hero",
+    "filter.anyBase": "any base",
+    "filter.behind": "base {n}+ behind",
+    "filter.groupAria": "Has an affix",
+    "filter.anyAffix": "any affix",
+    "filter.with": "with {group}",
+    "filter.add": "Add rule",
+    "filter.reset": "Reset",
+    "filter.presets": "Presets:",
+    "rule.keep": "Keep {what}",
+    "rule.salvage": "Salvage {what}",
+    "rule.ilvl": "ilvl {n}+",
+    "rule.behind": "base {n}+ levels behind",
+    "rule.affixes": "{n}+ affixes",
+    "rule.with": "with {group}",
+    // ---- creation
+    "create.loading": "LOADING",
+    "create.nameAria": "Hero name",
+    "create.calling": "Calling",
+    "create.chosen": "Chosen",
+    "create.starts": "Starts with {skill} and a {weapon}.",
+    "create.story": "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead.",
+    "create.choose": "Choose a calling",
+    "create.name": "Name your Kindled",
+    "create.wake": "Wake up",
+    "create.nameNote": "Up to 20 letters, numbers and spaces. Enter wakes them.",
+    // ---- forge
+    "forge.worn": "Worn",
+    "forge.stash": "Stash",
+    "forge.case": "Relic case",
+    "forge.anvil": "On the anvil",
+    "forge.hone": "Hone",
+    "forge.qualityTip": "{q}% / {max}% quality",
+    "forge.max": "Max",
+    "forge.honeFor": "+1% for {cost}",
+    "forge.fullyHoned": "Fully honed",
+    "forge.honeTipWeapon": "Each point of quality is 1% increased physical damage on the item itself (H)",
+    "forge.honeTipArmour": "Each point of quality is 1% increased defences on the item itself (H)",
+    "forge.benchAria": "Affix to add at the bench",
+    "forge.benchOption": "{ps}: {text}",
+    "forge.bench": "Bench",
+    "forge.noRoom": "No room for another affix.",
+    "forge.benchAdd": "Add: {n} Graft + {dust}",
+    "forge.benchReplace": "Replace: {n} Graft + {dust}",
+    "forge.benchTip": "Adds the chosen affix at a random tier the item level allows.",
+    "forge.benchTipReplace": "Replaces the affix benched before.",
+    "forge.benchHave": "You have {n} Graft.",
+    "forge.benched": "Benched",
+    "forge.keep": "Keep",
+    "forge.lockedNote": "Locked: upkeep and bulk salvage leave it alone.",
+    "forge.unlockedNote": "Unlocked: upkeep may swap it for a better drop.",
+    "forge.pick": "Pick an item from the rack to work on it.",
+    "forge.use": "Use",
+    "forge.useOn": "Use on {item}",
+    "forge.pickFirst": "Pick an item first",
+    "forge.used": "{cur} used",
+    "forge.until": "Until upgrade",
+    "forge.untilTip": "Use {cur} again and again (up to 20) until {item} beats what you wear",
+    "forge.pickStash": "Pick a stash item first",
+    "forge.upAfter": "Upgrade after {n} {cur}",
+    "forge.noUpAfter": "No upgrade after {n} {cur}",
+    "forge.buy": "Buy {cost}",
+    "forge.buyTip": "Costs {cost} ember dust; shift-click buys 10",
+    "forge.bought": "Bought {n} {cur}",
+    "forge.smithUntilTip": "Forge rares for the {slot} slot until one beats what you wear (up to 10 at {cost} dust each; misses are salvaged)",
+    "forge.smithTip": "Forge a rare {slot} for {cost} dust",
+    "forge.needsDust": "Needs {cost} ember dust",
+    "forge.forgedWearing": "Forged {n}: wearing {item}",
+    "forge.forgedNone": "Forged {n}, none better than what you wear",
+    "forge.forged": "Forged a rare",
+    "forge.untilNote": "Up to 10 rares, stop at the first worth wearing; misses become dust.",
+    "forge.dust": "ember dust",
+    "forge.title": "Forge a rare",
+    "forge.costLine": "{cost} dust / item level {ilvl}",
+    "forge.note": "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust.",
+    "forge.moreDust": "{n} more ember dust for a rare. Salvaging drops on the Gear tab (or a loot rule that salvages) makes dust.",
+    "forge.rack": "Rack",
+    "forge.currency": "Currency",
+    // ---- atlas
+    "atlas.actCleared": "Act {n}: cleared",
+    "atlas.actHere": "Act {n}: here",
+    "atlas.act": "Act {n}",
+    "atlas.lands": "The Cinderlands",
+    "atlas.story": "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it.",
+    "atlas.opensAfter": "Opens after",
+    "atlas.gate": "{zone} (area level {level})",
+    "atlas.heroLevel": "the hero is level {n}",
+    "atlas.then": "Then {n} map tiers and the endless Depths",
+    "atlas.kept": "{n} map already found and kept for later.|{n} maps already found and kept for later.",
+    "atlas.dropLater": "Maps start to drop in Act 3; they are kept for later.",
+    "atlas.runMaps": "Run maps",
+    "atlas.runMapsNote": "Instead of story zones. With no maps left: the Outskirts, which drop Tier 1 maps.",
+    "atlas.highest": "Highest tier first",
+    "atlas.andBelow": "{tier} and below",
+    "atlas.andBelowNone": "{tier} and below (none in stash)",
+    "atlas.device": "The map device",
+    "atlas.order": "Order",
+    "atlas.count": "{n}/{cap} maps",
+    "atlas.deepest": "Deepest: {tier}",
+    "atlas.none": "none",
+    "atlas.xpCapTip": "Auto-push keeps to tiers within 4 levels of the hero for experience",
+    "atlas.xpCap": "XP cap: {tier}",
+    "atlas.autoCap": "Auto-push cap: {tier}",
+    "atlas.deathNote": "Dying in a map loses it and {n}% of a level's experience. Mods make maps harder and richer.",
+    "atlas.noMaps": "No maps yet. The Outskirts and Act 3 drop them.",
+    "atlas.maps": "Maps",
+    "atlas.craft": "Craft {map}:",
+    "atlas.after": "After: {list}",
+    "atlas.taken": "taken",
+    "atlas.locked": "locked",
+    "atlas.noPoints": "no points",
+    "atlas.take": "take",
+    "atlas.tree": "Atlas ({n} point left)|Atlas ({n} points left)",
+    "atlas.pointsNote": "First clears of tiers 1-{n} give a point each, every fifth Depth one more, pinnacles two.",
+    "atlas.pinInfo": "Level {level}. {sigil}s drop from map bosses at {tier}+. Kills: {kills}.",
+    "atlas.nextRun": "Next run",
+    "atlas.challenge": "Challenge ({have}/{cost})",
+    "atlas.isNext": "{name} is next",
+    "atlas.scout": "Scout",
+    "atlas.scoutTip": "Fight it five times on a copy of your hero (nothing is spent) to see the odds",
+    "atlas.pinnacles": "Pinnacles",
+    "atlas.scouted": "Scouted: won {wins} of {n} - {verdict}",
+    "atlas.scoutedTime": "Scouted: won {wins} of {n}, about {s} s each - {verdict}",
+    "atlas.ready": "ready",
+    "atlas.risky": "risky",
+    "atlas.notYet": "not yet",
+    "atlas.ladderAria": "Tiers cleared: {n} of {max}",
+    "atlas.rungCleared": "{tier}: cleared",
+    // ---- passive tree and ascendancy
+    "tree.left": "{n} point left|{n} points left",
+    "tree.taken": "{n} taken",
+    "tree.help": "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card.",
+    "tree.centre": "Centre",
+    "tree.notable": "{name} (notable)",
+    "tree.keystone": "{name} (keystone)",
+    "tree.yourSeat": "Your ember seat.",
+    "tree.otherSeat": "Another calling starts here.",
+    "tree.refund": "Refund ({n} dust)",
+    "tree.depends": "Other taken nodes depend on it",
+    "tree.take": "Take",
+    "tree.clickTake": "Click to take it.",
+    "tree.clickPin": "Click to pin it (refund).",
+    "asc.title": "Ascendancy ({n} point left)|Ascendancy ({n} points left)",
+    "asc.titleNamed": "Ascendancy: {name} ({n} point left)|Ascendancy: {name} ({n} points left)",
+    "asc.choose": "Choose your path. This is permanent for this hero.",
+    "asc.earn": "Pass a Trial (the first opens in Act 1 after the Sunken Chapel) to earn ascendancy points.",
+    "asc.node": "{name}: {mods}",
+    "asc.become": "Become {name}",
+    "asc.taken": "taken",
+    "asc.take": "take",
+    "asc.locked": "locked",
+    // ---- messages from the game's rules (errors.ts maps the core's English onto these)
+    "err.needsDust": "needs {n} ember dust",
+    "err.needsDustOrbs": "needs {n} ember dust (or spare orbs)",
+    "err.needsLevel": "needs level {n}",
+    "err.slotNeedsLevel": "{slot}: needs level {n}",
+    "err.supportNeedsLevel": "{name} needs level {n}",
+    "err.wrongSlot": "wrong slot",
+    "err.twoHanded": "two-handed weapon",
+    "err.needsBow": "needs a bow",
+    "err.notInStash": "not in stash",
+    "err.stashFull": "stash full",
+    "err.stashMax": "the stash is as big as it gets",
+    "err.itemNotFound": "item not found",
+    "err.unknownSkill": "unknown skill",
+    "err.unknownSupport": "unknown support",
+    "err.dupSupport": "duplicate support",
+    "err.unknownZone": "unknown zone",
+    "err.zoneLocked": "locked",
+    "err.skillUnavailable": "skill not available",
+    "err.cantUseWith": "{skill} can't be used with this weapon",
+    "err.cantUseUnarmed": "{skill} can't be used with no weapon",
+    "err.noSupport": "{support} does not support {skill}",
+    "err.unknownCompanion": "unknown companion",
+    "err.notFoundYet": "not found yet",
+    "err.noContract": "no such contract",
+    "err.notFinished": "not finished yet",
+    "err.claimInstead": "claim it instead",
+    "err.unknownBlessing": "unknown blessing",
+    "err.unknownNode": "unknown node",
+    "err.startFree": "start nodes are free",
+    "err.allocated": "already allocated",
+    "err.noPoints": "no points left",
+    "err.notConnected": "not connected",
+    "err.dependOn": "other nodes depend on it",
+    "err.notCalling": "not for this calling",
+    "err.alreadyChosen": "already chosen",
+    "err.trialFirst": "complete a trial first",
+    "err.notYourAsc": "not in your ascendancy",
+    "err.alreadyTaken": "already taken",
+    "err.noAscPoints": "no ascendancy points",
+    "err.noAtlasPoints": "no atlas points",
+    "err.nodeBefore": "take the node before it first",
+    "err.sunfallFirst": "clear the Sunfall first",
+    "err.badTier": "bad tier",
+    "err.unknownPinnacle": "unknown pinnacle",
+    "err.needsSigils": "needs {n} {sigil}s",
+    "err.mapNotFound": "map not found",
+    "err.unknownCurrency": "unknown currency",
+    "err.noneLeft": "no {cur} left",
+    "err.needsPlainMap": "needs a plain map",
+    "err.needsEnchantedMap": "needs an enchanted map",
+    "err.needsEnchantedMapOne": "needs an enchanted map with one mod",
+    "err.needsRareMap": "needs a rare map",
+    "err.needsRareMapRoom": "needs a rare map with room",
+    "err.alreadyPlain": "already plain",
+    "err.nothingOnMaps": "does nothing to maps",
+    "err.needsPlain": "needs a plain item",
+    "err.needsEnchanted": "needs an enchanted item",
+    "err.needsRare": "needs a rare item",
+    "err.needsEnchantedOrRare": "needs an enchanted or rare item",
+    "err.noRoom": "no room for another affix",
+    "err.relicNoUndo": "relics can't be undone",
+    "err.relicNoTemper": "relics can't be tempered",
+    "err.noAffixes": "no affixes",
+    "err.onlyRerolls": "only rerolls repeat",
+    "err.onlyStash": "only stash items",
+    "err.maxQuality": "already at {n}% quality",
+    "err.onlyWeaponsArmour": "only weapons and armour take quality",
+    "err.affixNoFit": "that affix doesn't fit",
+    "err.needsGraft": "needs {n} Graft",
+    "err.nothingToForge": "nothing to forge for that slot",
+    "err.saveNot": "not a save",
+    "err.saveNotHm": "not a Hollowmarch save",
+    "err.saveVersion": "bad save version",
+    "err.saveNewer": "save is from a newer version ({n})",
+    "err.saveNoMigration": "no migration from version {n}",
+    "err.exportNot": "not a Hollowmarch export",
+    "err.exportDamaged": "export is damaged",
+    "err.saveUnreadable": "could not read that save",
+    "err.saveBroken": "the save is damaged ({what})"
+  };
+  var EN = { ...content(), ...UI };
+
+  // src/i18n/ru.ts
+  var UI2 = {
+    // ---- shared words
+    "common.close": "\u0417\u0430\u043A\u0440\u044B\u0442\u044C",
+    "common.cancel": "\u041E\u0442\u043C\u0435\u043D\u0430",
+    "common.level": "\u0423\u0440\u043E\u0432\u0435\u043D\u044C {n}",
+    "common.or": " \u0438\u043B\u0438 ",
+    "common.list": ", ",
+    "common.count": "{label} ({n})",
+    // ---- modifier lines, time, tiers, maps
+    "mod.inc": "{v}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 {stat}",
+    "mod.red": "{v}% \u0443\u043C\u0435\u043D\u044C\u0448\u0435\u043D\u0438\u0435 {stat}",
+    "mod.more": "\u043D\u0430 {v}% \u0431\u043E\u043B\u044C\u0448\u0435 {stat}",
+    "mod.less": "\u043D\u0430 {v}% \u043C\u0435\u043D\u044C\u0448\u0435 {stat}",
+    "mod.flat": "{stat} {v}",
+    "time.dh": "{d} \u0434 {h} \u0447",
+    "time.hm": "{h} \u0447 {m} \u043C\u0438\u043D",
+    "time.m": "{m} \u043C\u0438\u043D",
+    "time.s": "{s} \u0441",
+    "ago.now": "\u0441\u0435\u0439\u0447\u0430\u0441",
+    "ago.m": "{n} \u043C\u0438\u043D",
+    "ago.h": "{n} \u0447",
+    "ago.d": "{n} \u0434",
+    "tier.outskirts": "\u041E\u043A\u0440\u0430\u0438\u043D\u044B",
+    "tier.tier": "\u042F\u0440\u0443\u0441 {n}",
+    "tier.depth": "\u0413\u043B\u0443\u0431\u0438\u043D\u0430 {n}",
+    "map.label": "{area} ({tier})",
+    "map.zone": "{area} - {tier}",
+    "item.rareName": "{b} {a}",
+    // ---- names of things the UI lists
+    "slot.weapon": "\u041E\u0440\u0443\u0436\u0438\u0435",
+    "slot.offhand": "\u0412\u0442\u043E\u0440\u0430\u044F \u0440\u0443\u043A\u0430",
+    "slot.helmet": "\u0428\u043B\u0435\u043C",
+    "slot.body": "\u0414\u043E\u0441\u043F\u0435\u0445",
+    "slot.gloves": "\u041F\u0435\u0440\u0447\u0430\u0442\u043A\u0438",
+    "slot.boots": "\u041E\u0431\u0443\u0432\u044C",
+    "slot.belt": "\u041F\u043E\u044F\u0441",
+    "slot.amulet": "\u0410\u043C\u0443\u043B\u0435\u0442",
+    "slot.ring": "\u041A\u043E\u043B\u044C\u0446\u043E",
+    "slot.ring1": "\u041A\u043E\u043B\u044C\u0446\u043E",
+    "slot.ring2": "\u041A\u043E\u043B\u044C\u0446\u043E 2",
+    "kind.sword": "\u043C\u0435\u0447",
+    "kind.axe": "\u0442\u043E\u043F\u043E\u0440",
+    "kind.mace": "\u0431\u0443\u043B\u0430\u0432\u0430",
+    "kind.dagger": "\u043A\u0438\u043D\u0436\u0430\u043B",
+    "kind.greatsword": "\u0434\u0432\u0443\u0440\u0443\u0447\u043D\u044B\u0439 \u043C\u0435\u0447",
+    "kind.greataxe": "\u0434\u0432\u0443\u0440\u0443\u0447\u043D\u044B\u0439 \u0442\u043E\u043F\u043E\u0440",
+    "kind.staff": "\u043F\u043E\u0441\u043E\u0445",
+    "kind.bow": "\u043B\u0443\u043A",
+    "kind.wand": "\u0436\u0435\u0437\u043B",
+    "kind.plate": "\u043B\u0430\u0442\u044B",
+    "kind.leather": "\u043A\u043E\u0436\u0430",
+    "kind.silk": "\u0448\u0451\u043B\u043A",
+    "kind.brigand": "\u0431\u0440\u0438\u0433\u0430\u043D\u0442\u0438\u043D\u0430",
+    "kind.shield": "\u0449\u0438\u0442",
+    "kind.buckler": "\u0431\u0430\u043A\u043B\u0435\u0440",
+    "kind.focus": "\u0444\u043E\u043A\u0443\u0441",
+    "kind.quiver": "\u043A\u043E\u043B\u0447\u0430\u043D",
+    "rarity.plain": "\u043E\u0431\u044B\u0447\u043D\u044B\u0439",
+    "rarity.enchanted": "\u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439",
+    "rarity.rare": "\u0440\u0435\u0434\u043A\u0438\u0439",
+    "rarity.relic": "\u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F",
+    "type.phys": "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439",
+    "type.fire": "\u041E\u0433\u043E\u043D\u044C",
+    "type.cold": "\u0425\u043E\u043B\u043E\u0434",
+    "type.lightning": "\u041C\u043E\u043B\u043D\u0438\u044F",
+    "type.chaos": "\u0425\u0430\u043E\u0441",
+    "dmg.phys": "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0443\u0440\u043E\u043D",
+    "dmg.fire": "\u0423\u0440\u043E\u043D \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "dmg.cold": "\u0423\u0440\u043E\u043D \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "dmg.lightning": "\u0423\u0440\u043E\u043D \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "dmg.chaos": "\u0423\u0440\u043E\u043D \u0445\u0430\u043E\u0441\u043E\u043C",
+    "res.fire": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E",
+    "res.cold": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "res.lightning": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "res.chaos": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443",
+    "attr.str": "\u041C\u043E\u0449\u044C",
+    "attr.dex": "\u0413\u0440\u0430\u0446\u0438\u044F",
+    "attr.int": "\u0420\u0430\u0437\u0443\u043C",
+    // ---- the window
+    "nav.hero": "\u0413\u0435\u0440\u043E\u0439",
+    "nav.gear": "\u0412\u0435\u0449\u0438",
+    "nav.forge": "\u041A\u0443\u0437\u043D\u0438\u0446\u0430",
+    "nav.skills": "\u0423\u043C\u0435\u043D\u0438\u044F",
+    "nav.tree": "\u0414\u0440\u0435\u0432\u043E",
+    "nav.world": "\u041C\u0438\u0440",
+    "nav.atlas": "\u0410\u0442\u043B\u0430\u0441",
+    "nav.log": "\u0416\u0443\u0440\u043D\u0430\u043B",
+    "nav.menu": "\u041C\u0435\u043D\u044E",
+    "app.sections": "\u0420\u0430\u0437\u0434\u0435\u043B\u044B \u0438\u0433\u0440\u044B",
+    "app.hudLabel": "\u0421\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0433\u0435\u0440\u043E\u044F",
+    "app.stage.m": "\u0411\u043E\u0439: \u043E\u0431\u044B\u0447\u043D\u044B\u0439 \u0432\u0438\u0434 (\u0449\u0435\u043B\u0447\u043E\u043A - \u043A\u0440\u0443\u043F\u043D\u0435\u0435)",
+    "app.stage.l": "\u0411\u043E\u0439: \u043A\u0440\u0443\u043F\u043D\u044B\u0439 \u0432\u0438\u0434 (\u0449\u0435\u043B\u0447\u043E\u043A - \u0441\u043A\u0440\u044B\u0442\u044C)",
+    "app.stage.off": "\u0411\u043E\u0439 \u0441\u043A\u0440\u044B\u0442 (\u0449\u0435\u043B\u0447\u043E\u043A - \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C)",
+    "app.mini": "\u041C\u0438\u043D\u0438-\u0440\u0435\u0436\u0438\u043C: \u0438\u0433\u0440\u0430 \u0438\u0434\u0451\u0442 \u0432 \u0443\u0437\u043A\u043E\u0439 \u043F\u043E\u043B\u043E\u0441\u043A\u0435",
+    "app.unmini": "\u041E\u0431\u0440\u0430\u0442\u043D\u043E \u0432 \u043F\u043E\u043B\u043D\u043E\u0435 \u043E\u043A\u043D\u043E",
+    "app.max": "\u0420\u0430\u0437\u0432\u0435\u0440\u043D\u0443\u0442\u044C (\u0434\u0432\u043E\u0439\u043D\u043E\u0439 \u0449\u0435\u043B\u0447\u043E\u043A \u043F\u043E \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u0443)",
+    "app.restore": "\u041F\u0440\u0435\u0436\u043D\u0438\u0439 \u0440\u0430\u0437\u043C\u0435\u0440 (\u0434\u0432\u043E\u0439\u043D\u043E\u0439 \u0449\u0435\u043B\u0447\u043E\u043A \u043F\u043E \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u0443)",
+    "app.soundOff": "\u0417\u0432\u0443\u043A \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D (\u0449\u0435\u043B\u0447\u043E\u043A \u0438\u043B\u0438 M - \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u044C)",
+    "app.soundOn": "\u0417\u0432\u0443\u043A \u0432\u043A\u043B\u044E\u0447\u0451\u043D (\u0449\u0435\u043B\u0447\u043E\u043A \u0438\u043B\u0438 M - \u0432\u044B\u043A\u043B\u044E\u0447\u0438\u0442\u044C)",
+    "app.close": "\u0417\u0430\u043A\u0440\u044B\u0442\u044C (\u0434\u043E\u0440\u043E\u0433\u0430 \u043D\u0435 \u043A\u043E\u043D\u0447\u0430\u0435\u0442\u0441\u044F: \u0432\u0441\u0451 \u0434\u043E\u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u0438)",
+    "app.openBtn": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C Hollowmarch",
+    "app.replaying": "\u0414\u043E\u0441\u0447\u0438\u0442\u044B\u0432\u0430\u0435\u043C {time}... {pct}%",
+    "app.who": "\u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}, {cls}",
+    "app.newKindled": "\u041D\u043E\u0432\u044B\u0439 \u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u044B\u0439",
+    "badge.support": "\u0421\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u0433\u043D\u0435\u0437\u0434\u043E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0438 \u043F\u0440\u0438\u0431\u0430\u0432\u0438\u0442 \u0443\u0440\u043E\u043D\u0430",
+    "badge.tree": "{n} \u043E\u0447\u043A\u043E \u0443\u043C\u0435\u043D\u0438\u0439 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u0430 \u0443\u043C\u0435\u043D\u0438\u0439 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u043E\u0432 \u0443\u043C\u0435\u043D\u0438\u0439 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "badge.atlas": "{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u0430 \u0430\u0442\u043B\u0430\u0441\u0430 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430 \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "badge.stash": "\u0422\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D: \u0434\u043E\u0431\u044B\u0447\u0430 \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F",
+    "badge.contracts": "{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0436\u0434\u0451\u0442 \u043D\u0430\u0433\u0440\u0430\u0434\u044B|{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0430 \u0436\u0434\u0443\u0442 \u043D\u0430\u0433\u0440\u0430\u0434\u044B|{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u043E\u0432 \u0436\u0434\u0443\u0442 \u043D\u0430\u0433\u0440\u0430\u0434\u044B",
+    "toast.newRoad": "\u041D\u043E\u0432\u0430\u044F \u0434\u043E\u0440\u043E\u0433\u0430: {zone}",
+    "toast.level": "\u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}",
+    "toast.equipped": "\u041D\u0430\u0434\u0435\u0442\u043E: {item}",
+    "toast.rare": "\u0420\u0435\u0434\u043A\u0438\u0439: {item}",
+    "toast.relic": "\u0420\u0435\u043B\u0438\u043A\u0432\u0438\u044F: {item}",
+    "toast.petJoins": "\u0421\u043F\u0443\u0442\u043D\u0438\u043A: {pet} \u0442\u0435\u043F\u0435\u0440\u044C \u0441 \u0432\u0430\u043C\u0438",
+    "toast.petCloser": "{pet}: \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u044C \u043A\u0440\u0435\u043F\u043D\u0435\u0442",
+    "event.level": "\u0414\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442 \u0443\u0440\u043E\u0432\u0435\u043D\u044C {level}",
+    "event.equipped": "\u041D\u0430\u0434\u0435\u0442\u043E: {item}",
+    "event.found": "\u041D\u0430\u0439\u0434\u0435\u043D\u043E: {item}",
+    "event.died": "\u0421\u043C\u0435\u0440\u0442\u044C. \u0423\u0433\u043E\u043B\u044C \u0440\u0430\u0437\u0433\u043E\u0440\u0430\u0435\u0442\u0441\u044F \u0432\u043D\u043E\u0432\u044C.",
+    "event.petJoined": "{pet}: \u0442\u0435\u043F\u0435\u0440\u044C \u0441 \u0432\u0430\u043C\u0438",
+    "event.petCloser": "{pet}: \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u044C \u043E\u043A\u0440\u0435\u043F\u043B\u0430",
+    "mini.message": "\u0421\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435",
+    "mini.tip": "{title}: \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u043F\u043E\u043B\u043D\u043E\u0435 \u043E\u043A\u043D\u043E, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0447\u0435\u0441\u0442\u044C",
+    "mini.waiting": "\u0416\u0434\u0451\u0442: {n} - \u043E\u0442\u043A\u0440\u044B\u0442\u044C|\u0416\u0434\u0443\u0442: {n} - \u043E\u0442\u043A\u0440\u044B\u0442\u044C|\u0416\u0434\u0443\u0442: {n} - \u043E\u0442\u043A\u0440\u044B\u0442\u044C",
+    "mini.open": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C",
+    "hud.aria": "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435 {life} \u0438\u0437 {lifeMax}{es}, \u043C\u0430\u043D\u0430 {mana} \u0438\u0437 {manaMax}, \u0444\u043B\u0430\u043A\u043E\u043D {flask} \u0438\u0437 30. \u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}, \u043E\u043F\u044B\u0442 {xp}%{eta}. {zone}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0438 {area}. {dps} DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435.",
+    "hud.ariaEs": ", \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442 {es} \u0438\u0437 {esMax}",
+    "hud.ariaDead": "\u041C\u0451\u0440\u0442\u0432: \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 {n} \u0441. ",
+    "hud.eta": "~{time} \u0434\u043E \u0443\u0440\u043E\u0432\u043D\u044F",
+    "hud.dead": "\u041C\u0401\u0420\u0422\u0412",
+    "hud.secs": "{n}\u0421",
+    "hud.area": "\u041E\u0411\u041B\u0410\u0421\u0422\u042C {n}",
+    "hud.dps": "{dps} DPS",
+    "hud.xp": "{n}% \u041E\u041F\u042B\u0422\u0410",
+    "hud.lv": "\u0423\u0420",
+    "battle.miss": "\u043C\u0438\u043C\u043E",
+    "battle.evade": "\u0443\u043A\u043B\u043E\u043D",
+    "battle.block": "\u0431\u043B\u043E\u043A",
+    "battle.flask": "+\u0444\u043B\u0430\u043A\u043E\u043D",
+    "battle.level": "\u0423\u0420\u041E\u0412\u0415\u041D\u042C {n}",
+    "battle.relights": "\u0423\u0413\u041E\u041B\u042C \u0420\u0410\u0417\u0413\u041E\u0420\u0410\u0415\u0422\u0421\u042F \u0412\u041D\u041E\u0412\u042C",
+    "battle.backIn": "\u0412\u041E\u0417\u0412\u0420\u0410\u0422 \u0427\u0415\u0420\u0415\u0417 {n}\u0421",
+    "story.title": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043F\u043E\u043C\u043D\u0438\u0442",
+    "story.onward": "\u0414\u0430\u043B\u044C\u0448\u0435",
+    "report.title": "\u041F\u043E\u043A\u0430 \u0432\u0430\u0441 \u043D\u0435 \u0431\u044B\u043B\u043E",
+    "report.away": "\u0412\u0430\u0441 \u043D\u0435 \u0431\u044B\u043B\u043E",
+    "report.runs": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u0437\u0430\u0431\u0435\u0433\u043E\u0432",
+    "report.kills": "\u0423\u0431\u0438\u0442\u043E \u0447\u0443\u0434\u043E\u0432\u0438\u0449",
+    "report.bosses": "\u0411\u043E\u0441\u0441\u043E\u0432",
+    "report.deaths": "\u0421\u043C\u0435\u0440\u0442\u0435\u0439",
+    "report.levels": "\u0423\u0440\u043E\u0432\u043D\u0438",
+    "report.levelUp": "{from} -> {to}",
+    "report.noChange": "{level} (\u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439)",
+    "report.xp": "\u041E\u043F\u044B\u0442",
+    "report.kept": "\u041E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "report.salvaged": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u043D\u043E",
+    "report.dust": "\u0423\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u043F\u044B\u043B\u044C",
+    "report.swapped": "\u0417\u0430\u043C\u0435\u043D\u0435\u043D\u043E \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438",
+    "report.roads": "\u041D\u043E\u0432\u044B\u0435 \u0434\u043E\u0440\u043E\u0433\u0438: {list}",
+    "report.equipped": "\u041D\u0430\u0434\u0435\u0442\u043E: {list}",
+    "report.pets": "\u041D\u043E\u0432\u044B\u0439 \u0441\u043F\u0443\u0442\u043D\u0438\u043A: {list}|\u041D\u043E\u0432\u044B\u0435 \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0438: {list}|\u041D\u043E\u0432\u044B\u0435 \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0438: {list}",
+    "report.relics": "\u041D\u043E\u0432\u043E\u0435 \u0432 \u043A\u043E\u0434\u0435\u043A\u0441\u0435: {list}",
+    "report.best": "\u041B\u0443\u0447\u0448\u0430\u044F \u043D\u0430\u0445\u043E\u0434\u043A\u0430:",
+    "report.back": "\u0417\u0430 \u0434\u0435\u043B\u043E",
+    "card.idle": "idle arpg",
+    "card.xp": "{n}% \u043E\u043F\u044B\u0442\u0430",
+    // ---- hero
+    "hero.noMods": "\u041D\u0435\u0442 \u043C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u0432",
+    "hero.inc": "{v}% \u0443\u0432\u0435\u043B.",
+    "hero.more": "\u043D\u0430 {v}% \u0431\u043E\u043B\u044C\u0448\u0435",
+    "hero.xpTitle": "\u041E\u043F\u044B\u0442: {xp} / {need}",
+    "hero.maxLevel": "\u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u0439 \u0443\u0440\u043E\u0432\u0435\u043D\u044C",
+    "hero.hit": "\u0423\u0434\u0430\u0440",
+    "hero.crit": "\u041A\u0440\u0438\u0442",
+    "hero.attacks": "\u0410\u0442\u0430\u043A\u0438",
+    "hero.casts": "\u0427\u0430\u0440\u044B",
+    "hero.hitChance": "\u041F\u043E\u043F\u0430\u0434\u0430\u043D\u0438\u0435",
+    "hero.dps": "DPS",
+    "hero.perSec": "{n}/\u0441",
+    "hero.bdDamage": "\u041C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u044B \u0443\u0440\u043E\u043D\u0430",
+    "hero.bdCrit": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0430",
+    "hero.bdSpeed": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C",
+    "hero.bdAccuracy": "\u041C\u0435\u0442\u043A\u043E\u0441\u0442\u044C",
+    "hero.bdCritMulti": "\u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0430",
+    "hero.offence": "\u041D\u0430\u043F\u0430\u0434\u0435\u043D\u0438\u0435 - {skill}",
+    "hero.single": "\u041E\u0434\u043D\u0430 \u0446\u0435\u043B\u044C",
+    "hero.singleNote": "\u0443\u0440\u043E\u043D \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "hero.packs": "\u041F\u0440\u043E\u0442\u0438\u0432 \u0433\u0440\u0443\u043F\u043F",
+    "hero.targets": "{n} \u0446\u0435\u043B\u044C \u043F\u043E\u0434 \u0443\u0434\u0430\u0440\u043E\u043C|{n} \u0446\u0435\u043B\u0438 \u043F\u043E\u0434 \u0443\u0434\u0430\u0440\u043E\u043C|{n} \u0446\u0435\u043B\u0435\u0439 \u043F\u043E\u0434 \u0443\u0434\u0430\u0440\u043E\u043C",
+    "hero.critChance": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "hero.critMulti": "\u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "hero.manaCost": "\u0420\u0430\u0441\u0445\u043E\u0434 \u043C\u0430\u043D\u044B",
+    "hero.manaLimited": "\u041C\u0430\u043D\u0430 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u0435\u0442",
+    "hero.leech": "\u041F\u043E\u0445\u0438\u0449\u0435\u043D\u0438\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "hero.resistances": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F",
+    "hero.whereTip": "{name} - \u0449\u0435\u043B\u0447\u043E\u043A \u043F\u043E\u043A\u0430\u0436\u0435\u0442, \u043E\u0442\u043A\u0443\u0434\u0430",
+    "hero.overCap": "\u0441\u0432\u0435\u0440\u0445 \u043F\u0440\u0435\u0434\u0435\u043B\u0430 ({n})",
+    "hero.max": "\u043F\u0440\u0435\u0434\u0435\u043B {n}",
+    "hero.defence": "\u0417\u0430\u0449\u0438\u0442\u0430",
+    "hero.life": "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "hero.es": "\u042D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "hero.regen": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F",
+    "hero.armour": "\u0411\u0440\u043E\u043D\u044F",
+    "hero.evasion": "\u0423\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435",
+    "hero.block": "\u0411\u043B\u043E\u043A",
+    "hero.ehp": "\u042D\u0444\u0444\u0435\u043A\u0442\u0438\u0432\u043D\u043E\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u043F\u043E \u0442\u0438\u043F\u0430\u043C \u0443\u0440\u043E\u043D\u0430 (\u0437\u0430\u043F\u0430\u0441 {n})",
+    "hero.ehpPhys": "\u041F\u0440\u043E\u0442\u0438\u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0430: \u0431\u0440\u043E\u043D\u044F, \u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 \u0438 \u0431\u043B\u043E\u043A",
+    "hero.ehpEle": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u0431\u043B\u043E\u043A",
+    "hero.move": "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "hero.rarity": "\u0420\u0435\u0434\u043A\u043E\u0441\u0442\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "hero.rarityCodex": "+{total}% (\u043A\u043E\u0434\u0435\u043A\u0441 +{codex}%)",
+    "hero.flask": "\u041B\u0435\u0447\u0435\u043D\u0438\u0435 \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "hero.score": "\u041E\u0446\u0435\u043D\u043A\u0430 \u0441\u0431\u043E\u0440\u043A\u0438",
+    "pets.title": "\u0421\u043F\u0443\u0442\u043D\u0438\u043A",
+    "pets.found": "\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n} / {total}",
+    "pets.fullBond": "\u041F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u044C \u043F\u043E\u043B\u043D\u0430\u044F",
+    "pets.bond": "\u041F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u044C {have} / {need}: \u043A\u0430\u0436\u0434\u043E\u0435 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E, \u043F\u043E\u043A\u0430 \u043E\u043D \u0440\u044F\u0434\u043E\u043C",
+    "pets.noneOut": "\u0421\u043F\u0443\u0442\u043D\u0438\u043A \u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D: \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043D\u0438\u0436\u0435.",
+    "pets.none": "\u0421\u043F\u0443\u0442\u043D\u0438\u043A\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442. \u041F\u0435\u0440\u0432\u043E\u0433\u043E \u0441\u0442\u0435\u0440\u0435\u0436\u0451\u0442 \u0421\u0442\u0440\u0430\u0436 \u043F\u0440\u0438\u043B\u0438\u0432\u0430; \u0434\u0440\u0443\u0433\u0438\u0445 \u043F\u043E\u0440\u043E\u0439 \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442 \u0431\u043E\u0441\u0441\u044B.",
+    "pets.aria": "{name}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C {level}",
+    "pets.notFoundAria": "\u0415\u0449\u0451 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D: {where}",
+    "pets.walks": "{name} \u0438\u0434\u0451\u0442 \u0440\u044F\u0434\u043E\u043C \u0441 \u0432\u0430\u043C\u0438",
+    "pets.unknown": "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E",
+    "pets.lv": "\u0423\u0440. {n}",
+    "pets.lvOut": "\u0423\u0440. {n} - \u0440\u044F\u0434\u043E\u043C",
+    "pets.tipOut": "{name}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C {level}: {bonus}. \u0421\u0435\u0439\u0447\u0430\u0441 \u0440\u044F\u0434\u043E\u043C \u0441 \u0432\u0430\u043C\u0438.",
+    "pets.tipIn": "{name}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C {level}: {bonus}. \u0429\u0435\u043B\u0447\u043E\u043A \u043F\u043E\u0437\u043E\u0432\u0451\u0442 \u0435\u0433\u043E.",
+    "pets.tipUnknown": "\u0415\u0449\u0451 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D. {where}.",
+    // ---- gear
+    "gear.slotEmpty": "{slot}: \u043F\u0443\u0441\u0442\u043E",
+    "gear.empty": "\u043F\u0443\u0441\u0442\u043E",
+    "gear.worn": "\u043D\u0430\u0434\u0435\u0442\u043E",
+    "gear.wornAria": "{label} (\u043D\u0430\u0434\u0435\u0442\u043E)",
+    "gear.wornAriaSlot": "{label} (\u043D\u0430\u0434\u0435\u0442\u043E, {slot})",
+    "gear.wornSep": "\u041D\u0430\u0434\u0435\u0442\u043E",
+    "gear.inStash": "\u0412 \u0442\u0430\u0439\u043D\u0438\u043A\u0435 ({n})",
+    "gear.quiverOnly": "\u041A\u043E\u043B\u0447\u0430\u043D",
+    "gear.twoHand": "2 \u0440\u0443\u043A\u0438",
+    "gear.quiverTip": "\u0420\u044F\u0434\u043E\u043C \u0441 \u043B\u0443\u043A\u043E\u043C \u043F\u043E\u043C\u0435\u0449\u0430\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u043B\u0447\u0430\u043D",
+    "gear.twoHandTip": "{base} \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u043E\u0431\u0435 \u0440\u0443\u043A\u0438",
+    "gear.offhandAria": "\u0412\u0442\u043E\u0440\u0430\u044F \u0440\u0443\u043A\u0430: {why}",
+    "gear.noMarkLocked": "\u0417\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u044B \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u043E\u043C\u0435\u0442\u0438\u0442\u044C \u043D\u0430 \u0440\u0430\u0437\u0431\u043E\u0440",
+    "gear.equippedLbl": "\u041D\u0430\u0434\u0435\u0442\u043E",
+    "gear.ghostAria": "{name}: \u043D\u0430\u0439\u0434\u0435\u043D\u043E {n}, \u043D\u0438 \u043E\u0434\u043D\u043E\u0439 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C",
+    "gear.unknownRelicAria": "\u0420\u0435\u043B\u0438\u043A\u0432\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0435\u0449\u0451 \u043D\u0435 \u043D\u0430\u0445\u043E\u0434\u0438\u043B\u0438",
+    "gear.unknownRelic": "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F",
+    "gear.foundTimes": "\u041D\u0430\u0439\u0434\u0435\u043D\u0430 {n} \u0440\u0430\u0437; \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0430\u0441\u044C. \u041B\u0443\u0447\u0448\u0435 \u0432\u044B\u043F\u0430\u0432\u0448\u0430\u044F \u043A\u043E\u043F\u0438\u044F \u0437\u0430\u043C\u0435\u043D\u044F\u0435\u0442 \u0442\u0443, \u0447\u0442\u043E \u0432 \u043B\u0430\u0440\u0446\u0435.|\u041D\u0430\u0439\u0434\u0435\u043D\u0430 {n} \u0440\u0430\u0437\u0430; \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0430\u0441\u044C. \u041B\u0443\u0447\u0448\u0435 \u0432\u044B\u043F\u0430\u0432\u0448\u0430\u044F \u043A\u043E\u043F\u0438\u044F \u0437\u0430\u043C\u0435\u043D\u044F\u0435\u0442 \u0442\u0443, \u0447\u0442\u043E \u0432 \u043B\u0430\u0440\u0446\u0435.|\u041D\u0430\u0439\u0434\u0435\u043D\u0430 {n} \u0440\u0430\u0437; \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0430\u0441\u044C. \u041B\u0443\u0447\u0448\u0435 \u0432\u044B\u043F\u0430\u0432\u0448\u0430\u044F \u043A\u043E\u043F\u0438\u044F \u0437\u0430\u043C\u0435\u043D\u044F\u0435\u0442 \u0442\u0443, \u0447\u0442\u043E \u0432 \u043B\u0430\u0440\u0446\u0435.",
+    "gear.dropsFrom": "\u0412\u044B\u043F\u0430\u0434\u0430\u0435\u0442 \u0438\u0437 \u0447\u0443\u0434\u043E\u0432\u0438\u0449 {n} \u0443\u0440\u043E\u0432\u043D\u044F \u0438 \u0432\u044B\u0448\u0435.",
+    "gear.stashEmpty": "\u0422\u0430\u0439\u043D\u0438\u043A \u043F\u0443\u0441\u0442. \u0421\u044E\u0434\u0430 \u043F\u043E\u043F\u0430\u0434\u0430\u0435\u0442 \u0434\u043E\u0431\u044B\u0447\u0430, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u0444\u0438\u043B\u044C\u0442\u0440.",
+    "gear.noUpgrades": "\u0412 \u0442\u0430\u0439\u043D\u0438\u043A\u0435 \u043D\u0435\u0442 \u043D\u0438\u0447\u0435\u0433\u043E \u043B\u0443\u0447\u0448\u0435 \u043D\u0430\u0434\u0435\u0442\u043E\u0433\u043E.",
+    "gear.noneHere": "\u0422\u0430\u043A\u0438\u0445 \u0432\u0435\u0449\u0435\u0439 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435 \u043D\u0435\u0442.",
+    "gear.sortAria": "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435",
+    "gear.sortRarity": "\u041F\u043E \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438",
+    "gear.sortLevel": "\u041F\u043E \u0443\u0440\u043E\u0432\u043D\u044E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430",
+    "gear.sortSlot": "\u041F\u043E \u044F\u0447\u0435\u0439\u043A\u0435",
+    "gear.roomBtn": "+{n} \u043C\u0435\u0441\u0442",
+    "gear.roomTip": "\u0415\u0449\u0451 \u0434\u0435\u0441\u044F\u0442\u044C \u043C\u0435\u0441\u0442 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435 \u0437\u0430 {cost} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 (\u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 {max})",
+    "gear.roomToast": "\u0422\u0430\u0439\u043D\u0438\u043A: {n} \u043C\u0435\u0441\u0442",
+    "gear.codex": "\u041A\u043E\u0434\u0435\u043A\u0441 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439",
+    "gear.codexTip": "\u041A\u0430\u0436\u0434\u0430\u044F \u043D\u043E\u0432\u0430\u044F \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F \u0434\u0430\u0451\u0442 +1% \u043A \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "gear.codexCount": "\u043D\u0430\u0439\u0434\u0435\u043D\u043E {found} / {total}, \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C +{n}%",
+    "gear.stash": "\u0422\u0430\u0439\u043D\u0438\u043A",
+    "gear.caseNote": "\u041B\u0430\u0440\u0435\u0446 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439 \u0445\u0440\u0430\u043D\u0438\u0442 \u043B\u0443\u0447\u0448\u0443\u044E \u043A\u043E\u043F\u0438\u044E \u043A\u0430\u0436\u0434\u043E\u0439 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0438, \u043E\u0442\u0434\u0435\u043B\u044C\u043D\u043E \u043E\u0442 \u0442\u0430\u0439\u043D\u0438\u043A\u0430. \u041F\u0435\u0440\u0435\u0442\u0430\u0449\u0438\u0442\u0435 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044E \u0432 \u044F\u0447\u0435\u0439\u043A\u0443, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0434\u0435\u0442\u044C.",
+    "gear.fullUpkeep": "\u0422\u0430\u0439\u043D\u0438\u043A \u0437\u0430\u0431\u0438\u0442 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u043C\u0438 \u0432\u0435\u0449\u0430\u043C\u0438 \u0438 \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F\u043C\u0438: \u043D\u043E\u0432\u044B\u0435 \u043D\u0430\u0445\u043E\u0434\u043A\u0438 \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u0441\u044F. \u041E\u0442\u043A\u0440\u0435\u043F\u0438\u0442\u0435, \u0440\u0430\u0437\u0431\u0435\u0440\u0438\u0442\u0435 \u0438\u043B\u0438 \u043A\u0443\u043F\u0438\u0442\u0435 \u043C\u0435\u0441\u0442\u0430.",
+    "gear.fullNoUpkeep": "\u0422\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D: \u043D\u043E\u0432\u0430\u044F \u0434\u043E\u0431\u044B\u0447\u0430 \u0438\u0434\u0451\u0442 \u0432 \u043F\u044B\u043B\u044C. \u0420\u0430\u0437\u0431\u0435\u0440\u0438\u0442\u0435 \u043B\u0438\u0448\u043D\u0435\u0435, \u043A\u0443\u043F\u0438\u0442\u0435 \u043C\u0435\u0441\u0442\u0430 \u0438\u043B\u0438 \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 (\u041C\u0435\u043D\u044E).",
+    "gear.fullNote": "\u0422\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D: \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u0435\u043D\u044F\u0435\u0442 \u0441\u0430\u043C\u0443\u044E \u0434\u0435\u0448\u0451\u0432\u0443\u044E \u043D\u0435\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u0443\u044E \u0432\u0435\u0449\u044C \u043D\u0430 \u043A\u0430\u0436\u0434\u0443\u044E \u043D\u0430\u0445\u043E\u0434\u043A\u0443 \u043F\u043E\u043B\u0443\u0447\u0448\u0435. \u0417\u0430\u043A\u0440\u0435\u043F\u0438\u0442\u0435 \u0442\u043E, \u0447\u0442\u043E \u0436\u0430\u043B\u043A\u043E.",
+    "gear.all": "\u0412\u0441\u0451",
+    "gear.upgrades": "\u041B\u0443\u0447\u0448\u0435",
+    "gear.weapons": "\u041E\u0440\u0443\u0436\u0438\u0435",
+    "gear.armour": "\u0414\u043E\u0441\u043F\u0435\u0445\u0438",
+    "gear.jewellery": "\u0423\u043A\u0440\u0430\u0448\u0435\u043D\u0438\u044F",
+    "gear.relics": "\u0420\u0435\u043B\u0438\u043A\u0432\u0438\u0438",
+    "gear.salvaged": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u043D\u043E \u043D\u0430 \u043F\u044B\u043B\u044C: {n}",
+    "gear.anvilTip": "\u0411\u0440\u043E\u0441\u044C\u0442\u0435 \u0441\u044E\u0434\u0430 \u0432\u0435\u0449\u044C \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430, \u0447\u0442\u043E\u0431\u044B \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C",
+    "gear.anvilAria": "\u0420\u0430\u0437\u0431\u043E\u0440: \u0431\u0440\u043E\u0441\u044C\u0442\u0435 \u0441\u044E\u0434\u0430 \u0432\u0435\u0449\u044C \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430",
+    "gear.salvage": "\u0420\u0430\u0437\u0431\u043E\u0440",
+    "gear.lockedNoSalvage": "\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u043E\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C",
+    "gear.dust": "\u0423\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u043F\u044B\u043B\u044C {n}",
+    "gear.equipUps": "\u041D\u0430\u0434\u0435\u0442\u044C \u043B\u0443\u0447\u0448\u0435\u0435 ({n})",
+    "gear.equipUpsTip": "\u041D\u0430\u0434\u0435\u0442\u044C \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430 \u0432\u0441\u0451, \u0447\u0442\u043E \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u043E\u0446\u0435\u043D\u043A\u0443 \u0441\u0431\u043E\u0440\u043A\u0438, \u043D\u0430\u0447\u0438\u043D\u0430\u044F \u0441 \u043B\u0443\u0447\u0448\u0435\u0433\u043E",
+    "gear.equippedN": "\u041D\u0430\u0434\u0435\u0442\u043E \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0439: {n}|\u041D\u0430\u0434\u0435\u0442\u043E \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0439: {n}|\u041D\u0430\u0434\u0435\u0442\u043E \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0439: {n}",
+    "gear.nothingToEquip": "\u041D\u0430\u0434\u0435\u0432\u0430\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E",
+    "gear.salvageOutdated": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u0441\u0442\u0430\u0440\u044C\u0451",
+    "gear.salvageOutdatedTip": "\u041D\u0435\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0435 \u0432\u0435\u0449\u0438 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0435, \u043E\u0442\u0441\u0442\u0430\u044E\u0449\u0435\u0439 \u043E\u0442 \u0433\u0435\u0440\u043E\u044F \u043D\u0430 10+ \u0443\u0440\u043E\u0432\u043D\u0435\u0439, \u0435\u0441\u043B\u0438 \u043E\u043D\u0438 \u043D\u0435 \u043B\u0443\u0447\u0448\u0435 \u043D\u0430\u0434\u0435\u0442\u043E\u0433\u043E",
+    "gear.salvagePlain": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043E\u0431\u044B\u0447\u043D\u044B\u0435",
+    "gear.salvagePlainTip": "\u0412\u0441\u0435 \u043D\u0435\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0435 \u043E\u0431\u044B\u0447\u043D\u044B\u0435 \u0432\u0435\u0449\u0438 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435",
+    "gear.salvageEnchanted": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435",
+    "gear.salvageEnchantedTip": "\u0412\u0441\u0435 \u043D\u0435\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0435 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0435\u0449\u0438 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435",
+    "gear.salvageMarked": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043F\u043E\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435",
+    "gear.salvageMarkedTip": "\u0412\u0435\u0449\u0438, \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435 \u0449\u0435\u043B\u0447\u043A\u043E\u043C \u0441 Shift",
+    "gear.clearMarks": "\u0421\u043D\u044F\u0442\u044C \u043F\u043E\u043C\u0435\u0442\u043A\u0438",
+    "gear.putBack": "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u044C \u043E\u0431\u0440\u0430\u0442\u043D\u043E (Esc)",
+    "gear.lock": "\u0417\u0430\u043A\u0440\u0435\u043F\u0438\u0442\u044C",
+    "gear.unlock": "\u041E\u0442\u043A\u0440\u0435\u043F\u0438\u0442\u044C",
+    "gear.lockTip": "\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C: \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435, \u0430\u0432\u0442\u043E\u043D\u0430\u0434\u0435\u0432\u0430\u043D\u0438\u0435 \u0438 \u043C\u0430\u0441\u0441\u043E\u0432\u044B\u0439 \u0440\u0430\u0437\u0431\u043E\u0440 \u0435\u0451 \u043D\u0435 \u0442\u0440\u043E\u043D\u0443\u0442 (L)",
+    "gear.unlockTip": "\u0421\u043D\u043E\u0432\u0430 \u043E\u0442\u0434\u0430\u0442\u044C \u043D\u0430 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u043C\u0430\u0441\u0441\u043E\u0432\u044B\u0439 \u0440\u0430\u0437\u0431\u043E\u0440 (L)",
+    "gear.equip": "\u041D\u0430\u0434\u0435\u0442\u044C",
+    "gear.equipLeft": "\u041D\u0430\u0434\u0435\u0442\u044C \u0441\u043B\u0435\u0432\u0430",
+    "gear.equipRight": "\u041D\u0430\u0434\u0435\u0442\u044C \u0441\u043F\u0440\u0430\u0432\u0430",
+    "gear.equipKey": "\u041D\u0430\u0434\u0435\u0442\u044C (E)",
+    "gear.salvageFor": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C +{n}",
+    "gear.unlockFirst": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043E\u0442\u043A\u0440\u0435\u043F\u0438\u0442\u0435",
+    "gear.salvageTip": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043D\u0430 \u0443\u0433\u043E\u043B\u044C\u043D\u0443\u044E \u043F\u044B\u043B\u044C (S)",
+    "gear.unequip": "\u0421\u043D\u044F\u0442\u044C",
+    "gear.toCase": "\u041E\u0431\u0440\u0430\u0442\u043D\u043E \u0432 \u043B\u0430\u0440\u0435\u0446 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439",
+    "gear.toStash": "\u041E\u0431\u0440\u0430\u0442\u043D\u043E \u0432 \u0442\u0430\u0439\u043D\u0438\u043A",
+    "gear.helpAria": "\u041A\u0430\u043A \u0443\u0441\u0442\u0440\u043E\u0435\u043D\u044B \u0432\u0435\u0449\u0438",
+    "gear.help": "\u041D\u0430\u0432\u0435\u0434\u0438\u0442\u0435 \u043D\u0430 \u0432\u0435\u0449\u044C, \u0447\u0442\u043E\u0431\u044B \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0441 \u043D\u0430\u0434\u0435\u0442\u044B\u043C; \u0449\u0435\u043B\u0447\u043E\u043A \u0437\u0430\u043A\u0440\u0435\u043F\u0438\u0442 \u0435\u0451 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u0441 \u043A\u043D\u043E\u043F\u043A\u0430\u043C\u0438 \u041D\u0430\u0434\u0435\u0442\u044C, \u0417\u0430\u043A\u0440\u0435\u043F\u0438\u0442\u044C \u0438 \u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C.\n\u041F\u0435\u0440\u0435\u0442\u0430\u0449\u0438\u0442\u0435 \u0432\u0435\u0449\u044C \u0432 \u044F\u0447\u0435\u0439\u043A\u0443, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0434\u0435\u0442\u044C, \u043D\u0430 \u043D\u0430\u043A\u043E\u0432\u0430\u043B\u044C\u043D\u044E - \u0447\u0442\u043E\u0431\u044B \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C; \u043D\u0430\u0434\u0435\u0442\u043E\u0435 \u043F\u0435\u0440\u0435\u0442\u0430\u0449\u0438\u0442\u0435 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A, \u0447\u0442\u043E\u0431\u044B \u0441\u043D\u044F\u0442\u044C.\n\u0429\u0435\u043B\u0447\u043E\u043A \u0441 Shift \u043F\u043E\u043C\u0435\u0447\u0430\u0435\u0442 \u0432\u0435\u0449\u0438 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435, \u0437\u0430\u0442\u0435\u043C - \u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043F\u043E\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435.\n\u0417\u0435\u043B\u0451\u043D\u044B\u0439 \u0443\u0433\u043E\u043B\u043E\u043A - \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0435; \u0431\u043B\u0435\u0434\u043D\u044B\u0435 \u0432\u0435\u0449\u0438 \u0442\u0440\u0435\u0431\u0443\u044E\u0442 \u0443\u0440\u043E\u0432\u043D\u044F \u0432\u044B\u0448\u0435; \u0437\u0430\u043C\u043E\u043A \u0431\u0435\u0440\u0435\u0436\u0451\u0442 \u0432\u0435\u0449\u044C \u043E\u0442 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u0438 \u043C\u0430\u0441\u0441\u043E\u0432\u043E\u0433\u043E \u0440\u0430\u0437\u0431\u043E\u0440\u0430.\n\u041A\u043B\u0430\u0432\u0438\u0448\u0438: E - \u043D\u0430\u0434\u0435\u0442\u044C, L - \u0437\u0430\u043A\u0440\u0435\u043F\u0438\u0442\u044C, S - \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C, Esc - \u043F\u043E\u043B\u043E\u0436\u0438\u0442\u044C \u043E\u0431\u0440\u0430\u0442\u043D\u043E.",
+    "gear.equippedHead": "\u041D\u0430\u0434\u0435\u0442\u043E",
+    "item.levels": "\u0443\u0440. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {ilvl}, \u043D\u0443\u0436\u0435\u043D \u0443\u0440\u043E\u0432\u0435\u043D\u044C {req}",
+    "item.quality": "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u043E +{n}%",
+    "item.locked": "\u0417\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u043E",
+    "item.physical": "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439",
+    "item.aps": "\u0410\u0442\u0430\u043A \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "item.crit": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "item.hands": "\u0420\u0443\u043A\u0438",
+    "item.armour": "\u0411\u0440\u043E\u043D\u044F",
+    "item.evasion": "\u0423\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435",
+    "item.es": "\u042D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "item.block": "\u0411\u043B\u043E\u043A",
+    "item.benchTip": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u043A\u0435",
+    "item.bench": "\u0412\u0435\u0440\u0441\u0442\u0430\u043A",
+    "item.prefix": "\u041F",
+    "item.suffix": "\u0421",
+    "item.tier": "\u0422{n}",
+    "item.cantEquip": "\u043D\u0435\u043B\u044C\u0437\u044F \u043D\u0430\u0434\u0435\u0442\u044C",
+    "cmp.dps": "DPS",
+    "cmp.packDps": "DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435",
+    "cmp.life": "\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "cmp.es": "\u042D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "cmp.ehpPhys": "\u042D\u0417, \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439",
+    "cmp.ehpEle": "\u042D\u0417, \u0441\u0442\u0438\u0445\u0438\u0438",
+    "cmp.new": "\u043D\u043E\u0432\u043E\u0435",
+    "cmp.score": "\u041E\u0446\u0435\u043D\u043A\u0430 \u0441\u0431\u043E\u0440\u043A\u0438",
+    // ---- skills
+    "skills.levelTag": "\u0443\u0440\u043E\u0432\u0435\u043D\u044C {n}",
+    "skills.dps": "{dps} dps",
+    "skills.unlocksAt": "\u041E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043D\u0430 \u0443\u0440\u043E\u0432\u043D\u0435 {n}",
+    "skills.main": "\u0412\u0430\u0448\u0435 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u0435 \u0443\u043C\u0435\u043D\u0438\u0435",
+    "skills.packTip": "DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435 \u0441 \u043D\u044B\u043D\u0435\u0448\u043D\u0438\u043C\u0438 \u0432\u0435\u0449\u0430\u043C\u0438 \u0438 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430\u043C\u0438",
+    "skills.selected": "\u0412\u044B\u0431\u0440\u0430\u043D\u043E: {name}",
+    "skills.eff": "{n}% \u044D\u0444\u0444.",
+    "skills.noFit": "\u043D\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442",
+    "skills.needs": "\u041D\u0443\u0436\u043D\u043E \u0443\u043C\u0435\u043D\u0438\u0435: {tags}",
+    "skills.slotted": "\u0432 \u0433\u043D\u0435\u0437\u0434\u0435",
+    "skills.worth": "\u0434\u0430\u0451\u0442 {pct}",
+    "skills.clickRemove": "\u0429\u0435\u043B\u0447\u043E\u043A \u0443\u0431\u0435\u0440\u0451\u0442: {pct} DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435",
+    "skills.for": "\u0432\u043C\u0435\u0441\u0442\u043E: {name}",
+    "skills.clickSwap": "\u0429\u0435\u043B\u0447\u043E\u043A \u0437\u0430\u043C\u0435\u043D\u0438\u0442 {name}: {pct} DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435",
+    "skills.clickAdd": "\u0429\u0435\u043B\u0447\u043E\u043A \u0434\u043E\u0431\u0430\u0432\u0438\u0442: {pct} DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435",
+    "skills.removed": "\u0423\u0431\u0440\u0430\u043D\u043E: {name}",
+    "skills.added": "\u0414\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E: {name}",
+    "skills.swapped": "{out} \u0437\u0430\u043C\u0435\u043D\u0435\u043D\u043E \u043D\u0430 {name}",
+    "skills.needsShort": "\u041D\u0443\u0436\u043D\u043E: {tags}.",
+    "skills.sockTip": "{name}: {blurb} \u0429\u0435\u043B\u0447\u043E\u043A \u0432\u044B\u043D\u0435\u0442.",
+    "skills.sockWorth": "\u0414\u0430\u0451\u0442 {pct} DPS \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435.",
+    "skills.emptyTip": "\u041F\u0443\u0441\u0442\u043E\u0435 \u0433\u043D\u0435\u0437\u0434\u043E: \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443 \u043D\u0438\u0436\u0435",
+    "skills.empty": "\u041F\u0443\u0441\u0442\u043E",
+    "skills.opensAt": "\u041E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043D\u0430 \u0443\u0440\u043E\u0432\u043D\u0435 {n}",
+    "skills.links": "\u0421\u0432\u044F\u0437\u043A\u0438 \u0443\u043C\u0435\u043D\u0438\u0439",
+    "skills.mainSkill": "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0435 \u0443\u043C\u0435\u043D\u0438\u0435",
+    "skills.supports": "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0438",
+    "skills.nextSlot": "\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435 \u0433\u043D\u0435\u0437\u0434\u043E \u043D\u0430 \u0443\u0440\u043E\u0432\u043D\u0435 {n}",
+    // ---- world
+    "world.autoPush": "\u0410\u0432\u0442\u043E\u043F\u0440\u043E\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435",
+    "world.autoPushNote": "\u0418\u0434\u0442\u0438 \u0434\u0430\u043B\u044C\u0448\u0435 \u043F\u043E\u0441\u043B\u0435 3 \u0447\u0438\u0441\u0442\u044B\u0445 \u043F\u0440\u043E\u0445\u043E\u0434\u043E\u0432, \u043E\u0442\u0441\u0442\u0443\u043F\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435 3 \u0441\u043C\u0435\u0440\u0442\u0435\u0439 (\u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445: \u043F\u043E\u0441\u043B\u0435 2 \u043F\u0440\u043E\u0432\u0430\u043B\u0435\u043D\u043D\u044B\u0445), \u0431\u0440\u0430\u0442\u044C\u0441\u044F \u0437\u0430 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u044F, \u043A\u043E\u0433\u0434\u0430 \u0433\u0435\u0440\u043E\u0439 \u0438\u0445 \u043F\u0435\u0440\u0435\u0440\u043E\u0441.",
+    "world.inMaps": "\u0413\u0435\u0440\u043E\u0439 \u0445\u043E\u0434\u0438\u0442 \u043F\u043E \u043A\u0430\u0440\u0442\u0430\u043C (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u0410\u0442\u043B\u0430\u0441). \u041C\u0435\u0441\u0442\u043E, \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0435 \u0437\u0434\u0435\u0441\u044C, \u0441\u043C\u0435\u043D\u0438\u0442 \u043A\u0430\u0440\u0442\u044B \u043F\u043E\u0441\u043B\u0435 \u0442\u0435\u043A\u0443\u0449\u0435\u0439.",
+    "world.act": "\u0410\u043A\u0442 {n} - {name}",
+    "world.cleared": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D",
+    "world.folded": "\u041C\u0435\u0441\u0442: {places}, \u043F\u0440\u043E\u0445\u043E\u0434\u043E\u0432: {clears}. \u0420\u0430\u0437\u0432\u0435\u0440\u043D\u0438\u0442\u0435, \u0447\u0442\u043E\u0431\u044B \u0432\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0438 \u0444\u0430\u0440\u043C\u0438\u0442\u044C.",
+    "world.openRoad": "\u0420\u0430\u0437\u0432\u0435\u0440\u043D\u0443\u0442\u044C",
+    "world.foldRoad": "\u0421\u0432\u0435\u0440\u043D\u0443\u0442\u044C",
+    "world.stopAria": "{name}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0438 {level}, \u043F\u0440\u043E\u0445\u043E\u0434\u043E\u0432: {clears}",
+    "world.stopAriaLocked": "{name}, \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0438 {level}, \u0437\u0430\u043A\u0440\u044B\u0442\u043E",
+    "world.notReached": "\u0415\u0449\u0451 \u043D\u0435 \u0434\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u043E",
+    "world.travelling": "\u0412 \u043F\u0443\u0442\u044C: {zone}",
+    "world.boss": "\u0411\u043E\u0441\u0441",
+    "world.trial": "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435",
+    "world.lvl": "\u0423{n}",
+    "world.clears": "{n} \u043F\u0440\u043E\u0445\u043E\u0434|{n} \u043F\u0440\u043E\u0445\u043E\u0434\u0430|{n} \u043F\u0440\u043E\u0445\u043E\u0434\u043E\u0432",
+    "world.locked": "\u0437\u0430\u043A\u0440\u044B\u0442\u043E",
+    "world.offRoad": "\u0412 \u0441\u0442\u043E\u0440\u043E\u043D\u0435 \u043E\u0442 \u0434\u043E\u0440\u043E\u0433\u0438",
+    "contract.kills": "\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0449\u0435|\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0449\u0430|\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0449",
+    "contract.champions": "\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0435\u043C\u043F\u0438\u043E\u043D\u0430|\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0435\u043C\u043F\u0438\u043E\u043D\u043E\u0432|\u0423\u0431\u0438\u0442\u044C {n} \u0447\u0435\u043C\u043F\u0438\u043E\u043D\u043E\u0432",
+    "contract.bosses": "\u041F\u043E\u0431\u0435\u0434\u0438\u0442\u044C {n} \u0431\u043E\u0441\u0441\u0430|\u041F\u043E\u0431\u0435\u0434\u0438\u0442\u044C {n} \u0431\u043E\u0441\u0441\u043E\u0432|\u041F\u043E\u0431\u0435\u0434\u0438\u0442\u044C {n} \u0431\u043E\u0441\u0441\u043E\u0432",
+    "contract.runs": "\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0435\u0433 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0435\u0433\u0430 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0435\u0433\u043E\u0432 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435",
+    "contract.maps": "\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442\u0443 \u044F\u0440\u0443\u0441\u0430 {tier} \u0438\u043B\u0438 \u0433\u043B\u0443\u0431\u0436\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442\u044B \u044F\u0440\u0443\u0441\u0430 {tier} \u0438\u043B\u0438 \u0433\u043B\u0443\u0431\u0436\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442 \u044F\u0440\u0443\u0441\u0430 {tier} \u0438\u043B\u0438 \u0433\u043B\u0443\u0431\u0436\u0435",
+    "contract.rares": "\u041D\u0430\u0439\u0442\u0438 {n} \u0440\u0435\u0434\u043A\u0438\u0439 \u043F\u0440\u0435\u0434\u043C\u0435\u0442|\u041D\u0430\u0439\u0442\u0438 {n} \u0440\u0435\u0434\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430|\u041D\u0430\u0439\u0442\u0438 {n} \u0440\u0435\u0434\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "contracts.title": "\u0414\u043E\u0441\u043A\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u043E\u0432",
+    "contracts.done": "\u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E: {n}",
+    "contracts.reward": "\u041D\u0430\u0433\u0440\u0430\u0434\u0430: {text}",
+    "contracts.claim": "\u0417\u0430\u0431\u0440\u0430\u0442\u044C",
+    "contracts.claimed": "\u041D\u0430\u0433\u0440\u0430\u0434\u0430 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0430",
+    "contracts.reroll": "\u0421\u043C\u0435\u043D\u0438\u0442\u044C {cost}",
+    "contracts.rerollTip": "\u0414\u0440\u0443\u0433\u043E\u0439 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0437\u0430 {cost} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438; \u043F\u0440\u043E\u0433\u0440\u0435\u0441\u0441 \u043F\u043E \u044D\u0442\u043E\u043C\u0443 \u043F\u0440\u043E\u043F\u0430\u0434\u0451\u0442",
+    "reward.dust": "{n} \u043F\u044B\u043B\u0438",
+    "reward.currency": "{name} x{n}",
+    "reward.relic": "\u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043D\u0435\u0442 \u0432 \u043A\u043E\u0434\u0435\u043A\u0441\u0435",
+    "reward.companion": "\u0441\u043F\u0443\u0442\u043D\u0438\u043A, \u043A\u043E\u0442\u043E\u0440\u043E\u0433\u043E \u0432\u044B \u0435\u0449\u0451 \u043D\u0435 \u0432\u0441\u0442\u0440\u0435\u0447\u0430\u043B\u0438",
+    "reward.maps": "3 \u043A\u0430\u0440\u0442\u044B",
+    "reward.sigil": "\u043F\u0435\u0447\u0430\u0442\u044C",
+    "shrine.title": "\u0421\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435 \u0443\u0433\u043B\u0435\u0439",
+    "shrine.cost": "{cost} \u043F\u044B\u043B\u0438 / \u0447\u0430\u0441",
+    "shrine.note": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u044F \u0438\u0434\u0443\u0442 \u043F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0433\u0435\u0440\u043E\u044F, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u0438 \u043F\u043E\u043A\u0430 \u0432\u0430\u0441 \u043D\u0435\u0442.",
+    "shrine.line": "{name}: {text}",
+    "shrine.left": "\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {time}",
+    "shrine.leftKept": "\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {time}, \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F",
+    "shrine.keptUp": "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F: \u043F\u0440\u043E\u0434\u043B\u0438\u0442\u0441\u044F, \u043A\u0430\u043A \u0442\u043E\u043B\u044C\u043A\u043E \u0445\u0432\u0430\u0442\u0438\u0442 \u043D\u0430 \u043E\u043F\u043B\u0430\u0442\u0443",
+    "shrine.notRunning": "\u041D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442",
+    "shrine.keepTip": "\u041F\u0440\u043E\u0434\u043B\u0435\u0432\u0430\u0442\u044C \u0441\u0430\u043C\u043E, \u043A\u043E\u0433\u0434\u0430 \u0438\u0441\u0442\u0435\u043A\u0430\u0435\u0442 (\u043F\u043E\u043A\u0430 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043D\u0430 \u043E\u043F\u043B\u0430\u0442\u0443)",
+    "shrine.keep": "\u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C",
+    "shrine.hour": "+1 \u0447",
+    "shrine.hourTip": "\u0427\u0430\u0441 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u044F \xAB{name}\xBB \u0437\u0430 {cost} \u043F\u044B\u043B\u0438",
+    "shrine.hourTipOrbs": "\u0427\u0430\u0441 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u044F \xAB{name}\xBB \u0437\u0430 {cost} \u043F\u044B\u043B\u0438 (\u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u043B\u0430\u0442\u044F\u0442 \u043B\u0438\u0448\u043D\u0438\u0435 \u0441\u0444\u0435\u0440\u044B)",
+    "shrine.blessed": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u0435: {name}",
+    "shrine.orbs": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u043B\u0430\u0442\u044F\u0442 \u043B\u0438\u0448\u043D\u0438\u0435 \u0441\u0444\u0435\u0440\u044B",
+    "shrine.orbsNote": "\u0421\u0444\u0435\u0440\u044B \u0441\u0432\u0435\u0440\u0445 {n} \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0438\u0434\u0443\u0442 \u043F\u043E \u0446\u0435\u043D\u0435 \u043B\u0430\u0432\u043A\u0438 (\u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0430 {v} \u043F\u044B\u043B\u0438).",
+    // ---- log
+    "log.title": "\u041B\u0435\u0442\u043E\u043F\u0438\u0441\u044C",
+    "log.all": "\u0412\u0441\u0451",
+    "logkind.level": "\u0423\u0440\u043E\u0432\u0435\u043D\u044C",
+    "logkind.loot": "\u0414\u043E\u0431\u044B\u0447\u0430",
+    "logkind.death": "\u0421\u043C\u0435\u0440\u0442\u044C",
+    "logkind.zone": "\u0414\u043E\u0440\u043E\u0433\u0430",
+    "logkind.boss": "\u0411\u043E\u0441\u0441",
+    "logkind.info": "\u0417\u0430\u043C\u0435\u0442\u043A\u0430",
+    "log.wake": "{name} \u043F\u0440\u043E\u0441\u044B\u043F\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \u0431\u0435\u0440\u0435\u0433\u0443.",
+    "log.equippedNew": "\u041D\u0430\u0434\u0435\u0442\u043E \u043D\u043E\u0432\u043E\u0435: {base}.",
+    "log.stashFull": "\u0422\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D: \u0432\u0435\u0449\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043E\u0441\u0442\u0430\u0432\u0438\u043B \u0431\u044B \u0444\u0438\u043B\u044C\u0442\u0440, \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u0441\u044F.",
+    "log.equippedFromStash": "\u041D\u0430\u0434\u0435\u0442\u043E \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430: {item}.",
+    "log.equippedFromCase": "\u041D\u0430\u0434\u0435\u0442\u043E \u0438\u0437 \u043B\u0430\u0440\u0446\u0430 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439: {item}.",
+    "log.petJoins": "{pet} \u043F\u0440\u0438\u0441\u043E\u0435\u0434\u0438\u043D\u044F\u0435\u0442\u0441\u044F \u043A \u0432\u0430\u043C.",
+    "log.petDuplicate": "\u0415\u0449\u0451 \u043E\u0434\u0438\u043D \u0441\u043F\u0443\u0442\u043D\u0438\u043A \xAB{pet}\xBB: \u0432\u0430\u0448 \u0441\u043F\u0443\u0442\u043D\u0438\u043A \xAB{pet}\xBB \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0431\u043B\u0438\u0436\u0435.",
+    "log.petLevel": "{pet} \u0434\u043E\u0441\u0442\u0438\u0433\u0430\u0435\u0442 \u0443\u0440\u043E\u0432\u043D\u044F {level}.",
+    "log.contractDone": "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D: {goal}. \u0417\u0430\u0431\u0435\u0440\u0438\u0442\u0435 \u043D\u0430\u0433\u0440\u0430\u0434\u0443 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u041C\u0438\u0440.",
+    "log.contractRelic": "\u041D\u0430\u0433\u0440\u0430\u0434\u0430 \u0437\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442: {relic}.",
+    "log.pinOpens": "\u041E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u0443\u0442\u044C: {pin}.",
+    "log.pinDefeated": "{pin} \u043F\u043E\u0432\u0435\u0440\u0436\u0435\u043D: +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430.|{pin} \u043F\u043E\u0432\u0435\u0440\u0436\u0435\u043D: +{n} \u043E\u0447\u043A\u0430 \u0430\u0442\u043B\u0430\u0441\u0430.|{pin} \u043F\u043E\u0432\u0435\u0440\u0436\u0435\u043D: +{n} \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430.",
+    "log.tierFirst": "{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D \u0432\u043F\u0435\u0440\u0432\u044B\u0435: +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430.|{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D \u0432\u043F\u0435\u0440\u0432\u044B\u0435: +{n} \u043E\u0447\u043A\u0430 \u0430\u0442\u043B\u0430\u0441\u0430.|{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D \u0432\u043F\u0435\u0440\u0432\u044B\u0435: +{n} \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430.",
+    "log.bossFalls": "{monster} \u043F\u043E\u0432\u0435\u0440\u0436\u0435\u043D.",
+    "log.sigilFound": "\u041D\u0430\u0439\u0434\u0435\u043D\u0430 \u043F\u0435\u0447\u0430\u0442\u044C: {sigil}.",
+    "log.levelUp": "\u0414\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442 \u0443\u0440\u043E\u0432\u0435\u043D\u044C {level}.",
+    "log.died": "\u0421\u043C\u0435\u0440\u0442\u044C: {place}.",
+    "log.tooDeep": "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0433\u043B\u0443\u0431\u043E\u043A\u043E: \u043F\u043E\u043A\u0430 \u0442\u043E\u043B\u044C\u043A\u043E {tier} \u0438 \u043D\u0438\u0436\u0435.",
+    "log.fellBack": "\u041E\u0442\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u0435: {zone}.",
+    "log.actDone": "\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D: +{n} \u043E\u0447\u043A\u043E \u0443\u043C\u0435\u043D\u0438\u0439.|\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D: +{n} \u043E\u0447\u043A\u0430 \u0443\u043C\u0435\u043D\u0438\u0439.|\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D: +{n} \u043E\u0447\u043A\u043E\u0432 \u0443\u043C\u0435\u043D\u0438\u0439.",
+    "log.zoneOpen": "\u041E\u0442\u043A\u0440\u044B\u0442\u043E: {zone}.",
+    "log.trialPassed": "{zone} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043A\u043E \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F.|{zone} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043A\u0430 \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F.|{zone} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043A\u043E\u0432 \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F.",
+    "log.attempting": "\u041F\u043E\u043F\u044B\u0442\u043A\u0430: {zone}.",
+    "log.pushDeeper": "\u0413\u043B\u0443\u0431\u0436\u0435: {tier} \u0438 \u043D\u0438\u0436\u0435.",
+    "log.pushedOn": "\u0414\u0430\u043B\u044C\u0448\u0435 \u043F\u043E \u0434\u043E\u0440\u043E\u0433\u0435: {zone}.",
+    // ---- menu
+    "menu.keepAll": "\u041E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0432\u0441\u0451",
+    "menu.keepEnchanted": "\u0417\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0438 \u043B\u0443\u0447\u0448\u0435",
+    "menu.keepRares": "\u0422\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0434\u043A\u0438\u0435",
+    "menu.autoEquip": "\u041D\u0430\u0434\u0435\u0432\u0430\u0442\u044C \u043B\u0443\u0447\u0448\u0435\u0435",
+    "menu.autoEquipNote": "\u0421\u0440\u0430\u0437\u0443 \u043D\u0430\u0434\u0435\u0432\u0430\u0442\u044C \u043D\u0430\u0445\u043E\u0434\u043A\u0443, \u0435\u0441\u043B\u0438 \u043E\u043D\u0430 \u043F\u043E\u0432\u044B\u0448\u0430\u0435\u0442 \u043E\u0446\u0435\u043D\u043A\u0443 \u0441\u0431\u043E\u0440\u043A\u0438; \u043D\u0430 \u043D\u043E\u0432\u043E\u043C \u0443\u0440\u043E\u0432\u043D\u0435 - \u0438 \u0432\u0435\u0449\u0438 \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430.",
+    "menu.upkeep": "\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0442\u0430\u0439\u043D\u0438\u043A\u0430",
+    "menu.upkeepNote": "\u041A\u043E\u0433\u0434\u0430 \u0442\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D, \u0445\u043E\u0440\u043E\u0448\u0430\u044F \u043D\u0430\u0445\u043E\u0434\u043A\u0430 \u0432\u044B\u0442\u0435\u0441\u043D\u044F\u0435\u0442 \u0441\u0430\u043C\u0443\u044E \u0434\u0435\u0448\u0451\u0432\u0443\u044E \u043D\u0435\u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u0443\u044E \u0432\u0435\u0449\u044C, \u0430 \u043D\u0435 \u0438\u0434\u0451\u0442 \u0432 \u0440\u0430\u0437\u0431\u043E\u0440.",
+    "menu.exportPh": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u042D\u043A\u0441\u043F\u043E\u0440\u0442\xBB",
+    "menu.importPh": "\u0412\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u044E\u0434\u0430 \u044D\u043A\u0441\u043F\u043E\u0440\u0442 HM1:",
+    "menu.loot": "\u0414\u043E\u0431\u044B\u0447\u0430",
+    "menu.otherwise": "\u0418\u043D\u0430\u0447\u0435",
+    "menu.rulesNote": "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0438\u0434\u0443\u0442 \u0441\u0432\u0435\u0440\u0445\u0443 \u0432\u043D\u0438\u0437; \u0440\u0435\u0448\u0430\u0435\u0442 \u043F\u0435\u0440\u0432\u043E\u0435 \u043F\u043E\u0434\u043E\u0448\u0435\u0434\u0448\u0435\u0435. \u0420\u0430\u0437\u043E\u0431\u0440\u0430\u043D\u043D\u043E\u0435 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u044C\u044E.",
+    "menu.save": "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435",
+    "menu.savedIdb": "\u0425\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0432 \u044D\u0442\u043E\u043C \u043F\u0440\u043E\u0444\u0438\u043B\u0435 Discord (IndexedDB).",
+    "menu.savedMem": "\u0425\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u0432 \u043F\u0430\u043C\u044F\u0442\u0438: \u0441\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u044D\u043A\u0441\u043F\u043E\u0440\u0442, \u0447\u0442\u043E\u0431\u044B \u043D\u0435 \u043F\u043E\u0442\u0435\u0440\u044F\u0442\u044C.",
+    "menu.export": "\u042D\u043A\u0441\u043F\u043E\u0440\u0442",
+    "menu.copy": "\u041A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C",
+    "menu.copied": "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E",
+    "menu.copyByHand": "\u0412\u044B\u0434\u0435\u043B\u0438\u0442\u0435 \u0438 \u0441\u043A\u043E\u043F\u0438\u0440\u0443\u0439\u0442\u0435 \u0432\u0440\u0443\u0447\u043D\u0443\u044E",
+    "menu.import": "\u0418\u043C\u043F\u043E\u0440\u0442",
+    "menu.loaded": "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E",
+    "menu.totals": "\u0418\u0442\u043E\u0433\u0438",
+    "menu.runs": "\u0417\u0430\u0431\u0435\u0433\u0438",
+    "menu.kills": "\u0423\u0431\u0438\u0439\u0441\u0442\u0432\u0430",
+    "menu.deaths": "\u0421\u043C\u0435\u0440\u0442\u0438",
+    "menu.items": "\u041D\u0430\u0439\u0434\u0435\u043D\u043E \u0432\u0435\u0449\u0435\u0439",
+    "menu.salvaged": "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u043D\u043E",
+    "menu.swapped": "\u0417\u0430\u043C\u0435\u043D\u0435\u043D\u043E \u043F\u0440\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0438",
+    "menu.time": "\u041F\u0440\u043E\u0436\u0438\u0442\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438",
+    "menu.hours": "{n} \u0447",
+    "menu.danger": "\u041E\u043F\u0430\u0441\u043D\u043E",
+    "menu.newHero": "\u041D\u043E\u0432\u044B\u0439 \u0433\u0435\u0440\u043E\u0439",
+    "menu.startOver": "\u041D\u0430\u0447\u0430\u0442\u044C \u0437\u0430\u043D\u043E\u0432\u043E?",
+    "menu.startOverNote": "\u041D\u044B\u043D\u0435\u0448\u043D\u0438\u0439 \u0433\u0435\u0440\u043E\u0439 \u0431\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043B\u0451\u043D. \u0415\u0441\u043B\u0438 \u0445\u043E\u0442\u0438\u0442\u0435 \u0435\u0433\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C, \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u044D\u043A\u0441\u043F\u043E\u0440\u0442.",
+    "menu.deleteStart": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0438 \u043D\u0430\u0447\u0430\u0442\u044C \u0437\u0430\u043D\u043E\u0432\u043E",
+    "filter.moveUp": "\u0412\u044B\u0448\u0435",
+    "filter.delete": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C",
+    "filter.deleteAria": "\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u043F\u0440\u0430\u0432\u0438\u043B\u043E: {rule}",
+    "filter.keep": "\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C",
+    "filter.salvage": "\u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0442\u044C",
+    "filter.anyRarity": "\u043B\u044E\u0431\u0430\u044F \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C",
+    "filter.anySlot": "\u043B\u044E\u0431\u0430\u044F \u044F\u0447\u0435\u0439\u043A\u0430",
+    "filter.anyAffixes": "\u043B\u044E\u0431\u044B\u0435 \u0430\u0444\u0444\u0438\u043A\u0441\u044B",
+    "filter.minAffixes": "\u0430\u0444\u0444\u0438\u043A\u0441\u043E\u0432 {n}+",
+    "filter.behindAria": "\u041D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0441\u043D\u043E\u0432\u0430 \u043E\u0442\u0441\u0442\u0430\u0451\u0442 \u043E\u0442 \u0433\u0435\u0440\u043E\u044F",
+    "filter.anyBase": "\u043B\u044E\u0431\u0430\u044F \u043E\u0441\u043D\u043E\u0432\u0430",
+    "filter.behind": "\u043E\u0441\u043D\u043E\u0432\u0430 \u043E\u0442\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 {n}+",
+    "filter.groupAria": "\u0415\u0441\u0442\u044C \u0430\u0444\u0444\u0438\u043A\u0441",
+    "filter.anyAffix": "\u043B\u044E\u0431\u043E\u0439 \u0430\u0444\u0444\u0438\u043A\u0441",
+    "filter.with": "\u0441: {group}",
+    "filter.add": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C",
+    "filter.reset": "\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C",
+    "filter.presets": "\u041D\u0430\u0431\u043E\u0440\u044B:",
+    "rule.keep": "\u041E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C: {what}",
+    "rule.salvage": "\u0420\u0430\u0437\u0431\u0438\u0440\u0430\u0442\u044C: {what}",
+    "rule.ilvl": "\u0443\u0440. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {n}+",
+    "rule.behind": "\u043E\u0441\u043D\u043E\u0432\u0430 \u043E\u0442\u0441\u0442\u0430\u0451\u0442 \u043D\u0430 {n}+ \u0443\u0440.",
+    "rule.affixes": "\u0430\u0444\u0444\u0438\u043A\u0441\u043E\u0432 {n}+",
+    "rule.with": "\u0441: {group}",
+    // ---- creation
+    "create.loading": "\u0417\u0410\u0413\u0420\u0423\u0417\u041A\u0410",
+    "create.nameAria": "\u0418\u043C\u044F \u0433\u0435\u0440\u043E\u044F",
+    "create.calling": "\u041F\u0440\u0438\u0437\u0432\u0430\u043D\u0438\u0435",
+    "create.chosen": "\u0412\u044B\u0431\u0440\u0430\u043D",
+    "create.starts": "\u041D\u0430\u0447\u0438\u043D\u0430\u0435\u0442 \u0441 \u0443\u043C\u0435\u043D\u0438\u044F \xAB{skill}\xBB, \u0432 \u0440\u0443\u043A\u0430\u0445: {weapon}.",
+    "create.story": "\u0421\u043E\u043B\u043D\u0446\u0435 \u041C\u0430\u0440\u043A\u0438 \u043F\u043E\u0433\u0430\u0441\u043B\u043E \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442 \u043D\u0430\u0437\u0430\u0434. \u0427\u0442\u043E \u043E\u0442 \u043D\u0435\u0433\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C, \u043E\u0441\u044B\u043F\u0430\u043B\u043E\u0441\u044C \u0443\u0433\u043B\u044F\u043C\u0438, \u0438 \u0442\u043E\u0442, \u043A\u0442\u043E \u0434\u0435\u0440\u0436\u0438\u0442 \u0443\u0433\u043E\u043B\u044C, \u043D\u0435 \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043C\u0451\u0440\u0442\u0432\u044B\u043C.",
+    "create.choose": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043F\u0440\u0438\u0437\u0432\u0430\u043D\u0438\u0435",
+    "create.name": "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u043E\u0433\u043E",
+    "create.wake": "\u041F\u0440\u043E\u0441\u043D\u0443\u0442\u044C\u0441\u044F",
+    "create.nameNote": "\u0414\u043E 20 \u0431\u0443\u043A\u0432, \u0446\u0438\u0444\u0440 \u0438 \u043F\u0440\u043E\u0431\u0435\u043B\u043E\u0432. Enter - \u043F\u0440\u043E\u0441\u043D\u0443\u0442\u044C\u0441\u044F.",
+    // ---- forge
+    "forge.worn": "\u041D\u0430\u0434\u0435\u0442\u043E",
+    "forge.stash": "\u0422\u0430\u0439\u043D\u0438\u043A",
+    "forge.case": "\u041B\u0430\u0440\u0435\u0446 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439",
+    "forge.anvil": "\u041D\u0430 \u043D\u0430\u043A\u043E\u0432\u0430\u043B\u044C\u043D\u0435",
+    "forge.hone": "\u0417\u0430\u0442\u043E\u0447\u043A\u0430",
+    "forge.qualityTip": "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u043E {q}% / {max}%",
+    "forge.max": "\u041F\u0440\u0435\u0434\u0435\u043B",
+    "forge.honeFor": "+1% \u0437\u0430 {cost}",
+    "forge.fullyHoned": "\u0417\u0430\u0442\u043E\u0447\u0435\u043D\u043E \u0434\u043E \u043F\u0440\u0435\u0434\u0435\u043B\u0430",
+    "forge.honeTipWeapon": "\u041A\u0430\u0436\u0434\u043E\u0435 \u043E\u0447\u043A\u043E \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 - 1% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0441\u0430\u043C\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 (H)",
+    "forge.honeTipArmour": "\u041A\u0430\u0436\u0434\u043E\u0435 \u043E\u0447\u043A\u043E \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 - 1% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u044F \u0437\u0430\u0449\u0438\u0442\u044B \u0441\u0430\u043C\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 (H)",
+    "forge.benchAria": "\u0410\u0444\u0444\u0438\u043A\u0441 \u0434\u043B\u044F \u0432\u0435\u0440\u0441\u0442\u0430\u043A\u0430",
+    "forge.benchOption": "{ps}: {text}",
+    "forge.bench": "\u0412\u0435\u0440\u0441\u0442\u0430\u043A",
+    "forge.noRoom": "\u041D\u0435\u0442 \u043C\u0435\u0441\u0442\u0430 \u0434\u043B\u044F \u0435\u0449\u0451 \u043E\u0434\u043D\u043E\u0433\u043E \u0430\u0444\u0444\u0438\u043A\u0441\u0430.",
+    "forge.benchAdd": "\u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C: \u041F\u0440\u0438\u0432\u0438\u0432\u043A\u0430 x{n} + {dust}",
+    "forge.benchReplace": "\u0417\u0430\u043C\u0435\u043D\u0438\u0442\u044C: \u041F\u0440\u0438\u0432\u0438\u0432\u043A\u0430 x{n} + {dust}",
+    "forge.benchTip": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0439 \u0430\u0444\u0444\u0438\u043A\u0441 \u043D\u0430 \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u043E\u043C \u0442\u0438\u0440\u0435, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u0435\u0442 \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430.",
+    "forge.benchTipReplace": "\u0417\u0430\u043C\u0435\u043D\u044F\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441, \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u043A\u0435 \u0440\u0430\u043D\u044C\u0448\u0435.",
+    "forge.benchHave": "\u041F\u0440\u0438\u0432\u0438\u0432\u043E\u043A \u0443 \u0432\u0430\u0441: {n}.",
+    "forge.benched": "\u0421\u0434\u0435\u043B\u0430\u043D\u043E \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u043A\u0435",
+    "forge.keep": "\u0411\u0435\u0440\u0435\u0447\u044C",
+    "forge.lockedNote": "\u0417\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u043E: \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u043C\u0430\u0441\u0441\u043E\u0432\u044B\u0439 \u0440\u0430\u0437\u0431\u043E\u0440 \u0435\u0433\u043E \u043D\u0435 \u0442\u0440\u043E\u043D\u0443\u0442.",
+    "forge.unlockedNote": "\u041D\u0435 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u043E: \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u0436\u0435\u0442 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u0435\u0433\u043E \u043D\u0430 \u043D\u0430\u0445\u043E\u0434\u043A\u0443 \u043F\u043E\u043B\u0443\u0447\u0448\u0435.",
+    "forge.pick": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0449\u044C \u043D\u0430 \u0441\u0442\u043E\u0439\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0432\u0437\u044F\u0442\u044C\u0441\u044F \u0437\u0430 \u0440\u0430\u0431\u043E\u0442\u0443.",
+    "forge.use": "\u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C",
+    "forge.useOn": "\u041F\u0440\u0438\u043C\u0435\u043D\u0438\u0442\u044C \u043A: {item}",
+    "forge.pickFirst": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0449\u044C",
+    "forge.used": "\u041F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u043E: {cur}",
+    "forge.until": "\u0414\u043E \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F",
+    "forge.untilTip": "\u041F\u0440\u0438\u043C\u0435\u043D\u044F\u0442\u044C \xAB{cur}\xBB \u0441\u043D\u043E\u0432\u0430 \u0438 \u0441\u043D\u043E\u0432\u0430 (\u0434\u043E 20 \u0440\u0430\u0437), \u043F\u043E\u043A\u0430 {item} \u043D\u0435 \u0441\u0442\u0430\u043D\u0435\u0442 \u043B\u0443\u0447\u0448\u0435 \u043D\u0430\u0434\u0435\u0442\u043E\u0433\u043E",
+    "forge.pickStash": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0449\u044C \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430",
+    "forge.upAfter": "\u0423\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0435: {cur} x{n}",
+    "forge.noUpAfter": "\u0411\u0435\u0437 \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F: {cur} x{n}",
+    "forge.buy": "\u041A\u0443\u043F\u0438\u0442\u044C {cost}",
+    "forge.buyTip": "\u0421\u0442\u043E\u0438\u0442 {cost} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438; \u0441 Shift - \u0441\u0440\u0430\u0437\u0443 10",
+    "forge.bought": "\u041A\u0443\u043F\u043B\u0435\u043D\u043E: {cur} x{n}",
+    "forge.smithUntilTip": "\u041A\u043E\u0432\u0430\u0442\u044C \u0440\u0435\u0434\u043A\u0438\u0435 \u0432\u0435\u0449\u0438 \u0434\u043B\u044F \u044F\u0447\u0435\u0439\u043A\u0438 \xAB{slot}\xBB, \u043F\u043E\u043A\u0430 \u043E\u0434\u043D\u0430 \u043D\u0435 \u043E\u043A\u0430\u0436\u0435\u0442\u0441\u044F \u043B\u0443\u0447\u0448\u0435 \u043D\u0430\u0434\u0435\u0442\u043E\u0433\u043E (\u0434\u043E 10 \u043F\u043E {cost} \u043F\u044B\u043B\u0438; \u043D\u0435\u0443\u0434\u0430\u0447\u043D\u044B\u0435 \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u0441\u044F)",
+    "forge.smithTip": "\u0412\u044B\u043A\u043E\u0432\u0430\u0442\u044C \u0440\u0435\u0434\u043A\u0443\u044E \u0432\u0435\u0449\u044C \u0434\u043B\u044F \u044F\u0447\u0435\u0439\u043A\u0438 \xAB{slot}\xBB \u0437\u0430 {cost} \u043F\u044B\u043B\u0438",
+    "forge.needsDust": "\u041D\u0443\u0436\u043D\u043E {cost} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438",
+    "forge.forgedWearing": "\u0412\u044B\u043A\u043E\u0432\u0430\u043D\u043E {n}: \u043D\u0430\u0434\u0435\u0442\u043E {item}",
+    "forge.forgedNone": "\u0412\u044B\u043A\u043E\u0432\u0430\u043D\u043E {n}, \u043D\u0438\u0447\u0435\u0433\u043E \u043B\u0443\u0447\u0448\u0435 \u043D\u0430\u0434\u0435\u0442\u043E\u0433\u043E",
+    "forge.forged": "\u0412\u044B\u043A\u043E\u0432\u0430\u043D\u0430 \u0440\u0435\u0434\u043A\u0430\u044F \u0432\u0435\u0449\u044C",
+    "forge.untilNote": "\u0414\u043E 10 \u0440\u0435\u0434\u043A\u0438\u0445 \u0432\u0435\u0449\u0435\u0439, \u0434\u043E \u043F\u0435\u0440\u0432\u043E\u0439 \u0434\u043E\u0441\u0442\u043E\u0439\u043D\u043E\u0439; \u043D\u0435\u0443\u0434\u0430\u0447\u043D\u044B\u0435 \u0438\u0434\u0443\u0442 \u0432 \u043F\u044B\u043B\u044C.",
+    "forge.dust": "\u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438",
+    "forge.title": "\u0412\u044B\u043A\u043E\u0432\u0430\u0442\u044C \u0440\u0435\u0434\u043A\u0443\u044E",
+    "forge.costLine": "{cost} \u043F\u044B\u043B\u0438 / \u0443\u0440. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {ilvl}",
+    "forge.note": "\u0421\u043B\u0443\u0447\u0430\u0439\u043D\u0430\u044F \u0440\u0435\u0434\u043A\u0430\u044F \u0432\u0435\u0449\u044C \u0434\u043B\u044F \u044F\u0447\u0435\u0439\u043A\u0438 \u043D\u0430 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u043C \u0434\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u043E\u043C \u0443\u0440\u043E\u0432\u043D\u0435 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430. \u0423\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F \u043D\u0430\u0434\u0435\u0432\u0430\u044E\u0442\u0441\u044F \u0441\u0440\u0430\u0437\u0443. \u0412\u0430\u043B\u044E\u0442\u0430 \u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0447\u0435\u043C\u043F\u0438\u043E\u043D\u043E\u0432 \u0438 \u0431\u043E\u0441\u0441\u043E\u0432; \u043D\u0430 \u043F\u043E\u043B\u043A\u0435 \u0435\u0451 \u043F\u0440\u043E\u0434\u0430\u044E\u0442 \u0437\u0430 \u043F\u044B\u043B\u044C.",
+    "forge.moreDust": "\u0415\u0449\u0451 {n} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 \u043D\u0430 \u0440\u0435\u0434\u043A\u0443\u044E \u0432\u0435\u0449\u044C. \u041F\u044B\u043B\u044C \u0434\u0430\u0451\u0442 \u0440\u0430\u0437\u0431\u043E\u0440 \u0434\u043E\u0431\u044B\u0447\u0438 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u0412\u0435\u0449\u0438 (\u0438\u043B\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0444\u0438\u043B\u044C\u0442\u0440\u0430, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0435\u0442).",
+    "forge.rack": "\u0421\u0442\u043E\u0439\u043A\u0430",
+    "forge.currency": "\u0412\u0430\u043B\u044E\u0442\u0430",
+    // ---- atlas
+    "atlas.actCleared": "\u0410\u043A\u0442 {n}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D",
+    "atlas.actHere": "\u0410\u043A\u0442 {n}: \u0432\u044B \u0437\u0434\u0435\u0441\u044C",
+    "atlas.act": "\u0410\u043A\u0442 {n}",
+    "atlas.lands": "\u041F\u0435\u043F\u0435\u043B\u0438\u0449\u0430",
+    "atlas.story": "\u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0437\u0435\u043C\u043B\u044F - \u0441\u043F\u043B\u043E\u0448\u044C \u0443\u0433\u043B\u0438 \u0438 \u043F\u0435\u043F\u0435\u043B, \u0438 \u0435\u0439 \u043D\u0435\u0442 \u043A\u043E\u043D\u0446\u0430. \u041F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434, \u0447\u0442\u043E\u0431\u044B \u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043D\u0430 \u043D\u0435\u0451.",
+    "atlas.opensAfter": "\u041E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435",
+    "atlas.gate": "{zone} (\u0443\u0440\u043E\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0438 {level})",
+    "atlas.heroLevel": "\u0443\u0440\u043E\u0432\u0435\u043D\u044C \u0433\u0435\u0440\u043E\u044F {n}",
+    "atlas.then": "\u0414\u0430\u043B\u044C\u0448\u0435 - {n} \u044F\u0440\u0443\u0441\u043E\u0432 \u043A\u0430\u0440\u0442 \u0438 \u0431\u0435\u0441\u043A\u043E\u043D\u0435\u0447\u043D\u044B\u0435 \u0413\u043B\u0443\u0431\u0438\u043D\u044B",
+    "atlas.kept": "{n} \u043A\u0430\u0440\u0442\u0430 \u0443\u0436\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430 \u0438 \u043E\u0442\u043B\u043E\u0436\u0435\u043D\u0430 \u043D\u0430 \u043F\u043E\u0442\u043E\u043C.|{n} \u043A\u0430\u0440\u0442\u044B \u0443\u0436\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u044B \u0438 \u043E\u0442\u043B\u043E\u0436\u0435\u043D\u044B \u043D\u0430 \u043F\u043E\u0442\u043E\u043C.|{n} \u043A\u0430\u0440\u0442 \u0443\u0436\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0438 \u043E\u0442\u043B\u043E\u0436\u0435\u043D\u043E \u043D\u0430 \u043F\u043E\u0442\u043E\u043C.",
+    "atlas.dropLater": "\u041A\u0430\u0440\u0442\u044B \u043D\u0430\u0447\u0438\u043D\u0430\u044E\u0442 \u043F\u0430\u0434\u0430\u0442\u044C \u0432 \u0442\u0440\u0435\u0442\u044C\u0435\u043C \u0430\u043A\u0442\u0435; \u0438\u0445 \u043E\u0442\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442 \u043D\u0430 \u043F\u043E\u0442\u043E\u043C.",
+    "atlas.runMaps": "\u0425\u043E\u0434\u0438\u0442\u044C \u043F\u043E \u043A\u0430\u0440\u0442\u0430\u043C",
+    "atlas.runMapsNote": "\u0412\u043C\u0435\u0441\u0442\u043E \u0441\u044E\u0436\u0435\u0442\u043D\u044B\u0445 \u043C\u0435\u0441\u0442. \u041A\u043E\u0433\u0434\u0430 \u043A\u0430\u0440\u0442 \u043D\u0435\u0442 - \u041E\u043A\u0440\u0430\u0438\u043D\u044B, \u0433\u0434\u0435 \u043F\u0430\u0434\u0430\u044E\u0442 \u043A\u0430\u0440\u0442\u044B \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u044F\u0440\u0443\u0441\u0430.",
+    "atlas.highest": "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u044B\u0441\u0448\u0438\u0439 \u044F\u0440\u0443\u0441",
+    "atlas.andBelow": "{tier} \u0438 \u043D\u0438\u0436\u0435",
+    "atlas.andBelowNone": "{tier} \u0438 \u043D\u0438\u0436\u0435 (\u0432 \u0437\u0430\u043F\u0430\u0441\u0435 \u043D\u0435\u0442)",
+    "atlas.device": "\u0423\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E \u043A\u0430\u0440\u0442",
+    "atlas.order": "\u041F\u043E\u0440\u044F\u0434\u043E\u043A",
+    "atlas.count": "{n}/{cap} \u043A\u0430\u0440\u0442",
+    "atlas.deepest": "\u0413\u043B\u0443\u0431\u0436\u0435 \u0432\u0441\u0435\u0433\u043E: {tier}",
+    "atlas.none": "\u043D\u0438\u0433\u0434\u0435",
+    "atlas.xpCapTip": "\u0420\u0430\u0434\u0438 \u043E\u043F\u044B\u0442\u0430 \u0430\u0432\u0442\u043E\u043F\u0440\u043E\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u044F\u0440\u0443\u0441\u043E\u0432 \u043D\u0435 \u0432\u044B\u0448\u0435 \u0443\u0440\u043E\u0432\u043D\u044F \u0433\u0435\u0440\u043E\u044F + 4",
+    "atlas.xpCap": "\u041F\u0440\u0435\u0434\u0435\u043B \u043E\u043F\u044B\u0442\u0430: {tier}",
+    "atlas.autoCap": "\u041F\u0440\u0435\u0434\u0435\u043B \u0430\u0432\u0442\u043E\u043F\u0440\u043E\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F: {tier}",
+    "atlas.deathNote": "\u0421\u043C\u0435\u0440\u0442\u044C \u043D\u0430 \u043A\u0430\u0440\u0442\u0435 \u0441\u0442\u043E\u0438\u0442 \u0441\u0430\u043C\u043E\u0439 \u043A\u0430\u0440\u0442\u044B \u0438 {n}% \u043E\u043F\u044B\u0442\u0430 \u0443\u0440\u043E\u0432\u043D\u044F. \u041C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u044B \u0434\u0435\u043B\u0430\u044E\u0442 \u043A\u0430\u0440\u0442\u044B \u0442\u0440\u0443\u0434\u043D\u0435\u0435 \u0438 \u0431\u043E\u0433\u0430\u0447\u0435.",
+    "atlas.noMaps": "\u041A\u0430\u0440\u0442 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442. \u0418\u0445 \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442 \u041E\u043A\u0440\u0430\u0438\u043D\u044B \u0438 \u0442\u0440\u0435\u0442\u0438\u0439 \u0430\u043A\u0442.",
+    "atlas.maps": "\u041A\u0430\u0440\u0442\u044B",
+    "atlas.craft": "\u041E\u0431\u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u043A\u0430\u0440\u0442\u0443 {map}:",
+    "atlas.after": "\u041F\u043E\u0441\u043B\u0435: {list}",
+    "atlas.taken": "\u0432\u0437\u044F\u0442\u043E",
+    "atlas.locked": "\u0437\u0430\u043A\u0440\u044B\u0442\u043E",
+    "atlas.noPoints": "\u043D\u0435\u0442 \u043E\u0447\u043A\u043E\u0432",
+    "atlas.take": "\u0432\u0437\u044F\u0442\u044C",
+    "atlas.tree": "\u0410\u0442\u043B\u0430\u0441 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E)|\u0410\u0442\u043B\u0430\u0441 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u0430)|\u0410\u0442\u043B\u0430\u0441 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E\u0432)",
+    "atlas.pointsNote": "\u041F\u0435\u0440\u0432\u043E\u0435 \u043F\u0440\u043E\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \u044F\u0440\u0443\u0441\u043E\u0432 1-{n} \u0434\u0430\u0451\u0442 \u043F\u043E \u043E\u0447\u043A\u0443, \u043A\u0430\u0436\u0434\u0430\u044F \u043F\u044F\u0442\u0430\u044F \u0413\u043B\u0443\u0431\u0438\u043D\u0430 - \u0435\u0449\u0451 \u043E\u0434\u043D\u043E, \u0432\u0435\u0440\u0448\u0438\u043D\u044B - \u043F\u043E \u0434\u0432\u0430.",
+    "atlas.pinInfo": "\u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}. {sigil}: \u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0431\u043E\u0441\u0441\u043E\u0432 \u043A\u0430\u0440\u0442, {tier} \u0438 \u0433\u043B\u0443\u0431\u0436\u0435. \u041F\u043E\u0431\u0435\u0434: {kills}.",
+    "atlas.nextRun": "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0437\u0430\u0431\u0435\u0433",
+    "atlas.challenge": "\u0411\u0440\u043E\u0441\u0438\u0442\u044C \u0432\u044B\u0437\u043E\u0432 ({have}/{cost})",
+    "atlas.isNext": "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0431\u043E\u0439: {name}",
+    "atlas.scout": "\u0420\u0430\u0437\u0432\u0435\u0434\u0430\u0442\u044C",
+    "atlas.scoutTip": "\u0421\u0440\u0430\u0437\u0438\u0442\u044C\u0441\u044F \u043F\u044F\u0442\u044C \u0440\u0430\u0437 \u043A\u043E\u043F\u0438\u0435\u0439 \u0433\u0435\u0440\u043E\u044F (\u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0442\u0440\u0430\u0442\u0438\u0442\u0441\u044F) \u0438 \u0443\u0437\u043D\u0430\u0442\u044C \u0448\u0430\u043D\u0441\u044B",
+    "atlas.pinnacles": "\u0412\u0435\u0440\u0448\u0438\u043D\u044B",
+    "atlas.scouted": "\u0420\u0430\u0437\u0432\u0435\u0434\u043A\u0430: \u043F\u043E\u0431\u0435\u0434 {wins} \u0438\u0437 {n} - {verdict}",
+    "atlas.scoutedTime": "\u0420\u0430\u0437\u0432\u0435\u0434\u043A\u0430: \u043F\u043E\u0431\u0435\u0434 {wins} \u0438\u0437 {n}, \u043F\u0440\u0438\u043C\u0435\u0440\u043D\u043E \u043F\u043E {s} \u0441 - {verdict}",
+    "atlas.ready": "\u0433\u043E\u0442\u043E\u0432",
+    "atlas.risky": "\u0440\u0438\u0441\u043A\u043E\u0432\u0430\u043D\u043D\u043E",
+    "atlas.notYet": "\u0440\u0430\u043D\u043E",
+    "atlas.ladderAria": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u044F\u0440\u0443\u0441\u043E\u0432: {n} \u0438\u0437 {max}",
+    "atlas.rungCleared": "{tier}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D",
+    // ---- passive tree and ascendancy
+    "tree.left": "\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E|\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u0430|\u041E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E\u0432",
+    "tree.taken": "\u0432\u0437\u044F\u0442\u043E {n}",
+    "tree.help": "\u0422\u044F\u043D\u0438\u0442\u0435, \u0447\u0442\u043E\u0431\u044B \u0434\u0432\u0438\u0433\u0430\u0442\u044C, \u043A\u043E\u043B\u0435\u0441\u043E - \u043C\u0430\u0441\u0448\u0442\u0430\u0431. \u0429\u0435\u043B\u0447\u043E\u043A \u043F\u043E \u0441\u0432\u0435\u0442\u044F\u0449\u0435\u043C\u0443\u0441\u044F \u0443\u0437\u043B\u0443 \u0431\u0435\u0440\u0451\u0442 \u0435\u0433\u043E, \u043F\u043E \u043B\u044E\u0431\u043E\u043C\u0443 - \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u044F\u0435\u0442 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443.",
+    "tree.centre": "\u041A \u0446\u0435\u043D\u0442\u0440\u0443",
+    "tree.notable": "{name} (\u0437\u043D\u0430\u0447\u0438\u043C\u044B\u0439)",
+    "tree.keystone": "{name} (\u043A\u043B\u044E\u0447\u0435\u0432\u043E\u0439)",
+    "tree.yourSeat": "\u0417\u0434\u0435\u0441\u044C \u0432\u0430\u0448 \u0438\u0441\u0442\u043E\u043A.",
+    "tree.otherSeat": "\u041E\u0442\u0441\u044E\u0434\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442 \u0434\u0440\u0443\u0433\u043E\u0435 \u043F\u0440\u0438\u0437\u0432\u0430\u043D\u0438\u0435.",
+    "tree.refund": "\u0412\u0435\u0440\u043D\u0443\u0442\u044C ({n} \u043F\u044B\u043B\u0438)",
+    "tree.depends": "\u041E\u0442 \u043D\u0435\u0433\u043E \u0437\u0430\u0432\u0438\u0441\u044F\u0442 \u0434\u0440\u0443\u0433\u0438\u0435 \u0432\u0437\u044F\u0442\u044B\u0435 \u0443\u0437\u043B\u044B",
+    "tree.take": "\u0412\u0437\u044F\u0442\u044C",
+    "tree.clickTake": "\u0429\u0435\u043B\u0447\u043E\u043A - \u0432\u0437\u044F\u0442\u044C.",
+    "tree.clickPin": "\u0429\u0435\u043B\u0447\u043E\u043A \u0437\u0430\u043A\u0440\u0435\u043F\u0438\u0442 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 (\u0432\u043E\u0437\u0432\u0440\u0430\u0442).",
+    "asc.title": "\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E)|\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u0430)|\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435 (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E\u0432)",
+    "asc.titleNamed": "\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435: {name} (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E)|\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435: {name} (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u0430)|\u0412\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435: {name} (\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {n} \u043E\u0447\u043A\u043E\u0432)",
+    "asc.choose": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043F\u0443\u0442\u044C. \u0412\u044B\u0431\u043E\u0440 \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u0433\u0435\u0440\u043E\u044F.",
+    "asc.earn": "\u041F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 (\u043F\u0435\u0440\u0432\u043E\u0435 \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0432 \u043F\u0435\u0440\u0432\u043E\u043C \u0430\u043A\u0442\u0435, \u043F\u043E\u0441\u043B\u0435 \u0417\u0430\u0442\u043E\u043D\u0443\u0432\u0448\u0435\u0439 \u0447\u0430\u0441\u043E\u0432\u043D\u0438), \u0447\u0442\u043E\u0431\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u043E\u0447\u043A\u0438 \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F.",
+    "asc.node": "{name}: {mods}",
+    "asc.become": "\u0421\u0442\u0430\u0442\u044C: {name}",
+    "asc.taken": "\u0432\u0437\u044F\u0442\u043E",
+    "asc.take": "\u0432\u0437\u044F\u0442\u044C",
+    "asc.locked": "\u0437\u0430\u043A\u0440\u044B\u0442\u043E",
+    // ---- messages from the game's rules
+    "err.needsDust": "\u043D\u0443\u0436\u043D\u043E {n} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438",
+    "err.needsDustOrbs": "\u043D\u0443\u0436\u043D\u043E {n} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 (\u0438\u043B\u0438 \u043B\u0438\u0448\u043D\u0438\u0435 \u0441\u0444\u0435\u0440\u044B)",
+    "err.needsLevel": "\u043D\u0443\u0436\u0435\u043D \u0443\u0440\u043E\u0432\u0435\u043D\u044C {n}",
+    "err.slotNeedsLevel": "{slot}: \u043D\u0443\u0436\u0435\u043D \u0443\u0440\u043E\u0432\u0435\u043D\u044C {n}",
+    "err.supportNeedsLevel": "{name}: \u043D\u0443\u0436\u0435\u043D \u0443\u0440\u043E\u0432\u0435\u043D\u044C {n}",
+    "err.wrongSlot": "\u043D\u0435 \u0442\u0430 \u044F\u0447\u0435\u0439\u043A\u0430",
+    "err.twoHanded": "\u0434\u0432\u0443\u0440\u0443\u0447\u043D\u043E\u0435 \u043E\u0440\u0443\u0436\u0438\u0435",
+    "err.needsBow": "\u043D\u0443\u0436\u0435\u043D \u043B\u0443\u043A",
+    "err.notInStash": "\u043D\u0435\u0442 \u0432 \u0442\u0430\u0439\u043D\u0438\u043A\u0435",
+    "err.stashFull": "\u0442\u0430\u0439\u043D\u0438\u043A \u043F\u043E\u043B\u043E\u043D",
+    "err.stashMax": "\u0442\u0430\u0439\u043D\u0438\u043A \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u0440\u0430\u0441\u0442\u0451\u0442",
+    "err.itemNotFound": "\u0432\u0435\u0449\u044C \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430",
+    "err.unknownSkill": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0443\u043C\u0435\u043D\u0438\u0435",
+    "err.unknownSupport": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430",
+    "err.dupSupport": "\u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0430 \u0443\u0436\u0435 \u0441\u0442\u043E\u0438\u0442",
+    "err.unknownZone": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u043C\u0435\u0441\u0442\u043E",
+    "err.zoneLocked": "\u0437\u0430\u043A\u0440\u044B\u0442\u043E",
+    "err.skillUnavailable": "\u0443\u043C\u0435\u043D\u0438\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E",
+    "err.cantUseWith": "{skill}: \u043D\u0435 \u0441 \u044D\u0442\u0438\u043C \u043E\u0440\u0443\u0436\u0438\u0435\u043C",
+    "err.cantUseUnarmed": "{skill}: \u043D\u0443\u0436\u043D\u043E \u043E\u0440\u0443\u0436\u0438\u0435",
+    "err.noSupport": "{support} \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 {skill}",
+    "err.unknownCompanion": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0441\u043F\u0443\u0442\u043D\u0438\u043A",
+    "err.notFoundYet": "\u0435\u0449\u0451 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D",
+    "err.noContract": "\u043D\u0435\u0442 \u0442\u0430\u043A\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0430",
+    "err.notFinished": "\u0435\u0449\u0451 \u043D\u0435 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D",
+    "err.claimInstead": "\u043B\u0443\u0447\u0448\u0435 \u0437\u0430\u0431\u0435\u0440\u0438\u0442\u0435 \u043D\u0430\u0433\u0440\u0430\u0434\u0443",
+    "err.unknownBlessing": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u0435",
+    "err.unknownNode": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u0443\u0437\u0435\u043B",
+    "err.startFree": "\u0438\u0441\u0442\u043E\u043A \u0434\u0430\u0451\u0442\u0441\u044F \u0434\u0430\u0440\u043E\u043C",
+    "err.allocated": "\u0443\u0436\u0435 \u0432\u0437\u044F\u0442",
+    "err.noPoints": "\u043E\u0447\u043A\u043E\u0432 \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C",
+    "err.notConnected": "\u043D\u0435 \u0441\u0432\u044F\u0437\u0430\u043D \u0441 \u0432\u0437\u044F\u0442\u044B\u043C\u0438",
+    "err.dependOn": "\u043E\u0442 \u043D\u0435\u0433\u043E \u0437\u0430\u0432\u0438\u0441\u044F\u0442 \u0434\u0440\u0443\u0433\u0438\u0435 \u0443\u0437\u043B\u044B",
+    "err.notCalling": "\u043D\u0435 \u0434\u043B\u044F \u044D\u0442\u043E\u0433\u043E \u043F\u0440\u0438\u0437\u0432\u0430\u043D\u0438\u044F",
+    "err.alreadyChosen": "\u0443\u0436\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u043E",
+    "err.trialFirst": "\u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0438\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435",
+    "err.notYourAsc": "\u043D\u0435 \u0438\u0437 \u0432\u0430\u0448\u0435\u0433\u043E \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F",
+    "err.alreadyTaken": "\u0443\u0436\u0435 \u0432\u0437\u044F\u0442\u043E",
+    "err.noAscPoints": "\u043D\u0435\u0442 \u043E\u0447\u043A\u043E\u0432 \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u044F",
+    "err.noAtlasPoints": "\u043D\u0435\u0442 \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430",
+    "err.nodeBefore": "\u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0432\u043E\u0437\u044C\u043C\u0438\u0442\u0435 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 \u0443\u0437\u0435\u043B",
+    "err.sunfallFirst": "\u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u043F\u0440\u043E\u0439\u0434\u0438\u0442\u0435 \u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434",
+    "err.badTier": "\u043D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u044F\u0440\u0443\u0441",
+    "err.unknownPinnacle": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u0432\u0435\u0440\u0448\u0438\u043D\u0430",
+    "err.needsSigils": "\u043D\u0443\u0436\u043D\u043E \u043F\u0435\u0447\u0430\u0442\u0435\u0439: {n} ({sigil})",
+    "err.mapNotFound": "\u043A\u0430\u0440\u0442\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430",
+    "err.unknownCurrency": "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u0432\u0430\u043B\u044E\u0442\u0430",
+    "err.noneLeft": "{cur}: \u043D\u0435 \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C",
+    "err.needsPlainMap": "\u043D\u0443\u0436\u043D\u0430 \u043E\u0431\u044B\u0447\u043D\u0430\u044F \u043A\u0430\u0440\u0442\u0430",
+    "err.needsEnchantedMap": "\u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u043A\u0430\u0440\u0442\u0430",
+    "err.needsEnchantedMapOne": "\u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0441 \u043E\u0434\u043D\u0438\u043C \u043C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u043C",
+    "err.needsRareMap": "\u043D\u0443\u0436\u043D\u0430 \u0440\u0435\u0434\u043A\u0430\u044F \u043A\u0430\u0440\u0442\u0430",
+    "err.needsRareMapRoom": "\u043D\u0443\u0436\u043D\u0430 \u0440\u0435\u0434\u043A\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0441\u043E \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u043C \u043C\u0435\u0441\u0442\u043E\u043C",
+    "err.alreadyPlain": "\u0443\u0436\u0435 \u043E\u0431\u044B\u0447\u043D\u0430\u044F",
+    "err.nothingOnMaps": "\u043D\u0430 \u043A\u0430\u0440\u0442\u044B \u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442",
+    "err.needsPlain": "\u043D\u0443\u0436\u043D\u0430 \u043E\u0431\u044B\u0447\u043D\u0430\u044F \u0432\u0435\u0449\u044C",
+    "err.needsEnchanted": "\u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u0432\u0435\u0449\u044C",
+    "err.needsRare": "\u043D\u0443\u0436\u043D\u0430 \u0440\u0435\u0434\u043A\u0430\u044F \u0432\u0435\u0449\u044C",
+    "err.needsEnchantedOrRare": "\u043D\u0443\u0436\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F \u0438\u043B\u0438 \u0440\u0435\u0434\u043A\u0430\u044F \u0432\u0435\u0449\u044C",
+    "err.noRoom": "\u043D\u0435\u0442 \u043C\u0435\u0441\u0442\u0430 \u0434\u043B\u044F \u0435\u0449\u0451 \u043E\u0434\u043D\u043E\u0433\u043E \u0430\u0444\u0444\u0438\u043A\u0441\u0430",
+    "err.relicNoUndo": "\u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044E \u043D\u0435 \u0440\u0430\u0437\u0432\u0435\u044F\u0442\u044C",
+    "err.relicNoTemper": "\u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044E \u043D\u0435 \u0437\u0430\u043A\u0430\u043B\u0438\u0442\u044C",
+    "err.noAffixes": "\u043D\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441\u043E\u0432",
+    "err.onlyRerolls": "\u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0435\u0440\u0435\u0431\u0440\u043E\u0441\u044B",
+    "err.onlyStash": "\u0442\u043E\u043B\u044C\u043A\u043E \u0432\u0435\u0449\u0438 \u0438\u0437 \u0442\u0430\u0439\u043D\u0438\u043A\u0430",
+    "err.maxQuality": "\u043A\u0430\u0447\u0435\u0441\u0442\u0432\u043E \u0443\u0436\u0435 {n}%",
+    "err.onlyWeaponsArmour": "\u043A\u0430\u0447\u0435\u0441\u0442\u0432\u043E \u0431\u044B\u0432\u0430\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0443 \u043E\u0440\u0443\u0436\u0438\u044F \u0438 \u0434\u043E\u0441\u043F\u0435\u0445\u043E\u0432",
+    "err.affixNoFit": "\u044D\u0442\u043E\u0442 \u0430\u0444\u0444\u0438\u043A\u0441 \u043D\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442",
+    "err.needsGraft": "\u043D\u0443\u0436\u043D\u043E \u043F\u0440\u0438\u0432\u0438\u0432\u043E\u043A: {n}",
+    "err.nothingToForge": "\u0434\u043B\u044F \u044D\u0442\u043E\u0439 \u044F\u0447\u0435\u0439\u043A\u0438 \u043A\u043E\u0432\u0430\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E",
+    "err.saveNot": "\u044D\u0442\u043E \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435",
+    "err.saveNotHm": "\u044D\u0442\u043E \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 Hollowmarch",
+    "err.saveVersion": "\u043D\u0435\u0432\u0435\u0440\u043D\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F",
+    "err.saveNewer": "\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0438\u0437 \u0431\u043E\u043B\u0435\u0435 \u043D\u043E\u0432\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 ({n})",
+    "err.saveNoMigration": "\u043D\u0435\u0442 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0430 \u0441 \u0432\u0435\u0440\u0441\u0438\u0438 {n}",
+    "err.exportNot": "\u044D\u0442\u043E \u043D\u0435 \u044D\u043A\u0441\u043F\u043E\u0440\u0442 Hollowmarch",
+    "err.exportDamaged": "\u044D\u043A\u0441\u043F\u043E\u0440\u0442 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D",
+    "err.saveUnreadable": "\u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u043E\u0447\u0435\u0441\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435",
+    "err.saveBroken": "\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u043E ({what})"
+  };
+  var CONTENT = {
+    // classes, skills, supports
+    "class.vanguard.name": "\u0410\u0432\u0430\u043D\u0433\u0430\u0440\u0434",
+    "class.vanguard.blurb": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u0439 \u0441\u043E\u043B\u0434\u0430\u0442, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0432\u0441\u0451 \u0435\u0449\u0451 \u043F\u043E\u043C\u043D\u0438\u0442 \u0441\u0442\u0435\u043D\u0443 \u0449\u0438\u0442\u043E\u0432. \u0422\u044F\u0436\u0451\u043B\u044B\u0435 \u0443\u0434\u0430\u0440\u044B, \u0442\u044F\u0436\u0451\u043B\u0430\u044F \u0431\u0440\u043E\u043D\u044F.",
+    "class.strider.name": "\u0421\u043A\u043E\u0440\u043E\u0445\u043E\u0434",
+    "class.strider.blurb": "\u0424\u043E\u043D\u0430\u0440\u0449\u0438\u043A, \u0447\u0442\u043E \u0437\u0430\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u043B \u043D\u0430 \u0436\u0438\u0437\u043D\u044C \u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435\u043C \u043F\u043E \u0443\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u043C \u0434\u043E\u0440\u043E\u0433\u0430\u043C. \u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u043D\u043E\u0433\u0438, \u043B\u0443\u043A \u0438 \u0437\u043E\u0440\u043A\u0438\u0439 \u0433\u043B\u0430\u0437.",
+    "class.arcanist.name": "\u0422\u0430\u0439\u043D\u043E\u0432\u0435\u0434",
+    "class.arcanist.blurb": "\u0423\u0447\u0451\u043D\u044B\u0439 \u0438\u0437 \u0447\u0430\u0441\u043E\u0432\u043D\u0438, \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0432\u0448\u0438\u0439 \u043F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u0443\u0433\u043B\u044F \u043F\u0440\u0435\u0436\u0434\u0435, \u0447\u0435\u043C \u0442\u043E\u0442 \u0441\u0436\u0451\u0433 \u0435\u0433\u043E \u0437\u0430\u0436\u0438\u0432\u043E. \u0427\u0430\u0440\u044B \u0438 \u0449\u0438\u0442 \u0438\u0437 \u0441\u0432\u0435\u0442\u0430.",
+    "skill.crescent.name": "\u0421\u0435\u0440\u043F\u043E\u0432\u0438\u0434\u043D\u044B\u0439 \u0437\u0430\u043C\u0430\u0445",
+    "skill.crescent.blurb": "\u0428\u0438\u0440\u043E\u043A\u0438\u0439 \u0437\u0430\u043C\u0430\u0445, \u0437\u0430\u0434\u0435\u0432\u0430\u044E\u0449\u0438\u0439 \u0434\u043E \u0442\u0440\u0451\u0445 \u0432\u0440\u0430\u0433\u043E\u0432 \u043F\u0435\u0440\u0435\u0434 \u0432\u0430\u043C\u0438.",
+    "skill.sunder.name": "\u0420\u0430\u0441\u043A\u043E\u043B",
+    "skill.sunder.blurb": "\u041E\u0434\u0438\u043D \u0441\u043E\u043A\u0440\u0443\u0448\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0443\u0434\u0430\u0440 \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0432\u0440\u0430\u0433\u0443. \u041C\u0435\u0434\u043B\u0435\u043D\u043D\u043E, \u0442\u044F\u0436\u0435\u043B\u043E, \u0445\u043E\u0440\u043E\u0448\u043E \u043F\u0440\u043E\u0442\u0438\u0432 \u0431\u043E\u0441\u0441\u043E\u0432.",
+    "skill.hatchet.name": "\u0411\u0440\u043E\u0441\u043E\u043A \u0442\u043E\u043F\u043E\u0440\u0438\u043A\u0430",
+    "skill.hatchet.blurb": "\u0411\u0440\u043E\u0441\u0430\u0435\u0442 \u0432\u0440\u0430\u0449\u0430\u044E\u0449\u0443\u044E\u0441\u044F \u043A\u043E\u043F\u0438\u044E \u0432\u0430\u0448\u0435\u0433\u043E \u043E\u0440\u0443\u0436\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u0435\u0442 \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0440\u0430\u0433\u0430.",
+    "skill.quake.name": "\u0421\u043E\u0442\u0440\u044F\u0441\u0430\u044E\u0449\u0438\u0439 \u0442\u043E\u043F\u043E\u0442",
+    "skill.quake.blurb": "\u0411\u044C\u0451\u0442 \u0432 \u0437\u0435\u043C\u043B\u044E \u0442\u0430\u043A, \u0447\u0442\u043E \u044D\u0442\u043E \u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0435\u0442 \u0432\u0441\u044F \u0433\u0440\u0443\u043F\u043F\u0430.",
+    "skill.cinderwake.name": "\u0417\u043E\u043B\u044C\u043D\u044B\u0439 \u0441\u043B\u0435\u0434",
+    "skill.cinderwake.blurb": "\u0413\u043E\u0440\u044F\u0449\u0430\u044F \u0434\u0443\u0433\u0430. \u041F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0435\u0451 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u043E\u0433\u043D\u0451\u043C.",
+    "skill.twinshot.name": "\u0414\u0432\u043E\u0439\u043D\u043E\u0439 \u0432\u044B\u0441\u0442\u0440\u0435\u043B",
+    "skill.twinshot.blurb": "\u0414\u0432\u0435 \u0441\u0442\u0440\u0435\u043B\u044B \u0441 \u043E\u0434\u043D\u043E\u0433\u043E \u043D\u0430\u0442\u044F\u0436\u0435\u043D\u0438\u044F; \u043A\u0430\u0436\u0434\u0430\u044F \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u043E\u0431\u0438\u0442\u044C \u0432\u0440\u0430\u0433\u0430.",
+    "skill.barbrain.name": "\u0414\u043E\u0436\u0434\u044C \u0437\u0430\u0437\u0443\u0431\u0440\u0438\u043D",
+    "skill.barbrain.blurb": "\u0421\u0442\u0440\u0435\u043B\u044B, \u043F\u0443\u0449\u0435\u043D\u043D\u044B\u0435 \u0432\u0432\u044B\u0441\u044C, \u043F\u0430\u0434\u0430\u044E\u0442 \u043D\u0430 \u0432\u0441\u044E \u0433\u0440\u0443\u043F\u043F\u0443.",
+    "skill.heartseeker.name": "\u0418\u0449\u0443\u0449\u0438\u0439 \u0441\u0435\u0440\u0434\u0446\u0435",
+    "skill.heartseeker.blurb": "\u041C\u0435\u0434\u043B\u0435\u043D\u043D\u044B\u0439 \u043F\u0440\u0438\u0446\u0435\u043B\u044C\u043D\u044B\u0439 \u0432\u044B\u0441\u0442\u0440\u0435\u043B, \u043D\u0430\u0445\u043E\u0434\u044F\u0449\u0438\u0439 \u0449\u0435\u043B\u0438 \u0432 \u0431\u0440\u043E\u043D\u0435.",
+    "skill.stormvolley.name": "\u0413\u0440\u043E\u0437\u043E\u0432\u043E\u0439 \u0437\u0430\u043B\u043F",
+    "skill.stormvolley.blurb": "\u0417\u0430\u0440\u044F\u0436\u0435\u043D\u043D\u044B\u0435 \u0441\u0442\u0440\u0435\u043B\u044B; \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0438\u0445 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u043C\u043E\u043B\u043D\u0438\u0435\u0439.",
+    "skill.skewer.name": "\u041F\u0440\u043E\u043A\u043E\u043B",
+    "skill.skewer.blurb": "\u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u0443\u043A\u043E\u043B\u044B, \u043A\u043E\u0433\u0434\u0430 \u0433\u0440\u0443\u043F\u043F\u0430 \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u043B\u0438\u0437\u043A\u043E, \u0447\u0442\u043E\u0431\u044B \u0441\u0442\u0440\u0435\u043B\u044F\u0442\u044C.",
+    "skill.emberbolt.name": "\u041E\u0433\u043D\u0435\u043D\u043D\u044B\u0439 \u0443\u0433\u043E\u043B\u044C",
+    "skill.emberbolt.blurb": "\u0411\u0440\u043E\u0448\u0435\u043D\u043D\u044B\u0439 \u0443\u0433\u043E\u043B\u044C \u043C\u0451\u0440\u0442\u0432\u043E\u0433\u043E \u0441\u043E\u043B\u043D\u0446\u0430.",
+    "skill.frostring.name": "\u041A\u043E\u043B\u044C\u0446\u043E \u0438\u043D\u0435\u044F",
+    "skill.frostring.blurb": "\u041E\u0442 \u0432\u0430\u0441 \u0440\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u043A\u043E\u043B\u044C\u0446\u043E \u043C\u043E\u0440\u043E\u0437\u0430 \u0438 \u043A\u0443\u0441\u0430\u0435\u0442 \u0432\u0441\u0451 \u0432\u043E\u043A\u0440\u0443\u0433.",
+    "skill.chainspark.name": "\u0426\u0435\u043F\u043D\u0430\u044F \u0438\u0441\u043A\u0440\u0430",
+    "skill.chainspark.blurb": "\u0418\u0441\u043A\u0440\u0430, \u0447\u0442\u043E \u043F\u0435\u0440\u0435\u0441\u043A\u0430\u043A\u0438\u0432\u0430\u0435\u0442 \u0441 \u0432\u0440\u0430\u0433\u0430 \u043D\u0430 \u0432\u0440\u0430\u0433\u0430.",
+    "skill.glacial.name": "\u041B\u0435\u0434\u043D\u0438\u043A\u043E\u0432\u043E\u0435 \u043A\u043E\u043F\u044C\u0451",
+    "skill.glacial.blurb": "\u041A\u043E\u043F\u044C\u0451 \u0438\u0437 \u0434\u0440\u0435\u0432\u043D\u0435\u0433\u043E \u043B\u044C\u0434\u0430: \u0441\u043E\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E, \u043F\u0435\u0440\u0435\u0436\u0438\u0442\u044C \u0435\u0433\u043E \u0442\u0440\u0443\u0434\u043D\u043E.",
+    "skill.hexbloom.name": "\u0426\u0432\u0435\u0442\u0435\u043D\u0438\u0435 \u043F\u043E\u0440\u0447\u0438",
+    "skill.hexbloom.blurb": "\u041F\u043E\u0441\u0440\u0435\u0434\u0438 \u0433\u0440\u0443\u043F\u043F\u044B \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0446\u0432\u0435\u0442\u044B \u0433\u043D\u0438\u043B\u0438. \u041C\u0430\u043B\u043E \u0447\u0442\u043E \u043C\u043E\u0436\u0435\u0442 \u0438\u043C \u043F\u0440\u043E\u0442\u0438\u0432\u0438\u0442\u044C\u0441\u044F.",
+    "support.heavyhand.name": "\u0422\u044F\u0436\u0451\u043B\u0430\u044F \u0440\u0443\u043A\u0430",
+    "support.heavyhand.blurb": "\u041D\u0430 35% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430, \u043D\u0430 10% \u043C\u0435\u043D\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438.",
+    "support.quicken.name": "\u0423\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435",
+    "support.quicken.blurb": "\u041D\u0430 22% \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438 \u0438 \u0447\u0430\u0440, \u043D\u0430 8% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.widesweep.name": "\u0428\u0438\u0440\u043E\u043A\u0438\u0439 \u0440\u0430\u0437\u043C\u0430\u0445",
+    "support.widesweep.blurb": "50% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F, \u043D\u0430 10% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.bloodthirst.name": "\u0416\u0430\u0436\u0434\u0430 \u043A\u0440\u043E\u0432\u0438",
+    "support.bloodthirst.blurb": "3% \u0443\u0440\u043E\u043D\u0430 \u043F\u043E\u0445\u0438\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435, \u043D\u0430 5% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.passthrough.name": "\u041D\u0430\u0432\u044B\u043B\u0435\u0442",
+    "support.passthrough.blurb": "\u041F\u0440\u043E\u0431\u0438\u0432\u0430\u0435\u0442 \u0435\u0449\u0451 \u0434\u0432\u0443\u0445 \u0432\u0440\u0430\u0433\u043E\u0432, \u043D\u0430 15% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.emberedge.name": "\u0420\u0430\u0441\u043A\u0430\u043B\u0451\u043D\u043D\u0430\u044F \u043A\u0440\u043E\u043C\u043A\u0430",
+    "support.emberedge.blurb": "\u041F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442 50% \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u043E\u0433\u043E\u043D\u044C; \u043D\u0430 20% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F.",
+    "support.keeneye.name": "\u0417\u043E\u0440\u043A\u0438\u0439 \u0433\u043B\u0430\u0437",
+    "support.keeneye.blurb": "90% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430, +25% \u043A \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044E \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430.",
+    "support.ruthless.name": "\u0411\u0435\u0441\u043F\u043E\u0449\u0430\u0434\u043D\u043E\u0441\u0442\u044C",
+    "support.ruthless.blurb": "\u041D\u0430 30% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430 \u0432 \u0431\u043B\u0438\u0436\u043D\u0435\u043C \u0431\u043E\u044E, \u043D\u0430 20% \u0431\u043E\u043B\u044C\u0448\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430.",
+    "support.fracture.name": "\u0422\u0440\u0435\u0449\u0438\u043D\u0430",
+    "support.fracture.blurb": "\u0423\u0434\u0430\u0440\u044B \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u0443\u044E\u0442 15% \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0439 \u0441\u0442\u0438\u0445\u0438\u044F\u043C; \u043D\u0430 10% \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u0442\u0438\u0445\u0438\u0439\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430.",
+    "support.echo.name": "\u042D\u0445\u043E \u0441\u043B\u043E\u0432",
+    "support.echo.blurb": "\u041D\u0430 35% \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440, \u043D\u0430 12% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.potency.name": "\u041C\u043E\u0433\u0443\u0449\u0435\u0441\u0442\u0432\u043E",
+    "support.potency.blurb": "\u041D\u0430 30% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0447\u0430\u0440.",
+    "support.volley.name": "\u0417\u0430\u043B\u043F",
+    "support.volley.blurb": "\u0421\u043D\u0430\u0440\u044F\u0434 \u043F\u043E\u0440\u0430\u0436\u0430\u0435\u0442 \u043D\u0430 \u043E\u0434\u043D\u0443 \u0446\u0435\u043B\u044C \u0431\u043E\u043B\u044C\u0448\u0435, \u043D\u0430 10% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430.",
+    "support.elemfocus.name": "\u0421\u043E\u0441\u0440\u0435\u0434\u043E\u0442\u043E\u0447\u0435\u043D\u0438\u0435 \u0441\u0442\u0438\u0445\u0438\u0439",
+    "support.elemfocus.blurb": "\u041D\u0430 30% \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u0442\u0438\u0445\u0438\u0439\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430.",
+    "support.rot.name": "\u0413\u043D\u0438\u043B\u044C",
+    "support.rot.blurb": "25% \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u0445\u0430\u043E\u0441\u043E\u043C; \u043D\u0430 15% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C.",
+    // monsters
+    "monster.drowned.name": "\u0416\u0430\u043B\u043A\u0438\u0439 \u0443\u0442\u043E\u043F\u043B\u0435\u043D\u043D\u0438\u043A",
+    "monster.crab.name": "\u041F\u0430\u043D\u0446\u0438\u0440\u043D\u0438\u043A",
+    "monster.gull.name": "\u041A\u043E\u0441\u0442\u044F\u043D\u0430\u044F \u0447\u0430\u0439\u043A\u0430",
+    "monster.bogwitch.name": "\u0422\u043E\u043F\u044F\u043D\u0430\u044F \u043A\u0430\u0440\u0433\u0430",
+    "monster.eel.name": "\u0423\u0433\u043E\u0440\u044C-\u0444\u043E\u043D\u0430\u0440\u044C",
+    "monster.lampman.name": "\u0411\u0435\u0441\u0444\u043E\u043D\u0430\u0440\u043D\u044B\u0439",
+    "monster.scorpion.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u0441\u043A\u043E\u0440\u043F\u0438\u043E\u043D",
+    "monster.wraith.name": "\u041F\u0435\u0441\u0447\u0430\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u0440\u0430\u043A",
+    "monster.jackal.name": "\u0428\u0430\u043A\u0430\u043B-\u043C\u0438\u0440\u0430\u0436",
+    "monster.bleached.name": "\u0412\u044B\u0431\u0435\u043B\u0435\u043D\u043D\u044B\u0439 \u043F\u0430\u043B\u043E\u043C\u043D\u0438\u043A",
+    "monster.wasp.name": "\u041F\u0440\u0438\u0437\u043C\u0435\u043D\u043D\u0430\u044F \u043E\u0441\u0430",
+    "monster.hound.name": "\u0423\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u0433\u043E\u043D\u0447\u0430\u044F",
+    "monster.ashwalker.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0430\u043D\u043D\u0438\u043A",
+    "monster.cinderbat.name": "\u0417\u043E\u043B\u044C\u043D\u044B\u0439 \u043D\u0435\u0442\u043E\u043F\u044B\u0440\u044C",
+    "monster.magmacrab.name": "\u041C\u0430\u0433\u043C\u043E\u0432\u044B\u0439 \u043F\u0430\u043D\u0446\u0438\u0440\u044C",
+    "monster.sunpriest.name": "\u0411\u0435\u0441\u0441\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u0436\u0440\u0435\u0446",
+    "monster.tidewarden.name": "\u0421\u0442\u0440\u0430\u0436 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "monster.keeper.name": "\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u0447\u0430\u0441\u043E\u0432\u043D\u0438",
+    "monster.drownedknight.name": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u0439 \u0440\u044B\u0446\u0430\u0440\u044C",
+    "monster.sandwright.name": "\u041F\u0435\u0441\u0447\u0430\u043D\u044B\u0439 \u0437\u043E\u0434\u0447\u0438\u0439",
+    "monster.mirrorwarden.name": "\u0417\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0430\u0436",
+    "monster.glassregent.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u0440\u0435\u0433\u0435\u043D\u0442\u0448\u0430",
+    "monster.cindermatron.name": "\u0417\u043E\u043B\u044C\u043D\u0430\u044F \u043C\u0430\u0442\u0440\u043E\u043D\u0430",
+    "monster.emberjudge.name": "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0441\u0443\u0434\u044C\u044F",
+    "monster.p_drownedsun.name": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0435\u0435 \u0441\u043E\u043B\u043D\u0446\u0435",
+    "monster.p_glasschoir.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u0445\u043E\u0440",
+    "monster.p_ashenking.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "monster.p_hollowcrown.name": "\u041F\u043E\u043B\u0430\u044F \u043A\u043E\u0440\u043E\u043D\u0430",
+    "monster.lastdawn.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0430\u0441\u0441\u0432\u0435\u0442",
+    // zones and acts
+    "zone.a1_shore.name": "\u041F\u043B\u0430\u0447\u0443\u0449\u0438\u0439 \u0431\u0435\u0440\u0435\u0433",
+    "zone.a1_shore.story": "\u0412\u044B \u043F\u0440\u043E\u0441\u044B\u043F\u0430\u0435\u0442\u0435\u0441\u044C \u0432 \u043F\u0440\u0438\u0431\u043E\u0435 \u0441 \u0443\u0433\u043B\u0451\u043C \u043D\u0430 \u043C\u0435\u0441\u0442\u0435 \u0441\u0435\u0440\u0434\u0446\u0430. \u041F\u0440\u0438\u043B\u0438\u0432 \u0432\u0435\u0440\u043D\u0443\u043B \u0432\u0430\u0441. \u0411\u0435\u0440\u0435\u0433 \u043F\u043E\u043B\u043E\u043D \u0434\u0440\u0443\u0433\u0438\u0445, \u043A\u043E\u0433\u043E \u043E\u043D \u0432\u0435\u0440\u043D\u0443\u043B \u0445\u0443\u0436\u0435.",
+    "zone.a1_saltmire.name": "\u0421\u043E\u043B\u0451\u043D\u0430\u044F \u0442\u043E\u043F\u044C",
+    "zone.a1_saltmire.story": "\u0421\u043E\u043B\u043E\u043D\u0447\u0430\u043A\u043E\u0432\u043E\u0435 \u0431\u043E\u043B\u043E\u0442\u043E \u0433\u0443\u0434\u0438\u0442. \u0427\u0442\u043E-\u0442\u043E \u0432 \u0442\u0440\u043E\u0441\u0442\u043D\u0438\u043A\u0435 \u043F\u043E\u0451\u0442, \u0438 \u0443\u0442\u043E\u043F\u043B\u0435\u043D\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0441\u044B\u043F\u0430\u044E\u0442\u0441\u044F.",
+    "zone.a1_chapel.name": "\u0417\u0430\u0442\u043E\u043D\u0443\u0432\u0448\u0430\u044F \u0447\u0430\u0441\u043E\u0432\u043D\u044F",
+    "zone.a1_chapel.story": "\u041F\u043E\u043B\u0447\u0430\u0441\u043E\u0432\u043D\u0438 \u043F\u043E\u0434 \u0432\u043E\u0434\u043E\u0439. \u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u0432\u0441\u0451 \u0435\u0449\u0451 \u0437\u0432\u043E\u043D\u0438\u0442 \u043A \u0441\u043B\u0443\u0436\u0431\u0435, \u043D\u0430 \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u043F\u0440\u0438\u0434\u0451\u0442.",
+    "zone.a1_cliffs.name": "\u0427\u0430\u044F\u0447\u044C\u0438 \u0443\u0442\u0451\u0441\u044B",
+    "zone.a1_cliffs.story": "\u041D\u0430 \u0443\u0442\u0451\u0441\u0430\u0445 \u0433\u043D\u0435\u0437\u0434\u044F\u0442\u0441\u044F \u043A\u043E\u0441\u0442\u044F\u043D\u044B\u0435 \u0447\u0430\u0439\u043A\u0438. \u041E\u043D\u0438 \u0443\u0441\u0432\u043E\u0438\u043B\u0438, \u0447\u0442\u043E \u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u044B\u0435 \u043D\u0435 \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u043C\u0451\u0440\u0442\u0432\u044B\u043C\u0438, \u0438 \u0443\u043C\u0435\u044E\u0442 \u0436\u0434\u0430\u0442\u044C.",
+    "zone.a1_village.name": "\u0414\u0435\u0440\u0435\u0432\u043D\u044F \u0431\u0435\u0437 \u0444\u043E\u043D\u0430\u0440\u0435\u0439",
+    "zone.a1_village.story": "\u0412\u0441\u0435 \u0444\u043E\u043D\u0430\u0440\u0438 \u0432 \u0434\u0435\u0440\u0435\u0432\u043D\u0435 \u043F\u043E\u0433\u0430\u0441\u043B\u0438 \u0432 \u0442\u043E\u0442 \u0434\u0435\u043D\u044C, \u043A\u043E\u0433\u0434\u0430 \u043F\u043E\u0433\u0430\u0441\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435. \u0416\u0438\u0442\u0435\u043B\u0438 \u0434\u043E \u0441\u0438\u0445 \u043F\u043E\u0440 \u0438\u0449\u0443\u0442 \u043E\u0433\u043E\u043D\u044C.",
+    "zone.a1_floodgate.name": "\u041C\u043E\u0440\u0441\u043A\u0438\u0435 \u0432\u043E\u0440\u043E\u0442\u0430",
+    "zone.a1_floodgate.story": "\u0412\u0435\u043B\u0438\u043A\u0438\u0435 \u0432\u043E\u0440\u043E\u0442\u0430 \u043D\u0435 \u043F\u0443\u0441\u043A\u0430\u044E\u0442 \u043C\u043E\u0440\u0435 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0443 \u0432\u0433\u043B\u0443\u0431\u044C \u0437\u0435\u043C\u043B\u0438. \u041A\u0442\u043E-\u0442\u043E \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0438\u0445, \u043F\u043E\u043D\u0435\u043C\u043D\u043E\u0433\u0443 \u043A\u0430\u0436\u0434\u0443\u044E \u043D\u043E\u0447\u044C.",
+    "zone.a1_lock.name": "\u0428\u043B\u044E\u0437 \u0421\u0442\u0440\u0430\u0436\u0430 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "zone.a1_lock.story": "\u0421\u0442\u0440\u0430\u0436 \u043F\u0440\u0438\u043B\u0438\u0432\u0430 \u043F\u043E\u043A\u043B\u044F\u043B\u0441\u044F \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0432\u043E\u0440\u043E\u0442\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u044B\u043C\u0438. \u0417\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442 \u043F\u043E\u0434 \u0432\u043E\u0434\u043E\u0439 \u043E\u043D \u043F\u043E\u043D\u044F\u043B \u043A\u043B\u044F\u0442\u0432\u0443 \u043F\u043E-\u0441\u0432\u043E\u0435\u043C\u0443.",
+    "zone.a1_lock.bossText": "\u0421\u0442\u0440\u0430\u0436 \u0443\u0445\u043E\u0434\u0438\u0442 \u043D\u0430 \u0434\u043D\u043E. \u0412\u043F\u0435\u0440\u0432\u044B\u0435 \u0437\u0430 \u0442\u0440\u0438 \u0432\u0435\u043A\u0430 \u0432\u043E\u0440\u043E\u0442\u0430 \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F \u0437\u0430\u043A\u0440\u044B\u0442\u044B\u043C\u0438 \u0441\u0430\u043C\u0438.",
+    "zone.a1_trial.name": "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0441\u043E\u043B\u044C\u044E",
+    "zone.a1_trial.story": "\u041F\u043E\u0434 \u0447\u0430\u0441\u043E\u0432\u043D\u0435\u0439 \u0435\u0441\u0442\u044C \u0437\u0430\u043B, \u0433\u0434\u0435 \u0443\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u0439 \u043E\u0440\u0434\u0435\u043D \u0438\u0441\u043F\u044B\u0442\u044B\u0432\u0430\u043B \u0441\u0432\u043E\u0438\u0445 \u0440\u044B\u0446\u0430\u0440\u0435\u0439. \u041E\u0434\u0438\u043D \u0438\u0437 \u043D\u0438\u0445 \u0442\u0430\u043A \u0438 \u043D\u0435 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B \u0438\u0441\u043F\u044B\u0442\u044B\u0432\u0430\u0442\u044C.",
+    "zone.a1_trial.bossText": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u0439 \u0440\u044B\u0446\u0430\u0440\u044C \u043F\u0440\u0435\u043A\u043B\u043E\u043D\u044F\u0435\u0442 \u043A\u043E\u043B\u0435\u043D\u043E \u0438 \u043F\u0440\u0438\u043D\u043E\u0441\u0438\u0442 \u0432\u0430\u043C \u043A\u043B\u044F\u0442\u0432\u0443. \u0412\u0430\u0448 \u0443\u0433\u043E\u043B\u044C \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0435\u0451.",
+    "zone.a2_dunes.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0435 \u0434\u044E\u043D\u044B",
+    "zone.a2_dunes.story": "\u0417\u0430 \u0432\u043E\u0440\u043E\u0442\u0430\u043C\u0438 \u043C\u043E\u0440\u0435 \u0441\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u0435\u0441\u043A\u043E\u043C, \u0430 \u043F\u0435\u0441\u043E\u043A - \u0441\u0442\u0435\u043A\u043B\u043E\u043C. \u0417\u0434\u0435\u0441\u044C \u0441\u043E\u043B\u043D\u0446\u0435 \u0443\u043F\u0430\u043B\u043E \u0433\u043E\u0440\u044F\u0447\u0438\u043C.",
+    "zone.a2_mirage.name": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043C\u0438\u0440\u0430\u0436\u0435\u0439",
+    "zone.a2_mirage.story": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0433\u043E\u0440\u043E\u0434\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043D\u0435\u0442. \u041D\u043E \u0442\u0435, \u043A\u0442\u043E \u0432 \u043D\u0438\u0445 \u0436\u0438\u0432\u0451\u0442, \u0432\u043F\u043E\u043B\u043D\u0435 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0438\u0435.",
+    "zone.a2_caravan.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043A\u0430\u0440\u0430\u0432\u0430\u043D",
+    "zone.a2_caravan.story": "\u041A\u0430\u0440\u0430\u0432\u0430\u043D \u0432\u0441\u0451 \u0435\u0449\u0451 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442 \u041F\u0443\u0441\u0442\u043E\u0448\u044C, \u043E\u043F\u0430\u0437\u0434\u044B\u0432\u0430\u044F \u043D\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442. \u0415\u0433\u043E \u0445\u043E\u0437\u044F\u0438\u043D \u0441\u0442\u0440\u043E\u0438\u0442 \u043D\u043E\u0432\u044B\u0435 \u043F\u043E\u0432\u043E\u0437\u043A\u0438 \u0438\u0437 \u043F\u0435\u0441\u043A\u0430 \u0438 \u0441\u0442\u0430\u0440\u044B\u0445 \u043F\u0443\u0442\u043D\u0438\u043A\u043E\u0432.",
+    "zone.a2_caravan.bossText": "\u041F\u043E\u0432\u043E\u0437\u043A\u0438 \u041F\u0435\u0441\u0447\u0430\u043D\u043E\u0433\u043E \u0437\u043E\u0434\u0447\u0435\u0433\u043E \u0440\u0430\u0441\u0441\u044B\u043F\u0430\u044E\u0442\u0441\u044F \u0432 \u0434\u044E\u043D\u044B. \u0414\u043E\u0440\u043E\u0433\u0430 \u0432\u043F\u0435\u0440\u0435\u0434\u0438 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u0430.",
+    "zone.a2_shards.name": "\u041F\u043E\u043B\u0435 \u043E\u0441\u043A\u043E\u043B\u043A\u043E\u0432",
+    "zone.a2_shards.story": "\u0417\u0434\u0435\u0441\u044C \u0441\u0442\u0435\u043A\u043B\u043E \u0432\u0441\u0442\u0430\u0451\u0442 \u043A\u043B\u0438\u043D\u043A\u0430\u043C\u0438 \u0432\u044B\u0448\u0435 \u0434\u043E\u043C\u043E\u0432. \u0412\u0435\u0442\u0435\u0440 \u043F\u043E\u0451\u0442 \u0441\u043A\u0432\u043E\u0437\u044C \u043D\u0438\u0445.",
+    "zone.a2_oasis.name": "\u0421\u0443\u0445\u043E\u0439 \u043E\u0430\u0437\u0438\u0441",
+    "zone.a2_oasis.story": "\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u043A\u0438 \u0432\u0441\u0451 \u0435\u0449\u0451 \u0441\u0442\u043E\u044F\u0442 \u043D\u0430 \u043A\u043E\u043B\u0435\u043D\u044F\u0445 \u0443 \u0440\u043E\u0434\u043D\u0438\u043A\u0430, \u043F\u0435\u0440\u0435\u0441\u043E\u0445\u0448\u0435\u0433\u043E \u0437\u0430\u0434\u043E\u043B\u0433\u043E \u0434\u043E \u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0445 \u0434\u0435\u0434\u043E\u0432.",
+    "zone.a2_spire.name": "\u041F\u0440\u0438\u0437\u043C\u0435\u043D\u043D\u044B\u0439 \u0448\u043F\u0438\u043B\u044C",
+    "zone.a2_spire.story": "\u0411\u0430\u0448\u043D\u044F, \u0432\u044B\u0440\u043E\u0441\u0448\u0430\u044F \u0438\u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0430. \u0421\u0432\u0435\u0442 \u0432\u043D\u0443\u0442\u0440\u0438 \u043D\u0435\u0451 \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u0441\u0430\u043C \u043F\u043E \u0441\u0435\u0431\u0435.",
+    "zone.a2_throne.name": "\u0422\u0440\u043E\u043D \u0420\u0435\u0433\u0435\u043D\u0442\u0448\u0438",
+    "zone.a2_throne.story": "\u0420\u0435\u0433\u0435\u043D\u0442\u0448\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u041F\u0443\u0441\u0442\u043E\u0448\u044C\u044E \u043E\u0442 \u0438\u043C\u0435\u043D\u0438 \u0441\u043E\u043B\u043D\u0446\u0430. \u041A\u043E\u0433\u0434\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0443\u043C\u0435\u0440\u043B\u043E, \u043E\u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u043B\u0430 \u043F\u0440\u0430\u0432\u0438\u0442\u044C.",
+    "zone.a2_throne.bossText": "\u0420\u0435\u0433\u0435\u043D\u0442\u0448\u0430 \u0440\u0430\u0437\u043B\u0435\u0442\u0430\u0435\u0442\u0441\u044F \u0432\u0434\u0440\u0435\u0431\u0435\u0437\u0433\u0438. \u0412 \u043E\u0441\u043A\u043E\u043B\u043A\u0430\u0445 \u0432\u0438\u0434\u043D\u043E, \u043A\u0443\u0434\u0430 \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435: \u043D\u0430 \u0441\u0435\u0432\u0435\u0440, \u0437\u0430 \u043F\u0435\u043F\u0435\u043B.",
+    "zone.a2_trial.name": "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0441\u0442\u0435\u043A\u043B\u043E\u043C",
+    "zone.a2_trial.story": "\u0417\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442, \u0433\u0434\u0435 \u043A\u0430\u0436\u0434\u043E\u0435 \u043E\u0442\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0434\u0430\u0451\u0442 \u043E\u0442\u043F\u043E\u0440. \u0421\u0442\u0440\u0430\u0436 \u0432\u043D\u0443\u0442\u0440\u0438 \u043D\u0438 \u0440\u0430\u0437\u0443 \u043D\u0435 \u0432\u0438\u0434\u0435\u043B \u0441\u043E\u0431\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0433\u043E \u043B\u0438\u0446\u0430.",
+    "zone.a2_trial.bossText": "\u0417\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0430\u0436 \u0440\u0430\u0441\u043A\u0430\u043B\u044B\u0432\u0430\u0435\u0442\u0441\u044F, \u0438 \u043D\u0430 \u043C\u0438\u0433 \u043A\u0430\u0436\u0434\u043E\u0435 \u043E\u0442\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u0432 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442\u0435 \u043A\u043B\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u0432\u0430\u043C.",
+    "zone.a3_ashroad.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u0430\u044F \u0434\u043E\u0440\u043E\u0433\u0430",
+    "zone.a3_ashroad.story": "\u041F\u0435\u043F\u0435\u043B \u043F\u0430\u0434\u0430\u0435\u0442 \u0437\u0434\u0435\u0441\u044C \u043A\u0430\u043A \u0441\u043D\u0435\u0433 \u0438 \u043D\u0435 \u043F\u0440\u0435\u043A\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F. \u0421\u0442\u0440\u0430\u043D\u043D\u0438\u043A\u0438 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0435 \u0438\u0434\u0443\u0442 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440, \u043A\u0430\u043A \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435.",
+    "zone.a3_emberwood.name": "\u0422\u043B\u0435\u044E\u0449\u0438\u0439 \u043B\u0435\u0441",
+    "zone.a3_emberwood.story": "\u041B\u0435\u0441, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0433\u043E\u0440\u0438\u0442 \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442 \u0438 \u043D\u0438\u043A\u0430\u043A \u043D\u0435 \u0441\u0433\u043E\u0440\u0438\u0442.",
+    "zone.a3_rim.name": "\u041A\u0440\u0430\u0439 \u043A\u0440\u0430\u0442\u0435\u0440\u0430",
+    "zone.a3_rim.story": "\u0421 \u043A\u0440\u0430\u044F \u0435\u0451 \u0432\u0438\u0434\u043D\u043E: \u0440\u0430\u043D\u0430 \u0432 \u043C\u0438\u0440\u0435, \u0438 \u043E\u043D\u0430 \u0441\u0432\u0435\u0442\u0438\u0442\u0441\u044F. \u041C\u0430\u0442\u0440\u043E\u043D\u0430 \u0433\u043D\u0435\u0437\u0434\u0438\u0442\u0441\u044F \u043D\u0430 \u0435\u0451 \u043A\u0440\u0430\u044E \u0438 \u0440\u0430\u0441\u0442\u0438\u0442 \u0443\u0433\u043B\u0438, \u043A\u0430\u043A \u0434\u0435\u0442\u0435\u0439.",
+    "zone.a3_rim.bossText": "\u0412\u044B\u0432\u043E\u0434\u043E\u043A \u041C\u0430\u0442\u0440\u043E\u043D\u044B \u0440\u0430\u0441\u0441\u044B\u043F\u0430\u0435\u0442\u0441\u044F \u0438\u0441\u043A\u0440\u0430\u043C\u0438. \u041F\u0443\u0442\u044C \u0432\u043D\u0438\u0437, \u0432 \u043A\u0440\u0430\u0442\u0435\u0440, \u043E\u0442\u043A\u0440\u044B\u0442.",
+    "zone.a3_molten.name": "\u0420\u0430\u0441\u043F\u043B\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0435 \u0441\u0442\u0443\u043F\u0435\u043D\u0438",
+    "zone.a3_molten.story": "\u0412\u043D\u0438\u0437 \u0432\u0435\u0434\u0443\u0442 \u0441\u0442\u0443\u043F\u0435\u043D\u0438, \u0432\u044B\u0440\u0443\u0431\u043B\u0435\u043D\u043D\u044B\u0435 \u0432 \u043E\u0441\u0442\u044B\u0432\u0430\u044E\u0449\u0435\u0439 \u043F\u043E\u0440\u043E\u0434\u0435. \u041A\u0442\u043E-\u0442\u043E \u0438\u0445 \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u043B - \u0437\u043D\u0430\u0447\u0438\u0442, \u043A\u0442\u043E-\u0442\u043E \u0445\u043E\u0442\u0435\u043B \u0442\u0443\u0434\u0430 \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F.",
+    "zone.a3_bellcourt.name": "\u041A\u043E\u043B\u043E\u043A\u043E\u043B\u044C\u043D\u044B\u0439 \u0441\u0443\u0434",
+    "zone.a3_bellcourt.story": "\u0416\u0440\u0435\u0446\u044B \u043C\u0451\u0440\u0442\u0432\u043E\u0433\u043E \u0441\u043E\u043B\u043D\u0446\u0430 \u0432\u0435\u0440\u0448\u0430\u0442 \u0437\u0434\u0435\u0441\u044C \u0441\u0443\u0434 \u043D\u0430\u0434 \u043A\u0430\u0436\u0434\u044B\u043C \u0443\u0433\u043B\u0451\u043C, \u0447\u0442\u043E \u0441\u043F\u0443\u0441\u043A\u0430\u0435\u0442\u0441\u044F \u043F\u043E \u0441\u0442\u0443\u043F\u0435\u043D\u044F\u043C.",
+    "zone.a3_bellcourt.bossText": "\u041A\u043E\u043B\u043E\u043A\u043E\u043B \u0421\u0443\u0434\u044C\u0438 \u0442\u0440\u0435\u0441\u043A\u0430\u0435\u0442\u0441\u044F. \u0417\u0430\u0441\u0435\u0434\u0430\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.",
+    "zone.a3_heart.name": "\u0421\u0435\u0440\u0434\u0446\u0435 \u043A\u0440\u0430\u0442\u0435\u0440\u0430",
+    "zone.a3_heart.story": "\u0416\u0430\u0440, \u0441\u0432\u0435\u0442 \u0438 \u0437\u0432\u0443\u043A, \u043F\u043E\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0434\u044B\u0445\u0430\u043D\u0438\u0435. \u041E\u0442\u0441\u044E\u0434\u0430 \u043F\u0440\u0438\u0448\u0451\u043B \u043A\u0430\u0436\u0434\u044B\u0439 \u0443\u0433\u043E\u043B\u044C \u041C\u0430\u0440\u043A\u0438.",
+    "zone.a3_sunfall.name": "\u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434",
+    "zone.a3_sunfall.story": "\u041D\u0430 \u0434\u043D\u0435 \u043B\u0435\u0436\u0438\u0442 \u0442\u043E, \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442 \u0441\u043E\u043B\u043D\u0446\u0430. \u041E\u043D\u043E \u043D\u0435 \u043C\u0435\u0440\u0442\u0432\u043E. \u041E\u043D\u043E \u0436\u0434\u0451\u0442, \u0447\u0442\u043E \u043A\u0442\u043E-\u043D\u0438\u0431\u0443\u0434\u044C \u043F\u043E\u0434\u043D\u0438\u043C\u0435\u0442 \u0435\u0433\u043E \u043E\u0431\u0440\u0430\u0442\u043D\u043E.",
+    "zone.a3_sunfall.bossText": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0430\u0441\u0441\u0432\u0435\u0442 \u0437\u0430\u0442\u0438\u0445\u0430\u0435\u0442 \u0432 \u0432\u0430\u0448\u0438\u0445 \u0440\u0443\u043A\u0430\u0445. \u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0431\u0435\u0437 \u043A\u043E\u043D\u0446\u0430 \u0442\u044F\u043D\u0443\u0442\u0441\u044F \u041F\u0435\u043F\u0435\u043B\u0438\u0449\u0430. \u0422\u0443\u0434\u0430 \u0432\u0430\u0441 \u043F\u043E\u0432\u0435\u0434\u0443\u0442 \u043A\u0430\u0440\u0442\u044B.",
+    "zone.a3_trial.name": "\u0418\u0441\u043F\u044B\u0442\u0430\u043D\u0438\u0435 \u0443\u0433\u043B\u044F\u043C\u0438",
+    "zone.a3_trial.story": "\u0421\u0442\u0430\u0440\u043E\u0435 \u0438\u0441\u043F\u044B\u0442\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u043F\u043E\u043B\u0435 \u0436\u0440\u0435\u0446\u043E\u0432. \u0421\u043E \u0432\u0440\u0435\u043C\u0451\u043D \u043F\u0430\u0434\u0435\u043D\u0438\u044F \u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0448\u0451\u043B \u043D\u0438\u043A\u0442\u043E.",
+    "zone.a3_trial.bossText": "\u0418\u0441\u043F\u044B\u0442\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043E\u0433\u043E\u043D\u044C \u0443\u0433\u0430\u0441\u0430\u0435\u0442. \u041A\u0435\u043C \u0431\u044B \u0432\u044B \u043D\u0438 \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0438\u0441\u044C, \u0443\u0433\u043E\u043B\u044C \u044D\u0442\u043E \u043E\u0434\u043E\u0431\u0440\u044F\u0435\u0442.",
+    "act.1.name": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0430\u044F \u0434\u043E\u0440\u043E\u0433\u0430",
+    "act.1.intro": "\u0414\u043E\u0440\u043E\u0433\u0430 \u0432\u0433\u043B\u0443\u0431\u044C \u0437\u0435\u043C\u043B\u0438 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F \u043F\u043E\u0434 \u043C\u043E\u0440\u0435\u043C.",
+    "act.1.outro": "\u0412\u043E\u0440\u043E\u0442\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u044B, \u0434\u043E\u0440\u043E\u0433\u0430 \u0441\u0443\u0445\u0430. \u0417\u0430 \u043D\u0438\u043C\u0438 \u0441\u0432\u0435\u0442 \u043D\u0435 \u0442\u043E\u0442: \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u044F\u0440\u043A\u0438\u0439, \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0431\u0435\u043B\u044B\u0439. \u0421\u0442\u0435\u043A\u043B\u043E.",
+    "act.2.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u043F\u0443\u0441\u0442\u043E\u0448\u044C",
+    "act.2.intro": "\u0422\u0430\u043C, \u0433\u0434\u0435 \u0441\u043E\u043B\u043D\u0446\u0435 \u0443\u043F\u0430\u043B\u043E \u0433\u043E\u0440\u044F\u0447\u0435\u0435 \u0432\u0441\u0435\u0433\u043E, \u043F\u0443\u0441\u0442\u044B\u043D\u044F \u0441\u0442\u0430\u043B\u0430 \u0441\u0442\u0435\u043A\u043B\u043E\u043C.",
+    "act.2.outro": "\u0420\u0435\u0433\u0435\u043D\u0442\u0448\u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435\u0442, \u0438 \u041F\u0443\u0441\u0442\u043E\u0448\u044C \u0442\u0435\u043F\u0435\u0440\u044C \u043D\u0438\u0447\u044C\u044F. \u041D\u0430 \u0441\u0435\u0432\u0435\u0440\u0435 \u043D\u0435\u0431\u043E \u0446\u0432\u0435\u0442\u0430 \u043F\u0435\u043F\u043B\u0430.",
+    "act.3.name": "\u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434",
+    "act.3.intro": "\u041A\u0440\u0430\u0442\u0435\u0440, \u043A\u0443\u0434\u0430 \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435. \u0417\u0434\u0435\u0441\u044C \u043D\u0430\u0447\u0430\u043B\u0441\u044F \u043A\u0430\u0436\u0434\u044B\u0439 \u0443\u0433\u043E\u043B\u044C.",
+    "act.3.outro": "\u0412\u044B \u0434\u0435\u0440\u0436\u0438\u0442\u0435 \u0442\u043E, \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043E\u0442 \u0441\u043E\u043B\u043D\u0446\u0430. \u042D\u0442\u043E\u0433\u043E \u043C\u0430\u043B\u043E, \u0447\u0442\u043E\u0431\u044B \u043E\u0441\u0432\u0435\u0442\u0438\u0442\u044C \u041C\u0430\u0440\u043A\u0443. \u041F\u043E\u043A\u0430 \u043C\u0430\u043B\u043E. \u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0436\u0434\u0443\u0442 \u041F\u0435\u043F\u0435\u043B\u0438\u0449\u0430.",
+    // affixes: prefixes agree with the item's noun (m|f|n|p); suffixes are genitives after it
+    "affix.life.label": "\u041A\u0440\u0435\u043F\u043A\u0438\u0439|\u041A\u0440\u0435\u043F\u043A\u0430\u044F|\u041A\u0440\u0435\u043F\u043A\u043E\u0435|\u041A\u0440\u0435\u043F\u043A\u0438\u0435",
+    "affix.life.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F +{0}",
+    "affix.mana.label": "\u042F\u0441\u043D\u044B\u0439|\u042F\u0441\u043D\u0430\u044F|\u042F\u0441\u043D\u043E\u0435|\u042F\u0441\u043D\u044B\u0435",
+    "affix.mana.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u044B +{0}",
+    "affix.es.label": "\u041C\u0435\u0440\u0446\u0430\u044E\u0449\u0438\u0439|\u041C\u0435\u0440\u0446\u0430\u044E\u0449\u0430\u044F|\u041C\u0435\u0440\u0446\u0430\u044E\u0449\u0435\u0435|\u041C\u0435\u0440\u0446\u0430\u044E\u0449\u0438\u0435",
+    "affix.es.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430 +{0}",
+    "affix.ar_local.label": "\u0417\u0430\u043A\u0430\u043B\u0451\u043D\u043D\u044B\u0439|\u0417\u0430\u043A\u0430\u043B\u0451\u043D\u043D\u0430\u044F|\u0417\u0430\u043A\u0430\u043B\u0451\u043D\u043D\u043E\u0435|\u0417\u0430\u043A\u0430\u043B\u0451\u043D\u043D\u044B\u0435",
+    "affix.ar_local.text": "\u0411\u0440\u043E\u043D\u044F +{0}",
+    "affix.ev_local.label": "\u0421\u043A\u043E\u043B\u044C\u0437\u043A\u0438\u0439|\u0421\u043A\u043E\u043B\u044C\u0437\u043A\u0430\u044F|\u0421\u043A\u043E\u043B\u044C\u0437\u043A\u043E\u0435|\u0421\u043A\u043E\u043B\u044C\u0437\u043A\u0438\u0435",
+    "affix.ev_local.text": "\u0423\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 +{0}",
+    "affix.es_local.label": "\u0421\u0438\u044F\u044E\u0449\u0438\u0439|\u0421\u0438\u044F\u044E\u0449\u0430\u044F|\u0421\u0438\u044F\u044E\u0449\u0435\u0435|\u0421\u0438\u044F\u044E\u0449\u0438\u0435",
+    "affix.es_local.text": "\u042D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 +{0}",
+    "affix.def_inc.label": "\u0423\u0441\u0438\u043B\u0435\u043D\u043D\u044B\u0439|\u0423\u0441\u0438\u043B\u0435\u043D\u043D\u0430\u044F|\u0423\u0441\u0438\u043B\u0435\u043D\u043D\u043E\u0435|\u0423\u0441\u0438\u043B\u0435\u043D\u043D\u044B\u0435",
+    "affix.def_inc.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0437\u0430\u0449\u0438\u0442\u044B",
+    "affix.armour_belt.label": "\u041A\u043B\u0451\u043F\u0430\u043D\u044B\u0439|\u041A\u043B\u0451\u043F\u0430\u043D\u0430\u044F|\u041A\u043B\u0451\u043F\u0430\u043D\u043E\u0435|\u041A\u043B\u0451\u043F\u0430\u043D\u044B\u0435",
+    "affix.armour_belt.text": "\u0411\u0440\u043E\u043D\u044F +{0}",
+    "affix.phys_local.label": "\u041E\u0442\u0442\u043E\u0447\u0435\u043D\u043D\u044B\u0439|\u041E\u0442\u0442\u043E\u0447\u0435\u043D\u043D\u0430\u044F|\u041E\u0442\u0442\u043E\u0447\u0435\u043D\u043D\u043E\u0435|\u041E\u0442\u0442\u043E\u0447\u0435\u043D\u043D\u044B\u0435",
+    "affix.phys_local.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "affix.phys_add_local.label": "\u0417\u0430\u0437\u0443\u0431\u0440\u0435\u043D\u043D\u044B\u0439|\u0417\u0430\u0437\u0443\u0431\u0440\u0435\u043D\u043D\u0430\u044F|\u0417\u0430\u0437\u0443\u0431\u0440\u0435\u043D\u043D\u043E\u0435|\u0417\u0430\u0437\u0443\u0431\u0440\u0435\u043D\u043D\u044B\u0435",
+    "affix.phys_add_local.text": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 {0}-{1} \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "affix.fire_add_local.label": "\u0422\u043B\u0435\u044E\u0449\u0438\u0439|\u0422\u043B\u0435\u044E\u0449\u0430\u044F|\u0422\u043B\u0435\u044E\u0449\u0435\u0435|\u0422\u043B\u0435\u044E\u0449\u0438\u0435",
+    "affix.fire_add_local.text": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "affix.cold_add_local.label": "\u0417\u0430\u0438\u043D\u0434\u0435\u0432\u0435\u043B\u044B\u0439|\u0417\u0430\u0438\u043D\u0434\u0435\u0432\u0435\u043B\u0430\u044F|\u0417\u0430\u0438\u043D\u0434\u0435\u0432\u0435\u043B\u043E\u0435|\u0417\u0430\u0438\u043D\u0434\u0435\u0432\u0435\u043B\u044B\u0435",
+    "affix.cold_add_local.text": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "affix.light_add_local.label": "\u0422\u0440\u0435\u0441\u043A\u0443\u0447\u0438\u0439|\u0422\u0440\u0435\u0441\u043A\u0443\u0447\u0430\u044F|\u0422\u0440\u0435\u0441\u043A\u0443\u0447\u0435\u0435|\u0422\u0440\u0435\u0441\u043A\u0443\u0447\u0438\u0435",
+    "affix.light_add_local.text": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "affix.spell_inc.label": "\u041F\u043E\u044E\u0449\u0438\u0439|\u041F\u043E\u044E\u0449\u0430\u044F|\u041F\u043E\u044E\u0449\u0435\u0435|\u041F\u043E\u044E\u0449\u0438\u0435",
+    "affix.spell_inc.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0447\u0430\u0440",
+    "affix.spell_fire.label": "\u041F\u044B\u043B\u0430\u044E\u0449\u0438\u0439|\u041F\u044B\u043B\u0430\u044E\u0449\u0430\u044F|\u041F\u044B\u043B\u0430\u044E\u0449\u0435\u0435|\u041F\u044B\u043B\u0430\u044E\u0449\u0438\u0435",
+    "affix.spell_fire.text": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "affix.spell_light.label": "\u0413\u0440\u043E\u0437\u043E\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439|\u0413\u0440\u043E\u0437\u043E\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u0430\u044F|\u0413\u0440\u043E\u0437\u043E\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u043E\u0435|\u0413\u0440\u043E\u0437\u043E\u0440\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0435",
+    "affix.spell_light.text": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "affix.atk_phys.label": "\u0428\u0438\u043F\u0430\u0441\u0442\u044B\u0439|\u0428\u0438\u043F\u0430\u0441\u0442\u0430\u044F|\u0428\u0438\u043F\u0430\u0441\u0442\u043E\u0435|\u0428\u0438\u043F\u0430\u0441\u0442\u044B\u0435",
+    "affix.atk_phys.text": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 {0}-{1} \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "affix.atk_fire.label": "\u041F\u0430\u043B\u044F\u0449\u0438\u0439|\u041F\u0430\u043B\u044F\u0449\u0430\u044F|\u041F\u0430\u043B\u044F\u0449\u0435\u0435|\u041F\u0430\u043B\u044F\u0449\u0438\u0435",
+    "affix.atk_fire.text": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 {0}-{1} \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "affix.ele_inc.label": "\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0439|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435",
+    "affix.ele_inc.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u0442\u0438\u0445\u0438\u0439\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "affix.phys_inc.label": "\u0416\u0435\u0441\u0442\u043E\u043A\u0438\u0439|\u0416\u0435\u0441\u0442\u043E\u043A\u0430\u044F|\u0416\u0435\u0441\u0442\u043E\u043A\u043E\u0435|\u0416\u0435\u0441\u0442\u043E\u043A\u0438\u0435",
+    "affix.phys_inc.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "affix.str.label": "\u0431\u044B\u043A\u0430",
+    "affix.str.text": "\u041C\u043E\u0449\u044C +{0}",
+    "affix.dex.label": "\u0446\u0430\u043F\u043B\u0438",
+    "affix.dex.text": "\u0413\u0440\u0430\u0446\u0438\u044F +{0}",
+    "affix.int.label": "\u0441\u043E\u0432\u044B",
+    "affix.int.text": "\u0420\u0430\u0437\u0443\u043C +{0}",
+    "affix.res_fire.label": "\u043E\u0447\u0430\u0433\u0430",
+    "affix.res_fire.text": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E +{0}%",
+    "affix.res_cold.label": "\u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "affix.res_cold.text": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "affix.res_light.label": "\u0448\u043A\u0432\u0430\u043B\u0430",
+    "affix.res_light.text": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438 +{0}%",
+    "affix.res_chaos.label": "\u043F\u0443\u0441\u0442\u043E\u0442\u044B",
+    "affix.res_chaos.text": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "affix.aspd_local.label": "\u043F\u043E\u0441\u043F\u0435\u0448\u043D\u043E\u0441\u0442\u0438",
+    "affix.aspd_local.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "affix.aspd.label": "\u0441\u043F\u0435\u0448\u043A\u0438",
+    "affix.aspd.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "affix.cspd.label": "\u043F\u0435\u0441\u043D\u043E\u043F\u0435\u043D\u0438\u0439",
+    "affix.cspd.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "affix.crit_local.label": "\u0442\u043E\u0447\u043D\u043E\u0441\u0442\u0438",
+    "affix.crit_local.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "affix.crit.label": "\u0437\u043D\u0430\u043C\u0435\u043D\u0438\u0439",
+    "affix.crit.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "affix.critmulti.label": "\u043F\u043E\u0433\u0438\u0431\u0435\u043B\u0438",
+    "affix.critmulti.text": "\u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430 +{0}%",
+    "affix.accuracy.label": "\u044F\u0441\u0442\u0440\u0435\u0431\u0430",
+    "affix.accuracy.text": "\u041C\u0435\u0442\u043A\u043E\u0441\u0442\u044C +{0}",
+    "affix.leech.label": "\u043F\u0438\u044F\u0432\u043A\u0438",
+    "affix.leech.text": "{0}% \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0430\u0442\u0430\u043A \u043F\u043E\u0445\u0438\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "affix.area.label": "\u0440\u0430\u0437\u043C\u0430\u0445\u0430",
+    "affix.area.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "affix.regen.label": "\u0438\u0441\u0446\u0435\u043B\u0435\u043D\u0438\u044F",
+    "affix.regen.text": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "affix.mana_regen.label": "\u044F\u0441\u043D\u043E\u0441\u0442\u0438",
+    "affix.mana_regen.text": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0} \u043C\u0430\u043D\u044B \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "affix.flask.label": "\u043A\u043E\u043B\u043E\u0434\u0446\u0430",
+    "affix.flask.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043B\u0435\u0447\u0435\u043D\u0438\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "affix.block.label": "\u0441\u0442\u0435\u043D\u044B",
+    "affix.block.text": "\u0428\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0430 +{0}%",
+    "affix.move.label": "\u0434\u043E\u0440\u043E\u0433\u0438",
+    "affix.move.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "affix.rarity.label": "\u0433\u0440\u0430\u0431\u0435\u0436\u0430",
+    "affix.rarity.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "affix.life_kill.label": "\u0441\u0442\u0435\u0440\u0432\u044F\u0442\u043D\u0438\u043A\u0430",
+    "affix.life_kill.text": "{0} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0437\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E",
+    // affix groups (the loot filter's "with ...")
+    "group.life": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "group.mana": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u044B",
+    "group.es": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "group.defFlat": "\u0431\u0440\u043E\u043D\u044F, \u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u0449\u0438\u0442 (\u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430)",
+    "group.defInc": "\u0437\u0430\u0449\u0438\u0442\u0430",
+    "group.armourFlat": "\u0431\u0440\u043E\u043D\u044F (\u043F\u043E\u044F\u0441)",
+    "group.physInc": "\u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0443\u0440\u043E\u043D (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.physAdd": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0443\u0440\u043E\u043D (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.fireAdd": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0443\u0440\u043E\u043D \u043E\u0442 \u043E\u0433\u043D\u044F (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.coldAdd": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0443\u0440\u043E\u043D \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430 (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.lightAdd": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0443\u0440\u043E\u043D \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438 (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.spellInc": "\u0443\u0440\u043E\u043D \u043E\u0442 \u0447\u0430\u0440",
+    "group.spellAdd": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0443\u0440\u043E\u043D \u043A \u0447\u0430\u0440\u0430\u043C",
+    "group.atkPhys": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0443\u0440\u043E\u043D \u043A \u0430\u0442\u0430\u043A\u0430\u043C",
+    "group.atkFire": "\u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u044B\u0439 \u0443\u0440\u043E\u043D \u043E\u0442 \u043E\u0433\u043D\u044F \u043A \u0430\u0442\u0430\u043A\u0430\u043C",
+    "group.eleInc": "\u0441\u0442\u0438\u0445\u0438\u0439\u043D\u044B\u0439 \u0443\u0440\u043E\u043D",
+    "group.physGlobal": "\u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0443\u0440\u043E\u043D",
+    "group.str": "\u041C\u043E\u0449\u044C",
+    "group.dex": "\u0413\u0440\u0430\u0446\u0438\u044F",
+    "group.int": "\u0420\u0430\u0437\u0443\u043C",
+    "group.resFire": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E",
+    "group.resCold": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "group.resLight": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "group.resChaos": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443",
+    "group.aspd": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438 (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.aspdGlobal": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438",
+    "group.cspd": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0447\u0430\u0440",
+    "group.crit": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430 (\u043E\u0440\u0443\u0436\u0438\u0435)",
+    "group.critGlobal": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "group.critMulti": "\u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "group.accuracy": "\u043C\u0435\u0442\u043A\u043E\u0441\u0442\u044C",
+    "group.leech": "\u043F\u043E\u0445\u0438\u0449\u0435\u043D\u0438\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "group.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "group.regen": "\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "group.manaRegen": "\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u043C\u0430\u043D\u044B",
+    "group.flask": "\u043B\u0435\u0447\u0435\u043D\u0438\u0435 \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "group.block": "\u0448\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0430",
+    "group.move": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "group.rarity": "\u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "group.lifeOnKill": "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u0437\u0430 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E",
+    // rare names: "{b} {a}", the first word in the genitive ("Bite of Gloom")
+    "rare.a.grim": "\u041C\u0440\u0430\u043A\u0430",
+    "rare.a.salt": "\u0421\u043E\u043B\u0438",
+    "rare.a.hollow": "\u041F\u0443\u0441\u0442\u043E\u0442\u044B",
+    "rare.a.tide": "\u041F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "rare.a.dusk": "\u0421\u0443\u043C\u0435\u0440\u0435\u043A",
+    "rare.a.ember": "\u0423\u0433\u043B\u044F",
+    "rare.a.gloom": "\u0422\u044C\u043C\u044B",
+    "rare.a.wrack": "\u041A\u0440\u0443\u0448\u0435\u043D\u0438\u044F",
+    "rare.a.brine": "\u041F\u0443\u0447\u0438\u043D\u044B",
+    "rare.a.storm": "\u0411\u0443\u0440\u0438",
+    "rare.a.ash": "\u041F\u0435\u043F\u043B\u0430",
+    "rare.a.wither": "\u0423\u0432\u044F\u0434\u0430\u043D\u0438\u044F",
+    "rare.a.lantern": "\u0424\u043E\u043D\u0430\u0440\u044F",
+    "rare.a.glass": "\u0421\u0442\u0435\u043A\u043B\u0430",
+    "rare.a.cinder": "\u0417\u043E\u043B\u044B",
+    "rare.a.mourn": "\u0421\u043A\u043E\u0440\u0431\u0438",
+    "rare.a.drift": "\u0422\u0435\u0447\u0435\u043D\u0438\u044F",
+    "rare.a.bone": "\u041A\u043E\u0441\u0442\u0438",
+    "rare.a.rust": "\u0420\u0436\u0430\u0432\u0447\u0438\u043D\u044B",
+    "rare.a.omen": "\u0417\u043D\u0430\u043C\u0435\u043D\u0438\u044F",
+    "rare.b.bite": "\u0423\u043A\u0443\u0441",
+    "rare.b.song": "\u041F\u0435\u0441\u043D\u044C",
+    "rare.b.ward": "\u041E\u0431\u0435\u0440\u0435\u0433",
+    "rare.b.mark": "\u041C\u0435\u0442\u043A\u0430",
+    "rare.b.coil": "\u0412\u0438\u0442\u043E\u043A",
+    "rare.b.veil": "\u041F\u043E\u043A\u0440\u043E\u0432",
+    "rare.b.fang": "\u041A\u043B\u044B\u043A",
+    "rare.b.shell": "\u0420\u0430\u043A\u043E\u0432\u0438\u043D\u0430",
+    "rare.b.grasp": "\u0425\u0432\u0430\u0442\u043A\u0430",
+    "rare.b.knell": "\u0417\u0432\u043E\u043D",
+    "rare.b.wake": "\u0421\u043B\u0435\u0434",
+    "rare.b.spire": "\u0428\u043F\u0438\u043B\u044C",
+    "rare.b.crest": "\u0413\u0440\u0435\u0431\u0435\u043D\u044C",
+    "rare.b.wail": "\u0412\u043E\u043F\u043B\u044C",
+    "rare.b.hook": "\u041A\u0440\u044E\u043A",
+    "rare.b.bloom": "\u0426\u0432\u0435\u0442\u0435\u043D\u0438\u0435",
+    "rare.b.scar": "\u0428\u0440\u0430\u043C",
+    "rare.b.turn": "\u041F\u043E\u0432\u043E\u0440\u043E\u0442",
+    "rare.b.keel": "\u041A\u0438\u043B\u044C",
+    "rare.b.hush": "\u0422\u0438\u0448\u044C",
+    // passive tree
+    "node.vigour": "\u0411\u043E\u0434\u0440\u043E\u0441\u0442\u044C",
+    "node.prism": "\u041F\u0440\u0438\u0437\u043C\u0430",
+    "node.might": "\u041C\u043E\u0449\u044C",
+    "node.grace": "\u0413\u0440\u0430\u0446\u0438\u044F",
+    "node.wit": "\u0420\u0430\u0437\u0443\u043C",
+    "node.ferocity": "\u0421\u0432\u0438\u0440\u0435\u043F\u043E\u0441\u0442\u044C",
+    "node.ember_seat": "\u0418\u0441\u0442\u043E\u043A \u0443\u0433\u043B\u044F",
+    "node.path_of_embers": "\u0422\u0440\u043E\u043F\u0430 \u0443\u0433\u043B\u0435\u0439",
+    "node.iron_skin": "\u0416\u0435\u043B\u0435\u0437\u043D\u0430\u044F \u043A\u043E\u0436\u0430",
+    "node.thick_blood": "\u0413\u0443\u0441\u0442\u0430\u044F \u043A\u0440\u043E\u0432\u044C",
+    "node.bulwark_oath": "\u041A\u043B\u044F\u0442\u0432\u0430 \u043E\u043F\u043B\u043E\u0442\u0430",
+    "node.unbroken": "\u041D\u0435\u0441\u043B\u043E\u043C\u043B\u0435\u043D\u043D\u044B\u0439",
+    "node.honed_edge": "\u041E\u0442\u0442\u043E\u0447\u0435\u043D\u043D\u0430\u044F \u043A\u0440\u043E\u043C\u043A\u0430",
+    "node.quick_hands": "\u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u0440\u0443\u043A\u0438",
+    "node.butcher_s_rhythm": "\u0420\u0438\u0442\u043C \u043C\u044F\u0441\u043D\u0438\u043A\u0430",
+    "node.split_bone": "\u0420\u0430\u0441\u043A\u043E\u043B\u043E\u0442\u0430\u044F \u043A\u043E\u0441\u0442\u044C",
+    "node.kindle": "\u0420\u043E\u0437\u0436\u0438\u0433",
+    "node.hearth_ward": "\u0417\u0430\u0449\u0438\u0442\u0430 \u043E\u0447\u0430\u0433\u0430",
+    "node.pyre_heart": "\u0421\u0435\u0440\u0434\u0446\u0435 \u043A\u043E\u0441\u0442\u0440\u0430",
+    "node.cinder_skin": "\u0417\u043E\u043B\u044C\u043D\u0430\u044F \u043A\u043E\u0436\u0430",
+    "node.light_step": "\u041B\u0451\u0433\u043A\u0438\u0439 \u0448\u0430\u0433",
+    "node.fleet": "\u0411\u044B\u0441\u0442\u0440\u043E\u043D\u043E\u0433\u043E\u0441\u0442\u044C",
+    "node.gale_dancer": "\u0422\u0430\u043D\u0446\u0443\u044E\u0449\u0438\u0439 \u0441 \u0432\u0435\u0442\u0440\u043E\u043C",
+    "node.afterimage": "\u041E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u044B\u0439 \u043E\u0431\u0440\u0430\u0437",
+    "node.fletching": "\u041E\u043F\u0435\u0440\u0435\u043D\u0438\u0435",
+    "node.keen_sight": "\u0417\u043E\u0440\u043A\u043E\u0441\u0442\u044C",
+    "node.deadeye": "\u0412\u0435\u0440\u043D\u044B\u0439 \u0433\u043B\u0430\u0437",
+    "node.barbed_volley": "\u0417\u0430\u0437\u0443\u0431\u0440\u0435\u043D\u043D\u044B\u0439 \u0437\u0430\u043B\u043F",
+    "node.static": "\u0421\u0442\u0430\u0442\u0438\u043A\u0430",
+    "node.grounding": "\u0417\u0430\u0437\u0435\u043C\u043B\u0435\u043D\u0438\u0435",
+    "node.thunderhead": "\u0413\u0440\u043E\u0437\u043E\u0432\u0430\u044F \u0442\u0443\u0447\u0430",
+    "node.rod_of_the_squall": "\u0413\u0440\u043E\u043C\u043E\u043E\u0442\u0432\u043E\u0434 \u0448\u043A\u0432\u0430\u043B\u0430",
+    "node.shimmer": "\u041C\u0435\u0440\u0446\u0430\u043D\u0438\u0435",
+    "node.focus": "\u0421\u043E\u0441\u0440\u0435\u0434\u043E\u0442\u043E\u0447\u0435\u043D\u0438\u0435",
+    "node.mirror_mind": "\u0417\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0440\u0430\u0437\u0443\u043C",
+    "node.still_water": "\u0422\u0438\u0445\u0430\u044F \u0432\u043E\u0434\u0430",
+    "node.chant": "\u041D\u0430\u043F\u0435\u0432",
+    "node.swift_words": "\u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u0441\u043B\u043E\u0432\u0430",
+    "node.grand_litany": "\u0412\u0435\u043B\u0438\u043A\u0430\u044F \u043B\u0438\u0442\u0430\u043D\u0438\u044F",
+    "node.fateweaver": "\u0422\u043A\u0430\u0447 \u0441\u0443\u0434\u044C\u0431\u044B",
+    "node.chill": "\u041E\u0437\u043D\u043E\u0431",
+    "node.tide_ward": "\u0417\u0430\u0449\u0438\u0442\u0430 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "node.heart_of_winter": "\u0421\u0435\u0440\u0434\u0446\u0435 \u0437\u0438\u043C\u044B",
+    "node.rime_coat": "\u041F\u043E\u043A\u0440\u043E\u0432 \u0438\u043D\u0435\u044F",
+    "node.threshold": "\u041F\u043E\u0440\u043E\u0433",
+    "node.glass_oath": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u043A\u043B\u044F\u0442\u0432\u0430",
+    "node.iron_vow": "\u0416\u0435\u043B\u0435\u0437\u043D\u044B\u0439 \u043E\u0431\u0435\u0442",
+    "node.ember_blood": "\u0423\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u043A\u0440\u043E\u0432\u044C",
+    "keystone.glass_oath": "\u0411\u0438\u0442\u044C \u043A\u0443\u0434\u0430 \u0441\u0438\u043B\u044C\u043D\u0435\u0435. \u041B\u043E\u043C\u0430\u0442\u044C\u0441\u044F \u043A\u0443\u0434\u0430 \u043B\u0435\u0433\u0447\u0435.",
+    "keystone.iron_vow": "\u0411\u0440\u043E\u043D\u044F \u0440\u0430\u0437\u0440\u0430\u0441\u0442\u0430\u0435\u0442\u0441\u044F; \u0443\u043A\u043B\u043E\u043D\u044F\u0442\u044C\u0441\u044F \u0432\u044B \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442\u0435.",
+    "keystone.ember_blood": "\u0413\u043E\u0440\u0435\u0442\u044C \u0436\u0430\u0440\u043A\u043E \u0438 \u0437\u0430\u0436\u0438\u0432\u0430\u0442\u044C \u0431\u044B\u0441\u0442\u0440\u043E; \u043E\u0433\u043E\u043D\u044C \u0440\u0430\u043D\u0438\u0442 \u0441\u0438\u043B\u044C\u043D\u0435\u0435.",
+    // ascendancies
+    "asc.bastion.name": "\u0411\u0430\u0441\u0442\u0438\u043E\u043D",
+    "asc.bastion.blurb": "\u0421\u0442\u0435\u043D\u0430, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u0445\u043E\u0434\u0438\u0442. \u0420\u0430\u043D\u0438\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u043E, \u0443\u0431\u0438\u0442\u044C - \u0435\u0449\u0451 \u0442\u0440\u0443\u0434\u043D\u0435\u0435.",
+    "ascnode.bastion_1.name": "\u0421\u0442\u0435\u043D\u0430 \u0449\u0438\u0442\u043E\u0432",
+    "ascnode.bastion_2.name": "\u0421\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0439 \u043A\u043B\u044F\u0442\u0432\u043E\u0439",
+    "ascnode.bastion_3.name": "\u0412\u043E\u043B\u043D\u043E\u043B\u043E\u043C",
+    "ascnode.bastion_4.name": "\u0421\u043E\u043B\u044C \u043D\u0430 \u0440\u0430\u043D\u0443",
+    "ascnode.bastion_5.name": "\u0416\u0435\u043B\u0435\u0437\u043D\u044B\u0439 \u043E\u0442\u0432\u0435\u0442",
+    "ascnode.bastion_6.name": "\u041D\u0435\u043F\u043E\u043A\u043E\u043B\u0435\u0431\u0438\u043C\u044B\u0439",
+    "asc.reaver.name": "\u0420\u0430\u0437\u043E\u0440\u0438\u0442\u0435\u043B\u044C",
+    "asc.reaver.blurb": "\u0423\u0433\u043E\u043B\u044C \u0445\u043E\u0447\u0435\u0442 \u043A\u0440\u043E\u0432\u0438. \u0414\u0430\u0439\u0442\u0435 \u0435\u043C\u0443.",
+    "ascnode.reaver_1.name": "\u041A\u0440\u0430\u0441\u043D\u0430\u044F \u0436\u0430\u0442\u0432\u0430",
+    "ascnode.reaver_2.name": "\u0416\u0430\u0436\u0434\u0430",
+    "ascnode.reaver_3.name": "\u041D\u0435\u0438\u0441\u0442\u043E\u0432\u0441\u0442\u0432\u043E",
+    "ascnode.reaver_4.name": "\u041F\u0430\u043B\u0430\u0447",
+    "ascnode.reaver_5.name": "\u0428\u0438\u0440\u043E\u043A\u0430\u044F \u0431\u043E\u0439\u043D\u044F",
+    "ascnode.reaver_6.name": "\u041A\u0440\u043E\u0432\u044C \u0437\u0430 \u0443\u0433\u043E\u043B\u044C",
+    "asc.windrunner.name": "\u0412\u0435\u0442\u0440\u043E\u0431\u0435\u0433",
+    "asc.windrunner.blurb": "\u0412\u0441\u0435\u0433\u0434\u0430 \u043D\u0435 \u0442\u0430\u043C, \u043A\u0443\u0434\u0430 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0443\u0434\u0430\u0440.",
+    "ascnode.windrunner_1.name": "\u041F\u043E\u043F\u0443\u0442\u043D\u044B\u0439 \u043F\u043E\u0442\u043E\u043A",
+    "ascnode.windrunner_2.name": "\u0414\u043E\u043B\u0433\u0430\u044F \u0434\u043E\u0440\u043E\u0433\u0430",
+    "ascnode.windrunner_3.name": "\u0411\u0443\u0440\u044F \u0441\u0442\u0440\u0435\u043B",
+    "ascnode.windrunner_4.name": "\u041D\u0430\u0441\u043A\u0432\u043E\u0437\u044C",
+    "ascnode.windrunner_5.name": "\u041F\u043E\u043F\u0443\u0442\u043D\u044B\u0439 \u0432\u0435\u0442\u0435\u0440",
+    "ascnode.windrunner_6.name": "\u0418\u0441\u0447\u0435\u0437",
+    "asc.stormcaller.name": "\u0411\u0443\u0440\u0435\u0432\u0435\u0441\u0442\u043D\u0438\u043A",
+    "asc.stormcaller.blurb": "\u041D\u043E\u0441\u0438\u0442 \u0448\u043A\u0432\u0430\u043B \u0432 \u043A\u043E\u043B\u0447\u0430\u043D\u0435.",
+    "ascnode.stormcaller_1.name": "\u0417\u0430\u0440\u044F\u0436\u0435\u043D\u043D\u044B\u0439 \u0432\u043E\u0437\u0434\u0443\u0445",
+    "ascnode.stormcaller_2.name": "\u0417\u0430\u0437\u0435\u043C\u043B\u0451\u043D\u043D\u044B\u0439",
+    "ascnode.stormcaller_3.name": "\u0420\u0430\u0441\u043A\u043E\u043B\u043E\u0442\u044C \u043D\u0435\u0431\u043E",
+    "ascnode.stormcaller_4.name": "\u041E\u043A\u043E \u0441\u0442\u0430\u0442\u0438\u043A\u0438",
+    "ascnode.stormcaller_5.name": "\u0420\u0430\u0441\u043A\u0430\u0442 \u0433\u0440\u043E\u043C\u0430",
+    "ascnode.stormcaller_6.name": "\u0420\u043E\u0436\u0434\u0451\u043D\u043D\u044B\u0439 \u0431\u0443\u0440\u0435\u0439",
+    "asc.lumen.name": "\u041B\u044E\u043C\u0435\u043D",
+    "asc.lumen.blurb": "\u041B\u0430\u043C\u043F\u0430, \u043D\u0430\u0443\u0447\u0438\u0432\u0448\u0430\u044F\u0441\u044F \u0441\u0440\u0430\u0436\u0430\u0442\u044C\u0441\u044F.",
+    "ascnode.lumen_1.name": "\u041E\u0440\u0435\u043E\u043B",
+    "ascnode.lumen_2.name": "\u042F\u0441\u043D\u044B\u0439 \u0443\u043C",
+    "ascnode.lumen_3.name": "\u041B\u0438\u0442\u0430\u043D\u0438\u044F \u0441\u0432\u0435\u0442\u0430",
+    "ascnode.lumen_4.name": "\u0411\u044B\u0441\u0442\u0440\u044B\u0439 \u044F\u0437\u044B\u043A",
+    "ascnode.lumen_5.name": "\u0421\u0438\u044F\u043D\u0438\u0435",
+    "ascnode.lumen_6.name": "\u041D\u0435\u0433\u0430\u0441\u043D\u0443\u0449\u0438\u0439",
+    "asc.hexwright.name": "\u041F\u0438\u0441\u0435\u0446 \u043F\u0440\u043E\u043A\u043B\u044F\u0442\u0438\u0439",
+    "asc.hexwright.blurb": "\u041F\u0438\u0448\u0435\u0442 \u043F\u0440\u043E\u043A\u043B\u044F\u0442\u0438\u044F \u043D\u0430 \u043F\u043E\u043B\u044F\u0445 \u0443\u0433\u043B\u044F.",
+    "ascnode.hexwright_1.name": "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u043C\u043E\u0440\u0430",
+    "ascnode.hexwright_2.name": "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u0438\u043D\u0435\u044F",
+    "ascnode.hexwright_3.name": "\u041E\u0431\u0435\u0440\u0435\u0433 \u043F\u0443\u0441\u0442\u043E\u0442\u044B",
+    "ascnode.hexwright_4.name": "\u0420\u0430\u0441\u043F\u0443\u0442\u044B\u0432\u0430\u043D\u0438\u0435",
+    "ascnode.hexwright_5.name": "\u041E\u0442\u043C\u0435\u0447\u0435\u043D \u0433\u0438\u0431\u0435\u043B\u044C\u044E",
+    "ascnode.hexwright_6.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0441\u043B\u043E\u0432\u043E",
+    // currency
+    "currency.kindling.name": "\u0420\u0430\u0441\u0442\u043E\u043F\u043A\u0430",
+    "currency.kindling.blurb": "\u0414\u0435\u043B\u0430\u0435\u0442 \u043E\u0431\u044B\u0447\u043D\u0443\u044E \u0432\u0435\u0449\u044C \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0439.",
+    "currency.reshaper.name": "\u041F\u0435\u0440\u0435\u043A\u0440\u043E\u0439\u043A\u0430",
+    "currency.reshaper.blurb": "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441\u044B \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0439 \u0432\u0435\u0449\u0438.",
+    "currency.graft.name": "\u041F\u0440\u0438\u0432\u0438\u0432\u043A\u0430",
+    "currency.graft.blurb": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u043E\u0439 \u0432\u0435\u0449\u0438, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u043C\u0435\u0441\u0442\u043E.",
+    "currency.crownseal.name": "\u041F\u0435\u0447\u0430\u0442\u044C \u043A\u043E\u0440\u043E\u043D\u044B",
+    "currency.crownseal.blurb": "\u0412\u043E\u0437\u0432\u044B\u0448\u0430\u0435\u0442 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u0443\u044E \u0432\u0435\u0449\u044C \u0434\u043E \u0440\u0435\u0434\u043A\u043E\u0439 \u0438 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441.",
+    "currency.forgeheart.name": "\u0421\u0435\u0440\u0434\u0446\u0435 \u0433\u043E\u0440\u043D\u0430",
+    "currency.forgeheart.blurb": "\u0414\u0435\u043B\u0430\u0435\u0442 \u043E\u0431\u044B\u0447\u043D\u0443\u044E \u0432\u0435\u0449\u044C \u0440\u0435\u0434\u043A\u043E\u0439.",
+    "currency.tempest.name": "\u041E\u0441\u043A\u043E\u043B\u043E\u043A \u0431\u0443\u0440\u0438",
+    "currency.tempest.blurb": "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u0442 \u0432\u0441\u0435 \u0430\u0444\u0444\u0438\u043A\u0441\u044B \u0440\u0435\u0434\u043A\u043E\u0439 \u0432\u0435\u0449\u0438.",
+    "currency.starfall.name": "\u0417\u0432\u0435\u0437\u0434\u043E\u043F\u0430\u0434",
+    "currency.starfall.blurb": "\u0414\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0430\u0444\u0444\u0438\u043A\u0441 \u0440\u0435\u0434\u043A\u043E\u0439 \u0432\u0435\u0449\u0438, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u043C\u0435\u0441\u0442\u043E.",
+    "currency.salt.name": "\u0421\u043E\u043B\u044C \u0437\u0430\u0431\u0432\u0435\u043D\u0438\u044F",
+    "currency.salt.blurb": "\u0421\u043D\u0438\u043C\u0430\u0435\u0442 \u0432\u0441\u0435 \u0430\u0444\u0444\u0438\u043A\u0441\u044B; \u0432\u0435\u0449\u044C \u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0441\u044F \u043E\u0431\u044B\u0447\u043D\u043E\u0439.",
+    "currency.unmaker.name": "\u0418\u0437\u044A\u044F\u0442\u0438\u0435",
+    "currency.unmaker.blurb": "\u0423\u0431\u0438\u0440\u0430\u0435\u0442 \u043E\u0434\u0438\u043D \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u044B\u0439 \u0430\u0444\u0444\u0438\u043A\u0441.",
+    "currency.temper.name": "\u0417\u0430\u043A\u0430\u043B\u043E\u0447\u043D\u043E\u0435 \u043C\u0430\u0441\u043B\u043E",
+    "currency.temper.blurb": "\u041F\u0435\u0440\u0435\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u0442 \u0447\u0438\u0441\u043B\u0430, \u0430\u0444\u0444\u0438\u043A\u0441\u044B \u043E\u0441\u0442\u0430\u044E\u0442\u0441\u044F.",
+    // relics
+    "relic.tidebreaker.name": "\u041E\u0442\u043A\u0430\u0437 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "relic.tidebreaker.flavour": "\u0415\u0433\u043E \u0432\u044B\u043A\u043E\u0432\u0430\u043B\u0438, \u0447\u0442\u043E\u0431\u044B \u0441\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C \u043C\u043E\u0440\u0435. \u041E\u043D \u0432\u0441\u0451 \u0435\u0449\u0451 \u043F\u044B\u0442\u0430\u0435\u0442\u0441\u044F.",
+    "relic.tidebreaker.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "relic.tidebreaker.mod1": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidebreaker.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F +{0}",
+    "relic.lampwick.name": "\u0424\u0438\u0442\u0438\u043B\u044C",
+    "relic.lampwick.flavour": "\u0415\u0449\u0451 \u0442\u0451\u043F\u043B\u044B\u0439. \u0412\u0441\u0451 \u0435\u0449\u0451 \u0436\u0434\u0451\u0442, \u0447\u0442\u043E \u043A\u0442\u043E-\u0442\u043E \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F \u0434\u043E\u043C\u043E\u0439.",
+    "relic.lampwick.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0447\u0430\u0440",
+    "relic.lampwick.mod1": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.lampwick.mod2": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.lampwick.mod3": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0} \u043C\u0430\u043D\u044B \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.gullfeather.name": "\u041F\u043E\u0441\u0442\u0443\u043F\u044C \u0447\u0430\u044F\u0447\u044C\u0435\u0433\u043E \u043F\u0435\u0440\u0430",
+    "relic.gullfeather.flavour": "\u0427\u0430\u0439\u043A\u0438 \u043D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u0441\u0430\u0434\u044F\u0442\u0441\u044F. \u0422\u0435\u043F\u0435\u0440\u044C \u0438 \u0432\u044B \u0442\u043E\u0436\u0435.",
+    "relic.gullfeather.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "relic.gullfeather.mod1": "\u0423\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 +{0}",
+    "relic.gullfeather.mod2": "\u0413\u0440\u0430\u0446\u0438\u044F +{0}",
+    "relic.chapelbell.name": "\u041A\u043E\u043B\u043E\u043A\u043E\u043B \u0445\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044F",
+    "relic.chapelbell.flavour": "\u0417\u0432\u043E\u043D\u0438\u0442 \u043A \u0441\u043B\u0443\u0436\u0431\u0435, \u043D\u0430 \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u043D\u0438\u043A\u0442\u043E \u043D\u0435 \u043F\u0440\u0438\u0434\u0451\u0442.",
+    "relic.chapelbell.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "relic.chapelbell.mod1": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0}% \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.chapelbell.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.saltcrown.name": "\u0421\u043E\u043B\u044F\u043D\u043E\u0439 \u0432\u0435\u043D\u0435\u0446",
+    "relic.saltcrown.flavour": "\u0422\u044F\u0436\u0451\u043B \u043E\u0442 \u043C\u043E\u0440\u044F. \u0415\u0449\u0451 \u0442\u044F\u0436\u0435\u043B\u0435\u0435 \u043E\u0442 \u043A\u043B\u044F\u0442\u0432\u044B.",
+    "relic.saltcrown.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0431\u0440\u043E\u043D\u0438",
+    "relic.saltcrown.mod1": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E +{0}%",
+    "relic.saltcrown.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.saltcrown.mod3": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438 +{0}%",
+    "relic.emberknot.name": "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0443\u0437\u0435\u043B",
+    "relic.emberknot.flavour": "\u0414\u0432\u0430 \u0443\u0433\u043E\u043B\u044C\u043A\u0430, \u0447\u0442\u043E \u043D\u0438\u043A\u0430\u043A \u043D\u0435 \u0441\u043E\u043F\u0440\u0438\u043A\u043E\u0441\u043D\u0443\u0442\u0441\u044F.",
+    "relic.emberknot.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.emberknot.mod1": "{0}% \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u0432 \u043E\u0433\u043E\u043D\u044C",
+    "relic.emberknot.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 {0}%",
+    "relic.lastlight.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0441\u0432\u0435\u0442",
+    "relic.lastlight.flavour": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043B\u0443\u0447 \u0441\u043E\u043B\u043D\u0446\u0430 \u041C\u0430\u0440\u043A\u0438, \u0437\u0430\u0442\u043E\u0447\u0435\u043D\u043D\u044B\u0439.",
+    "relic.lastlight.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "relic.lastlight.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "relic.lastlight.mod2": "\u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430 +{0}%",
+    "relic.lastlight.mod3": "{0}% \u0443\u0440\u043E\u043D\u0430 \u043F\u043E\u0445\u0438\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "relic.hollowheart.name": "\u041F\u043E\u043B\u043E\u0435 \u0441\u0435\u0440\u0434\u0446\u0435",
+    "relic.hollowheart.flavour": "\u0412 \u043D\u0451\u043C \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435\u0442. \u0412 \u044D\u0442\u043E\u043C \u0438 \u0441\u043C\u044B\u0441\u043B.",
+    "relic.hollowheart.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.hollowheart.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.hollowheart.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F {0}%",
+    "relic.stormstring.name": "\u0413\u0440\u043E\u0437\u043E\u0432\u0430\u044F \u0442\u0435\u0442\u0438\u0432\u0430",
+    "relic.stormstring.flavour": "\u041E\u043D\u0430 \u0433\u0443\u0434\u0438\u0442 \u0440\u0430\u043D\u044C\u0448\u0435, \u0447\u0435\u043C \u0433\u0440\u043E\u0437\u0430.",
+    "relic.stormstring.mod0": "+{0} \u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "relic.stormstring.mod1": "+{0} \u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "relic.stormstring.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "relic.stormstring.mod3": "\u0421\u043D\u0430\u0440\u044F\u0434\u044B \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u044E\u0442 \u0435\u0449\u0451 {0} \u0432\u0440\u0430\u0433\u0430",
+    "relic.wardenseye.name": "\u041E\u043A\u043E \u0441\u0442\u0440\u0430\u0436\u0430",
+    "relic.wardenseye.flavour": "\u041E\u043D\u043E \u0441\u043B\u0435\u0434\u0438\u043B\u043E \u0437\u0430 \u0432\u043E\u0440\u043E\u0442\u0430\u043C\u0438 \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442 \u0438 \u043D\u0438 \u0440\u0430\u0437\u0443 \u043D\u0435 \u043C\u043E\u0440\u0433\u043D\u0443\u043B\u043E.",
+    "relic.wardenseye.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "relic.wardenseye.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "relic.wardenseye.mod2": "\u0423\u0434\u0430\u0440\u044B \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u0443\u044E\u0442 {0}% \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443",
+    "relic.pilgrimsknot.name": "\u0423\u0437\u0435\u043B \u043F\u0430\u043B\u043E\u043C\u043D\u0438\u043A\u0430",
+    "relic.pilgrimsknot.flavour": "\u041F\u043E \u0443\u0437\u043B\u0443 \u0437\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u0441\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435, \u0447\u0442\u043E \u0442\u0430\u043A \u0438 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B\u043E.",
+    "relic.pilgrimsknot.mod0": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F +{0}",
+    "relic.pilgrimsknot.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043B\u0435\u0447\u0435\u043D\u0438\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "relic.pilgrimsknot.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u044B\u0445 \u0437\u0430\u0440\u044F\u0434\u043E\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430",
+    "relic.brineclutch.name": "\u0420\u0430\u0441\u0441\u043E\u043B\u044C\u043D\u0430\u044F \u0445\u0432\u0430\u0442\u043A\u0430",
+    "relic.brineclutch.flavour": "\u041C\u043E\u043A\u0440\u044B\u0435 \u043F\u043E \u0437\u0430\u043F\u044F\u0441\u0442\u044C\u0435. \u0412\u0441\u0435\u0433\u0434\u0430.",
+    "relic.brineclutch.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "relic.brineclutch.mod1": "{0} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0437\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E",
+    "relic.brineclutch.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidecaller.name": "\u041F\u0435\u0442\u043B\u044F \u0437\u043E\u0432\u0443\u0449\u0435\u0433\u043E \u043F\u0440\u0438\u043B\u0438\u0432",
+    "relic.tidecaller.flavour": "\u041F\u043E\u0432\u0435\u0440\u043D\u0438\u0442\u0435 \u0435\u0433\u043E \u0440\u0430\u0437 - \u0438 \u043F\u043E\u043B \u0443\u0436\u0435 \u043C\u043E\u043A\u0440\u044B\u0439.",
+    "relic.tidecaller.mod0": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "relic.tidecaller.mod1": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "relic.tidecaller.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidecaller.mod3": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u044B +{0}",
+    "relic.bellwright.name": "\u0417\u0432\u043E\u043D \u043A\u043E\u043B\u043E\u043A\u043E\u043B\u044C\u0449\u0438\u043A\u0430",
+    "relic.bellwright.flavour": "\u041A\u0430\u0436\u0434\u044B\u0439 \u0443\u0434\u0430\u0440 \u0437\u0432\u0435\u043D\u0438\u0442. \u0427\u0442\u043E-\u043D\u0438\u0431\u0443\u0434\u044C \u0432\u0441\u0435\u0433\u0434\u0430 \u043E\u0442\u0432\u0435\u0447\u0430\u0435\u0442.",
+    "relic.bellwright.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "relic.bellwright.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "relic.bellwright.mod2": "\u041C\u043E\u0449\u044C +{0}",
+    "relic.glassveil.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u0432\u0443\u0430\u043B\u044C",
+    "relic.glassveil.flavour": "\u0412\u044B \u0432\u0438\u0434\u0438\u0442\u0435 \u043F\u0443\u0441\u0442\u043E\u0448\u044C \u0442\u0430\u043A, \u043A\u0430\u043A \u043E\u043D\u0430 \u0432\u0438\u0434\u0438\u0442 \u0432\u0430\u0441: \u043F\u043E \u043A\u0443\u0441\u043E\u0447\u043A\u0430\u043C.",
+    "relic.glassveil.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.glassveil.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "relic.glassveil.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u044B +{0}",
+    "relic.glassveil.mod3": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438 +{0}%",
+    "relic.hollowcrown.name": "\u041F\u043E\u043B\u0430\u044F \u043A\u043E\u0440\u043E\u043D\u0430",
+    "relic.hollowcrown.flavour": "\u0415\u0451 \u043D\u043E\u0441\u0438\u043B \u043A\u0430\u0436\u0434\u044B\u0439 \u043A\u043E\u0440\u043E\u043B\u044C \u041C\u0430\u0440\u043A\u0438. \u041D\u0438\u043A\u0442\u043E - \u043F\u043E\u0434\u043E\u043B\u0433\u0443.",
+    "relic.hollowcrown.mod0": "\u041C\u043E\u0449\u044C +{0}",
+    "relic.hollowcrown.mod1": "\u0413\u0440\u0430\u0446\u0438\u044F +{0}",
+    "relic.hollowcrown.mod2": "\u0420\u0430\u0437\u0443\u043C +{0}",
+    "relic.hollowcrown.mod3": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.hollowcrown.mod4": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "relic.lanternheart.name": "\u0421\u0435\u0440\u0434\u0446\u0435 \u0444\u043E\u043D\u0430\u0440\u044F",
+    "relic.lanternheart.flavour": "\u041E\u043D\u043E \u0433\u043E\u0440\u0438\u0442 \u0438\u0437\u043D\u0443\u0442\u0440\u0438 - \u0438 \u0432\u044B \u0431\u0443\u0434\u0435\u0442\u0435.",
+    "relic.lanternheart.mod0": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0}% \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.lanternheart.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "relic.lanternheart.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E {0}%",
+    "relic.dunestrider.name": "\u041E\u0431\u043C\u043E\u0442\u043A\u0438 \u0438\u0434\u0443\u0449\u0435\u0433\u043E \u043F\u043E \u0434\u044E\u043D\u0430\u043C",
+    "relic.dunestrider.flavour": "\u041F\u0435\u0441\u043E\u043A \u0437\u0430\u0431\u044B\u0432\u0430\u0435\u0442 \u0432\u0430\u0448\u0438 \u0448\u0430\u0433\u0438 \u0440\u0430\u043D\u044C\u0448\u0435, \u0447\u0435\u043C \u0432\u044B \u0438\u0445 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0435.",
+    "relic.dunestrider.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "relic.dunestrider.mod1": "\u0423\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435 +{0}",
+    "relic.dunestrider.mod2": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E +{0}%",
+    "relic.dunestrider.mod3": "\u0413\u0440\u0430\u0446\u0438\u044F +{0}",
+    "relic.laststand.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0443\u0431\u0435\u0436 \u0441\u0442\u0440\u0430\u0436\u0430",
+    "relic.laststand.flavour": "\u0412\u043E\u0440\u043E\u0442\u0430 \u043F\u0430\u043B\u0438. \u0429\u0438\u0442 - \u043D\u0435\u0442.",
+    "relic.laststand.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0431\u0440\u043E\u043D\u0438",
+    "relic.laststand.mod1": "\u0428\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0430 +{0}%",
+    "relic.laststand.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F +{0}",
+    "relic.laststand.mod3": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.sunshard.name": "\u041A\u043E\u043B\u0447\u0430\u043D \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0445 \u043E\u0441\u043A\u043E\u043B\u043A\u043E\u0432",
+    "relic.sunshard.flavour": "\u041A\u0430\u0436\u0434\u0430\u044F \u0441\u0442\u0440\u0435\u043B\u0430 - \u0449\u0435\u043F\u043A\u0430 \u0443\u043F\u0430\u0432\u0448\u0435\u0433\u043E \u0441\u043E\u043B\u043D\u0446\u0430.",
+    "relic.sunshard.mod0": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.sunshard.mod1": "\u0410\u0442\u0430\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.sunshard.mod2": "\u0421\u043D\u0430\u0440\u044F\u0434\u044B \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u044E\u0442 \u0435\u0449\u0451 {0} \u0432\u0440\u0430\u0433\u0430",
+    "relic.sunshard.mod3": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "relic.saltwedding.name": "\u0421\u043E\u043B\u044F\u043D\u043E\u0435 \u043E\u0431\u0440\u0443\u0447\u0430\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E",
+    "relic.saltwedding.flavour": "\u041E\u0431\u0435\u0449\u0430\u043D\u043E \u043C\u043E\u0440\u044E. \u041C\u043E\u0440\u0435 \u0434\u0435\u0440\u0436\u0438\u0442 \u043E\u0431\u0435\u0449\u0430\u043D\u0438\u044F.",
+    "relic.saltwedding.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "relic.saltwedding.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "relic.saltwedding.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u043E\u0433\u043E \u043E\u043F\u044B\u0442\u0430",
+    "relic.voidsinger.name": "\u041F\u043E\u044E\u0449\u0438\u0439 \u043F\u0443\u0441\u0442\u043E\u0442\u0435",
+    "relic.voidsinger.flavour": "\u041E\u043D \u043D\u0430\u043F\u0435\u0432\u0430\u0435\u0442 \u043D\u043E\u0442\u0443, \u043D\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0441\u044F \u043C\u0438\u0440.",
+    "relic.voidsinger.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0447\u0430\u0440",
+    "relic.voidsinger.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430 \u0447\u0430\u0440",
+    "relic.voidsinger.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0430\u0441\u0445\u043E\u0434\u0430 \u043C\u0430\u043D\u044B",
+    "relic.cinderoath.name": "\u0417\u043E\u043B\u044C\u043D\u0430\u044F \u043A\u043B\u044F\u0442\u0432\u0430",
+    "relic.cinderoath.flavour": "\u0414\u0430\u043D\u0430 \u0432 \u043F\u0435\u043F\u043B\u0435. \u0425\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0432 \u043E\u0433\u043D\u0435.",
+    "relic.cinderoath.mod0": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.cinderoath.mod1": "\u0427\u0430\u0440\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 +{0} \u043A \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.cinderoath.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "relic.cinderoath.mod3": "\u0423\u0434\u0430\u0440\u044B \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u0443\u044E\u0442 {0}% \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E",
+    "relic.cinderoath.mod4": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 {0}%",
+    "relic.drownedheart.name": "\u0421\u0435\u0440\u0434\u0446\u0435 \u0443\u0442\u043E\u043F\u043B\u0435\u043D\u043D\u0438\u043A\u0430",
+    "relic.drownedheart.flavour": "\u041E\u043D\u043E \u0434\u0430\u0432\u043D\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u0431\u0438\u0442\u044C\u0441\u044F. \u0422\u043E\u043D\u0443\u0442\u044C \u043E\u043D\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u0439\u0447\u0430\u0441.",
+    "relic.drownedheart.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0431\u0440\u043E\u043D\u0438",
+    "relic.drownedheart.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "relic.drownedheart.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.drownedheart.mod3": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.worldbreaker.name": "\u041C\u0438\u0440\u043E\u043B\u043E\u043C",
+    "relic.worldbreaker.flavour": "\u041E\u0434\u043D\u0430\u0436\u0434\u044B \u041C\u0430\u0440\u043A\u0430 \u0442\u0440\u0435\u0441\u043D\u0443\u043B\u0430. \u0412\u043E\u0442 \u0447\u0442\u043E \u0435\u0451 \u0440\u0430\u0441\u043A\u043E\u043B\u043E\u043B\u043E.",
+    "relic.worldbreaker.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "relic.worldbreaker.mod1": "\u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430 +{0}%",
+    "relic.worldbreaker.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "relic.worldbreaker.mod3": "{0}% \u0443\u0440\u043E\u043D\u0430 \u043F\u043E\u0445\u0438\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "relic.lastember.name": "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0443\u0433\u043E\u043B\u044C",
+    "relic.lastember.flavour": "\u041A\u043E\u0433\u0434\u0430 \u043E\u043D \u043F\u043E\u0433\u0430\u0441\u043D\u0435\u0442, \u043F\u043E\u0433\u0430\u0441\u043D\u0435\u0442 \u0438 \u041C\u0430\u0440\u043A\u0430.",
+    "relic.lastember.mod0": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430",
+    "relic.lastember.mod1": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "relic.lastember.mod2": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "relic.lastember.mod3": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    // companions
+    "companion.saltcrab.name": "\u0421\u043E\u043B\u044F\u043D\u043E\u0439 \u043A\u0440\u0430\u0431",
+    "companion.saltcrab.blurb": "\u041E\u043D \u043D\u0430\u0448\u0451\u043B \u0432\u0430\u0441 \u043D\u0430 \u0431\u0435\u0440\u0435\u0433\u0443 \u0438 \u0440\u0435\u0448\u0438\u043B, \u0447\u0442\u043E \u0432\u044B \u0435\u0433\u043E \u0441\u043A\u0430\u043B\u0430.",
+    "companion.saltcrab.where": "\u0410\u043A\u0442 1: \u0421\u0442\u0440\u0430\u0436 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "companion.saltcrab.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0431\u0440\u043E\u043D\u0438",
+    "companion.bogimp.name": "\u0411\u043E\u043B\u043E\u0442\u043D\u044B\u0439 \u0431\u0435\u0441\u0451\u043D\u043E\u043A",
+    "companion.bogimp.blurb": "\u041A\u0440\u0430\u0434\u0451\u0442 \u0431\u043B\u0435\u0441\u0442\u044F\u0449\u0435\u0435. \u0412 \u043E\u0441\u043D\u043E\u0432\u043D\u043E\u043C \u0434\u043B\u044F \u0432\u0430\u0441.",
+    "companion.bogimp.where": "\u0411\u043E\u0441\u0441\u044B \u0441 10 \u0443\u0440\u043E\u0432\u043D\u044F",
+    "companion.bogimp.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "companion.lanternwisp.name": "\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0439 \u043E\u0433\u043E\u043D\u0451\u043A",
+    "companion.lanternwisp.blurb": "\u041F\u043B\u0430\u043C\u044F, \u0437\u0430\u0431\u044B\u0432\u0448\u0435\u0435, \u0438\u0437 \u043A\u0430\u043A\u043E\u0439 \u043E\u043D\u043E \u043B\u0430\u043C\u043F\u044B.",
+    "companion.lanternwisp.where": "\u0411\u043E\u0441\u0441\u044B \u0441 14 \u0443\u0440\u043E\u0432\u043D\u044F",
+    "companion.lanternwisp.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "companion.dunepup.name": "\u0414\u044E\u043D\u043D\u044B\u0439 \u0449\u0435\u043D\u043E\u043A",
+    "companion.dunepup.blurb": "\u0411\u0435\u0436\u0438\u0442 \u0432\u043F\u0435\u0440\u0451\u0434, \u0431\u0435\u0436\u0438\u0442 \u043D\u0430\u0437\u0430\u0434, \u0441\u043D\u043E\u0432\u0430 \u0431\u0435\u0436\u0438\u0442 \u0432\u043F\u0435\u0440\u0451\u0434.",
+    "companion.dunepup.where": "\u0410\u043A\u0442 2: \u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u0440\u0435\u0433\u0435\u043D\u0442\u0448\u0430",
+    "companion.dunepup.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "companion.prismlynx.name": "\u041F\u0440\u0438\u0437\u043C\u0435\u043D\u043D\u0430\u044F \u0440\u044B\u0441\u044C",
+    "companion.prismlynx.blurb": "\u041E\u043D\u0430 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u043D\u0430 \u0441\u043B\u0430\u0431\u043E\u0435 \u043C\u0435\u0441\u0442\u043E, \u043F\u043E\u043A\u0430 \u0438 \u0432\u044B \u0435\u0433\u043E \u043D\u0435 \u0443\u0432\u0438\u0434\u0438\u0442\u0435.",
+    "companion.prismlynx.where": "\u0411\u043E\u0441\u0441\u044B \u0441 24 \u0443\u0440\u043E\u0432\u043D\u044F",
+    "companion.prismlynx.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "companion.drowned.name": "\u0423\u0442\u043E\u043F\u043B\u0435\u043D\u043D\u0438\u0447\u0435\u043A",
+    "companion.drowned.blurb": "\u041E\u043D \u043D\u0435 \u0434\u044B\u0448\u0438\u0442. \u0417\u0430\u0442\u043E \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0434\u044B\u0448\u0430\u0442\u044C \u0432\u0430\u043C.",
+    "companion.drowned.where": "\u0411\u043E\u0441\u0441\u044B \u0441 30 \u0443\u0440\u043E\u0432\u043D\u044F",
+    "companion.drowned.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "companion.ashpup.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u0449\u0435\u043D\u043E\u043A",
+    "companion.ashpup.blurb": "\u0420\u043E\u0436\u0434\u0451\u043D \u0432 \u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434\u0435. \u0412\u0441\u0451 \u0435\u0449\u0451 \u0442\u0451\u043F\u043B\u044B\u0439.",
+    "companion.ashpup.where": "\u0410\u043A\u0442 3: \u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0440\u0430\u0441\u0441\u0432\u0435\u0442",
+    "companion.ashpup.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "companion.cinderskull.name": "\u0417\u043E\u043B\u044C\u043D\u044B\u0439 \u0447\u0435\u0440\u0435\u043F",
+    "companion.cinderskull.blurb": "\u0413\u043E\u043B\u043E\u0432\u0430, \u0447\u0442\u043E \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u043B\u0430 \u0433\u043E\u0440\u0435\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u0432\u0441\u0451 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u043E\u0435 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E.",
+    "companion.cinderskull.where": "\u0411\u043E\u0441\u0441\u044B \u0441 45 \u0443\u0440\u043E\u0432\u043D\u044F",
+    "companion.cinderskull.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "companion.whisperskull.name": "\u0428\u0435\u043F\u0447\u0443\u0449\u0438\u0439 \u0447\u0435\u0440\u0435\u043F",
+    "companion.whisperskull.blurb": "\u041E\u043D \u0440\u0430\u0441\u0441\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u0447\u0442\u043E \u0443\u0437\u043D\u0430\u043B\u0438 \u043C\u0451\u0440\u0442\u0432\u044B\u0435. \u041A\u043E\u0435-\u0447\u0442\u043E \u0438\u0437 \u044D\u0442\u043E\u0433\u043E \u043F\u043E\u043B\u0435\u0437\u043D\u043E.",
+    "companion.whisperskull.where": "\u0411\u043E\u0441\u0441\u044B \u043A\u0430\u0440\u0442",
+    "companion.whisperskull.bonus": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u043E\u0433\u043E \u043E\u043F\u044B\u0442\u0430",
+    // shrine
+    "blessing.insight.name": "\u041F\u0440\u043E\u0437\u0440\u0435\u043D\u0438\u0435",
+    "blessing.insight.text": "\u043D\u0430 {0}% \u0431\u043E\u043B\u044C\u0448\u0435 \u043E\u043F\u044B\u0442\u0430",
+    "blessing.fortune.name": "\u0423\u0434\u0430\u0447\u0430",
+    "blessing.fortune.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "blessing.plenty.name": "\u0418\u0437\u043E\u0431\u0438\u043B\u0438\u0435",
+    "blessing.plenty.text": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "blessing.hoard.name": "\u041A\u043B\u0430\u0434",
+    "blessing.hoard.text": "\u043D\u0430 {0}% \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u043E\u0439 \u0432\u0430\u043B\u044E\u0442\u044B",
+    // maps, atlas, pinnacles
+    "mapArea.cinderfield.name": "\u0417\u043E\u043B\u044C\u043D\u043E\u0435 \u043F\u043E\u043B\u0435",
+    "mapArea.saltflats.name": "\u0421\u043E\u043B\u044F\u043D\u044B\u0435 \u0440\u0430\u0432\u043D\u0438\u043D\u044B",
+    "mapArea.drownedspire.name": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0438\u0439 \u0448\u043F\u0438\u043B\u044C",
+    "mapArea.glassmaze.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u043B\u0430\u0431\u0438\u0440\u0438\u043D\u0442",
+    "mapArea.lanternrow.name": "\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0439 \u0440\u044F\u0434",
+    "mapArea.bonecoast.name": "\u041A\u043E\u0441\u0442\u044F\u043D\u043E\u0439 \u0431\u0435\u0440\u0435\u0433",
+    "mapArea.ashcathedral.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u043E\u0431\u043E\u0440",
+    "mapArea.moltenweir.name": "\u0420\u0430\u0441\u043F\u043B\u0430\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u0437\u0430\u043F\u0440\u0443\u0434\u0430",
+    "mapArea.mirrorsea.name": "\u0417\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u043E\u0435 \u043C\u043E\u0440\u0435",
+    "mapArea.sunscar.name": "\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u0448\u0440\u0430\u043C",
+    "mapMod.hardy.text": "\u0423 \u0447\u0443\u0434\u043E\u0432\u0438\u0449 \u043D\u0430 40% \u0431\u043E\u043B\u044C\u0448\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "mapMod.savage.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u043D\u0430\u043D\u043E\u0441\u044F\u0442 \u043D\u0430 30% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430",
+    "mapMod.frenzied.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u0430\u0442\u0430\u043A\u0443\u044E\u0442 \u043D\u0430 20% \u0431\u044B\u0441\u0442\u0440\u0435\u0435",
+    "mapMod.searing.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u043D\u0430\u043D\u043E\u0441\u044F\u0442 40% \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0433\u043D\u0451\u043C",
+    "mapMod.freezing.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u043D\u0430\u043D\u043E\u0441\u044F\u0442 40% \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u043E\u043B\u043E\u0434\u043E\u043C",
+    "mapMod.shocking.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u043D\u0430\u043D\u043E\u0441\u044F\u0442 40% \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043C\u043E\u043B\u043D\u0438\u0435\u0439",
+    "mapMod.rotting.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0449\u0430 \u043D\u0430\u043D\u043E\u0441\u044F\u0442 25% \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C",
+    "mapMod.crowded.text": "\u041D\u0430 40% \u0431\u043E\u043B\u044C\u0448\u0435 \u0433\u0440\u0443\u043F\u043F \u0447\u0443\u0434\u043E\u0432\u0438\u0449",
+    "mapMod.parched.text": "\u0412\u0430\u0448\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u0430\u0432\u043B\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430 60% \u043C\u0435\u043D\u044C\u0448\u0435",
+    "mapMod.exposed.text": "\u0412\u0441\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u044B \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0439 -12%",
+    "mapMod.brittle.text": "\u0412\u044B \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442\u0435 \u043D\u0430 15% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430",
+    "mapMod.dulled.text": "\u0412\u044B \u043D\u0430\u043D\u043E\u0441\u0438\u0442\u0435 \u043D\u0430 15% \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0440\u043E\u043D\u0430",
+    "atlas.a_cart.name": "\u041A\u0430\u0440\u0442\u043E\u0433\u0440\u0430\u0444",
+    "atlas.a_cart.text": "20% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u043A\u0430\u0440\u0442",
+    "atlas.a_cart2.name": "\u0417\u0435\u043C\u043B\u0435\u043C\u0435\u0440",
+    "atlas.a_cart2.text": "25% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u043A\u0430\u0440\u0442",
+    "atlas.a_climb.name": "\u041B\u0435\u0441\u0442\u043D\u0438\u0446\u0430 \u043F\u0435\u043F\u043B\u0430",
+    "atlas.a_climb.text": "10% \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0432\u044B\u043F\u0430\u0432\u0448\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0431\u0443\u0434\u0435\u0442 \u043D\u0430 \u044F\u0440\u0443\u0441 \u0432\u044B\u0448\u0435",
+    "atlas.a_climb2.name": "\u0417\u0432\u0451\u0437\u0434\u043D\u0430\u044F \u043B\u0435\u0441\u0442\u043D\u0438\u0446\u0430",
+    "atlas.a_climb2.text": "15% \u0448\u0430\u043D\u0441, \u0447\u0442\u043E \u0432\u044B\u043F\u0430\u0432\u0448\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0431\u0443\u0434\u0435\u0442 \u043D\u0430 \u044F\u0440\u0443\u0441 \u0432\u044B\u0448\u0435",
+    "atlas.a_qty.name": "\u0413\u0440\u0430\u0431\u0451\u0436",
+    "atlas.a_qty.text": "10% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_qty2.name": "\u041A\u043B\u0430\u0434",
+    "atlas.a_qty2.text": "15% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_rar.name": "\u041F\u043E\u0437\u043E\u043B\u043E\u0447\u0435\u043D\u043D\u044B\u0435 \u043F\u0443\u0442\u0438",
+    "atlas.a_rar.text": "25% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_rar2.name": "\u041A\u043E\u0440\u043E\u043D\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u043F\u0443\u0442\u0438",
+    "atlas.a_rar2.text": "35% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_cur.name": "\u0423\u0433\u043B\u0435\u043F\u0430\u0434",
+    "atlas.a_cur.text": "30% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u0432\u0430\u043B\u044E\u0442\u044B \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_cur2.name": "\u0416\u0438\u043B\u044B \u0437\u0432\u0435\u0437\u0434\u043E\u043F\u0430\u0434\u0430",
+    "atlas.a_cur2.text": "40% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u0432\u0430\u043B\u044E\u0442\u044B \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_packs.name": "\u041A\u0438\u0448\u0430\u0449\u0438\u0435 \u043E\u0440\u0434\u044B",
+    "atlas.a_packs.text": "\u041D\u0430 15% \u0431\u043E\u043B\u044C\u0448\u0435 \u0433\u0440\u0443\u043F\u043F \u0447\u0443\u0434\u043E\u0432\u0438\u0449 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_xp.name": "\u0416\u0451\u0441\u0442\u043A\u0438\u0435 \u0443\u0440\u043E\u043A\u0438",
+    "atlas.a_xp.text": "15% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u043F\u044B\u0442\u0430 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_xp2.name": "\u0416\u0435\u0441\u0442\u043E\u0447\u0430\u0439\u0448\u0438\u0435 \u0443\u0440\u043E\u043A\u0438",
+    "atlas.a_xp2.text": "20% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043E\u043F\u044B\u0442\u0430 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_mods.name": "\u041E\u043F\u0430\u0441\u043D\u0430\u044F \u0437\u0435\u043C\u043B\u044F",
+    "atlas.a_mods.text": "30% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043D\u0430\u0433\u0440\u0430\u0434 \u043E\u0442 \u043C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u0432 \u043A\u0430\u0440\u0442",
+    "atlas.a_mods2.name": "\u0421\u043C\u0435\u0440\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0437\u0435\u043C\u043B\u044F",
+    "atlas.a_mods2.text": "40% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043D\u0430\u0433\u0440\u0430\u0434 \u043E\u0442 \u043C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u0432 \u043A\u0430\u0440\u0442",
+    "atlas.a_frag.name": "\u0418\u0441\u043A\u0430\u0442\u0435\u043B\u044C \u043F\u0435\u0447\u0430\u0442\u0435\u0439",
+    "atlas.a_frag.text": "40% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u043F\u0435\u0447\u0430\u0442\u0435\u0439",
+    "atlas.a_frag2.name": "\u041E\u0445\u043E\u0442\u043D\u0438\u043A \u0437\u0430 \u043F\u0435\u0447\u0430\u0442\u044F\u043C\u0438",
+    "atlas.a_frag2.text": "60% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u0432\u044B\u043F\u0430\u0434\u0435\u043D\u0438\u044F \u043F\u0435\u0447\u0430\u0442\u0435\u0439",
+    "atlas.a_boss.name": "\u041E\u0445\u043E\u0442\u043D\u0438\u043A \u0437\u0430 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F\u043C\u0438",
+    "atlas.a_boss.text": "\u0411\u043E\u0441\u0441\u044B \u043A\u0430\u0440\u0442 \u0441 \u0448\u0430\u043D\u0441\u043E\u043C 6% \u0440\u043E\u043D\u044F\u044E\u0442 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044E",
+    "pinnacle.drownedsun.name": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0435\u0435 \u0441\u043E\u043B\u043D\u0446\u0435",
+    "pinnacle.drownedsun.text": "\u0412\u0442\u043E\u0440\u043E\u0435 \u0441\u043E\u043B\u043D\u0446\u0435 \u043F\u043E\u0434\u043D\u044F\u043B\u043E\u0441\u044C \u0438\u0437 \u043C\u043E\u0440\u044F \u0438 \u0442\u0430\u043A \u0438 \u043D\u0435 \u043D\u0430\u0443\u0447\u0438\u043B\u043E\u0441\u044C \u0441\u0432\u0435\u0442\u0438\u0442\u044C.",
+    "pinnacle.drownedsun.sigil": "\u041F\u0435\u0447\u0430\u0442\u044C \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "pinnacle.glasschoir.name": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u0445\u043E\u0440",
+    "pinnacle.glasschoir.text": "\u0422\u044B\u0441\u044F\u0447\u0430 \u043E\u0441\u043A\u043E\u043B\u043A\u043E\u0432 \u043F\u043E\u0451\u0442 \u043E\u0434\u043D\u0443 \u043D\u043E\u0442\u0443. \u042D\u0442\u0430 \u043D\u043E\u0442\u0430 - \u0432\u0430\u0448\u0435 \u0438\u043C\u044F.",
+    "pinnacle.glasschoir.sigil": "\u041F\u0435\u0447\u0430\u0442\u044C \u043F\u0440\u0438\u0437\u043C\u044B",
+    "pinnacle.ashenking.name": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "pinnacle.ashenking.text": "\u0415\u0433\u043E \u043A\u043E\u0440\u043E\u043D\u043E\u0432\u0430\u043B\u0438 \u0432 \u0434\u0435\u043D\u044C, \u043A\u043E\u0433\u0434\u0430 \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435, \u0438 \u0441 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043E\u043D \u043F\u0440\u0430\u0432\u0438\u0442 \u043F\u0435\u043F\u043B\u043E\u043C.",
+    "pinnacle.ashenking.sigil": "\u041F\u0435\u0447\u0430\u0442\u044C \u043F\u0435\u043F\u043B\u0430",
+    "pinnacle.hollowcrown.name": "\u041F\u043E\u043B\u0430\u044F \u043A\u043E\u0440\u043E\u043D\u0430",
+    "pinnacle.hollowcrown.text": "\u041D\u0430 \u0434\u043D\u0435 \u0413\u043B\u0443\u0431\u0438\u043D \u0442\u043E, \u0447\u0442\u043E \u0441\u044A\u0435\u043B\u043E \u0441\u0432\u0435\u0442 \u0441\u043E\u043B\u043D\u0446\u0430, \u0436\u0434\u0451\u0442, \u043A\u043E\u0433\u0434\u0430 \u0435\u0433\u043E \u043D\u0430\u043A\u043E\u0440\u043C\u044F\u0442 \u0441\u043D\u043E\u0432\u0430.",
+    "pinnacle.hollowcrown.sigil": "\u041F\u0435\u0447\u0430\u0442\u044C \u043F\u0443\u0441\u0442\u043E\u0442\u044B",
+    // loot filter presets
+    "preset.starter.name": "\u041D\u0430\u0447\u0430\u043B\u044C\u043D\u044B\u0439",
+    "preset.starter.blurb": "\u041E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0438; \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0442\u044C \u043E\u0431\u044B\u0447\u043D\u044B\u0435 \u0438 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u0432\u0435\u0449\u0438, \u043E\u0442\u0441\u0442\u0430\u044E\u0449\u0438\u0435 \u043D\u0430 10+ \u0443\u0440\u043E\u0432\u043D\u0435\u0439.",
+    "preset.lean.name": "\u0421\u043A\u0443\u043F\u043E\u0439",
+    "preset.lean.blurb": "\u041E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0438 \u0438 \u0440\u0435\u0434\u043A\u0438\u0435; \u0440\u0430\u0437\u0431\u0438\u0440\u0430\u0442\u044C \u0432\u0441\u0435 \u043E\u0431\u044B\u0447\u043D\u044B\u0435 \u0438 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435.",
+    "preset.endgame.name": "\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0438\u0433\u0440\u0430",
+    "preset.endgame.blurb": "\u0422\u043E\u043B\u044C\u043A\u043E \u0440\u0435\u0434\u043A\u0438\u0435 \u0441 5+ \u0430\u0444\u0444\u0438\u043A\u0441\u0430\u043C\u0438 \u0438 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0438; \u0432\u0441\u0451 \u043F\u0440\u043E\u0447\u0435\u0435 - \u0432 \u043F\u044B\u043B\u044C.",
+    "preset.resists.name": "\u041E\u0445\u043E\u0442\u0430 \u0437\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F\u043C\u0438",
+    "preset.resists.blurb": "\u041A\u0430\u043A \xAB\u041F\u043E\u0437\u0434\u043D\u044F\u044F \u0438\u0433\u0440\u0430\xBB, \u043D\u043E \u0435\u0449\u0451 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0440\u0435\u0434\u043A\u0438\u0435 \u0443\u043A\u0440\u0430\u0448\u0435\u043D\u0438\u044F \u0441 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435\u043C.",
+    // modifier stats: "nominative|genitive" (flat lines use the first, "increased" and "more" lines the second)
+    "stat.life": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "stat.mana": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u044B|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u043C\u0430\u043D\u044B",
+    "stat.energyShield": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "stat.lifeRegen": "\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.lifeRegenPct": "\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.manaRegen": "\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u043C\u0430\u043D\u044B \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0440\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u0438 \u043C\u0430\u043D\u044B \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.armour": "\u0431\u0440\u043E\u043D\u044F|\u0431\u0440\u043E\u043D\u0438",
+    "stat.evasion": "\u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u0435|\u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u044F",
+    "stat.block": "\u0448\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0430|\u0448\u0430\u043D\u0441\u0430 \u0431\u043B\u043E\u043A\u0430",
+    "stat.str": "\u043C\u043E\u0449\u044C|\u043C\u043E\u0449\u0438",
+    "stat.dex": "\u0433\u0440\u0430\u0446\u0438\u044F|\u0433\u0440\u0430\u0446\u0438\u0438",
+    "stat.int": "\u0440\u0430\u0437\u0443\u043C|\u0440\u0430\u0437\u0443\u043C\u0430",
+    "stat.accuracy": "\u043C\u0435\u0442\u043A\u043E\u0441\u0442\u044C|\u043C\u0435\u0442\u043A\u043E\u0441\u0442\u0438",
+    "stat.damage": "\u0443\u0440\u043E\u043D|\u0443\u0440\u043E\u043D\u0430",
+    "stat.critChance": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430|\u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "stat.critMulti": "\u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430|\u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044F \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "stat.attackSpeed": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438|\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438",
+    "stat.castSpeed": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0447\u0430\u0440|\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0447\u0430\u0440",
+    "stat.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F|\u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F",
+    "stat.pierce": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043D\u0430\u0440\u044F\u0434\u043E\u0432|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043D\u0430\u0440\u044F\u0434\u043E\u0432",
+    "stat.leech": "\u043F\u043E\u0445\u0438\u0449\u0435\u043D\u0438\u0435 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F|\u043F\u043E\u0445\u0438\u0449\u0435\u043D\u0438\u044F \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "stat.flaskHeal": "\u043B\u0435\u0447\u0435\u043D\u0438\u0435 \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C|\u043B\u0435\u0447\u0435\u043D\u0438\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "stat.flaskCharges": "\u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0435 \u0437\u0430\u0440\u044F\u0434\u043E\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430|\u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u044F \u0437\u0430\u0440\u044F\u0434\u043E\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430",
+    "stat.moveSpeed": "\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F|\u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "stat.itemRarity": "\u0440\u0435\u0434\u043A\u043E\u0441\u0442\u044C \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432|\u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "stat.itemQuantity": "\u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432|\u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "stat.xpGain": "\u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u044B\u0439 \u043E\u043F\u044B\u0442|\u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u043E\u0433\u043E \u043E\u043F\u044B\u0442\u0430",
+    "stat.manaCost": "\u0440\u0430\u0441\u0445\u043E\u0434 \u043C\u0430\u043D\u044B|\u0440\u0430\u0441\u0445\u043E\u0434\u0430 \u043C\u0430\u043D\u044B",
+    "stat.dmgTaken": "\u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u044B\u0439 \u0443\u0440\u043E\u043D|\u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "stat.lifeOnKill": "\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435 \u0437\u0430 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E|\u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F \u0437\u0430 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u043E",
+    "stat.baseCrit": "\u0431\u0430\u0437\u043E\u0432\u044B\u0439 \u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430|\u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "stat.skillEffect": "\u044D\u0444\u0444\u0435\u043A\u0442 \u0443\u043C\u0435\u043D\u0438\u044F|\u044D\u0444\u0444\u0435\u043A\u0442\u0430 \u0443\u043C\u0435\u043D\u0438\u044F",
+    "stat.res.phys": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443|\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443",
+    "stat.maxRes.phys": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443",
+    "stat.pen.phys": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u043C\u0443 \u0443\u0440\u043E\u043D\u0443",
+    "stat.convert.phys": "\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430|\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "stat.addMin.phys": "\u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430|\u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "stat.addMax.phys": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430",
+    "stat.res.fire": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E|\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E",
+    "stat.maxRes.fire": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E",
+    "stat.pen.fire": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043E\u0433\u043D\u044E",
+    "stat.convert.fire": "\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u043E\u0433\u043E\u043D\u044C|\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u043E\u0433\u043E\u043D\u044C",
+    "stat.addMin.fire": "\u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F|\u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "stat.addMax.fire": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "stat.res.cold": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443|\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.maxRes.cold": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.pen.cold": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.convert.cold": "\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u0445\u043E\u043B\u043E\u0434|\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u0445\u043E\u043B\u043E\u0434",
+    "stat.addMin.cold": "\u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430|\u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "stat.addMax.cold": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "stat.res.lightning": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438|\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stat.maxRes.lightning": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043C\u043E\u043B\u043D\u0438\u0438|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stat.pen.lightning": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043C\u043E\u043B\u043D\u0438\u0438|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stat.convert.lightning": "\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u043C\u043E\u043B\u043D\u0438\u044E|\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u043C\u043E\u043B\u043D\u0438\u044E",
+    "stat.addMin.lightning": "\u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438|\u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stat.addMax.lightning": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stat.res.chaos": "\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443|\u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u0430\u043E\u0441\u0443",
+    "stat.maxRes.chaos": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u0430\u043E\u0441\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u0430\u043E\u0441\u0443",
+    "stat.pen.chaos": "\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u0430\u043E\u0441\u0443|\u043F\u0440\u043E\u0431\u0438\u0432\u0430\u043D\u0438\u044F \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0445\u0430\u043E\u0441\u0443",
+    "stat.convert.chaos": "\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u0445\u0430\u043E\u0441|\u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0432 \u0445\u0430\u043E\u0441",
+    "stat.addMin.chaos": "\u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C|\u043C\u0438\u043D\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C",
+    "stat.addMax.chaos": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0433\u043E \u0443\u0440\u043E\u043D\u0430 \u0445\u0430\u043E\u0441\u043E\u043C",
+    "tag.attack": "\u0430\u0442\u0430\u043A\u0430",
+    "tag.spell": "\u0447\u0430\u0440\u044B",
+    "tag.melee": "\u0431\u043B\u0438\u0436\u043D\u0438\u0439 \u0431\u043E\u0439",
+    "tag.projectile": "\u0441\u043D\u0430\u0440\u044F\u0434",
+    "tag.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C",
+    "tag.strike": "\u0443\u0434\u0430\u0440",
+    "tag.slam": "\u0441\u043E\u043A\u0440\u0443\u0448\u0435\u043D\u0438\u0435",
+    "tag.bow": "\u043B\u0443\u043A",
+    "tag.phys": "\u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0439",
+    "tag.fire": "\u043E\u0433\u043E\u043D\u044C",
+    "tag.cold": "\u0445\u043E\u043B\u043E\u0434",
+    "tag.lightning": "\u043C\u043E\u043B\u043D\u0438\u044F",
+    "tag.chaos": "\u0445\u0430\u043E\u0441",
+    "tag.elemental": "\u0441\u0442\u0438\u0445\u0438\u0438"
+  };
+  var BASE = {};
+  var GENDER = {};
+  var put = (id, [name, g]) => {
+    BASE[`base.${id}.name`] = name;
+    GENDER[id] = g;
+  };
+  var WEAPONS2 = {
+    sword: [["\u0420\u0436\u0430\u0432\u044B\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u041F\u0430\u0440\u043E\u043C\u043D\u0430\u044F \u0441\u0430\u0431\u043B\u044F", "f"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u043F\u0440\u0438\u043B\u0438\u0432\u043D\u043E\u0439 \u0441\u0442\u0430\u043B\u0438", "m"], ["\u0422\u0440\u043E\u0441\u0442\u043D\u0438\u043A\u043E\u0432\u044B\u0439 \u0440\u0435\u0437\u0430\u043A", "m"], ["\u0421\u0442\u0435\u043A\u043B\u043E\u0440\u0435\u0437\u043D\u0430\u044F \u0441\u0430\u0431\u043B\u044F", "f"], ["\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u0421\u043E\u043B\u043D\u0446\u0435\u043A\u043E\u0432\u0430\u043D\u044B\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0433\u043E \u0441\u0435\u0440\u0434\u0446\u0430", "m"]],
+    axe: [["\u0422\u043E\u043F\u043E\u0440\u0438\u043A \u0438\u0437 \u043F\u043B\u0430\u0432\u043D\u0438\u043A\u0430", "m"], ["\u0411\u043E\u0440\u043E\u0434\u043E\u0432\u0438\u0434\u043D\u044B\u0439 \u0442\u043E\u043F\u043E\u0440", "m"], ["\u0422\u043E\u043F\u043E\u0440 \u0441\u0435\u0442\u0435\u0432\u044F\u0437\u0430", "m"], ["\u0420\u0430\u0441\u0441\u0435\u043A\u0430\u0442\u0435\u043B\u044C \u043A\u0438\u043B\u0435\u0439", "m"], ["\u041F\u0440\u043E\u0441\u043E\u043B\u0435\u043D\u043D\u044B\u0439 \u0442\u043E\u043F\u043E\u0440", "m"], ["\u0414\u044E\u043D\u043E\u0433\u0440\u044B\u0437", "m"], ["\u0417\u0430\u043A\u0430\u0442\u043D\u044B\u0439 \u0442\u0435\u0441\u0430\u043A", "m"], ["\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u0436\u043D\u0435\u0446", "m"]],
+    mace: [["\u0421\u0443\u0447\u043A\u043E\u0432\u0430\u0442\u0430\u044F \u0434\u0443\u0431\u0438\u043D\u0430", "f"], ["\u042F\u043A\u043E\u0440\u043D\u0430\u044F \u0431\u0443\u043B\u0430\u0432\u0430", "f"], ["\u0420\u0430\u043A\u0443\u0448\u0435\u0447\u043D\u044B\u0439 \u043C\u043E\u043B\u043E\u0442", "m"], ["\u0411\u0443\u043B\u0430\u0432\u0430 \u043A\u043E\u043B\u043E\u043A\u043E\u043B\u044C\u0449\u0438\u043A\u0430", "f"], ["\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u043C\u043E\u0440\u0433\u0435\u043D\u0448\u0442\u0435\u0440\u043D", "m"], ["\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0446\u0435\u043F", "m"], ["\u041C\u043E\u043B\u043E\u0442 \u0440\u0430\u0441\u0441\u0432\u0435\u0442\u0430", "m"], ["\u0417\u043E\u043B\u044C\u043D\u044B\u0439 \u0441\u043A\u0438\u043F\u0435\u0442\u0440", "m"]],
+    dagger: [["\u041F\u043E\u0442\u0440\u043E\u0448\u0438\u043B\u044C\u043D\u044B\u0439 \u043D\u043E\u0436", "m"], ["\u0427\u0435\u0448\u0443\u0435\u0447\u0438\u0441\u0442\u043A\u0430", "f"], ["\u041A\u043E\u0440\u0442\u0438\u043A \u0438\u0437 \u0443\u0433\u0440\u0451\u0432\u043E\u0439 \u043A\u043E\u0441\u0442\u0438", "m"], ["\u041A\u0438\u043D\u0436\u0430\u043B \u0442\u0443\u043C\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u043E\u0446\u0435\u043B\u0443\u044F", "m"], ["\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u0441\u0442\u0438\u043B\u0435\u0442", "m"], ["\u041D\u043E\u0436 \u043A\u043B\u044F\u0442\u0432\u044B", "m"], ["\u041A\u0440\u0438\u0441 \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0433\u043E \u043E\u0441\u043A\u043E\u043B\u043A\u0430", "m"], ["\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0441\u0432\u0435\u0442", "m"]],
+    greatsword: [["\u0413\u043D\u0443\u0442\u044B\u0439 \u0446\u0432\u0430\u0439\u0445\u0430\u043D\u0434\u0435\u0440", "m"], ["\u041F\u043E\u0440\u0442\u043E\u0432\u044B\u0439 \u0434\u0432\u0443\u0440\u0443\u0447\u043D\u0438\u043A", "m"], ["\u0412\u043E\u043B\u043D\u043E\u043B\u043E\u043C", "m"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u0434\u0430\u043C\u0431\u044B", "m"], ["\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u043A\u043E\u043B\u043E\u0441\u0441", "m"], ["\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u043A\u043B\u044F\u0442\u0432\u044B", "m"], ["\u0414\u0432\u0443\u0440\u0443\u0447\u043D\u0438\u043A \u0421\u043E\u043B\u043D\u0446\u0435\u043F\u0430\u0434\u0430", "m"], ["\u0423\u0433\u043E\u043B\u044C \u043C\u0438\u0440\u0430", "m"]],
+    greataxe: [["\u0414\u0440\u043E\u0432\u043E\u043A\u043E\u043B", "m"], ["\u041A\u0438\u0442\u043E\u0431\u043E\u0439\u043D\u044B\u0439 \u0442\u043E\u043F\u043E\u0440", "m"], ["\u0422\u043E\u043F\u043E\u0440 \u043B\u0435\u0432\u0438\u0430\u0444\u0430\u043D\u0430", "m"], ["\u041A\u0440\u0443\u0448\u0438\u0442\u0435\u043B\u044C \u043E\u0431\u043B\u043E\u043C\u043A\u043E\u0432", "m"], ["\u041F\u0430\u043B\u0430\u0447 \u0434\u044E\u043D", "m"], ["\u041F\u043E\u0433\u0440\u0435\u0431\u0430\u043B\u044C\u043D\u044B\u0439 \u0442\u043E\u043F\u043E\u0440", "m"], ["\u0422\u0435\u0441\u0430\u043A \u043E\u043A\u043E\u0451\u043C\u0430", "m"], ["\u0422\u043E\u043F\u043E\u0440 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0433\u043E \u0443\u0433\u043B\u044F", "m"]],
+    staff: [["\u041A\u0440\u0438\u0432\u043E\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041F\u043E\u0441\u043E\u0445 \u0437\u043E\u0432\u0443\u0449\u0435\u0433\u043E \u043F\u0440\u0438\u043B\u0438\u0432", "m"], ["\u041A\u043E\u0440\u0430\u043B\u043B\u043E\u0432\u044B\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041C\u0430\u044F\u0447\u043D\u044B\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041C\u0438\u0440\u0430\u0436\u043D\u044B\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041F\u043E\u0441\u043E\u0445 \u0437\u0430\u0442\u043C\u0435\u043D\u0438\u044F", "m"], ["\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u043F\u0430\u0441\u0442\u044B\u0440\u0441\u043A\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"]],
+    bow: [["\u0420\u044B\u0431\u0430\u0446\u043A\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0427\u0430\u044F\u0447\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0422\u0440\u043E\u0441\u0442\u043D\u0438\u043A\u043E\u0432\u044B\u0439 \u0434\u043B\u0438\u043D\u043D\u044B\u0439 \u043B\u0443\u043A", "m"], ["\u0421\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043B\u0443\u043A", "m"], ["\u0421\u0442\u0435\u043A\u043B\u043E\u043A\u0440\u044B\u043B\u044B\u0439 \u043B\u0443\u043A", "m"], ["\u0413\u0440\u043E\u0437\u043E\u0432\u043E\u0439 \u043B\u0443\u043A", "m"], ["\u0422\u0435\u0442\u0438\u0432\u0430 \u0440\u0430\u0441\u0441\u0432\u0435\u0442\u0430", "f"], ["\u041F\u043E\u043B\u0451\u0442 \u0443\u0433\u043B\u0435\u0439", "m"]],
+    wand: [["\u0416\u0435\u0437\u043B \u0438\u0437 \u043F\u043B\u0430\u0432\u043D\u0438\u043A\u0430", "m"], ["\u0421\u0432\u0435\u0447\u043D\u043E\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0416\u0435\u043C\u0447\u0443\u0436\u043D\u044B\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u041F\u0440\u0438\u0437\u043C\u0435\u043D\u043D\u044B\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0416\u0435\u0437\u043B \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u044F", "m"], ["\u041A\u043E\u0440\u043E\u043D\u043D\u044B\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0436\u0435\u0437\u043B", "m"]]
+  };
+  for (const [kind, names] of Object.entries(WEAPONS2)) names.forEach((n, i) => put(`${kind}${i + 1}`, n));
+  var PLATE2 = [
+    "\u041C\u044F\u0442\u044B\u0439|\u041C\u044F\u0442\u0430\u044F|\u041C\u044F\u0442\u043E\u0435|\u041C\u044F\u0442\u044B\u0435",
+    "\u041F\u043E\u0440\u0442\u043E\u0432\u044B\u0439|\u041F\u043E\u0440\u0442\u043E\u0432\u0430\u044F|\u041F\u043E\u0440\u0442\u043E\u0432\u043E\u0435|\u041F\u043E\u0440\u0442\u043E\u0432\u044B\u0435",
+    "\u0420\u0430\u043A\u0443\u0448\u0435\u0447\u043D\u044B\u0439|\u0420\u0430\u043A\u0443\u0448\u0435\u0447\u043D\u0430\u044F|\u0420\u0430\u043A\u0443\u0448\u0435\u0447\u043D\u043E\u0435|\u0420\u0430\u043A\u0443\u0448\u0435\u0447\u043D\u044B\u0435",
+    "\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u043E\u0439|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u0430\u044F|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u043E\u0435|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u044B\u0435",
+    "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439|\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F|\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u043E\u0435|\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0435",
+    "\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439|\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F|\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435|\u041F\u0430\u043B\u043E\u043C\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435",
+    "\u0420\u0430\u0441\u0441\u0432\u0435\u0442\u043D\u044B\u0439|\u0420\u0430\u0441\u0441\u0432\u0435\u0442\u043D\u0430\u044F|\u0420\u0430\u0441\u0441\u0432\u0435\u0442\u043D\u043E\u0435|\u0420\u0430\u0441\u0441\u0432\u0435\u0442\u043D\u044B\u0435",
+    "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439|\u0423\u0433\u043E\u043B\u044C\u043D\u0430\u044F|\u0423\u0433\u043E\u043B\u044C\u043D\u043E\u0435|\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0435"
+  ];
+  var LEATHER2 = [
+    "\u041B\u0430\u0442\u0430\u043D\u044B\u0439|\u041B\u0430\u0442\u0430\u043D\u0430\u044F|\u041B\u0430\u0442\u0430\u043D\u043E\u0435|\u041B\u0430\u0442\u0430\u043D\u044B\u0435",
+    "\u0422\u044E\u043B\u0435\u043D\u0438\u0439|\u0422\u044E\u043B\u0435\u043D\u044C\u044F|\u0422\u044E\u043B\u0435\u043D\u044C\u0435|\u0422\u044E\u043B\u0435\u043D\u044C\u0438",
+    "\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u043D\u044B\u0439|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u043D\u0430\u044F|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u043D\u043E\u0435|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u043D\u044B\u0435",
+    "\u0421\u043A\u0430\u043B\u044C\u043D\u044B\u0439|\u0421\u043A\u0430\u043B\u044C\u043D\u0430\u044F|\u0421\u043A\u0430\u043B\u044C\u043D\u043E\u0435|\u0421\u043A\u0430\u043B\u044C\u043D\u044B\u0435",
+    "\u041F\u0435\u0441\u0447\u0430\u043D\u044B\u0439|\u041F\u0435\u0441\u0447\u0430\u043D\u0430\u044F|\u041F\u0435\u0441\u0447\u0430\u043D\u043E\u0435|\u041F\u0435\u0441\u0447\u0430\u043D\u044B\u0435",
+    "\u0421\u0443\u043C\u0435\u0440\u0435\u0447\u043D\u044B\u0439|\u0421\u0443\u043C\u0435\u0440\u0435\u0447\u043D\u0430\u044F|\u0421\u0443\u043C\u0435\u0440\u0435\u0447\u043D\u043E\u0435|\u0421\u0443\u043C\u0435\u0440\u0435\u0447\u043D\u044B\u0435",
+    "\u041E\u043A\u043E\u0451\u043C\u043D\u044B\u0439|\u041E\u043A\u043E\u0451\u043C\u043D\u0430\u044F|\u041E\u043A\u043E\u0451\u043C\u043D\u043E\u0435|\u041E\u043A\u043E\u0451\u043C\u043D\u044B\u0435",
+    "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439|\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u0430\u044F|\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u043E\u0435|\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0435"
+  ];
+  var SILK2 = [
+    "\u041F\u043E\u0442\u0451\u0440\u0442\u044B\u0439|\u041F\u043E\u0442\u0451\u0440\u0442\u0430\u044F|\u041F\u043E\u0442\u0451\u0440\u0442\u043E\u0435|\u041F\u043E\u0442\u0451\u0440\u0442\u044B\u0435",
+    "\u0427\u0430\u0441\u043E\u0432\u0435\u043D\u043D\u044B\u0439|\u0427\u0430\u0441\u043E\u0432\u0435\u043D\u043D\u0430\u044F|\u0427\u0430\u0441\u043E\u0432\u0435\u043D\u043D\u043E\u0435|\u0427\u0430\u0441\u043E\u0432\u0435\u043D\u043D\u044B\u0435",
+    "\u041F\u0440\u0438\u043B\u0438\u0432\u043D\u044B\u0439|\u041F\u0440\u0438\u043B\u0438\u0432\u043D\u0430\u044F|\u041F\u0440\u0438\u043B\u0438\u0432\u043D\u043E\u0435|\u041F\u0440\u0438\u043B\u0438\u0432\u043D\u044B\u0435",
+    "\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0439|\u0424\u043E\u043D\u0430\u0440\u043D\u0430\u044F|\u0424\u043E\u043D\u0430\u0440\u043D\u043E\u0435|\u0424\u043E\u043D\u0430\u0440\u043D\u044B\u0435",
+    "\u041C\u0438\u0440\u0430\u0436\u043D\u044B\u0439|\u041C\u0438\u0440\u0430\u0436\u043D\u0430\u044F|\u041C\u0438\u0440\u0430\u0436\u043D\u043E\u0435|\u041C\u0438\u0440\u0430\u0436\u043D\u044B\u0435",
+    "\u0417\u0430\u0442\u043C\u0435\u043D\u043D\u044B\u0439|\u0417\u0430\u0442\u043C\u0435\u043D\u043D\u0430\u044F|\u0417\u0430\u0442\u043C\u0435\u043D\u043D\u043E\u0435|\u0417\u0430\u0442\u043C\u0435\u043D\u043D\u044B\u0435",
+    "\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0439|\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u0430\u044F|\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0435|\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0435",
+    "\u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u044B\u0439|\u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u0430\u044F|\u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u043E\u0435|\u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u044B\u0435"
+  ];
+  var adj = (forms, g) => forms.split("|")["mfnp".indexOf(g)];
+  var NOUNS2 = {
+    body: [["\u043A\u0438\u0440\u0430\u0441\u0430", "f"], ["\u043A\u0443\u0440\u0442\u043A\u0430", "f"], ["\u043C\u0430\u043D\u0442\u0438\u044F", "f"], ["\u0431\u0440\u0438\u0433\u0430\u043D\u0442\u0438\u043D\u0430", "f"]],
+    helmet: [["\u0448\u043B\u0435\u043C", "m"], ["\u043A\u0430\u043F\u044E\u0448\u043E\u043D", "m"], ["\u043E\u0431\u0440\u0443\u0447", "m"], ["\u0441\u0430\u043B\u0430\u0434", "m"]],
+    gloves: [["\u0440\u0443\u043A\u0430\u0432\u0438\u0446\u044B", "p"], ["\u043F\u0435\u0440\u0447\u0430\u0442\u043A\u0438", "p"], ["\u043E\u0431\u043C\u043E\u0442\u043A\u0438", "p"], ["\u043D\u0430\u0440\u0443\u0447\u0438", "p"]],
+    boots: [["\u043F\u043E\u043D\u043E\u0436\u0438", "p"], ["\u0441\u0430\u043F\u043E\u0433\u0438", "p"], ["\u0442\u0443\u0444\u043B\u0438", "p"], ["\u0431\u0430\u0448\u043C\u0430\u043A\u0438", "p"]]
+  };
+  var armour = (kind, slot, adjs, [noun, g]) => adjs.forEach((a, i) => put(`${kind}_${slot}${i + 1}`, [`${adj(a, g)} ${noun}`, g]));
+  for (const [slot, [plate, leather, silk, brigand]] of Object.entries(NOUNS2)) {
+    armour("plate", slot, PLATE2, plate);
+    armour("leather", slot, LEATHER2, leather);
+    armour("silk", slot, SILK2, silk);
+    armour("brigand", slot, LEATHER2, brigand);
+  }
+  armour("shield", "offhand", PLATE2, ["\u0431\u0430\u0448\u0435\u043D\u043D\u044B\u0439 \u0449\u0438\u0442", "m"]);
+  armour("buckler", "offhand", LEATHER2, ["\u0431\u0430\u043A\u043B\u0435\u0440", "m"]);
+  armour("focus", "offhand", SILK2, ["\u0444\u043E\u043A\u0443\u0441", "m"]);
+  ["\u041F\u043E\u0442\u0451\u0440\u0442\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0427\u0430\u044F\u0447\u0438\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0422\u0440\u043E\u0441\u0442\u043D\u0438\u043A\u043E\u0432\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0421\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0413\u0440\u043E\u0437\u043E\u0432\u043E\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0420\u0430\u0441\u0441\u0432\u0435\u0442\u043D\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D", "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u043B\u0447\u0430\u043D"].forEach((n, i) => put(`quiver${i + 1}`, [n, "m"]));
+  var JEWELS = {
+    amulet_might: ["\u0416\u0435\u043B\u0435\u0437\u043D\u0430\u044F \u0433\u0440\u0438\u0432\u043D\u0430", "f"],
+    amulet_grace: ["\u041A\u0443\u043B\u043E\u043D \u0438\u0437 \u0440\u0430\u043A\u043E\u0432\u0438\u043D\u044B", "m"],
+    amulet_wit: ["\u0416\u0435\u043C\u0447\u0443\u0436\u043D\u044B\u0439 \u043C\u0435\u0434\u0430\u043B\u044C\u043E\u043D", "m"],
+    amulet_life: ["\u041A\u043E\u0440\u0430\u043B\u043B\u043E\u0432\u044B\u0439 \u043E\u0431\u0435\u0440\u0435\u0433", "m"],
+    amulet_ember: ["\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0440\u0435\u043B\u0438\u043A\u0432\u0430\u0440\u0438\u0439", "m"],
+    ring_iron: ["\u0416\u0435\u043B\u0435\u0437\u043D\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E", "n"],
+    ring_tide: ["\u041A\u043E\u043B\u044C\u0446\u043E \u043F\u0440\u0438\u043B\u0438\u0432\u0430", "n"],
+    ring_ember: ["\u0423\u0433\u043E\u043B\u044C\u043D\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E", "n"],
+    ring_storm: ["\u0413\u0440\u043E\u0437\u043E\u0432\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E", "n"],
+    ring_mana: ["\u041A\u043E\u043B\u044C\u0446\u043E \u0441 \u043B\u0443\u043D\u043D\u044B\u043C \u043A\u0430\u043C\u043D\u0435\u043C", "n"],
+    ring_glass: ["\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E", "n"],
+    ring_void: ["\u041F\u043E\u043B\u043E\u0435 \u043A\u043E\u043B\u044C\u0446\u043E", "n"],
+    belt_rope: ["\u0412\u0435\u0440\u0451\u0432\u043E\u0447\u043D\u044B\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_leather: ["\u0414\u0443\u0431\u043B\u0451\u043D\u044B\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_chain: ["\u0426\u0435\u043F\u043D\u043E\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_plate: ["\u041A\u0443\u0448\u0430\u043A \u0441 \u043F\u043B\u0430\u0441\u0442\u0438\u043D\u0430\u043C\u0438", "m"]
+  };
+  for (const [id, n] of Object.entries(JEWELS)) put(id, n);
+  var RU = { ...CONTENT, ...BASE, ...UI2 };
+  var RU_GENDER = GENDER;
+
+  // src/i18n/uk.ts
+  var UI3 = {
+    // ---- shared words
+    "common.close": "\u0417\u0430\u043A\u0440\u0438\u0442\u0438",
+    "common.cancel": "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
+    "common.level": "\u0420\u0456\u0432\u0435\u043D\u044C {n}",
+    "common.or": " \u0430\u0431\u043E ",
+    "common.list": ", ",
+    "common.count": "{label} ({n})",
+    // ---- modifier lines, time, tiers, maps
+    "mod.inc": "{v}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F {stat}",
+    "mod.red": "{v}% \u0437\u043C\u0435\u043D\u0448\u0435\u043D\u043D\u044F {stat}",
+    "mod.more": "\u043D\u0430 {v}% \u0431\u0456\u043B\u044C\u0448\u0435 {stat}",
+    "mod.less": "\u043D\u0430 {v}% \u043C\u0435\u043D\u0448\u0435 {stat}",
+    "mod.flat": "{stat} {v}",
+    "time.dh": "{d} \u0434 {h} \u0433\u043E\u0434",
+    "time.hm": "{h} \u0433\u043E\u0434 {m} \u0445\u0432",
+    "time.m": "{m} \u0445\u0432",
+    "time.s": "{s} \u0441",
+    "ago.now": "\u0449\u043E\u0439\u043D\u043E",
+    "ago.m": "{n} \u0445\u0432",
+    "ago.h": "{n} \u0433\u043E\u0434",
+    "ago.d": "{n} \u0434",
+    "tier.outskirts": "\u041E\u043A\u043E\u043B\u0438\u0446\u0456",
+    "tier.tier": "\u042F\u0440\u0443\u0441 {n}",
+    "tier.depth": "\u0413\u043B\u0438\u0431\u0438\u043D\u0430 {n}",
+    "map.label": "{area} ({tier})",
+    "map.zone": "{area} - {tier}",
+    "item.rareName": "{b} {a}",
+    // ---- names of things the UI lists
+    "slot.weapon": "\u0417\u0431\u0440\u043E\u044F",
+    "slot.offhand": "\u0414\u0440\u0443\u0433\u0430 \u0440\u0443\u043A\u0430",
+    "slot.helmet": "\u0428\u043E\u043B\u043E\u043C",
+    "slot.body": "\u041E\u0431\u043B\u0430\u0434\u0443\u043D\u043E\u043A",
+    "slot.gloves": "\u0420\u0443\u043A\u0430\u0432\u0438\u0446\u0456",
+    "slot.boots": "\u0412\u0437\u0443\u0442\u0442\u044F",
+    "slot.belt": "\u041F\u043E\u044F\u0441",
+    "slot.amulet": "\u0410\u043C\u0443\u043B\u0435\u0442",
+    "slot.ring": "\u041F\u0435\u0440\u0441\u0442\u0435\u043D\u044C",
+    "slot.ring1": "\u041F\u0435\u0440\u0441\u0442\u0435\u043D\u044C",
+    "slot.ring2": "\u041F\u0435\u0440\u0441\u0442\u0435\u043D\u044C 2",
+    "kind.sword": "\u043C\u0435\u0447",
+    "kind.axe": "\u0441\u043E\u043A\u0438\u0440\u0430",
+    "kind.mace": "\u0431\u0443\u043B\u0430\u0432\u0430",
+    "kind.dagger": "\u043A\u0438\u043D\u0434\u0436\u0430\u043B",
+    "kind.greatsword": "\u0434\u0432\u043E\u0440\u0443\u0447\u043D\u0438\u0439 \u043C\u0435\u0447",
+    "kind.greataxe": "\u0434\u0432\u043E\u0440\u0443\u0447\u043D\u0430 \u0441\u043E\u043A\u0438\u0440\u0430",
+    "kind.staff": "\u043F\u043E\u0441\u043E\u0445",
+    "kind.bow": "\u043B\u0443\u043A",
+    "kind.wand": "\u0436\u0435\u0437\u043B",
+    "kind.plate": "\u043B\u0430\u0442\u0438",
+    "kind.leather": "\u0448\u043A\u0456\u0440\u0430",
+    "kind.silk": "\u0448\u043E\u0432\u043A",
+    "kind.brigand": "\u0431\u0440\u0438\u0433\u0430\u043D\u0442\u0438\u043D\u0430",
+    "kind.shield": "\u0449\u0438\u0442",
+    "kind.buckler": "\u0431\u0430\u043A\u043B\u0435\u0440",
+    "kind.focus": "\u0444\u043E\u043A\u0443\u0441",
+    "kind.quiver": "\u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A",
+    "rarity.plain": "\u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439",
+    "rarity.enchanted": "\u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0438\u0439",
+    "rarity.rare": "\u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0438\u0439",
+    "rarity.relic": "\u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F",
+    "type.phys": "\u0424\u0456\u0437\u0438\u0447\u043D\u0430",
+    "type.fire": "\u0412\u043E\u0433\u043E\u043D\u044C",
+    "type.cold": "\u0425\u043E\u043B\u043E\u0434",
+    "type.lightning": "\u0411\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0430",
+    "type.chaos": "\u0425\u0430\u043E\u0441",
+    "dmg.phys": "\u0424\u0456\u0437\u0438\u0447\u043D\u0430 \u0448\u043A\u043E\u0434\u0430",
+    "dmg.fire": "\u0428\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "dmg.cold": "\u0428\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "dmg.lightning": "\u0428\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "dmg.chaos": "\u0428\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443",
+    "res.fire": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E",
+    "res.cold": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "res.lightning": "\u041E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456",
+    "res.chaos": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443",
+    "attr.str": "\u041C\u0456\u0446\u044C",
+    "attr.dex": "\u0413\u0440\u0430\u0446\u0456\u044F",
+    "attr.int": "\u0420\u043E\u0437\u0443\u043C",
+    // ---- the window
+    "nav.hero": "\u0413\u0435\u0440\u043E\u0439",
+    "nav.gear": "\u0420\u0435\u0447\u0456",
+    "nav.forge": "\u041A\u0443\u0437\u043D\u044F",
+    "nav.skills": "\u0423\u043C\u0456\u043D\u043D\u044F",
+    "nav.tree": "\u0414\u0435\u0440\u0435\u0432\u043E",
+    "nav.world": "\u0421\u0432\u0456\u0442",
+    "nav.atlas": "\u0410\u0442\u043B\u0430\u0441",
+    "nav.log": "\u0416\u0443\u0440\u043D\u0430\u043B",
+    "nav.menu": "\u041C\u0435\u043D\u044E",
+    "app.sections": "\u0420\u043E\u0437\u0434\u0456\u043B\u0438 \u0433\u0440\u0438",
+    "app.hudLabel": "\u0421\u0442\u0430\u043D \u0433\u0435\u0440\u043E\u044F",
+    "app.stage.m": "\u0411\u0456\u0439: \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 (\u043A\u043B\u0456\u043A - \u0431\u0456\u043B\u044C\u0448\u0435)",
+    "app.stage.l": "\u0411\u0456\u0439: \u0432\u0435\u043B\u0438\u043A\u0438\u0439 \u0432\u0438\u0433\u043B\u044F\u0434 (\u043A\u043B\u0456\u043A - \u0441\u0445\u043E\u0432\u0430\u0442\u0438)",
+    "app.stage.off": "\u0411\u0456\u0439 \u0441\u0445\u043E\u0432\u0430\u043D\u043E (\u043A\u043B\u0456\u043A - \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u0438)",
+    "app.mini": "\u041C\u0456\u043D\u0456\u0440\u0435\u0436\u0438\u043C: \u0433\u0440\u0430 \u0442\u0440\u0438\u0432\u0430\u0454 \u0443 \u0432\u0443\u0437\u044C\u043A\u0456\u0439 \u0441\u043C\u0443\u0436\u0446\u0456",
+    "app.unmini": "\u041D\u0430\u0437\u0430\u0434 \u0443 \u043F\u043E\u0432\u043D\u0435 \u0432\u0456\u043A\u043D\u043E",
+    "app.max": "\u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438 (\u043F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043A\u043B\u0456\u043A \u043F\u043E \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u0443)",
+    "app.restore": "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0440\u043E\u0437\u043C\u0456\u0440 (\u043F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043A\u043B\u0456\u043A \u043F\u043E \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u0443)",
+    "app.soundOff": "\u0417\u0432\u0443\u043A \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E (\u043A\u043B\u0456\u043A \u0430\u0431\u043E M - \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438)",
+    "app.soundOn": "\u0417\u0432\u0443\u043A \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E (\u043A\u043B\u0456\u043A \u0430\u0431\u043E M - \u0432\u0438\u043C\u043A\u043D\u0443\u0442\u0438)",
+    "app.close": "\u0417\u0430\u043A\u0440\u0438\u0442\u0438 (\u0434\u043E\u0440\u043E\u0433\u0430 \u043D\u0435 \u0441\u043F\u0438\u043D\u044F\u0454\u0442\u044C\u0441\u044F: \u0443\u0441\u0435 \u0434\u043E\u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0447\u0430\u0441 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0442\u044F)",
+    "app.openBtn": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 Hollowmarch",
+    "app.replaying": "\u0414\u043E\u0440\u0430\u0445\u043E\u0432\u0443\u0454\u043C\u043E {time}... {pct}%",
+    "app.who": "\u0420\u0456\u0432\u0435\u043D\u044C {level}, {cls}",
+    "app.newKindled": "\u041D\u043E\u0432\u0438\u0439 \u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0438\u0439",
+    "badge.support": "\u0412\u0456\u043B\u044C\u043D\u0435 \u0433\u043D\u0456\u0437\u0434\u043E \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0438 \u0434\u043E\u0434\u0430\u0441\u0442\u044C \u0448\u043A\u043E\u0434\u0438",
+    "badge.tree": "{n} \u043E\u0447\u043A\u043E \u0432\u043C\u0456\u043D\u044C \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u0438 \u0432\u043C\u0456\u043D\u044C \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043E\u043A \u0443\u043C\u0456\u043D\u044C \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "badge.atlas": "{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443 \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043A\u0438 \u0430\u0442\u043B\u0430\u0441\u0443 \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E|{n} \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443 \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0435\u043D\u043E",
+    "badge.stash": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430: \u0437\u0434\u043E\u0431\u0438\u0447 \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454\u0442\u044C\u0441\u044F",
+    "badge.contracts": "{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0447\u0435\u043A\u0430\u0454 \u043D\u0430\u0433\u043E\u0440\u043E\u0434\u0438|{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0438 \u0447\u0435\u043A\u0430\u044E\u0442\u044C \u043D\u0430\u0433\u043E\u0440\u043E\u0434\u0438|{n} \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0456\u0432 \u0447\u0435\u043A\u0430\u044E\u0442\u044C \u043D\u0430\u0433\u043E\u0440\u043E\u0434\u0438",
+    "toast.newRoad": "\u041D\u043E\u0432\u0430 \u0434\u043E\u0440\u043E\u0433\u0430: {zone}",
+    "toast.level": "\u0420\u0456\u0432\u0435\u043D\u044C {level}",
+    "toast.equipped": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E: {item}",
+    "toast.rare": "\u0420\u0456\u0434\u043A\u0456\u0441\u043D\u0435: {item}",
+    "toast.relic": "\u0420\u0435\u043B\u0456\u043A\u0432\u0456\u044F: {item}",
+    "toast.petJoins": "\u0421\u0443\u043F\u0443\u0442\u043D\u0438\u043A: {pet} \u0442\u0435\u043F\u0435\u0440 \u0437 \u0432\u0430\u043C\u0438",
+    "toast.petCloser": "{pet}: \u043F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u043C\u0456\u0446\u043D\u0456\u0448\u0430\u0454",
+    "event.level": "\u0414\u043E\u0441\u044F\u0433\u043D\u0443\u0442\u043E \u0440\u0456\u0432\u043D\u044F {level}",
+    "event.equipped": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E: {item}",
+    "event.found": "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E: {item}",
+    "event.died": "\u0421\u043C\u0435\u0440\u0442\u044C. \u0416\u0430\u0440\u0438\u043D\u0430 \u0440\u043E\u0437\u0433\u043E\u0440\u0430\u0454\u0442\u044C\u0441\u044F \u0437\u043D\u043E\u0432\u0443.",
+    "event.petJoined": "{pet}: \u0442\u0435\u043F\u0435\u0440 \u0437 \u0432\u0430\u043C\u0438",
+    "event.petCloser": "{pet}: \u043F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u0437\u043C\u0456\u0446\u043D\u0456\u043B\u0430",
+    "mini.message": "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F",
+    "mini.tip": "{title}: \u0432\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 \u043F\u043E\u0432\u043D\u0435 \u0432\u0456\u043A\u043D\u043E, \u0449\u043E\u0431 \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438",
+    "mini.waiting": "\u0427\u0435\u043A\u0430\u0454: {n} - \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438|\u0427\u0435\u043A\u0430\u044E\u0442\u044C: {n} - \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438|\u0427\u0435\u043A\u0430\u044E\u0442\u044C: {n} - \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438",
+    "mini.open": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438",
+    "hud.aria": "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F {life} \u0437 {lifeMax}{es}, \u043C\u0430\u043D\u0430 {mana} \u0437 {manaMax}, \u0444\u043B\u0430\u043A\u043E\u043D {flask} \u0437 30. \u0420\u0456\u0432\u0435\u043D\u044C {level}, \u0434\u043E\u0441\u0432\u0456\u0434 {xp}%{eta}. {zone}, \u0440\u0456\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0456 {area}. {dps} DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457.",
+    "hud.ariaEs": ", \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442 {es} \u0437 {esMax}",
+    "hud.ariaDead": "\u041C\u0435\u0440\u0442\u0432\u0438\u0439: \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F \u0437\u0430 {n} \u0441. ",
+    "hud.eta": "~{time} \u0434\u043E \u0440\u0456\u0432\u043D\u044F",
+    "hud.dead": "\u041C\u0415\u0420\u0422\u0412\u0418\u0419",
+    "hud.secs": "{n}\u0421",
+    "hud.area": "\u041E\u0411\u041B\u0410\u0421\u0422\u042C {n}",
+    "hud.dps": "{dps} DPS",
+    "hud.xp": "{n}% \u0414\u041E\u0421\u0412\u0406\u0414\u0423",
+    "hud.lv": "\u0420\u0406\u0412",
+    "battle.miss": "\u043C\u0438\u043C\u043E",
+    "battle.evade": "\u0443\u0445\u0438\u043B",
+    "battle.block": "\u0431\u043B\u043E\u043A",
+    "battle.flask": "+\u0444\u043B\u0430\u043A\u043E\u043D",
+    "battle.level": "\u0420\u0406\u0412\u0415\u041D\u042C {n}",
+    "battle.relights": "\u0416\u0410\u0420\u0418\u041D\u0410 \u0420\u041E\u0417\u0413\u041E\u0420\u0410\u0404\u0422\u042C\u0421\u042F \u0417\u041D\u041E\u0412\u0423",
+    "battle.backIn": "\u041F\u041E\u0412\u0415\u0420\u041D\u0415\u041D\u041D\u042F \u0417\u0410 {n}\u0421",
+    "story.title": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043F\u0430\u043C'\u044F\u0442\u0430\u0454",
+    "story.onward": "\u0414\u0430\u043B\u0456",
+    "report.title": "\u041F\u043E\u043A\u0438 \u0432\u0430\u0441 \u043D\u0435 \u0431\u0443\u043B\u043E",
+    "report.away": "\u0412\u0430\u0441 \u043D\u0435 \u0431\u0443\u043B\u043E",
+    "report.runs": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u0437\u0430\u0431\u0456\u0433\u0456\u0432",
+    "report.kills": "\u0423\u0431\u0438\u0442\u043E \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A",
+    "report.bosses": "\u0411\u043E\u0441\u0456\u0432",
+    "report.deaths": "\u0421\u043C\u0435\u0440\u0442\u0435\u0439",
+    "report.levels": "\u0420\u0456\u0432\u043D\u0456",
+    "report.levelUp": "{from} -> {to}",
+    "report.noChange": "{level} (\u0431\u0435\u0437 \u0437\u043C\u0456\u043D)",
+    "report.xp": "\u0414\u043E\u0441\u0432\u0456\u0434",
+    "report.kept": "\u0417\u0430\u043B\u0438\u0448\u0435\u043D\u043E \u0440\u0435\u0447\u0435\u0439",
+    "report.salvaged": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u043D\u043E",
+    "report.dust": "\u041F\u0438\u043B \u0436\u0430\u0440\u0438\u043D",
+    "report.swapped": "\u0417\u0430\u043C\u0456\u043D\u0435\u043D\u043E \u043F\u0456\u0434 \u0447\u0430\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "report.roads": "\u041D\u043E\u0432\u0456 \u0434\u043E\u0440\u043E\u0433\u0438: {list}",
+    "report.equipped": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E: {list}",
+    "report.pets": "\u041D\u043E\u0432\u0438\u0439 \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A: {list}|\u041D\u043E\u0432\u0456 \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0438: {list}|\u041D\u043E\u0432\u0456 \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0438: {list}",
+    "report.relics": "\u041D\u043E\u0432\u0435 \u0432 \u043A\u043E\u0434\u0435\u043A\u0441\u0456: {list}",
+    "report.best": "\u041D\u0430\u0439\u043A\u0440\u0430\u0449\u0430 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0430:",
+    "report.back": "\u0414\u043E \u0441\u043F\u0440\u0430\u0432\u0438",
+    "card.idle": "idle arpg",
+    "card.xp": "{n}% \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    // ---- hero
+    "hero.noMods": "\u041D\u0435\u043C\u0430\u0454 \u043C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u0456\u0432",
+    "hero.inc": "{v}% \u0437\u0431\u0456\u043B\u044C\u0448.",
+    "hero.more": "\u043D\u0430 {v}% \u0431\u0456\u043B\u044C\u0448\u0435",
+    "hero.xpTitle": "\u0414\u043E\u0441\u0432\u0456\u0434: {xp} / {need}",
+    "hero.maxLevel": "\u043D\u0430\u0439\u0432\u0438\u0449\u0438\u0439 \u0440\u0456\u0432\u0435\u043D\u044C",
+    "hero.hit": "\u0423\u0434\u0430\u0440",
+    "hero.crit": "\u041A\u0440\u0438\u0442",
+    "hero.attacks": "\u0410\u0442\u0430\u043A\u0438",
+    "hero.casts": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F",
+    "hero.hitChance": "\u0412\u043B\u0443\u0447\u0430\u043D\u043D\u044F",
+    "hero.dps": "DPS",
+    "hero.perSec": "{n}/\u0441",
+    "hero.bdDamage": "\u041C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u0438 \u0448\u043A\u043E\u0434\u0438",
+    "hero.bdCrit": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0443",
+    "hero.bdSpeed": "\u0428\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C",
+    "hero.bdAccuracy": "\u0412\u043B\u0443\u0447\u043D\u0456\u0441\u0442\u044C",
+    "hero.bdCritMulti": "\u041C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442\u0438\u0447\u043D\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0443",
+    "hero.offence": "\u041D\u0430\u043F\u0430\u0434 - {skill}",
+    "hero.single": "\u041E\u0434\u043D\u0430 \u0446\u0456\u043B\u044C",
+    "hero.singleNote": "\u0448\u043A\u043E\u0434\u0430 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "hero.packs": "\u041F\u0440\u043E\u0442\u0438 \u0437\u0433\u0440\u0430\u0439",
+    "hero.targets": "{n} \u0446\u0456\u043B\u044C \u043F\u0456\u0434 \u0443\u0434\u0430\u0440\u043E\u043C|{n} \u0446\u0456\u043B\u0456 \u043F\u0456\u0434 \u0443\u0434\u0430\u0440\u043E\u043C|{n} \u0446\u0456\u043B\u0435\u0439 \u043F\u0456\u0434 \u0443\u0434\u0430\u0440\u043E\u043C",
+    "hero.critChance": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "hero.critMulti": "\u041C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "hero.manaCost": "\u0412\u0438\u0442\u0440\u0430\u0442\u0430 \u043C\u0430\u043D\u0438",
+    "hero.manaLimited": "\u041C\u0430\u043D\u0430 \u0434\u043E\u0437\u0432\u043E\u043B\u044F\u0454",
+    "hero.leech": "\u0412\u0438\u043A\u0440\u0430\u0434\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "hero.resistances": "\u041E\u043F\u0456\u0440",
+    "hero.whereTip": "{name} - \u043A\u043B\u0456\u043A \u043F\u043E\u043A\u0430\u0436\u0435, \u0437\u0432\u0456\u0434\u043A\u0438",
+    "hero.overCap": "\u043F\u043E\u043D\u0430\u0434 \u043C\u0435\u0436\u0443 ({n})",
+    "hero.max": "\u043C\u0435\u0436\u0430 {n}",
+    "hero.defence": "\u0417\u0430\u0445\u0438\u0441\u0442",
+    "hero.life": "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "hero.es": "\u0415\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "hero.regen": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "hero.armour": "\u0411\u0440\u043E\u043D\u044F",
+    "hero.evasion": "\u0423\u0445\u0438\u043B\u0435\u043D\u043D\u044F",
+    "hero.block": "\u0411\u043B\u043E\u043A",
+    "hero.ehp": "\u0415\u0444\u0435\u043A\u0442\u0438\u0432\u043D\u0435 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0442\u0438\u043F\u0430\u043C\u0438 \u0448\u043A\u043E\u0434\u0438 (\u0437\u0430\u043F\u0430\u0441 {n})",
+    "hero.ehpPhys": "\u041F\u0440\u043E\u0442\u0438 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u043E\u0433\u043E \u0443\u0434\u0430\u0440\u0443: \u0431\u0440\u043E\u043D\u044F, \u0443\u0445\u0438\u043B\u0435\u043D\u043D\u044F \u0442\u0430 \u0431\u043B\u043E\u043A",
+    "hero.ehpEle": "\u041E\u043F\u0456\u0440 \u0456 \u0431\u043B\u043E\u043A",
+    "hero.move": "\u0428\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "hero.rarity": "\u0420\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "hero.rarityCodex": "+{total}% (\u043A\u043E\u0434\u0435\u043A\u0441 +{codex}%)",
+    "hero.flask": "\u041B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "hero.score": "\u041E\u0446\u0456\u043D\u043A\u0430 \u0437\u0431\u0456\u0440\u043A\u0438",
+    "pets.title": "\u0421\u0443\u043F\u0443\u0442\u043D\u0438\u043A",
+    "pets.found": "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n} / {total}",
+    "pets.fullBond": "\u041F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C \u043F\u043E\u0432\u043D\u0430",
+    "pets.bond": "\u041F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C {have} / {need}: \u043A\u043E\u0436\u043D\u0435 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E, \u043F\u043E\u043A\u0438 \u0432\u0456\u043D \u043F\u043E\u0440\u0443\u0447",
+    "pets.noneOut": "\u0421\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0430 \u043D\u0435 \u043E\u0431\u0440\u0430\u043D\u043E: \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u043D\u0438\u0436\u0447\u0435.",
+    "pets.none": "\u0421\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0456\u0432 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454. \u041F\u0435\u0440\u0448\u043E\u0433\u043E \u0441\u0442\u0435\u0440\u0435\u0436\u0435 \u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443; \u0456\u043D\u0448\u0438\u0445 \u0447\u0430\u0441\u043E\u043C \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442\u044C \u0431\u043E\u0441\u0438.",
+    "pets.aria": "{name}, \u0440\u0456\u0432\u0435\u043D\u044C {level}",
+    "pets.notFoundAria": "\u0429\u0435 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E: {where}",
+    "pets.walks": "{name} \u0456\u0434\u0435 \u043F\u043E\u0440\u0443\u0447 \u0456\u0437 \u0432\u0430\u043C\u0438",
+    "pets.unknown": "\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u043E",
+    "pets.lv": "\u0420\u0456\u0432. {n}",
+    "pets.lvOut": "\u0420\u0456\u0432. {n} - \u043F\u043E\u0440\u0443\u0447",
+    "pets.tipOut": "{name}, \u0440\u0456\u0432\u0435\u043D\u044C {level}: {bonus}. \u0417\u0430\u0440\u0430\u0437 \u043F\u043E\u0440\u0443\u0447 \u0456\u0437 \u0432\u0430\u043C\u0438.",
+    "pets.tipIn": "{name}, \u0440\u0456\u0432\u0435\u043D\u044C {level}: {bonus}. \u041A\u043B\u0456\u043A \u043F\u043E\u043A\u043B\u0438\u0447\u0435 \u0439\u043E\u0433\u043E.",
+    "pets.tipUnknown": "\u0429\u0435 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E. {where}.",
+    // ---- gear
+    "gear.slotEmpty": "{slot}: \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E",
+    "gear.empty": "\u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E",
+    "gear.worn": "\u043E\u0434\u044F\u0433\u043D\u0435\u043D\u043E",
+    "gear.wornAria": "{label} (\u043E\u0434\u044F\u0433\u043D\u0435\u043D\u043E)",
+    "gear.wornAriaSlot": "{label} (\u043E\u0434\u044F\u0433\u043D\u0435\u043D\u043E, {slot})",
+    "gear.wornSep": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E",
+    "gear.inStash": "\u0423 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456 ({n})",
+    "gear.quiverOnly": "\u0421\u0430\u0433\u0430\u0439\u0434\u0430\u043A",
+    "gear.twoHand": "2 \u0440\u0443\u043A\u0438",
+    "gear.quiverTip": "\u041F\u043E\u0440\u0443\u0447 \u0456\u0437 \u043B\u0443\u043A\u043E\u043C \u043F\u043E\u043C\u0456\u0449\u0430\u0454\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A",
+    "gear.twoHandTip": "{base} \u0437\u0430\u0439\u043C\u0430\u0454 \u043E\u0431\u0438\u0434\u0432\u0456 \u0440\u0443\u043A\u0438",
+    "gear.offhandAria": "\u0414\u0440\u0443\u0433\u0430 \u0440\u0443\u043A\u0430: {why}",
+    "gear.noMarkLocked": "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0456 \u0440\u0435\u0447\u0456 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u043F\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u043D\u0430 \u0440\u043E\u0437\u0431\u0456\u0440",
+    "gear.equippedLbl": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E",
+    "gear.ghostAria": "{name}: \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n}, \u0436\u043E\u0434\u043D\u043E\u0457 \u043D\u0435 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F",
+    "gear.unknownRelicAria": "\u0420\u0435\u043B\u0456\u043A\u0432\u0456\u044F, \u044F\u043A\u043E\u0457 \u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u043B\u0438",
+    "gear.unknownRelic": "\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F",
+    "gear.foundTimes": "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n} \u0440\u0430\u0437; \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0430\u0441\u044F. \u041A\u0440\u0430\u0449\u0435 \u0432\u0438\u043A\u0438\u043D\u0443\u0442\u0430 \u043A\u043E\u043F\u0456\u044F \u0437\u0430\u043C\u0456\u043D\u044E\u0454 \u0442\u0443, \u0449\u043E \u0432 \u0441\u043A\u0440\u0438\u043D\u044C\u0446\u0456.|\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n} \u0440\u0430\u0437\u0438; \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0430\u0441\u044F. \u041A\u0440\u0430\u0449\u0435 \u0432\u0438\u043A\u0438\u043D\u0443\u0442\u0430 \u043A\u043E\u043F\u0456\u044F \u0437\u0430\u043C\u0456\u043D\u044E\u0454 \u0442\u0443, \u0449\u043E \u0432 \u0441\u043A\u0440\u0438\u043D\u044C\u0446\u0456.|\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E {n} \u0440\u0430\u0437\u0456\u0432; \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0430\u0441\u044F. \u041A\u0440\u0430\u0449\u0435 \u0432\u0438\u043A\u0438\u043D\u0443\u0442\u0430 \u043A\u043E\u043F\u0456\u044F \u0437\u0430\u043C\u0456\u043D\u044E\u0454 \u0442\u0443, \u0449\u043E \u0432 \u0441\u043A\u0440\u0438\u043D\u044C\u0446\u0456.",
+    "gear.dropsFrom": "\u0412\u0438\u043F\u0430\u0434\u0430\u0454 \u0437 \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A {n} \u0440\u0456\u0432\u043D\u044F \u0439 \u0432\u0438\u0449\u0435.",
+    "gear.stashEmpty": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u044F. \u0421\u044E\u0434\u0438 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u0454 \u0437\u0434\u043E\u0431\u0438\u0447, \u044F\u043A\u0443 \u043B\u0438\u0448\u0430\u0454 \u0444\u0456\u043B\u044C\u0442\u0440.",
+    "gear.noUpgrades": "\u0423 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456 \u043D\u0435\u043C\u0430\u0454 \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u0440\u0430\u0449\u043E\u0433\u043E \u0437\u0430 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435.",
+    "gear.noneHere": "\u0422\u0430\u043A\u0438\u0445 \u0440\u0435\u0447\u0435\u0439 \u0443 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456 \u043D\u0435\u043C\u0430\u0454.",
+    "gear.sortAria": "\u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0443 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456",
+    "gear.sortRarity": "\u0417\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044E",
+    "gear.sortLevel": "\u0417\u0430 \u0440\u0456\u0432\u043D\u0435\u043C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430",
+    "gear.sortSlot": "\u0417\u0430 \u043A\u043E\u043C\u0456\u0440\u043A\u043E\u044E",
+    "gear.roomBtn": "+{n} \u043C\u0456\u0441\u0446\u044C",
+    "gear.roomTip": "\u0429\u0435 \u0434\u0435\u0441\u044F\u0442\u044C \u043C\u0456\u0441\u0446\u044C \u0443 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456 \u0437\u0430 {cost} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D (\u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 {max})",
+    "gear.roomToast": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430: {n} \u043C\u0456\u0441\u0446\u044C",
+    "gear.codex": "\u041A\u043E\u0434\u0435\u043A\u0441 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439",
+    "gear.codexTip": "\u041A\u043E\u0436\u043D\u0430 \u043D\u043E\u0432\u0430 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F \u0434\u0430\u0454 +1% \u0434\u043E \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "gear.codexCount": "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E {found} / {total}, \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044C +{n}%",
+    "gear.stash": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430",
+    "gear.caseNote": "\u0421\u043A\u0440\u0438\u043D\u044C\u043A\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u0443 \u043A\u043E\u043F\u0456\u044E \u043A\u043E\u0436\u043D\u043E\u0457 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0457 \u043E\u043A\u0440\u0435\u043C\u043E \u0432\u0456\u0434 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438. \u041F\u0435\u0440\u0435\u0442\u044F\u0433\u043D\u0456\u0442\u044C \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044E \u0432 \u043A\u043E\u043C\u0456\u0440\u043A\u0443, \u0449\u043E\u0431 \u043E\u0434\u044F\u0433\u043D\u0443\u0442\u0438.",
+    "gear.fullUpkeep": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0443 \u0437\u0430\u043F\u043E\u0432\u043D\u0438\u043B\u0438 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0456 \u0440\u0435\u0447\u0456 \u0439 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F: \u043D\u043E\u0432\u0456 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0438 \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u044C\u0441\u044F. \u0412\u0456\u0434\u043A\u0440\u0456\u043F\u0456\u0442\u044C, \u0440\u043E\u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0430\u0431\u043E \u043A\u0443\u043F\u0456\u0442\u044C \u043C\u0456\u0441\u0446\u044F.",
+    "gear.fullNoUpkeep": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430: \u043D\u043E\u0432\u0430 \u0437\u0434\u043E\u0431\u0438\u0447 \u0456\u0434\u0435 \u043D\u0430 \u043F\u0438\u043B. \u0420\u043E\u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0437\u0430\u0439\u0432\u0435, \u043A\u0443\u043F\u0456\u0442\u044C \u043C\u0456\u0441\u0446\u044F \u0430\u0431\u043E \u0432\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F (\u041C\u0435\u043D\u044E).",
+    "gear.fullNote": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430: \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u043D\u044F\u0454 \u043D\u0430\u0439\u0434\u0435\u0448\u0435\u0432\u0448\u0443 \u043D\u0435\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0443 \u0440\u0456\u0447 \u043D\u0430 \u043A\u043E\u0436\u043D\u0443 \u043A\u0440\u0430\u0449\u0443 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0443. \u0417\u0430\u043A\u0440\u0456\u043F\u0456\u0442\u044C \u0442\u0435, \u0449\u043E \u0448\u043A\u043E\u0434\u0430.",
+    "gear.all": "\u0423\u0441\u0435",
+    "gear.upgrades": "\u041A\u0440\u0430\u0449\u0435",
+    "gear.weapons": "\u0417\u0431\u0440\u043E\u044F",
+    "gear.armour": "\u041E\u0431\u043B\u0430\u0434\u0443\u043D\u043A\u0438",
+    "gear.jewellery": "\u041F\u0440\u0438\u043A\u0440\u0430\u0441\u0438",
+    "gear.relics": "\u0420\u0435\u043B\u0456\u043A\u0432\u0456\u0457",
+    "gear.salvaged": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u043D\u043E \u043D\u0430 \u043F\u0438\u043B: {n}",
+    "gear.anvilTip": "\u041A\u0438\u043D\u044C\u0442\u0435 \u0441\u044E\u0434\u0438 \u0440\u0456\u0447 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438, \u0449\u043E\u0431 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438",
+    "gear.anvilAria": "\u0420\u043E\u0437\u0431\u0456\u0440: \u043A\u0438\u043D\u044C\u0442\u0435 \u0441\u044E\u0434\u0438 \u0440\u0456\u0447 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438",
+    "gear.salvage": "\u0420\u043E\u0437\u0431\u0456\u0440",
+    "gear.lockedNoSalvage": "\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0435 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438",
+    "gear.dust": "\u041F\u0438\u043B \u0436\u0430\u0440\u0438\u043D {n}",
+    "gear.equipUps": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438 \u043A\u0440\u0430\u0449\u0435 ({n})",
+    "gear.equipUpsTip": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438 \u0432\u0441\u0435, \u0449\u043E \u043F\u0456\u0434\u0432\u0438\u0449\u0443\u0454 \u043E\u0446\u0456\u043D\u043A\u0443 \u0437\u0431\u0456\u0440\u043A\u0438, \u043F\u043E\u0447\u0438\u043D\u0430\u044E\u0447\u0438 \u0437 \u043D\u0430\u0439\u043A\u0440\u0430\u0449\u043E\u0433\u043E",
+    "gear.equippedN": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u044C: {n}|\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u044C: {n}|\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u044C: {n}",
+    "gear.nothingToEquip": "\u041D\u0456\u0447\u043E\u0433\u043E \u043E\u0434\u044F\u0433\u0430\u0442\u0438",
+    "gear.salvageOutdated": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0441\u0442\u0430\u0440\u0435",
+    "gear.salvageOutdatedTip": "\u041D\u0435\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0456 \u0440\u0435\u0447\u0456 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0456, \u0449\u043E \u0432\u0456\u0434\u0441\u0442\u0430\u0454 \u0432\u0456\u0434 \u0433\u0435\u0440\u043E\u044F \u043D\u0430 10+ \u0440\u0456\u0432\u043D\u0456\u0432, \u044F\u043A\u0449\u043E \u0432\u043E\u043D\u0438 \u043D\u0435 \u043A\u0440\u0430\u0449\u0456 \u0437\u0430 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435",
+    "gear.salvagePlain": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456",
+    "gear.salvagePlainTip": "\u0423\u0441\u0456 \u043D\u0435\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456 \u0440\u0435\u0447\u0456 \u0432 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456",
+    "gear.salvageEnchanted": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456",
+    "gear.salvageEnchantedTip": "\u0423\u0441\u0456 \u043D\u0435\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0456 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456 \u0440\u0435\u0447\u0456 \u0432 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456",
+    "gear.salvageMarked": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0456",
+    "gear.salvageMarkedTip": "\u0420\u0435\u0447\u0456, \u043F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0456 \u043A\u043B\u0456\u043A\u043E\u043C \u0456\u0437 Shift",
+    "gear.clearMarks": "\u0417\u043D\u044F\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0438",
+    "gear.putBack": "\u041F\u043E\u043A\u043B\u0430\u0441\u0442\u0438 \u043D\u0430\u0437\u0430\u0434 (Esc)",
+    "gear.lock": "\u0417\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438",
+    "gear.unlock": "\u0412\u0456\u0434\u043A\u0440\u0456\u043F\u0438\u0442\u0438",
+    "gear.lockTip": "\u0417\u0430\u043B\u0438\u0448\u0438\u0442\u0438: \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F, \u0430\u0432\u0442\u043E\u043E\u0434\u044F\u0433\u0430\u043D\u043D\u044F \u0439 \u043C\u0430\u0441\u043E\u0432\u0438\u0439 \u0440\u043E\u0437\u0431\u0456\u0440 \u0457\u0457 \u043D\u0435 \u0447\u0456\u043F\u0430\u0442\u0438\u043C\u0443\u0442\u044C (L)",
+    "gear.unlockTip": "\u0417\u043D\u043E\u0432\u0443 \u0432\u0456\u0434\u0434\u0430\u0442\u0438 \u043D\u0430 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0439 \u043C\u0430\u0441\u043E\u0432\u0438\u0439 \u0440\u043E\u0437\u0431\u0456\u0440 (L)",
+    "gear.equip": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438",
+    "gear.equipLeft": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438 \u043B\u0456\u0432\u043E\u0440\u0443\u0447",
+    "gear.equipRight": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438 \u043F\u0440\u0430\u0432\u043E\u0440\u0443\u0447",
+    "gear.equipKey": "\u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438 (E)",
+    "gear.salvageFor": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 +{n}",
+    "gear.unlockFirst": "\u0421\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u0456\u0442\u044C",
+    "gear.salvageTip": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u043D\u0430 \u043F\u0438\u043B \u0436\u0430\u0440\u0438\u043D (S)",
+    "gear.unequip": "\u0417\u043D\u044F\u0442\u0438",
+    "gear.toCase": "\u041D\u0430\u0437\u0430\u0434 \u0443 \u0441\u043A\u0440\u0438\u043D\u044C\u043A\u0443 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439",
+    "gear.toStash": "\u041D\u0430\u0437\u0430\u0434 \u0443 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0443",
+    "gear.helpAria": "\u042F\u043A \u0443\u043B\u0430\u0448\u0442\u043E\u0432\u0430\u043D\u0456 \u0440\u0435\u0447\u0456",
+    "gear.help": "\u041D\u0430\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430 \u0440\u0456\u0447, \u0449\u043E\u0431 \u043F\u043E\u0440\u0456\u0432\u043D\u044F\u0442\u0438 \u0437 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0438\u043C; \u043A\u043B\u0456\u043A \u0437\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u044C \u0457\u0457 \u043A\u0430\u0440\u0442\u043A\u0443 \u0437 \u043A\u043D\u043E\u043F\u043A\u0430\u043C\u0438 \u041E\u0434\u044F\u0433\u043D\u0443\u0442\u0438, \u0417\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438 \u0439 \u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438.\n\u041F\u0435\u0440\u0435\u0442\u044F\u0433\u043D\u0456\u0442\u044C \u0440\u0456\u0447 \u0443 \u043A\u043E\u043C\u0456\u0440\u043A\u0443, \u0449\u043E\u0431 \u043E\u0434\u044F\u0433\u043D\u0443\u0442\u0438, \u043D\u0430 \u043A\u043E\u0432\u0430\u0434\u043B\u043E - \u0449\u043E\u0431 \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438; \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435 \u043F\u0435\u0440\u0435\u0442\u044F\u0433\u043D\u0456\u0442\u044C \u0443 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0443, \u0449\u043E\u0431 \u0437\u043D\u044F\u0442\u0438.\n\u041A\u043B\u0456\u043A \u0456\u0437 Shift \u043F\u043E\u0437\u043D\u0430\u0447\u0430\u0454 \u0440\u0435\u0447\u0456 \u0432 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456, \u0434\u0430\u043B\u0456 - \u0420\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u043F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0456.\n\u0417\u0435\u043B\u0435\u043D\u0438\u0439 \u043A\u0443\u0442\u043E\u0447\u043E\u043A - \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F; \u0431\u043B\u0456\u0434\u0456 \u0440\u0435\u0447\u0456 \u0432\u0438\u043C\u0430\u0433\u0430\u044E\u0442\u044C \u0432\u0438\u0449\u043E\u0433\u043E \u0440\u0456\u0432\u043D\u044F; \u0437\u0430\u043C\u043E\u043A \u0431\u0435\u0440\u0435\u0436\u0435 \u0440\u0456\u0447 \u0432\u0456\u0434 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0439 \u043C\u0430\u0441\u043E\u0432\u043E\u0433\u043E \u0440\u043E\u0437\u0431\u043E\u0440\u0443.\n\u041A\u043B\u0430\u0432\u0456\u0448\u0456: E - \u043E\u0434\u044F\u0433\u043D\u0443\u0442\u0438, L - \u0437\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438, S - \u0440\u043E\u0437\u0456\u0431\u0440\u0430\u0442\u0438, Esc - \u043F\u043E\u043A\u043B\u0430\u0441\u0442\u0438 \u043D\u0430\u0437\u0430\u0434.",
+    "gear.equippedHead": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E",
+    "item.levels": "\u0440\u0456\u0432. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {ilvl}, \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0456\u0432\u0435\u043D\u044C {req}",
+    "item.quality": "\u042F\u043A\u0456\u0441\u0442\u044C +{n}%",
+    "item.locked": "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E",
+    "item.physical": "\u0424\u0456\u0437\u0438\u0447\u043D\u0430",
+    "item.aps": "\u0410\u0442\u0430\u043A \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "item.crit": "\u0428\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "item.hands": "\u0420\u0443\u043A\u0438",
+    "item.armour": "\u0411\u0440\u043E\u043D\u044F",
+    "item.evasion": "\u0423\u0445\u0438\u043B\u0435\u043D\u043D\u044F",
+    "item.es": "\u0415\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "item.block": "\u0411\u043B\u043E\u043A",
+    "item.benchTip": "\u0414\u043E\u0434\u0430\u043D\u043E \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u0442\u0456",
+    "item.bench": "\u0412\u0435\u0440\u0441\u0442\u0430\u0442",
+    "item.prefix": "\u041F",
+    "item.suffix": "\u0421",
+    "item.tier": "\u0422{n}",
+    "item.cantEquip": "\u043D\u0435 \u043C\u043E\u0436\u043D\u0430 \u043E\u0434\u044F\u0433\u043D\u0443\u0442\u0438",
+    "cmp.dps": "DPS",
+    "cmp.packDps": "DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457",
+    "cmp.life": "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "cmp.es": "\u0415\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442",
+    "cmp.ehpPhys": "\u0415\u0417, \u0444\u0456\u0437\u0438\u0447\u043D\u0430",
+    "cmp.ehpEle": "\u0415\u0417, \u0441\u0442\u0438\u0445\u0456\u0457",
+    "cmp.new": "\u043D\u043E\u0432\u0435",
+    "cmp.score": "\u041E\u0446\u0456\u043D\u043A\u0430 \u0437\u0431\u0456\u0440\u043A\u0438",
+    // ---- skills
+    "skills.levelTag": "\u0440\u0456\u0432\u0435\u043D\u044C {n}",
+    "skills.dps": "{dps} dps",
+    "skills.unlocksAt": "\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0440\u0456\u0432\u043D\u0456 {n}",
+    "skills.main": "\u0412\u0430\u0448\u0435 \u043E\u0441\u043D\u043E\u0432\u043D\u0435 \u0432\u043C\u0456\u043D\u043D\u044F",
+    "skills.packTip": "DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457 \u0437 \u043D\u0438\u043D\u0456\u0448\u043D\u0456\u043C\u0438 \u0440\u0435\u0447\u0430\u043C\u0438 \u0439 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430\u043C\u0438",
+    "skills.selected": "\u041E\u0431\u0440\u0430\u043D\u043E: {name}",
+    "skills.eff": "{n}% \u0435\u0444\u0435\u043A\u0442.",
+    "skills.noFit": "\u043D\u0435 \u043F\u0430\u0441\u0443\u0454",
+    "skills.needs": "\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0435 \u0432\u043C\u0456\u043D\u043D\u044F: {tags}",
+    "skills.slotted": "\u0443 \u0433\u043D\u0456\u0437\u0434\u0456",
+    "skills.worth": "\u0434\u0430\u0454 {pct}",
+    "skills.clickRemove": "\u041A\u043B\u0456\u043A \u043F\u0440\u0438\u0431\u0435\u0440\u0435: {pct} DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457",
+    "skills.for": "\u0437\u0430\u043C\u0456\u0441\u0442\u044C: {name}",
+    "skills.clickSwap": "\u041A\u043B\u0456\u043A \u0437\u0430\u043C\u0456\u043D\u0438\u0442\u044C {name}: {pct} DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457",
+    "skills.clickAdd": "\u041A\u043B\u0456\u043A \u0434\u043E\u0434\u0430\u0441\u0442\u044C: {pct} DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457",
+    "skills.removed": "\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E: {name}",
+    "skills.added": "\u0414\u043E\u0434\u0430\u043D\u043E: {name}",
+    "skills.swapped": "{out} \u0437\u0430\u043C\u0456\u043D\u0435\u043D\u043E \u043D\u0430 {name}",
+    "skills.needsShort": "\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u043E: {tags}.",
+    "skills.sockTip": "{name}: {blurb} \u041A\u043B\u0456\u043A \u0432\u0438\u0439\u043C\u0435.",
+    "skills.sockWorth": "\u0414\u0430\u0454 {pct} DPS \u043F\u043E \u0437\u0433\u0440\u0430\u0457.",
+    "skills.emptyTip": "\u041F\u043E\u0440\u043E\u0436\u043D\u0454 \u0433\u043D\u0456\u0437\u0434\u043E: \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443 \u043D\u0438\u0436\u0447\u0435",
+    "skills.empty": "\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E",
+    "skills.opensAt": "\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0440\u0456\u0432\u043D\u0456 {n}",
+    "skills.links": "\u0417\u0432'\u044F\u0437\u043A\u0438 \u0432\u043C\u0456\u043D\u044C",
+    "skills.mainSkill": "\u041E\u0441\u043D\u043E\u0432\u043D\u0435 \u0432\u043C\u0456\u043D\u043D\u044F",
+    "skills.supports": "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0438",
+    "skills.nextSlot": "\u043D\u0430\u0441\u0442\u0443\u043F\u043D\u0435 \u0433\u043D\u0456\u0437\u0434\u043E \u043D\u0430 \u0440\u0456\u0432\u043D\u0456 {n}",
+    // ---- world
+    "world.autoPush": "\u0410\u0432\u0442\u043E\u043F\u0440\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "world.autoPushNote": "\u0406\u0442\u0438 \u0434\u0430\u043B\u0456 \u043F\u0456\u0441\u043B\u044F 3 \u0447\u0438\u0441\u0442\u0438\u0445 \u043F\u0440\u043E\u0445\u043E\u0434\u0456\u0432, \u0432\u0456\u0434\u0441\u0442\u0443\u043F\u0430\u0442\u0438 \u043F\u0456\u0441\u043B\u044F 3 \u0441\u043C\u0435\u0440\u0442\u0435\u0439 (\u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445: \u043F\u0456\u0441\u043B\u044F 2 \u043F\u0440\u043E\u0432\u0430\u043B\u0435\u043D\u0438\u0445), \u0431\u0440\u0430\u0442\u0438\u0441\u044F \u0437\u0430 \u0432\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F, \u043A\u043E\u043B\u0438 \u0433\u0435\u0440\u043E\u0439 \u0457\u0445 \u043F\u0435\u0440\u0435\u0440\u0456\u0441.",
+    "world.inMaps": "\u0413\u0435\u0440\u043E\u0439 \u0445\u043E\u0434\u0438\u0442\u044C \u043A\u0430\u0440\u0442\u0430\u043C\u0438 (\u0432\u043A\u043B\u0430\u0434\u043A\u0430 \u0410\u0442\u043B\u0430\u0441). \u041C\u0456\u0441\u0446\u0435, \u043E\u0431\u0440\u0430\u043D\u0435 \u0442\u0443\u0442, \u0437\u043C\u0456\u043D\u0438\u0442\u044C \u043A\u0430\u0440\u0442\u0438 \u043F\u0456\u0441\u043B\u044F \u043F\u043E\u0442\u043E\u0447\u043D\u043E\u0457.",
+    "world.act": "\u0410\u043A\u0442 {n} - {name}",
+    "world.cleared": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
+    "world.folded": "\u041C\u0456\u0441\u0446\u044C: {places}, \u043F\u0440\u043E\u0445\u043E\u0434\u0456\u0432: {clears}. \u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438\u0441\u044F \u0439 \u0444\u0430\u0440\u043C\u0438\u0442\u0438.",
+    "world.openRoad": "\u0420\u043E\u0437\u0433\u043E\u0440\u043D\u0443\u0442\u0438",
+    "world.foldRoad": "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438",
+    "world.stopAria": "{name}, \u0440\u0456\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0456 {level}, \u043F\u0440\u043E\u0445\u043E\u0434\u0456\u0432: {clears}",
+    "world.stopAriaLocked": "{name}, \u0440\u0456\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0456 {level}, \u0437\u0430\u043A\u0440\u0438\u0442\u043E",
+    "world.notReached": "\u0429\u0435 \u043D\u0435 \u0434\u043E\u0441\u044F\u0433\u043D\u0443\u0442\u043E",
+    "world.travelling": "\u0423 \u0434\u043E\u0440\u043E\u0433\u0443: {zone}",
+    "world.boss": "\u0411\u043E\u0441",
+    "world.trial": "\u0412\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F",
+    "world.lvl": "\u0420{n}",
+    "world.clears": "{n} \u043F\u0440\u043E\u0445\u0456\u0434|{n} \u043F\u0440\u043E\u0445\u043E\u0434\u0438|{n} \u043F\u0440\u043E\u0445\u043E\u0434\u0456\u0432",
+    "world.locked": "\u0437\u0430\u043A\u0440\u0438\u0442\u043E",
+    "world.offRoad": "\u041E\u0441\u0442\u043E\u0440\u043E\u043D\u044C \u0434\u043E\u0440\u043E\u0433\u0438",
+    "contract.kills": "\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u043E|\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430|\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A",
+    "contract.champions": "\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0435\u043C\u043F\u0456\u043E\u043D\u0430|\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0435\u043C\u043F\u0456\u043E\u043D\u0456\u0432|\u0423\u0431\u0438\u0442\u0438 {n} \u0447\u0435\u043C\u043F\u0456\u043E\u043D\u0456\u0432",
+    "contract.bosses": "\u041F\u0435\u0440\u0435\u043C\u043E\u0433\u0442\u0438 {n} \u0431\u043E\u0441\u0430|\u041F\u0435\u0440\u0435\u043C\u043E\u0433\u0442\u0438 {n} \u0431\u043E\u0441\u0456\u0432|\u041F\u0435\u0440\u0435\u043C\u043E\u0433\u0442\u0438 {n} \u0431\u043E\u0441\u0456\u0432",
+    "contract.runs": "\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0456\u0433 \u0434\u043E\u0440\u043E\u0433\u043E\u044E|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0456\u0433\u0438 \u0434\u043E\u0440\u043E\u0433\u043E\u044E|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u0437\u0430\u0431\u0456\u0433\u0456\u0432 \u0434\u043E\u0440\u043E\u0433\u043E\u044E",
+    "contract.maps": "\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442\u0443 \u044F\u0440\u0443\u0441\u0443 {tier} \u0430\u0431\u043E \u0433\u043B\u0438\u0431\u0448\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442\u0438 \u044F\u0440\u0443\u0441\u0443 {tier} \u0430\u0431\u043E \u0433\u043B\u0438\u0431\u0448\u0435|\u041F\u0440\u043E\u0439\u0442\u0438 {n} \u043A\u0430\u0440\u0442 \u044F\u0440\u0443\u0441\u0443 {tier} \u0430\u0431\u043E \u0433\u043B\u0438\u0431\u0448\u0435",
+    "contract.rares": "\u0417\u043D\u0430\u0439\u0442\u0438 {n} \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0438\u0439 \u043F\u0440\u0435\u0434\u043C\u0435\u0442|\u0417\u043D\u0430\u0439\u0442\u0438 {n} \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0438|\u0417\u043D\u0430\u0439\u0442\u0438 {n} \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "contracts.title": "\u0414\u043E\u0448\u043A\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0456\u0432",
+    "contracts.done": "\u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E: {n}",
+    "contracts.reward": "\u041D\u0430\u0433\u043E\u0440\u043E\u0434\u0430: {text}",
+    "contracts.claim": "\u0417\u0430\u0431\u0440\u0430\u0442\u0438",
+    "contracts.claimed": "\u041D\u0430\u0433\u043E\u0440\u043E\u0434\u0443 \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E",
+    "contracts.reroll": "\u0417\u043C\u0456\u043D\u0438\u0442\u0438 {cost}",
+    "contracts.rerollTip": "\u0406\u043D\u0448\u0438\u0439 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0437\u0430 {cost} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D; \u043F\u043E\u0441\u0442\u0443\u043F \u0437\u0430 \u0446\u0438\u043C \u043F\u0440\u043E\u043F\u0430\u0434\u0435",
+    "reward.dust": "{n} \u043F\u0438\u043B\u0443",
+    "reward.currency": "{name} x{n}",
+    "reward.relic": "\u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F, \u044F\u043A\u043E\u0457 \u043D\u0435\u043C\u0430\u0454 \u0432 \u043A\u043E\u0434\u0435\u043A\u0441\u0456",
+    "reward.companion": "\u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A, \u044F\u043A\u043E\u0433\u043E \u0432\u0438 \u0449\u0435 \u043D\u0435 \u0437\u0443\u0441\u0442\u0440\u0456\u0447\u0430\u043B\u0438",
+    "reward.maps": "3 \u043A\u0430\u0440\u0442\u0438",
+    "reward.sigil": "\u043F\u0435\u0447\u0430\u0442\u043A\u0430",
+    "shrine.title": "\u0421\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435 \u0436\u0430\u0440\u0438\u043D",
+    "shrine.cost": "{cost} \u043F\u0438\u043B\u0443 / \u0433\u043E\u0434\u0438\u043D\u0430",
+    "shrine.note": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F \u0439\u0434\u0443\u0442\u044C \u0437\u0430 \u0447\u0430\u0441\u043E\u043C \u0433\u0435\u0440\u043E\u044F, \u0442\u043E\u0436 \u0434\u0456\u044E\u0442\u044C \u0456 \u0442\u043E\u0434\u0456, \u043A\u043E\u043B\u0438 \u0432\u0430\u0441 \u043D\u0435\u043C\u0430\u0454.",
+    "shrine.line": "{name}: {text}",
+    "shrine.left": "\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {time}",
+    "shrine.leftKept": "\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {time}, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F",
+    "shrine.keptUp": "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F: \u043F\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u044C\u0441\u044F, \u0449\u043E\u0439\u043D\u043E \u0432\u0438\u0441\u0442\u0430\u0447\u0438\u0442\u044C \u043D\u0430 \u043E\u043F\u043B\u0430\u0442\u0443",
+    "shrine.notRunning": "\u041D\u0435 \u0434\u0456\u0454",
+    "shrine.keepTip": "\u041F\u043E\u0434\u043E\u0432\u0436\u0443\u0432\u0430\u0442\u0438 \u0441\u0430\u043C\u0435, \u043A\u043E\u043B\u0438 \u0441\u043F\u043B\u0438\u0432\u0430\u0454 (\u043F\u043E\u043A\u0438 \u0432\u0438\u0441\u0442\u0430\u0447\u0430\u0454 \u043D\u0430 \u043E\u043F\u043B\u0430\u0442\u0443)",
+    "shrine.keep": "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438",
+    "shrine.hour": "+1 \u0433\u043E\u0434",
+    "shrine.hourTip": "\u0413\u043E\u0434\u0438\u043D\u0430 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F \xAB{name}\xBB \u0437\u0430 {cost} \u043F\u0438\u043B\u0443",
+    "shrine.hourTipOrbs": "\u0413\u043E\u0434\u0438\u043D\u0430 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F \xAB{name}\xBB \u0437\u0430 {cost} \u043F\u0438\u043B\u0443 (\u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u043B\u0430\u0442\u044F\u0442\u044C \u0437\u0430\u0439\u0432\u0456 \u0441\u0444\u0435\u0440\u0438)",
+    "shrine.blessed": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F: {name}",
+    "shrine.orbs": "\u0421\u043F\u0435\u0440\u0448\u0443 \u043F\u043B\u0430\u0442\u044F\u0442\u044C \u0437\u0430\u0439\u0432\u0456 \u0441\u0444\u0435\u0440\u0438",
+    "shrine.orbsNote": "\u0421\u0444\u0435\u0440\u0438 \u043F\u043E\u043D\u0430\u0434 {n} \u043A\u043E\u0436\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0443 \u0439\u0434\u0443\u0442\u044C \u0437\u0430 \u0446\u0456\u043D\u043E\u044E \u043A\u0440\u0430\u043C\u043D\u0438\u0446\u0456 (\u0437\u0430\u0440\u0430\u0437 \u043D\u0430 {v} \u043F\u0438\u043B\u0443).",
+    // ---- log
+    "log.title": "\u041B\u0456\u0442\u043E\u043F\u0438\u0441",
+    "log.all": "\u0423\u0441\u0435",
+    "logkind.level": "\u0420\u0456\u0432\u0435\u043D\u044C",
+    "logkind.loot": "\u0417\u0434\u043E\u0431\u0438\u0447",
+    "logkind.death": "\u0421\u043C\u0435\u0440\u0442\u044C",
+    "logkind.zone": "\u0414\u043E\u0440\u043E\u0433\u0430",
+    "logkind.boss": "\u0411\u043E\u0441",
+    "logkind.info": "\u041D\u043E\u0442\u0430\u0442\u043A\u0430",
+    "log.wake": "{name} \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0431\u0435\u0440\u0435\u0437\u0456.",
+    "log.equippedNew": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u043D\u043E\u0432\u0435: {base}.",
+    "log.stashFull": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430: \u0440\u0435\u0447\u0456, \u044F\u043A\u0456 \u043B\u0438\u0448\u0438\u0432 \u0431\u0438 \u0444\u0456\u043B\u044C\u0442\u0440, \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u044C\u0441\u044F.",
+    "log.equippedFromStash": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438: {item}.",
+    "log.equippedFromCase": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E \u0437\u0456 \u0441\u043A\u0440\u0438\u043D\u044C\u043A\u0438 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439: {item}.",
+    "log.petJoins": "{pet} \u043F\u0440\u0438\u0454\u0434\u043D\u0443\u0454\u0442\u044C\u0441\u044F \u0434\u043E \u0432\u0430\u0441.",
+    "log.petDuplicate": "\u0429\u0435 \u043E\u0434\u0438\u043D \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A \xAB{pet}\xBB: \u0432\u0430\u0448 \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A \xAB{pet}\xBB \u0441\u0442\u0430\u0454 \u0431\u043B\u0438\u0436\u0447\u0438\u043C.",
+    "log.petLevel": "{pet} \u0434\u043E\u0441\u044F\u0433\u0430\u0454 \u0440\u0456\u0432\u043D\u044F {level}.",
+    "log.contractDone": "\u041A\u043E\u043D\u0442\u0440\u0430\u043A\u0442 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E: {goal}. \u0417\u0430\u0431\u0435\u0440\u0456\u0442\u044C \u043D\u0430\u0433\u043E\u0440\u043E\u0434\u0443 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0421\u0432\u0456\u0442.",
+    "log.contractRelic": "\u041D\u0430\u0433\u043E\u0440\u043E\u0434\u0430 \u0437\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442: {relic}.",
+    "log.pinOpens": "\u0412\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0448\u043B\u044F\u0445: {pin}.",
+    "log.pinDefeated": "{pin}: \u043F\u0435\u0440\u0435\u043C\u043E\u0436\u0435\u043D\u043E, +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443.|{pin}: \u043F\u0435\u0440\u0435\u043C\u043E\u0436\u0435\u043D\u043E, +{n} \u043E\u0447\u043A\u0438 \u0430\u0442\u043B\u0430\u0441\u0443.|{pin}: \u043F\u0435\u0440\u0435\u043C\u043E\u0436\u0435\u043D\u043E, +{n} \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443.",
+    "log.tierFirst": "{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u0432\u043F\u0435\u0440\u0448\u0435: +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443.|{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u0432\u043F\u0435\u0440\u0448\u0435: +{n} \u043E\u0447\u043A\u0438 \u0430\u0442\u043B\u0430\u0441\u0443.|{tier} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u0432\u043F\u0435\u0440\u0448\u0435: +{n} \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443.",
+    "log.bossFalls": "{monster}: \u043F\u0435\u0440\u0435\u043C\u043E\u0436\u0435\u043D\u043E.",
+    "log.sigilFound": "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u043F\u0435\u0447\u0430\u0442\u043A\u0443: {sigil}.",
+    "log.levelUp": "\u0414\u043E\u0441\u044F\u0433\u043D\u0443\u0442\u043E \u0440\u0456\u0432\u043D\u044F {level}.",
+    "log.died": "\u0421\u043C\u0435\u0440\u0442\u044C: {place}.",
+    "log.tooDeep": "\u041D\u0430\u0434\u0442\u043E \u0433\u043B\u0438\u0431\u043E\u043A\u043E: \u043F\u043E\u043A\u0438 \u043B\u0438\u0448\u0435 {tier} \u0456 \u043D\u0438\u0436\u0447\u0435.",
+    "log.fellBack": "\u0412\u0456\u0434\u0441\u0442\u0443\u043F: {zone}.",
+    "log.actDone": "\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043A\u043E \u0432\u043C\u0456\u043D\u044C.|\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043A\u0438 \u0432\u043C\u0456\u043D\u044C.|\u0410\u043A\u0442 {act} \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: +{n} \u043E\u0447\u043E\u043A \u0443\u043C\u0456\u043D\u044C.",
+    "log.zoneOpen": "\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u043E: {zone}.",
+    "log.trialPassed": "{zone}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E, +{n} \u043E\u0447\u043A\u043E \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F.|{zone}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E, +{n} \u043E\u0447\u043A\u0438 \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F.|{zone}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E, +{n} \u043E\u0447\u043E\u043A \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F.",
+    "log.attempting": "\u0421\u043F\u0440\u043E\u0431\u0430: {zone}.",
+    "log.pushDeeper": "\u0413\u043B\u0438\u0431\u0448\u0435: {tier} \u0456 \u043D\u0438\u0436\u0447\u0435.",
+    "log.pushedOn": "\u0414\u0430\u043B\u0456 \u0434\u043E\u0440\u043E\u0433\u043E\u044E: {zone}.",
+    // ---- menu
+    "menu.keepAll": "\u041B\u0438\u0448\u0430\u0442\u0438 \u0432\u0441\u0435",
+    "menu.keepEnchanted": "\u0417\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456 \u0439 \u043A\u0440\u0430\u0449\u0456",
+    "menu.keepRares": "\u041B\u0438\u0448\u0435 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456",
+    "menu.autoEquip": "\u041E\u0434\u044F\u0433\u0430\u0442\u0438 \u043A\u0440\u0430\u0449\u0435",
+    "menu.autoEquipNote": "\u041E\u0434\u0440\u0430\u0437\u0443 \u043E\u0434\u044F\u0433\u0430\u0442\u0438 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0443, \u044F\u043A\u0449\u043E \u0432\u043E\u043D\u0430 \u043F\u0456\u0434\u0432\u0438\u0449\u0443\u0454 \u043E\u0446\u0456\u043D\u043A\u0443 \u0437\u0431\u0456\u0440\u043A\u0438; \u043D\u0430 \u043D\u043E\u0432\u043E\u043C\u0443 \u0440\u0456\u0432\u043D\u0456 - \u0456 \u0440\u0435\u0447\u0456 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438.",
+    "menu.upkeep": "\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438",
+    "menu.upkeepNote": "\u041A\u043E\u043B\u0438 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430, \u0434\u043E\u0431\u0440\u0430 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0430 \u0432\u0438\u0442\u0456\u0441\u043D\u044F\u0454 \u043D\u0430\u0439\u0434\u0435\u0448\u0435\u0432\u0448\u0443 \u043D\u0435\u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0443 \u0440\u0456\u0447, \u0430 \u043D\u0435 \u0439\u0434\u0435 \u043D\u0430 \u0440\u043E\u0437\u0431\u0456\u0440.",
+    "menu.exportPh": "\u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \xAB\u0415\u043A\u0441\u043F\u043E\u0440\u0442\xBB",
+    "menu.importPh": "\u0412\u0441\u0442\u0430\u0432\u0442\u0435 \u0441\u044E\u0434\u0438 \u0435\u043A\u0441\u043F\u043E\u0440\u0442 HM1:",
+    "menu.loot": "\u0417\u0434\u043E\u0431\u0438\u0447",
+    "menu.otherwise": "\u0406\u043D\u0430\u043A\u0448\u0435",
+    "menu.rulesNote": "\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u0439\u0434\u0443\u0442\u044C \u0437\u0433\u043E\u0440\u0438 \u0434\u043E\u043D\u0438\u0437\u0443; \u0432\u0438\u0440\u0456\u0448\u0443\u0454 \u043F\u0435\u0440\u0448\u0435, \u0449\u043E \u043F\u0456\u0434\u0456\u0439\u0448\u043B\u043E. \u0420\u043E\u0437\u0456\u0431\u0440\u0430\u043D\u0435 \u0441\u0442\u0430\u0454 \u043F\u0438\u043B\u043E\u043C \u0436\u0430\u0440\u0438\u043D.",
+    "menu.save": "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
+    "menu.savedIdb": "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u043E\u0444\u0456\u043B\u0456 Discord (IndexedDB).",
+    "menu.savedMem": "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u0432 \u043F\u0430\u043C'\u044F\u0442\u0456: \u0437\u0440\u043E\u0431\u0456\u0442\u044C \u0435\u043A\u0441\u043F\u043E\u0440\u0442, \u0449\u043E\u0431 \u043D\u0435 \u0432\u0442\u0440\u0430\u0442\u0438\u0442\u0438.",
+    "menu.export": "\u0415\u043A\u0441\u043F\u043E\u0440\u0442",
+    "menu.copy": "\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438",
+    "menu.copied": "\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E",
+    "menu.copyByHand": "\u0412\u0438\u0434\u0456\u043B\u0456\u0442\u044C \u0456 \u0441\u043A\u043E\u043F\u0456\u044E\u0439\u0442\u0435 \u0432\u0440\u0443\u0447\u043D\u0443",
+    "menu.import": "\u0406\u043C\u043F\u043E\u0440\u0442",
+    "menu.loaded": "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E",
+    "menu.totals": "\u041F\u0456\u0434\u0441\u0443\u043C\u043A\u0438",
+    "menu.runs": "\u0417\u0430\u0431\u0456\u0433\u0438",
+    "menu.kills": "\u0423\u0431\u0438\u0432\u0441\u0442\u0432\u0430",
+    "menu.deaths": "\u0421\u043C\u0435\u0440\u0442\u0456",
+    "menu.items": "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0440\u0435\u0447\u0435\u0439",
+    "menu.salvaged": "\u0420\u043E\u0437\u0456\u0431\u0440\u0430\u043D\u043E",
+    "menu.swapped": "\u0417\u0430\u043C\u0456\u043D\u0435\u043D\u043E \u043F\u0456\u0434 \u0447\u0430\u0441 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "menu.time": "\u041F\u0440\u043E\u0436\u0438\u0442\u043E \u0447\u0430\u0441\u0443",
+    "menu.hours": "{n} \u0433\u043E\u0434",
+    "menu.danger": "\u041D\u0435\u0431\u0435\u0437\u043F\u0435\u0447\u043D\u043E",
+    "menu.newHero": "\u041D\u043E\u0432\u0438\u0439 \u0433\u0435\u0440\u043E\u0439",
+    "menu.startOver": "\u041F\u043E\u0447\u0430\u0442\u0438 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443?",
+    "menu.startOverNote": "\u041D\u0438\u043D\u0456\u0448\u043D\u044C\u043E\u0433\u043E \u0433\u0435\u0440\u043E\u044F \u0431\u0443\u0434\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E. \u042F\u043A\u0449\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u0439\u043E\u0433\u043E \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438, \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0440\u043E\u0431\u0456\u0442\u044C \u0435\u043A\u0441\u043F\u043E\u0440\u0442.",
+    "menu.deleteStart": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0439 \u043F\u043E\u0447\u0430\u0442\u0438 \u0441\u043F\u043E\u0447\u0430\u0442\u043A\u0443",
+    "filter.moveUp": "\u0412\u0438\u0449\u0435",
+    "filter.delete": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438",
+    "filter.deleteAria": "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u043E: {rule}",
+    "filter.keep": "\u043B\u0438\u0448\u0430\u0442\u0438",
+    "filter.salvage": "\u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0442\u0438",
+    "filter.anyRarity": "\u0431\u0443\u0434\u044C-\u044F\u043A\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044C",
+    "filter.anySlot": "\u0431\u0443\u0434\u044C-\u044F\u043A\u0430 \u043A\u043E\u043C\u0456\u0440\u043A\u0430",
+    "filter.anyAffixes": "\u0431\u0443\u0434\u044C-\u044F\u043A\u0456 \u0430\u0444\u0456\u043A\u0441\u0438",
+    "filter.minAffixes": "\u0430\u0444\u0456\u043A\u0441\u0456\u0432 {n}+",
+    "filter.behindAria": "\u041D\u0430\u0441\u043A\u0456\u043B\u044C\u043A\u0438 \u043E\u0441\u043D\u043E\u0432\u0430 \u0432\u0456\u0434\u0441\u0442\u0430\u0454 \u0432\u0456\u0434 \u0433\u0435\u0440\u043E\u044F",
+    "filter.anyBase": "\u0431\u0443\u0434\u044C-\u044F\u043A\u0430 \u043E\u0441\u043D\u043E\u0432\u0430",
+    "filter.behind": "\u043E\u0441\u043D\u043E\u0432\u0430 \u0432\u0456\u0434\u0441\u0442\u0430\u0454 \u043D\u0430 {n}+",
+    "filter.groupAria": "\u0404 \u0430\u0444\u0456\u043A\u0441",
+    "filter.anyAffix": "\u0431\u0443\u0434\u044C-\u044F\u043A\u0438\u0439 \u0430\u0444\u0456\u043A\u0441",
+    "filter.with": "\u0437: {group}",
+    "filter.add": "\u0414\u043E\u0434\u0430\u0442\u0438",
+    "filter.reset": "\u0421\u043A\u0438\u043D\u0443\u0442\u0438",
+    "filter.presets": "\u041D\u0430\u0431\u043E\u0440\u0438:",
+    "rule.keep": "\u041B\u0438\u0448\u0430\u0442\u0438: {what}",
+    "rule.salvage": "\u0420\u043E\u0437\u0431\u0438\u0440\u0430\u0442\u0438: {what}",
+    "rule.ilvl": "\u0440\u0456\u0432. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {n}+",
+    "rule.behind": "\u043E\u0441\u043D\u043E\u0432\u0430 \u0432\u0456\u0434\u0441\u0442\u0430\u0454 \u043D\u0430 {n}+ \u0440\u0456\u0432.",
+    "rule.affixes": "\u0430\u0444\u0456\u043A\u0441\u0456\u0432 {n}+",
+    "rule.with": "\u0437: {group}",
+    // ---- creation
+    "create.loading": "\u0417\u0410\u0412\u0410\u041D\u0422\u0410\u0416\u0415\u041D\u041D\u042F",
+    "create.nameAria": "\u0406\u043C'\u044F \u0433\u0435\u0440\u043E\u044F",
+    "create.calling": "\u041F\u043E\u043A\u043B\u0438\u043A\u0430\u043D\u043D\u044F",
+    "create.chosen": "\u041E\u0431\u0440\u0430\u043D\u043E",
+    "create.starts": "\u041F\u043E\u0447\u0438\u043D\u0430\u0454 \u0437 \u0443\u043C\u0456\u043D\u043D\u044F \xAB{skill}\xBB, \u0443 \u0440\u0443\u043A\u0430\u0445: {weapon}.",
+    "create.story": "\u0421\u043E\u043D\u0446\u0435 \u041C\u0430\u0440\u043A\u0438 \u0437\u0433\u0430\u0441\u043B\u043E \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432 \u0442\u043E\u043C\u0443. \u0422\u0435, \u0449\u043E \u0432\u0456\u0434 \u043D\u044C\u043E\u0433\u043E \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F, \u043E\u0441\u0438\u043F\u0430\u043B\u043E\u0441\u044F \u0436\u0430\u0440\u0438\u043D\u0430\u043C\u0438, \u0456 \u0442\u043E\u0439, \u0445\u0442\u043E \u0442\u0440\u0438\u043C\u0430\u0454 \u0436\u0430\u0440\u0438\u043D\u0443, \u043D\u0435 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u043C\u0435\u0440\u0442\u0432\u0438\u043C.",
+    "create.choose": "\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u043F\u043E\u043A\u043B\u0438\u043A\u0430\u043D\u043D\u044F",
+    "create.name": "\u041D\u0430\u0437\u0432\u0456\u0442\u044C \u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u043E\u0433\u043E",
+    "create.wake": "\u041F\u0440\u043E\u043A\u0438\u043D\u0443\u0442\u0438\u0441\u044F",
+    "create.nameNote": "\u0414\u043E 20 \u043B\u0456\u0442\u0435\u0440, \u0446\u0438\u0444\u0440 \u0456 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0456\u0432. Enter - \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0442\u0438\u0441\u044F.",
+    // ---- forge
+    "forge.worn": "\u041E\u0434\u044F\u0433\u043D\u0435\u043D\u043E",
+    "forge.stash": "\u0421\u0445\u043E\u0432\u0430\u043D\u043A\u0430",
+    "forge.case": "\u0421\u043A\u0440\u0438\u043D\u044C\u043A\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439",
+    "forge.anvil": "\u041D\u0430 \u043A\u043E\u0432\u0430\u0434\u043B\u0456",
+    "forge.hone": "\u0417\u0430\u0442\u043E\u0447\u0443\u0432\u0430\u043D\u043D\u044F",
+    "forge.qualityTip": "\u042F\u043A\u0456\u0441\u0442\u044C {q}% / {max}%",
+    "forge.max": "\u041C\u0435\u0436\u0430",
+    "forge.honeFor": "+1% \u0437\u0430 {cost}",
+    "forge.fullyHoned": "\u0417\u0430\u0442\u043E\u0447\u0435\u043D\u043E \u0434\u043E \u043C\u0435\u0436\u0456",
+    "forge.honeTipWeapon": "\u041A\u043E\u0436\u043D\u0435 \u043E\u0447\u043A\u043E \u044F\u043A\u043E\u0441\u0442\u0456 - 1% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0441\u0430\u043C\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 (H)",
+    "forge.honeTipArmour": "\u041A\u043E\u0436\u043D\u0435 \u043E\u0447\u043A\u043E \u044F\u043A\u043E\u0441\u0442\u0456 - 1% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0445\u0438\u0441\u0442\u0443 \u0441\u0430\u043C\u043E\u0433\u043E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 (H)",
+    "forge.benchAria": "\u0410\u0444\u0456\u043A\u0441 \u0434\u043B\u044F \u0432\u0435\u0440\u0441\u0442\u0430\u0442\u0430",
+    "forge.benchOption": "{ps}: {text}",
+    "forge.bench": "\u0412\u0435\u0440\u0441\u0442\u0430\u0442",
+    "forge.noRoom": "\u041D\u0435\u043C\u0430\u0454 \u043C\u0456\u0441\u0446\u044F \u0434\u043B\u044F \u0449\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u0430\u0444\u0456\u043A\u0441\u0430.",
+    "forge.benchAdd": "\u0414\u043E\u0434\u0430\u0442\u0438: \u0429\u0435\u043F\u043B\u0435\u043D\u043D\u044F x{n} + {dust}",
+    "forge.benchReplace": "\u0417\u0430\u043C\u0456\u043D\u0438\u0442\u0438: \u0429\u0435\u043F\u043B\u0435\u043D\u043D\u044F x{n} + {dust}",
+    "forge.benchTip": "\u0414\u043E\u0434\u0430\u0454 \u043E\u0431\u0440\u0430\u043D\u0438\u0439 \u0430\u0444\u0456\u043A\u0441 \u043D\u0430 \u0432\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u043E\u043C\u0443 \u0442\u0438\u0440\u0456, \u044F\u043A\u0438\u0439 \u0434\u043E\u0437\u0432\u043E\u043B\u044F\u0454 \u0440\u0456\u0432\u0435\u043D\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430.",
+    "forge.benchTipReplace": "\u0417\u0430\u043C\u0456\u043D\u044E\u0454 \u0430\u0444\u0456\u043A\u0441, \u0434\u043E\u0434\u0430\u043D\u0438\u0439 \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u0442\u0456 \u0440\u0430\u043D\u0456\u0448\u0435.",
+    "forge.benchHave": "\u0429\u0435\u043F\u043B\u0435\u043D\u044C \u0443 \u0432\u0430\u0441: {n}.",
+    "forge.benched": "\u0417\u0440\u043E\u0431\u043B\u0435\u043D\u043E \u043D\u0430 \u0432\u0435\u0440\u0441\u0442\u0430\u0442\u0456",
+    "forge.keep": "\u0411\u0435\u0440\u0435\u0433\u0442\u0438",
+    "forge.lockedNote": "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E: \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0439 \u043C\u0430\u0441\u043E\u0432\u0438\u0439 \u0440\u043E\u0437\u0431\u0456\u0440 \u0439\u043E\u0433\u043E \u043D\u0435 \u0447\u0456\u043F\u0430\u0442\u0438\u043C\u0443\u0442\u044C.",
+    "forge.unlockedNote": "\u041D\u0435 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E: \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043C\u043E\u0436\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0439\u043E\u0433\u043E \u043D\u0430 \u043A\u0440\u0430\u0449\u0443 \u0437\u043D\u0430\u0445\u0456\u0434\u043A\u0443.",
+    "forge.pick": "\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0440\u0456\u0447 \u043D\u0430 \u0441\u0442\u0456\u0439\u0446\u0456, \u0449\u043E\u0431 \u0443\u0437\u044F\u0442\u0438\u0441\u044F \u0434\u043E \u0440\u043E\u0431\u043E\u0442\u0438.",
+    "forge.use": "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u0442\u0438",
+    "forge.useOn": "\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u0442\u0438 \u0434\u043E: {item}",
+    "forge.pickFirst": "\u0421\u043F\u0435\u0440\u0448\u0443 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u0440\u0456\u0447",
+    "forge.used": "\u0417\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0430\u043D\u043E: {cur}",
+    "forge.until": "\u0414\u043E \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F",
+    "forge.untilTip": "\u0417\u0430\u0441\u0442\u043E\u0441\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \xAB{cur}\xBB \u0437\u043D\u043E\u0432\u0443 \u0439 \u0437\u043D\u043E\u0432\u0443 (\u0434\u043E 20 \u0440\u0430\u0437\u0456\u0432), \u0434\u043E\u043A\u0438 {item} \u043D\u0435 \u0441\u0442\u0430\u043D\u0435 \u043A\u0440\u0430\u0449\u0438\u043C \u0437\u0430 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435",
+    "forge.pickStash": "\u0421\u043F\u0435\u0440\u0448\u0443 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u0440\u0456\u0447 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438",
+    "forge.upAfter": "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F: {cur} x{n}",
+    "forge.noUpAfter": "\u0411\u0435\u0437 \u043F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F: {cur} x{n}",
+    "forge.buy": "\u041A\u0443\u043F\u0438\u0442\u0438 {cost}",
+    "forge.buyTip": "\u041A\u043E\u0448\u0442\u0443\u0454 {cost} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D; \u0456\u0437 Shift - \u043E\u0434\u0440\u0430\u0437\u0443 10",
+    "forge.bought": "\u041A\u0443\u043F\u043B\u0435\u043D\u043E: {cur} x{n}",
+    "forge.smithUntilTip": "\u041A\u0443\u0432\u0430\u0442\u0438 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456 \u0440\u0435\u0447\u0456 \u0434\u043B\u044F \u043A\u043E\u043C\u0456\u0440\u043A\u0438 \xAB{slot}\xBB, \u0434\u043E\u043A\u0438 \u043E\u0434\u043D\u0430 \u043D\u0435 \u0432\u0438\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043A\u0440\u0430\u0449\u043E\u044E \u0437\u0430 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435 (\u0434\u043E 10 \u043F\u043E {cost} \u043F\u0438\u043B\u0443; \u043D\u0435\u0432\u0434\u0430\u043B\u0456 \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u044E\u0442\u044C\u0441\u044F)",
+    "forge.smithTip": "\u0412\u0438\u043A\u0443\u0432\u0430\u0442\u0438 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0443 \u0440\u0456\u0447 \u0434\u043B\u044F \u043A\u043E\u043C\u0456\u0440\u043A\u0438 \xAB{slot}\xBB \u0437\u0430 {cost} \u043F\u0438\u043B\u0443",
+    "forge.needsDust": "\u041F\u043E\u0442\u0440\u0456\u0431\u043D\u043E {cost} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D",
+    "forge.forgedWearing": "\u0412\u0438\u043A\u0443\u0432\u0430\u043D\u043E {n}: \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u043E {item}",
+    "forge.forgedNone": "\u0412\u0438\u043A\u0443\u0432\u0430\u043D\u043E {n}, \u043D\u0456\u0447\u043E\u0433\u043E \u043A\u0440\u0430\u0449\u043E\u0433\u043E \u0437\u0430 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0435",
+    "forge.forged": "\u0412\u0438\u043A\u0443\u0432\u0430\u043D\u043E \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0443 \u0440\u0456\u0447",
+    "forge.untilNote": "\u0414\u043E 10 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0438\u0445 \u0440\u0435\u0447\u0435\u0439, \u0434\u043E \u043F\u0435\u0440\u0448\u043E\u0457 \u0433\u0456\u0434\u043D\u043E\u0457; \u043D\u0435\u0432\u0434\u0430\u043B\u0456 \u0439\u0434\u0443\u0442\u044C \u043D\u0430 \u043F\u0438\u043B.",
+    "forge.dust": "\u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D",
+    "forge.title": "\u0412\u0438\u043A\u0443\u0432\u0430\u0442\u0438 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0443",
+    "forge.costLine": "{cost} \u043F\u0438\u043B\u0443 / \u0440\u0456\u0432. \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 {ilvl}",
+    "forge.note": "\u0412\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0430 \u0440\u0456\u0447 \u0434\u043B\u044F \u043A\u043E\u043C\u0456\u0440\u043A\u0438 \u043D\u0430 \u043D\u0430\u0439\u0432\u0438\u0449\u043E\u043C\u0443 \u0434\u043E\u0441\u044F\u0433\u043D\u0443\u0442\u043E\u043C\u0443 \u0440\u0456\u0432\u043D\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430. \u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F \u043E\u0434\u044F\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443. \u0412\u0430\u043B\u044E\u0442\u0430 \u043F\u0430\u0434\u0430\u0454 \u0437 \u0447\u0435\u043C\u043F\u0456\u043E\u043D\u0456\u0432 \u0456 \u0431\u043E\u0441\u0456\u0432; \u043D\u0430 \u043F\u043E\u043B\u0438\u0446\u0456 \u0457\u0457 \u043F\u0440\u043E\u0434\u0430\u044E\u0442\u044C \u0437\u0430 \u043F\u0438\u043B.",
+    "forge.moreDust": "\u0429\u0435 {n} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D \u043D\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0443 \u0440\u0456\u0447. \u041F\u0438\u043B \u0434\u0430\u0454 \u0440\u043E\u0437\u0431\u0456\u0440 \u0437\u0434\u043E\u0431\u0438\u0447\u0456 \u043D\u0430 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \u0420\u0435\u0447\u0456 (\u0430\u0431\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u043E \u0444\u0456\u043B\u044C\u0442\u0440\u0430, \u044F\u043A\u0435 \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0454).",
+    "forge.rack": "\u0421\u0442\u0456\u0439\u043A\u0430",
+    "forge.currency": "\u0412\u0430\u043B\u044E\u0442\u0430",
+    // ---- atlas
+    "atlas.actCleared": "\u0410\u043A\u0442 {n}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
+    "atlas.actHere": "\u0410\u043A\u0442 {n}: \u0432\u0438 \u0442\u0443\u0442",
+    "atlas.act": "\u0410\u043A\u0442 {n}",
+    "atlas.lands": "\u0417\u0433\u0430\u0440\u0438\u0449\u0430",
+    "atlas.story": "\u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0437\u0435\u043C\u043B\u044F - \u0441\u0443\u0446\u0456\u043B\u044C\u043D\u0456 \u0436\u0430\u0440\u0438\u043D\u0438 \u0439 \u043F\u043E\u043F\u0456\u043B, \u0456 \u0457\u0439 \u043D\u0435\u043C\u0430\u0454 \u043A\u0456\u043D\u0446\u044F. \u041F\u0440\u043E\u0439\u0434\u0456\u0442\u044C \u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434, \u0449\u043E\u0431 \u0441\u0442\u0443\u043F\u0438\u0442\u0438 \u043D\u0430 \u043D\u0435\u0457.",
+    "atlas.opensAfter": "\u0412\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F",
+    "atlas.gate": "{zone} (\u0440\u0456\u0432\u0435\u043D\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u0456 {level})",
+    "atlas.heroLevel": "\u0440\u0456\u0432\u0435\u043D\u044C \u0433\u0435\u0440\u043E\u044F {n}",
+    "atlas.then": "\u0414\u0430\u043B\u0456 - {n} \u044F\u0440\u0443\u0441\u0456\u0432 \u043A\u0430\u0440\u0442 \u0456 \u043D\u0435\u0441\u043A\u0456\u043D\u0447\u0435\u043D\u043D\u0456 \u0413\u043B\u0438\u0431\u0438\u043D\u0438",
+    "atlas.kept": "{n} \u043A\u0430\u0440\u0442\u0443 \u0432\u0436\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0439 \u0432\u0456\u0434\u043A\u043B\u0430\u0434\u0435\u043D\u043E \u043D\u0430 \u043F\u043E\u0442\u0456\u043C.|{n} \u043A\u0430\u0440\u0442\u0438 \u0432\u0436\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0439 \u0432\u0456\u0434\u043A\u043B\u0430\u0434\u0435\u043D\u043E \u043D\u0430 \u043F\u043E\u0442\u0456\u043C.|{n} \u043A\u0430\u0440\u0442 \u0443\u0436\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0439 \u0432\u0456\u0434\u043A\u043B\u0430\u0434\u0435\u043D\u043E \u043D\u0430 \u043F\u043E\u0442\u0456\u043C.",
+    "atlas.dropLater": "\u041A\u0430\u0440\u0442\u0438 \u043F\u043E\u0447\u0438\u043D\u0430\u044E\u0442\u044C \u043F\u0430\u0434\u0430\u0442\u0438 \u0432 \u0442\u0440\u0435\u0442\u044C\u043E\u043C\u0443 \u0430\u043A\u0442\u0456; \u0457\u0445 \u0432\u0456\u0434\u043A\u043B\u0430\u0434\u0430\u044E\u0442\u044C \u043D\u0430 \u043F\u043E\u0442\u0456\u043C.",
+    "atlas.runMaps": "\u0425\u043E\u0434\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u0430\u043C\u0438",
+    "atlas.runMapsNote": "\u0417\u0430\u043C\u0456\u0441\u0442\u044C \u0441\u044E\u0436\u0435\u0442\u043D\u0438\u0445 \u043C\u0456\u0441\u0446\u044C. \u041A\u043E\u043B\u0438 \u043A\u0430\u0440\u0442 \u043D\u0435\u043C\u0430\u0454 - \u041E\u043A\u043E\u043B\u0438\u0446\u0456, \u0434\u0435 \u043F\u0430\u0434\u0430\u044E\u0442\u044C \u043A\u0430\u0440\u0442\u0438 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u044F\u0440\u0443\u0441\u0443.",
+    "atlas.highest": "\u0421\u043F\u0435\u0440\u0448\u0443 \u043D\u0430\u0439\u0432\u0438\u0449\u0438\u0439 \u044F\u0440\u0443\u0441",
+    "atlas.andBelow": "{tier} \u0456 \u043D\u0438\u0436\u0447\u0435",
+    "atlas.andBelowNone": "{tier} \u0456 \u043D\u0438\u0436\u0447\u0435 (\u0443 \u0437\u0430\u043F\u0430\u0441\u0456 \u043D\u0435\u043C\u0430\u0454)",
+    "atlas.device": "\u041F\u0440\u0438\u0441\u0442\u0440\u0456\u0439 \u043A\u0430\u0440\u0442",
+    "atlas.order": "\u041F\u043E\u0440\u044F\u0434\u043E\u043A",
+    "atlas.count": "{n}/{cap} \u043A\u0430\u0440\u0442",
+    "atlas.deepest": "\u041D\u0430\u0439\u0433\u043B\u0438\u0431\u0448\u0435: {tier}",
+    "atlas.none": "\u043D\u0456\u0434\u0435",
+    "atlas.xpCapTip": "\u0417\u0430\u0440\u0430\u0434\u0438 \u0434\u043E\u0441\u0432\u0456\u0434\u0443 \u0430\u0432\u0442\u043E\u043F\u0440\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u0442\u0440\u0438\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u0440\u0443\u0441\u0456\u0432 \u043D\u0435 \u0432\u0438\u0449\u0435 \u0437\u0430 \u0440\u0456\u0432\u0435\u043D\u044C \u0433\u0435\u0440\u043E\u044F + 4",
+    "atlas.xpCap": "\u041C\u0435\u0436\u0430 \u0434\u043E\u0441\u0432\u0456\u0434\u0443: {tier}",
+    "atlas.autoCap": "\u041C\u0435\u0436\u0430 \u0430\u0432\u0442\u043E\u043F\u0440\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F: {tier}",
+    "atlas.deathNote": "\u0421\u043C\u0435\u0440\u0442\u044C \u043D\u0430 \u043A\u0430\u0440\u0442\u0456 \u043A\u043E\u0448\u0442\u0443\u0454 \u0441\u0430\u043C\u043E\u0457 \u043A\u0430\u0440\u0442\u0438 \u0439 {n}% \u0434\u043E\u0441\u0432\u0456\u0434\u0443 \u0440\u0456\u0432\u043D\u044F. \u041C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u0438 \u0440\u043E\u0431\u043B\u044F\u0442\u044C \u043A\u0430\u0440\u0442\u0438 \u0432\u0430\u0436\u0447\u0438\u043C\u0438 \u0439 \u0431\u0430\u0433\u0430\u0442\u0448\u0438\u043C\u0438.",
+    "atlas.noMaps": "\u041A\u0430\u0440\u0442 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454. \u0407\u0445 \u043F\u0440\u0438\u043D\u043E\u0441\u044F\u0442\u044C \u041E\u043A\u043E\u043B\u0438\u0446\u0456 \u0439 \u0442\u0440\u0435\u0442\u0456\u0439 \u0430\u043A\u0442.",
+    "atlas.maps": "\u041A\u0430\u0440\u0442\u0438",
+    "atlas.craft": "\u041E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u043A\u0430\u0440\u0442\u0443 {map}:",
+    "atlas.after": "\u041F\u0456\u0441\u043B\u044F: {list}",
+    "atlas.taken": "\u0443\u0437\u044F\u0442\u043E",
+    "atlas.locked": "\u0437\u0430\u043A\u0440\u0438\u0442\u043E",
+    "atlas.noPoints": "\u043D\u0435\u043C\u0430\u0454 \u043E\u0447\u043E\u043A",
+    "atlas.take": "\u0443\u0437\u044F\u0442\u0438",
+    "atlas.tree": "\u0410\u0442\u043B\u0430\u0441 (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u043E)|\u0410\u0442\u043B\u0430\u0441 (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u0438)|\u0410\u0442\u043B\u0430\u0441 (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043E\u043A)",
+    "atlas.pointsNote": "\u041F\u0435\u0440\u0448\u0435 \u043F\u0440\u043E\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F \u044F\u0440\u0443\u0441\u0456\u0432 1-{n} \u0434\u0430\u0454 \u043F\u043E \u043E\u0447\u043A\u0443, \u043A\u043E\u0436\u043D\u0430 \u043F'\u044F\u0442\u0430 \u0413\u043B\u0438\u0431\u0438\u043D\u0430 - \u0449\u0435 \u043E\u0434\u043D\u0435, \u0432\u0435\u0440\u0448\u0438\u043D\u0438 - \u043F\u043E \u0434\u0432\u0430.",
+    "atlas.pinInfo": "\u0420\u0456\u0432\u0435\u043D\u044C {level}. {sigil}: \u043F\u0430\u0434\u0430\u0454 \u0437 \u0431\u043E\u0441\u0456\u0432 \u043A\u0430\u0440\u0442, {tier} \u0456 \u0433\u043B\u0438\u0431\u0448\u0435. \u041F\u0435\u0440\u0435\u043C\u043E\u0433: {kills}.",
+    "atlas.nextRun": "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0437\u0430\u0431\u0456\u0433",
+    "atlas.challenge": "\u041A\u0438\u043D\u0443\u0442\u0438 \u0432\u0438\u043A\u043B\u0438\u043A ({have}/{cost})",
+    "atlas.isNext": "\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0431\u0456\u0439: {name}",
+    "atlas.scout": "\u0420\u043E\u0437\u0432\u0456\u0434\u0430\u0442\u0438",
+    "atlas.scoutTip": "\u0411\u0438\u0442\u0438\u0441\u044F \u043F'\u044F\u0442\u044C \u0440\u0430\u0437\u0456\u0432 \u043A\u043E\u043F\u0456\u0454\u044E \u0433\u0435\u0440\u043E\u044F (\u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0432\u0438\u0442\u0440\u0430\u0447\u0430\u0454\u0442\u044C\u0441\u044F) \u0439 \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044F \u0448\u0430\u043D\u0441\u0438",
+    "atlas.pinnacles": "\u0412\u0435\u0440\u0448\u0438\u043D\u0438",
+    "atlas.scouted": "\u0420\u043E\u0437\u0432\u0456\u0434\u043A\u0430: \u043F\u0435\u0440\u0435\u043C\u043E\u0433 {wins} \u0437 {n} - {verdict}",
+    "atlas.scoutedTime": "\u0420\u043E\u0437\u0432\u0456\u0434\u043A\u0430: \u043F\u0435\u0440\u0435\u043C\u043E\u0433 {wins} \u0437 {n}, \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u043D\u043E \u043F\u043E {s} \u0441 - {verdict}",
+    "atlas.ready": "\u0433\u043E\u0442\u043E\u0432\u0438\u0439",
+    "atlas.risky": "\u0440\u0438\u0437\u0438\u043A\u043E\u0432\u0430\u043D\u043E",
+    "atlas.notYet": "\u0437\u0430\u0440\u0430\u043D\u043E",
+    "atlas.ladderAria": "\u041F\u0440\u043E\u0439\u0434\u0435\u043D\u043E \u044F\u0440\u0443\u0441\u0456\u0432: {n} \u0437 {max}",
+    "atlas.rungCleared": "{tier}: \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E",
+    // ---- passive tree and ascendancy
+    "tree.left": "\u041B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u043E|\u041B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u0438|\u041B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043E\u043A",
+    "tree.taken": "\u0443\u0437\u044F\u0442\u043E {n}",
+    "tree.help": "\u0422\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0440\u0443\u0445\u0430\u0442\u0438, \u043A\u043E\u043B\u0456\u0449\u0430\u0442\u043A\u043E - \u043C\u0430\u0441\u0448\u0442\u0430\u0431. \u041A\u043B\u0456\u043A \u043F\u043E \u0432\u0443\u0437\u043B\u0443, \u0449\u043E \u0441\u0432\u0456\u0442\u0438\u0442\u044C\u0441\u044F, \u0431\u0435\u0440\u0435 \u0439\u043E\u0433\u043E, \u043F\u043E \u0431\u0443\u0434\u044C-\u044F\u043A\u043E\u043C\u0443 - \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u044E\u0454 \u043A\u0430\u0440\u0442\u043A\u0443.",
+    "tree.centre": "\u0414\u043E \u0446\u0435\u043D\u0442\u0440\u0443",
+    "tree.notable": "{name} (\u0432\u0438\u0437\u043D\u0430\u0447\u043D\u0438\u0439)",
+    "tree.keystone": "{name} (\u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0439)",
+    "tree.yourSeat": "\u0422\u0443\u0442 \u0432\u0430\u0448 \u0432\u0438\u0442\u0456\u043A.",
+    "tree.otherSeat": "\u0417\u0432\u0456\u0434\u0441\u0438 \u043F\u043E\u0447\u0438\u043D\u0430\u0454 \u0456\u043D\u0448\u0435 \u043F\u043E\u043A\u043B\u0438\u043A\u0430\u043D\u043D\u044F.",
+    "tree.refund": "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 ({n} \u043F\u0438\u043B\u0443)",
+    "tree.depends": "\u0412\u0456\u0434 \u043D\u044C\u043E\u0433\u043E \u0437\u0430\u043B\u0435\u0436\u0430\u0442\u044C \u0456\u043D\u0448\u0456 \u0432\u0437\u044F\u0442\u0456 \u0432\u0443\u0437\u043B\u0438",
+    "tree.take": "\u0423\u0437\u044F\u0442\u0438",
+    "tree.clickTake": "\u041A\u043B\u0456\u043A - \u0443\u0437\u044F\u0442\u0438.",
+    "tree.clickPin": "\u041A\u043B\u0456\u043A \u0437\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u044C \u043A\u0430\u0440\u0442\u043A\u0443 (\u043F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F).",
+    "asc.title": "\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u043E)|\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u0438)|\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043E\u043A)",
+    "asc.titleNamed": "\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F: {name} (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u043E)|\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F: {name} (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043A\u0438)|\u0421\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F: {name} (\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {n} \u043E\u0447\u043E\u043A)",
+    "asc.choose": "\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0448\u043B\u044F\u0445. \u0412\u0438\u0431\u0456\u0440 \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u0433\u0435\u0440\u043E\u044F.",
+    "asc.earn": "\u041F\u0440\u043E\u0439\u0434\u0456\u0442\u044C \u0432\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F (\u043F\u0435\u0440\u0448\u0435 \u0432\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u0435\u0440\u0448\u043E\u043C\u0443 \u0430\u043A\u0442\u0456, \u043F\u0456\u0441\u043B\u044F \u0417\u0430\u0442\u043E\u043F\u043B\u0435\u043D\u043E\u0457 \u043A\u0430\u043F\u043B\u0438\u0446\u0456), \u0449\u043E\u0431 \u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043E\u0447\u043A\u0438 \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F.",
+    "asc.node": "{name}: {mods}",
+    "asc.become": "\u0421\u0442\u0430\u0442\u0438: {name}",
+    "asc.taken": "\u0443\u0437\u044F\u0442\u043E",
+    "asc.take": "\u0443\u0437\u044F\u0442\u0438",
+    "asc.locked": "\u0437\u0430\u043A\u0440\u0438\u0442\u043E",
+    // ---- messages from the game's rules
+    "err.needsDust": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E {n} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D",
+    "err.needsDustOrbs": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E {n} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D (\u0430\u0431\u043E \u0437\u0430\u0439\u0432\u0456 \u0441\u0444\u0435\u0440\u0438)",
+    "err.needsLevel": "\u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0456\u0432\u0435\u043D\u044C {n}",
+    "err.slotNeedsLevel": "{slot}: \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0456\u0432\u0435\u043D\u044C {n}",
+    "err.supportNeedsLevel": "{name}: \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u0440\u0456\u0432\u0435\u043D\u044C {n}",
+    "err.wrongSlot": "\u043D\u0435 \u0442\u0430 \u043A\u043E\u043C\u0456\u0440\u043A\u0430",
+    "err.twoHanded": "\u0434\u0432\u043E\u0440\u0443\u0447\u043D\u0430 \u0437\u0431\u0440\u043E\u044F",
+    "err.needsBow": "\u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043B\u0443\u043A",
+    "err.notInStash": "\u043D\u0435\u043C\u0430\u0454 \u0432 \u0441\u0445\u043E\u0432\u0430\u043D\u0446\u0456",
+    "err.stashFull": "\u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u043F\u043E\u0432\u043D\u0430",
+    "err.stashMax": "\u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0430 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435 \u0440\u043E\u0441\u0442\u0435",
+    "err.itemNotFound": "\u0440\u0456\u0447 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E",
+    "err.unknownSkill": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0435 \u0432\u043C\u0456\u043D\u043D\u044F",
+    "err.unknownSupport": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430",
+    "err.dupSupport": "\u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430 \u0432\u0436\u0435 \u0441\u0442\u043E\u0457\u0442\u044C",
+    "err.unknownZone": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0435 \u043C\u0456\u0441\u0446\u0435",
+    "err.zoneLocked": "\u0437\u0430\u043A\u0440\u0438\u0442\u043E",
+    "err.skillUnavailable": "\u0443\u043C\u0456\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435",
+    "err.cantUseWith": "{skill}: \u043D\u0435 \u0437 \u0446\u0456\u0454\u044E \u0437\u0431\u0440\u043E\u0454\u044E",
+    "err.cantUseUnarmed": "{skill}: \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0431\u0440\u043E\u044F",
+    "err.noSupport": "{support} \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454 {skill}",
+    "err.unknownCompanion": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A",
+    "err.notFoundYet": "\u0449\u0435 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E",
+    "err.noContract": "\u043D\u0435\u043C\u0430\u0454 \u0442\u0430\u043A\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442\u0443",
+    "err.notFinished": "\u0449\u0435 \u043D\u0435 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E",
+    "err.claimInstead": "\u043A\u0440\u0430\u0449\u0435 \u0437\u0430\u0431\u0435\u0440\u0456\u0442\u044C \u043D\u0430\u0433\u043E\u0440\u043E\u0434\u0443",
+    "err.unknownBlessing": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0435 \u0431\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F",
+    "err.unknownNode": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 \u0432\u0443\u0437\u043E\u043B",
+    "err.startFree": "\u0432\u0438\u0442\u0456\u043A \u0434\u0430\u0454\u0442\u044C\u0441\u044F \u0434\u0430\u0440\u043E\u043C",
+    "err.allocated": "\u0443\u0436\u0435 \u0432\u0437\u044F\u0442\u043E",
+    "err.noPoints": "\u043E\u0447\u043E\u043A \u043D\u0435 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F",
+    "err.notConnected": "\u043D\u0435 \u043F\u043E\u0432'\u044F\u0437\u0430\u043D\u0438\u0439 \u0456\u0437 \u0432\u0437\u044F\u0442\u0438\u043C\u0438",
+    "err.dependOn": "\u0432\u0456\u0434 \u043D\u044C\u043E\u0433\u043E \u0437\u0430\u043B\u0435\u0436\u0430\u0442\u044C \u0456\u043D\u0448\u0456 \u0432\u0443\u0437\u043B\u0438",
+    "err.notCalling": "\u043D\u0435 \u0434\u043B\u044F \u0446\u044C\u043E\u0433\u043E \u043F\u043E\u043A\u043B\u0438\u043A\u0430\u043D\u043D\u044F",
+    "err.alreadyChosen": "\u0443\u0436\u0435 \u043E\u0431\u0440\u0430\u043D\u043E",
+    "err.trialFirst": "\u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0440\u043E\u0439\u0434\u0456\u0442\u044C \u0432\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F",
+    "err.notYourAsc": "\u043D\u0435 \u0437 \u0432\u0430\u0448\u043E\u0433\u043E \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F",
+    "err.alreadyTaken": "\u0443\u0436\u0435 \u0432\u0437\u044F\u0442\u043E",
+    "err.noAscPoints": "\u043D\u0435\u043C\u0430\u0454 \u043E\u0447\u043E\u043A \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F",
+    "err.noAtlasPoints": "\u043D\u0435\u043C\u0430\u0454 \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443",
+    "err.nodeBefore": "\u0441\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u0437\u044C\u043C\u0456\u0442\u044C \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0432\u0443\u0437\u043E\u043B",
+    "err.sunfallFirst": "\u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0440\u043E\u0439\u0434\u0456\u0442\u044C \u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434",
+    "err.badTier": "\u0445\u0438\u0431\u043D\u0438\u0439 \u044F\u0440\u0443\u0441",
+    "err.unknownPinnacle": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u0432\u0435\u0440\u0448\u0438\u043D\u0430",
+    "err.needsSigils": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u043F\u0435\u0447\u0430\u0442\u043E\u043A: {n} ({sigil})",
+    "err.mapNotFound": "\u043A\u0430\u0440\u0442\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E",
+    "err.unknownCurrency": "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u0432\u0430\u043B\u044E\u0442\u0430",
+    "err.noneLeft": "{cur}: \u043D\u0435 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F",
+    "err.needsPlainMap": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0430 \u043A\u0430\u0440\u0442\u0430",
+    "err.needsEnchantedMap": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0430 \u043A\u0430\u0440\u0442\u0430",
+    "err.needsEnchantedMapOne": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0430 \u043A\u0430\u0440\u0442\u0430 \u0437 \u043E\u0434\u043D\u0438\u043C \u043C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u043E\u043C",
+    "err.needsRareMap": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u0430",
+    "err.needsRareMapRoom": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0430 \u043A\u0430\u0440\u0442\u0430 \u0437 \u0432\u0456\u043B\u044C\u043D\u0438\u043C \u043C\u0456\u0441\u0446\u0435\u043C",
+    "err.alreadyPlain": "\u0443\u0436\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0430",
+    "err.nothingOnMaps": "\u043D\u0430 \u043A\u0430\u0440\u0442\u0438 \u043D\u0435 \u0434\u0456\u0454",
+    "err.needsPlain": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0430 \u0440\u0456\u0447",
+    "err.needsEnchanted": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0430 \u0440\u0456\u0447",
+    "err.needsRare": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0430 \u0440\u0456\u0447",
+    "err.needsEnchantedOrRare": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0430 \u0430\u0431\u043E \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0430 \u0440\u0456\u0447",
+    "err.noRoom": "\u043D\u0435\u043C\u0430\u0454 \u043C\u0456\u0441\u0446\u044F \u0434\u043B\u044F \u0449\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u0430\u0444\u0456\u043A\u0441\u0430",
+    "err.relicNoUndo": "\u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044E \u043D\u0435 \u0440\u043E\u0437\u0432\u0456\u044F\u0442\u0438",
+    "err.relicNoTemper": "\u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044E \u043D\u0435 \u0437\u0430\u0433\u0430\u0440\u0442\u0443\u0432\u0430\u0442\u0438",
+    "err.noAffixes": "\u043D\u0435\u043C\u0430\u0454 \u0430\u0444\u0456\u043A\u0441\u0456\u0432",
+    "err.onlyRerolls": "\u043F\u043E\u0432\u0442\u043E\u0440\u044E\u044E\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u043F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u043D\u043D\u044F",
+    "err.onlyStash": "\u043B\u0438\u0448\u0435 \u0440\u0435\u0447\u0456 \u0437\u0456 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438",
+    "err.maxQuality": "\u044F\u043A\u0456\u0441\u0442\u044C \u0443\u0436\u0435 {n}%",
+    "err.onlyWeaponsArmour": "\u044F\u043A\u0456\u0441\u0442\u044C \u0431\u0443\u0432\u0430\u0454 \u043B\u0438\u0448\u0435 \u0443 \u0437\u0431\u0440\u043E\u0457 \u0442\u0430 \u043E\u0431\u043B\u0430\u0434\u0443\u043D\u043A\u0456\u0432",
+    "err.affixNoFit": "\u0446\u0435\u0439 \u0430\u0444\u0456\u043A\u0441 \u043D\u0435 \u043F\u0430\u0441\u0443\u0454",
+    "err.needsGraft": "\u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0449\u0435\u043F\u043B\u0435\u043D\u044C: {n}",
+    "err.nothingToForge": "\u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043A\u043E\u043C\u0456\u0440\u043A\u0438 \u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u0456\u0447\u043E\u0433\u043E",
+    "err.saveNot": "\u0446\u0435 \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
+    "err.saveNotHm": "\u0446\u0435 \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F Hollowmarch",
+    "err.saveVersion": "\u0445\u0438\u0431\u043D\u0430 \u0432\u0435\u0440\u0441\u0456\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
+    "err.saveNewer": "\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0437 \u043D\u043E\u0432\u0456\u0448\u043E\u0457 \u0432\u0435\u0440\u0441\u0456\u0457 ({n})",
+    "err.saveNoMigration": "\u043D\u0435\u043C\u0430\u0454 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0443 \u0437 \u0432\u0435\u0440\u0441\u0456\u0457 {n}",
+    "err.exportNot": "\u0446\u0435 \u043D\u0435 \u0435\u043A\u0441\u043F\u043E\u0440\u0442 Hollowmarch",
+    "err.exportDamaged": "\u0435\u043A\u0441\u043F\u043E\u0440\u0442 \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u043E",
+    "err.saveUnreadable": "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F",
+    "err.saveBroken": "\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u043F\u043E\u0448\u043A\u043E\u0434\u0436\u0435\u043D\u043E ({what})"
+  };
+  var CONTENT2 = {
+    // classes, skills, supports
+    "class.vanguard.name": "\u0410\u0432\u0430\u043D\u0433\u0430\u0440\u0434",
+    "class.vanguard.blurb": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u0439 \u0441\u043E\u043B\u0434\u0430\u0442, \u044F\u043A\u0438\u0439 \u0434\u043E\u0441\u0456 \u043F\u0430\u043C'\u044F\u0442\u0430\u0454 \u0441\u0442\u0456\u043D\u0443 \u0449\u0438\u0442\u0456\u0432. \u0412\u0430\u0436\u043A\u0456 \u0443\u0434\u0430\u0440\u0438, \u0432\u0430\u0436\u043A\u0430 \u0431\u0440\u043E\u043D\u044F.",
+    "class.strider.name": "\u0428\u0432\u0438\u0434\u043A\u043E\u0445\u0456\u0434",
+    "class.strider.blurb": "\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u043A, \u0449\u043E \u0437\u0430\u0440\u043E\u0431\u043B\u044F\u0432 \u043D\u0430 \u0436\u0438\u0442\u0442\u044F \u0445\u043E\u0434\u0456\u043D\u043D\u044F\u043C \u043F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u043C\u0438 \u0434\u043E\u0440\u043E\u0433\u0430\u043C\u0438. \u0428\u0432\u0438\u0434\u043A\u0456 \u043D\u043E\u0433\u0438, \u043B\u0443\u043A \u0456 \u043F\u0438\u043B\u044C\u043D\u0435 \u043E\u043A\u043E.",
+    "class.arcanist.name": "\u0422\u0430\u0454\u043C\u043D\u043E\u0437\u043D\u0430\u0432\u0435\u0446\u044C",
+    "class.arcanist.blurb": "\u0423\u0447\u0435\u043D\u0438\u0439 \u0456\u0437 \u043A\u0430\u043F\u043B\u0438\u0446\u0456, \u0449\u043E \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0432 \u043F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u0436\u0430\u0440\u0438\u043D\u0438, \u043F\u0435\u0440\u0448 \u043D\u0456\u0436 \u0432\u043E\u043D\u0430 \u0441\u043F\u0430\u043B\u0438\u043B\u0430 \u0439\u043E\u0433\u043E \u0436\u0438\u0432\u0446\u0435\u043C. \u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u0456 \u0449\u0438\u0442 \u0437\u0456 \u0441\u0432\u0456\u0442\u043B\u0430.",
+    "skill.crescent.name": "\u0421\u0435\u0440\u043F\u043E\u043F\u043E\u0434\u0456\u0431\u043D\u0438\u0439 \u0437\u0430\u043C\u0430\u0445",
+    "skill.crescent.blurb": "\u0428\u0438\u0440\u043E\u043A\u0438\u0439 \u0437\u0430\u043C\u0430\u0445, \u0449\u043E \u0437\u0430\u0447\u0456\u043F\u0430\u0454 \u0434\u043E \u0442\u0440\u044C\u043E\u0445 \u0432\u043E\u0440\u043E\u0433\u0456\u0432 \u043F\u0435\u0440\u0435\u0434 \u0432\u0430\u043C\u0438.",
+    "skill.sunder.name": "\u0420\u043E\u0437\u043A\u043E\u043B",
+    "skill.sunder.blurb": "\u041E\u0434\u0438\u043D \u043D\u0438\u0449\u0456\u0432\u043D\u0438\u0439 \u0443\u0434\u0430\u0440 \u043F\u043E \u043E\u0434\u043D\u043E\u043C\u0443 \u0432\u043E\u0440\u043E\u0433\u0443. \u041F\u043E\u0432\u0456\u043B\u044C\u043D\u043E, \u0432\u0430\u0436\u043A\u043E, \u0434\u043E\u0431\u0440\u0435 \u043F\u0440\u043E\u0442\u0438 \u0431\u043E\u0441\u0456\u0432.",
+    "skill.hatchet.name": "\u041A\u0438\u0434\u043E\u043A \u0441\u043E\u043A\u0438\u0440\u043A\u0438",
+    "skill.hatchet.blurb": "\u041A\u0438\u0434\u0430\u0454 \u043A\u043E\u043F\u0456\u044E \u0432\u0430\u0448\u043E\u0457 \u0437\u0431\u0440\u043E\u0457, \u0449\u043E \u043E\u0431\u0435\u0440\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u0454 \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u043E\u0440\u043E\u0433\u0430.",
+    "skill.quake.name": "\u0421\u0442\u0440\u0443\u0441\u043D\u0438\u0439 \u0442\u0443\u043F\u0456\u0442",
+    "skill.quake.blurb": "\u0411'\u0454 \u0432 \u0437\u0435\u043C\u043B\u044E \u0442\u0430\u043A, \u0449\u043E \u0446\u0435 \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u0454 \u0432\u0441\u044F \u0437\u0433\u0440\u0430\u044F.",
+    "skill.cinderwake.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0438\u0439 \u0441\u043B\u0456\u0434",
+    "skill.cinderwake.blurb": "\u0412\u043E\u0433\u043D\u044F\u043D\u0430 \u0434\u0443\u0433\u0430. \u041F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0457\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0441\u0442\u0430\u0454 \u0432\u043E\u0433\u043D\u0435\u043C.",
+    "skill.twinshot.name": "\u041F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043F\u043E\u0441\u0442\u0440\u0456\u043B",
+    "skill.twinshot.blurb": "\u0414\u0432\u0456 \u0441\u0442\u0440\u0456\u043B\u0438 \u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u043D\u0430\u0442\u044F\u0433\u0443; \u043A\u043E\u0436\u043D\u0430 \u043C\u043E\u0436\u0435 \u043F\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043E\u0440\u043E\u0433\u0430.",
+    "skill.barbrain.name": "\u0414\u043E\u0449 \u0437\u0430\u0437\u0443\u0431\u043B\u0438\u043D",
+    "skill.barbrain.blurb": "\u0421\u0442\u0440\u0456\u043B\u0438, \u0432\u0438\u043F\u0443\u0449\u0435\u043D\u0456 \u0432\u0438\u0441\u043E\u043A\u043E \u0432\u0433\u043E\u0440\u0443, \u043F\u0430\u0434\u0430\u044E\u0442\u044C \u043D\u0430 \u0432\u0441\u044E \u0437\u0433\u0440\u0430\u044E.",
+    "skill.heartseeker.name": "\u0428\u0443\u043A\u0430\u0447 \u0441\u0435\u0440\u0446\u044F",
+    "skill.heartseeker.blurb": "\u041F\u043E\u0432\u0456\u043B\u044C\u043D\u0438\u0439 \u043F\u0440\u0438\u0446\u0456\u043B\u044C\u043D\u0438\u0439 \u043F\u043E\u0441\u0442\u0440\u0456\u043B, \u0449\u043E \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0442\u044C \u0448\u043F\u0430\u0440\u0438\u043D\u0438 \u0432 \u0431\u0440\u043E\u043D\u0456.",
+    "skill.stormvolley.name": "\u0413\u0440\u043E\u0437\u043E\u0432\u0438\u0439 \u0437\u0430\u043B\u043F",
+    "skill.stormvolley.blurb": "\u0417\u0430\u0440\u044F\u0434\u0436\u0435\u043D\u0456 \u0441\u0442\u0440\u0456\u043B\u0438; \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430 \u0457\u0445\u043D\u044C\u043E\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0441\u0442\u0430\u0454 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u043E\u044E.",
+    "skill.skewer.name": "\u041F\u0440\u043E\u043A\u043E\u043B",
+    "skill.skewer.blurb": "\u0428\u0432\u0438\u0434\u043A\u0456 \u0443\u043A\u043E\u043B\u0438, \u043A\u043E\u043B\u0438 \u0437\u0433\u0440\u0430\u044F \u043D\u0430\u0434\u0442\u043E \u0431\u043B\u0438\u0437\u044C\u043A\u043E, \u0449\u043E\u0431 \u0441\u0442\u0440\u0456\u043B\u044F\u0442\u0438.",
+    "skill.emberbolt.name": "\u0412\u043E\u0433\u043D\u044F\u043D\u0430 \u0436\u0430\u0440\u0438\u043D\u0430",
+    "skill.emberbolt.blurb": "\u041A\u0438\u043D\u0443\u0442\u0430 \u0436\u0430\u0440\u0438\u043D\u0430 \u043C\u0435\u0440\u0442\u0432\u043E\u0433\u043E \u0441\u043E\u043D\u0446\u044F.",
+    "skill.frostring.name": "\u041A\u0456\u043B\u044C\u0446\u0435 \u0456\u043D\u0435\u044E",
+    "skill.frostring.blurb": "\u0412\u0456\u0434 \u0432\u0430\u0441 \u0440\u043E\u0437\u0445\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u043A\u0456\u043B\u044C\u0446\u0435 \u043C\u043E\u0440\u043E\u0437\u0443 \u0439 \u043A\u0443\u0441\u0430\u0454 \u0432\u0441\u0435 \u0434\u043E\u0432\u043A\u043E\u043B\u0430.",
+    "skill.chainspark.name": "\u041B\u0430\u043D\u0446\u044E\u0433\u043E\u0432\u0430 \u0456\u0441\u043A\u0440\u0430",
+    "skill.chainspark.blurb": "\u0406\u0441\u043A\u0440\u0430, \u0449\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0440\u0438\u0431\u0443\u0454 \u0437 \u0432\u043E\u0440\u043E\u0433\u0430 \u043D\u0430 \u0432\u043E\u0440\u043E\u0433\u0430.",
+    "skill.glacial.name": "\u041B\u044C\u043E\u0434\u043E\u0432\u0438\u043A\u043E\u0432\u0438\u0439 \u0441\u043F\u0438\u0441",
+    "skill.glacial.blurb": "\u0421\u043F\u0438\u0441 \u0437\u0456 \u0441\u0442\u0430\u0440\u043E\u0433\u043E \u043B\u044C\u043E\u0434\u0443: \u0444\u043E\u0440\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u043F\u043E\u0432\u0456\u043B\u044C\u043D\u043E, \u043F\u0435\u0440\u0435\u0436\u0438\u0442\u0438 \u0439\u043E\u0433\u043E \u0432\u0430\u0436\u043A\u043E.",
+    "skill.hexbloom.name": "\u0426\u0432\u0456\u0442 \u043F\u0440\u043E\u043A\u043B\u044F\u0442\u0442\u044F",
+    "skill.hexbloom.blurb": "\u041F\u043E\u0441\u0435\u0440\u0435\u0434 \u0437\u0433\u0440\u0430\u0457 \u0440\u043E\u0437\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C\u0441\u044F \u043A\u0432\u0456\u0442\u0438 \u0433\u043D\u0438\u043B\u0456. \u041C\u0430\u043B\u043E \u0449\u043E \u043C\u043E\u0436\u0435 \u0457\u043C \u043E\u043F\u0438\u0440\u0430\u0442\u0438\u0441\u044F.",
+    "support.heavyhand.name": "\u0412\u0430\u0436\u043A\u0430 \u0440\u0443\u043A\u0430",
+    "support.heavyhand.blurb": "\u041D\u0430 35% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438, \u043D\u0430 10% \u043C\u0435\u043D\u0448\u0435 \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438.",
+    "support.quicken.name": "\u041F\u0440\u0438\u0448\u0432\u0438\u0434\u0448\u0435\u043D\u043D\u044F",
+    "support.quicken.blurb": "\u041D\u0430 22% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438 \u0439 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F, \u043D\u0430 8% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.widesweep.name": "\u0428\u0438\u0440\u043E\u043A\u0438\u0439 \u0440\u043E\u0437\u043C\u0430\u0445",
+    "support.widesweep.blurb": "50% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u0456 \u0434\u0456\u0457, \u043D\u0430 10% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.bloodthirst.name": "\u0421\u043F\u0440\u0430\u0433\u0430 \u043A\u0440\u043E\u0432\u0456",
+    "support.bloodthirst.blurb": "3% \u0448\u043A\u043E\u0434\u0438 \u0432\u0438\u043A\u0440\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F, \u043D\u0430 5% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.passthrough.name": "\u041D\u0430\u0432\u0438\u043B\u0456\u0442",
+    "support.passthrough.blurb": "\u041F\u0440\u043E\u0431\u0438\u0432\u0430\u0454 \u0449\u0435 \u0434\u0432\u043E\u0445 \u0432\u043E\u0440\u043E\u0433\u0456\u0432, \u043D\u0430 15% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.emberedge.name": "\u0420\u043E\u0437\u043F\u0435\u0447\u0435\u043D\u0435 \u0432\u0456\u0441\u0442\u0440\u044F",
+    "support.emberedge.blurb": "\u041F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u044E\u0454 50% \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0432\u043E\u0433\u043E\u043D\u044C; \u043D\u0430 20% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E.",
+    "support.keeneye.name": "\u041F\u0438\u043B\u044C\u043D\u0435 \u043E\u043A\u043E",
+    "support.keeneye.blurb": "90% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443, +25% \u0434\u043E \u043C\u043D\u043E\u0436\u043D\u0438\u043A\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443.",
+    "support.ruthless.name": "\u041D\u0435\u0449\u0430\u0434\u043D\u0456\u0441\u0442\u044C",
+    "support.ruthless.blurb": "\u041D\u0430 30% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432 \u0431\u043B\u0438\u0436\u043D\u044C\u043E\u043C\u0443 \u0431\u043E\u044E, \u043D\u0430 20% \u0431\u0456\u043B\u044C\u0448\u0435 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438.",
+    "support.fracture.name": "\u0422\u0440\u0456\u0449\u0438\u043D\u0430",
+    "support.fracture.blurb": "\u0423\u0434\u0430\u0440\u0438 \u0456\u0433\u043D\u043E\u0440\u0443\u044E\u0442\u044C 15% \u043E\u043F\u043E\u0440\u0443 \u0441\u0442\u0438\u0445\u0456\u044F\u043C; \u043D\u0430 10% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0441\u0442\u0438\u0445\u0456\u0439.",
+    "support.echo.name": "\u0412\u0456\u0434\u043B\u0443\u043D\u043D\u044F \u0441\u043B\u0456\u0432",
+    "support.echo.blurb": "\u041D\u0430 35% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F, \u043D\u0430 12% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.potency.name": "\u041C\u043E\u0433\u0443\u0442\u043D\u0456\u0441\u0442\u044C",
+    "support.potency.blurb": "\u041D\u0430 30% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0437\u0430\u043A\u043B\u044F\u0442\u044C.",
+    "support.volley.name": "\u0417\u0430\u043B\u043F",
+    "support.volley.blurb": "\u0421\u043D\u0430\u0440\u044F\u0434 \u0443\u0440\u0430\u0436\u0430\u0454 \u043D\u0430 \u043E\u0434\u043D\u0443 \u0446\u0456\u043B\u044C \u0431\u0456\u043B\u044C\u0448\u0435, \u043D\u0430 10% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438.",
+    "support.elemfocus.name": "\u0417\u043E\u0441\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F \u0441\u0442\u0438\u0445\u0456\u0439",
+    "support.elemfocus.blurb": "\u041D\u0430 30% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0441\u0442\u0438\u0445\u0456\u0439.",
+    "support.rot.name": "\u0413\u043D\u0438\u043B\u044C",
+    "support.rot.blurb": "25% \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0441\u0442\u0430\u0454 \u0445\u0430\u043E\u0441\u043E\u043C; \u043D\u0430 15% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443.",
+    // monsters
+    "monster.drowned.name": "\u0416\u0430\u043B\u044E\u0433\u0456\u0434\u043D\u0438\u0439 \u043F\u043E\u0442\u043E\u043F\u0435\u043B\u044C\u043D\u0438\u043A",
+    "monster.crab.name": "\u041F\u0430\u043D\u0446\u0438\u0440\u043D\u0438\u043A",
+    "monster.gull.name": "\u041A\u0456\u0441\u0442\u044F\u043D\u0430 \u0447\u0430\u0439\u043A\u0430",
+    "monster.bogwitch.name": "\u0422\u0440\u044F\u0441\u043E\u0432\u0438\u043D\u043D\u0430 \u043A\u0430\u0440\u0433\u0430",
+    "monster.eel.name": "\u0412\u0443\u0433\u043E\u0440-\u043B\u0456\u0445\u0442\u0430\u0440",
+    "monster.lampman.name": "\u0411\u0435\u0437\u043B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439",
+    "monster.scorpion.name": "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0441\u043A\u043E\u0440\u043F\u0456\u043E\u043D",
+    "monster.wraith.name": "\u041F\u0456\u0449\u0430\u043D\u0438\u0439 \u043F\u0440\u0438\u0432\u0438\u0434",
+    "monster.jackal.name": "\u0428\u0430\u043A\u0430\u043B-\u043C\u0456\u0440\u0430\u0436",
+    "monster.bleached.name": "\u0412\u0438\u0431\u0456\u043B\u0435\u043D\u0438\u0439 \u043F\u0440\u043E\u0447\u0430\u043D\u0438\u043D",
+    "monster.wasp.name": "\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0430 \u043E\u0441\u0430",
+    "monster.hound.name": "\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0433\u043E\u043D\u0447\u0430\u043A",
+    "monster.ashwalker.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u043C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u043A",
+    "monster.cinderbat.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0438\u0439 \u043D\u0435\u0442\u043E\u043F\u0438\u0440",
+    "monster.magmacrab.name": "\u041C\u0430\u0433\u043C\u043E\u0432\u0438\u0439 \u043F\u0430\u043D\u0446\u0438\u0440",
+    "monster.sunpriest.name": "\u0411\u0435\u0437\u0441\u043E\u043D\u044F\u0447\u043D\u0438\u0439 \u0436\u0440\u0435\u0446\u044C",
+    "monster.tidewarden.name": "\u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "monster.keeper.name": "\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u043A\u0430\u043F\u043B\u0438\u0446\u0456",
+    "monster.drownedknight.name": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u0439 \u043B\u0438\u0446\u0430\u0440",
+    "monster.sandwright.name": "\u041F\u0456\u0449\u0430\u043D\u0438\u0439 \u0431\u0443\u0434\u0456\u0432\u043D\u0438\u0447\u0438\u0439",
+    "monster.mirrorwarden.name": "\u0414\u0437\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u0438\u0439 \u0432\u0430\u0440\u0442\u043E\u0432\u0438\u0439",
+    "monster.glassregent.name": "\u0421\u043A\u043B\u044F\u043D\u0430 \u0440\u0435\u0433\u0435\u043D\u0442\u043A\u0430",
+    "monster.cindermatron.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0430 \u043C\u0430\u0442\u0440\u043E\u043D\u0430",
+    "monster.emberjudge.name": "\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0441\u0443\u0434\u0434\u044F",
+    "monster.p_drownedsun.name": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0435 \u0441\u043E\u043D\u0446\u0435",
+    "monster.p_glasschoir.name": "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0445\u043E\u0440",
+    "monster.p_ashenking.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "monster.p_hollowcrown.name": "\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0430 \u043A\u043E\u0440\u043E\u043D\u0430",
+    "monster.lastdawn.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0441\u0432\u0456\u0442\u0430\u043D\u043E\u043A",
+    // zones and acts
+    "zone.a1_shore.name": "\u041F\u043B\u0430\u043A\u0443\u0447\u0438\u0439 \u0431\u0435\u0440\u0435\u0433",
+    "zone.a1_shore.story": "\u0412\u0438 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u0435\u0441\u044F \u0432 \u043F\u0440\u0438\u0431\u043E\u0457 \u0437 \u0436\u0430\u0440\u0438\u043D\u043E\u044E \u043D\u0430 \u043C\u0456\u0441\u0446\u0456 \u0441\u0435\u0440\u0446\u044F. \u041F\u0440\u0438\u043F\u043B\u0438\u0432 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0432 \u0432\u0430\u0441. \u0411\u0435\u0440\u0435\u0433 \u043F\u043E\u0432\u0435\u043D \u0456\u043D\u0448\u0438\u0445, \u044F\u043A\u0438\u0445 \u0432\u0456\u043D \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0432 \u0433\u0456\u0440\u0448\u0438\u043C\u0438.",
+    "zone.a1_saltmire.name": "\u0421\u043E\u043B\u043E\u043D\u0430 \u0434\u0440\u0430\u0433\u043E\u0432\u0438\u043D\u0430",
+    "zone.a1_saltmire.story": "\u0421\u043E\u043B\u043E\u043D\u0447\u0430\u043A\u043E\u0432\u0435 \u0431\u043E\u043B\u043E\u0442\u043E \u0433\u0443\u0434\u0435. \u0429\u043E\u0441\u044C \u0432 \u043E\u0447\u0435\u0440\u0435\u0442\u0456 \u0441\u043F\u0456\u0432\u0430\u0454, \u0456 \u043F\u043E\u0442\u043E\u043F\u0435\u043B\u044C\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u044E\u0442\u044C\u0441\u044F.",
+    "zone.a1_chapel.name": "\u0417\u0430\u0442\u043E\u043F\u043B\u0435\u043D\u0430 \u043A\u0430\u043F\u043B\u0438\u0446\u044F",
+    "zone.a1_chapel.story": "\u041F\u0456\u0432 \u043A\u0430\u043F\u043B\u0438\u0446\u0456 \u043F\u0456\u0434 \u0432\u043E\u0434\u043E\u044E. \u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u0434\u043E\u0441\u0456 \u0434\u0437\u0432\u043E\u043D\u0438\u0442\u044C \u0434\u043E \u0441\u043B\u0443\u0436\u0431\u0438, \u043D\u0430 \u044F\u043A\u0443 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u043F\u0440\u0438\u0439\u0434\u0435.",
+    "zone.a1_cliffs.name": "\u0427\u0430\u044F\u0447\u0456 \u0441\u043A\u0435\u043B\u0456",
+    "zone.a1_cliffs.story": "\u041D\u0430 \u0441\u043A\u0435\u043B\u044F\u0445 \u0433\u043D\u0456\u0437\u0434\u044F\u0442\u044C\u0441\u044F \u043A\u0456\u0441\u0442\u044F\u043D\u0456 \u0447\u0430\u0439\u043A\u0438. \u0412\u043E\u043D\u0438 \u0437\u0430\u0441\u0432\u043E\u0457\u043B\u0438, \u0449\u043E \u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0456 \u043D\u0435 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F \u043C\u0435\u0440\u0442\u0432\u0438\u043C\u0438, \u0456 \u0432\u043C\u0456\u044E\u0442\u044C \u0447\u0435\u043A\u0430\u0442\u0438.",
+    "zone.a1_village.name": "\u0421\u0435\u043B\u043E \u0431\u0435\u0437 \u043B\u0456\u0445\u0442\u0430\u0440\u0456\u0432",
+    "zone.a1_village.story": "\u0423\u0441\u0456 \u043B\u0456\u0445\u0442\u0430\u0440\u0456 \u0432 \u0441\u0435\u043B\u0456 \u0437\u0433\u0430\u0441\u043B\u0438 \u0442\u043E\u0433\u043E \u0434\u043D\u044F, \u043A\u043E\u043B\u0438 \u0437\u0433\u0430\u0441\u043B\u043E \u0441\u043E\u043D\u0446\u0435. \u0421\u0435\u043B\u044F\u043D\u0438 \u0434\u043E\u0441\u0456 \u0448\u0443\u043A\u0430\u044E\u0442\u044C \u0432\u043E\u0433\u043D\u044E.",
+    "zone.a1_floodgate.name": "\u041C\u043E\u0440\u0441\u044C\u043A\u0430 \u0431\u0440\u0430\u043C\u0430",
+    "zone.a1_floodgate.story": "\u0412\u0435\u043B\u0438\u043A\u0430 \u0431\u0440\u0430\u043C\u0430 \u043D\u0435 \u043F\u0443\u0441\u043A\u0430\u0454 \u043C\u043E\u0440\u0435 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0443 \u0432\u0433\u043B\u0438\u0431 \u0441\u0443\u0445\u043E\u0434\u043E\u043B\u0443. \u0425\u0442\u043E\u0441\u044C \u0432\u0456\u0434\u0447\u0438\u043D\u044F\u0454 \u0457\u0457, \u043F\u043E\u0442\u0440\u043E\u0445\u0443 \u0449\u043E\u043D\u043E\u0447\u0456.",
+    "zone.a1_lock.name": "\u0428\u043B\u044E\u0437 \u0412\u0430\u0440\u0442\u043E\u0432\u043E\u0433\u043E \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "zone.a1_lock.story": "\u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443 \u043F\u0440\u0438\u0441\u044F\u0433\u043D\u0443\u0432 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0431\u0440\u0430\u043C\u0443 \u0437\u0430\u0447\u0438\u043D\u0435\u043D\u043E\u044E. \u0417\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432 \u043F\u0456\u0434 \u0432\u043E\u0434\u043E\u044E \u0432\u0456\u043D \u0437\u0440\u043E\u0437\u0443\u043C\u0456\u0432 \u043F\u0440\u0438\u0441\u044F\u0433\u0443 \u043F\u043E-\u0441\u0432\u043E\u0454\u043C\u0443.",
+    "zone.a1_lock.bossText": "\u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u0456\u0434\u0435 \u043D\u0430 \u0434\u043D\u043E. \u0423\u043F\u0435\u0440\u0448\u0435 \u0437\u0430 \u0442\u0440\u0438 \u0441\u0442\u043E\u043B\u0456\u0442\u0442\u044F \u0431\u0440\u0430\u043C\u0430 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0437\u0430\u0447\u0438\u043D\u0435\u043D\u043E\u044E \u0441\u0430\u043C\u0430.",
+    "zone.a1_trial.name": "\u0412\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F \u0441\u0456\u043B\u043B\u044E",
+    "zone.a1_trial.story": "\u041F\u0456\u0434 \u043A\u0430\u043F\u043B\u0438\u0446\u0435\u044E \u0454 \u0437\u0430\u043B\u0430, \u0434\u0435 \u043F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u0439 \u043E\u0440\u0434\u0435\u043D \u0432\u0438\u043F\u0440\u043E\u0431\u043E\u0432\u0443\u0432\u0430\u0432 \u0441\u0432\u043E\u0457\u0445 \u043B\u0438\u0446\u0430\u0440\u0456\u0432. \u041E\u0434\u0438\u043D \u0456\u0437 \u043D\u0438\u0445 \u0442\u0430\u043A \u0456 \u043D\u0435 \u043F\u0440\u0438\u043F\u0438\u043D\u0438\u0432 \u0432\u0438\u043F\u0440\u043E\u0431\u043E\u0432\u0443\u0432\u0430\u0442\u0438.",
+    "zone.a1_trial.bossText": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u0439 \u043B\u0438\u0446\u0430\u0440 \u0441\u0445\u0438\u043B\u044F\u0454 \u043A\u043E\u043B\u0456\u043D\u043E \u0439 \u043F\u0440\u0438\u0441\u044F\u0433\u0430\u0454 \u0432\u0430\u043C. \u0412\u0430\u0448\u0430 \u0436\u0430\u0440\u0438\u043D\u0430 \u043F\u0440\u0438\u0439\u043C\u0430\u0454 \u043F\u0440\u0438\u0441\u044F\u0433\u0443.",
+    "zone.a2_dunes.name": "\u0421\u043A\u043B\u044F\u043D\u0456 \u0434\u044E\u043D\u0438",
+    "zone.a2_dunes.story": "\u0417\u0430 \u0431\u0440\u0430\u043C\u043E\u044E \u043C\u043E\u0440\u0435 \u043F\u043E\u0441\u0442\u0443\u043F\u0430\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043A\u0443, \u0430 \u043F\u0456\u0441\u043E\u043A - \u0441\u043A\u043B\u0443. \u0422\u0443\u0442 \u0441\u043E\u043D\u0446\u0435 \u0432\u043F\u0430\u043B\u043E \u0433\u0430\u0440\u044F\u0447\u0438\u043C.",
+    "zone.a2_mirage.name": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043C\u0456\u0440\u0430\u0436\u0456\u0432",
+    "zone.a2_mirage.story": "\u0414\u043E\u0440\u043E\u0433\u0430 \u043F\u043E\u043A\u0430\u0437\u0443\u0454 \u043C\u0456\u0441\u0442\u0430, \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454. \u0410\u043B\u0435 \u0442\u0456, \u0445\u0442\u043E \u0432 \u043D\u0438\u0445 \u0436\u0438\u0432\u0435, \u0446\u0456\u043B\u043A\u043E\u043C \u0441\u043F\u0440\u0430\u0432\u0436\u043D\u0456.",
+    "zone.a2_caravan.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u043A\u0430\u0440\u0430\u0432\u0430\u043D",
+    "zone.a2_caravan.story": "\u041A\u0430\u0440\u0430\u0432\u0430\u043D \u0434\u043E\u0441\u0456 \u043F\u0435\u0440\u0435\u0442\u0438\u043D\u0430\u0454 \u041F\u0443\u0441\u0442\u043A\u0443, \u0437\u0430\u043F\u0456\u0437\u043D\u044E\u044E\u0447\u0438\u0441\u044C \u043D\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432. \u0419\u043E\u0433\u043E \u0433\u043E\u0441\u043F\u043E\u0434\u0430\u0440 \u0431\u0443\u0434\u0443\u0454 \u043D\u043E\u0432\u0456 \u0432\u043E\u0437\u0438 \u0437 \u043F\u0456\u0441\u043A\u0443 \u0442\u0430 \u0441\u0442\u0430\u0440\u0438\u0445 \u043C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u043A\u0456\u0432.",
+    "zone.a2_caravan.bossText": "\u0412\u043E\u0437\u0438 \u041F\u0456\u0449\u0430\u043D\u043E\u0433\u043E \u0431\u0443\u0434\u0456\u0432\u043D\u0438\u0447\u043E\u0433\u043E \u0440\u043E\u0437\u0441\u0438\u043F\u0430\u044E\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u044E\u043D\u0438. \u0414\u043E\u0440\u043E\u0433\u0430 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u0443 \u0432\u0456\u043B\u044C\u043D\u0430.",
+    "zone.a2_shards.name": "\u041F\u043E\u043B\u0435 \u0443\u043B\u0430\u043C\u043A\u0456\u0432",
+    "zone.a2_shards.story": "\u0422\u0443\u0442 \u0441\u043A\u043B\u043E \u0441\u0442\u043E\u0457\u0442\u044C \u043A\u043B\u0438\u043D\u043A\u0430\u043C\u0438, \u0432\u0438\u0449\u0438\u043C\u0438 \u0437\u0430 \u0431\u0443\u0434\u0438\u043D\u043A\u0438. \u0412\u0456\u0442\u0435\u0440 \u0441\u043F\u0456\u0432\u0430\u0454 \u043A\u0440\u0456\u0437\u044C \u043D\u0438\u0445.",
+    "zone.a2_oasis.name": "\u0421\u0443\u0445\u0438\u0439 \u043E\u0430\u0437\u0438\u0441",
+    "zone.a2_oasis.story": "\u041F\u0440\u043E\u0447\u0430\u043D\u0438 \u0434\u043E\u0441\u0456 \u0441\u0442\u043E\u044F\u0442\u044C \u043D\u0430\u0432\u043A\u043E\u043B\u0456\u0448\u043A\u0438 \u0431\u0456\u043B\u044F \u0434\u0436\u0435\u0440\u0435\u043B\u0430, \u0449\u043E \u043F\u0435\u0440\u0435\u0441\u043E\u0445\u043B\u043E \u0437\u0430\u0434\u043E\u0432\u0433\u043E \u0434\u043E \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F \u0457\u0445\u043D\u0456\u0445 \u0434\u0456\u0434\u0456\u0432.",
+    "zone.a2_spire.name": "\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0438\u0439 \u0448\u043F\u0438\u043B\u044C",
+    "zone.a2_spire.story": "\u0412\u0435\u0436\u0430, \u0449\u043E \u0432\u0438\u0440\u043E\u0441\u043B\u0430 \u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u0430. \u0421\u0432\u0456\u0442\u043B\u043E \u0432 \u043D\u0456\u0439 \u0440\u0443\u0445\u0430\u0454\u0442\u044C\u0441\u044F \u0441\u0430\u043C\u043E \u0441\u043E\u0431\u043E\u044E.",
+    "zone.a2_throne.name": "\u0422\u0440\u043E\u043D \u0420\u0435\u0433\u0435\u043D\u0442\u043A\u0438",
+    "zone.a2_throne.story": "\u0420\u0435\u0433\u0435\u043D\u0442\u043A\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u041F\u0443\u0441\u0442\u043A\u043E\u044E \u0432\u0456\u0434 \u0456\u043C\u0435\u043D\u0456 \u0441\u043E\u043D\u0446\u044F. \u041A\u043E\u043B\u0438 \u0441\u043E\u043D\u0446\u0435 \u043F\u043E\u043C\u0435\u0440\u043B\u043E, \u0432\u043E\u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0434\u0430\u043B\u0456.",
+    "zone.a2_throne.bossText": "\u0420\u0435\u0433\u0435\u043D\u0442\u043A\u0430 \u0440\u043E\u0437\u043B\u0456\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u0440\u0443\u0437\u043A\u0438. \u0412 \u0443\u043B\u0430\u043C\u043A\u0430\u0445 \u0432\u0438\u0434\u043D\u043E, \u0434\u0435 \u0432\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435: \u043D\u0430 \u043F\u0456\u0432\u043D\u043E\u0447\u0456, \u0437\u0430 \u043F\u043E\u043F\u0435\u043B\u043E\u043C.",
+    "zone.a2_trial.name": "\u0412\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F \u0441\u043A\u043B\u043E\u043C",
+    "zone.a2_trial.story": "\u041B\u0430\u0431\u0456\u0440\u0438\u043D\u0442 \u0434\u0437\u0435\u0440\u043A\u0430\u043B, \u0434\u0435 \u043A\u043E\u0436\u043D\u0435 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0434\u0430\u0454 \u0432\u0456\u0434\u0441\u0456\u0447. \u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0431\u0430\u0447\u0438\u0432 \u0432\u043B\u0430\u0441\u043D\u043E\u0433\u043E \u043E\u0431\u043B\u0438\u0447\u0447\u044F.",
+    "zone.a2_trial.bossText": "\u0414\u0437\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u0438\u0439 \u0432\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u0442\u0440\u0456\u0441\u043A\u0430\u0454, \u0456 \u043D\u0430 \u043C\u0438\u0442\u044C \u043A\u043E\u0436\u043D\u0435 \u0432\u0456\u0434\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u043D\u044F \u0432 \u043B\u0430\u0431\u0456\u0440\u0438\u043D\u0442\u0456 \u0432\u043A\u043B\u043E\u043D\u044F\u0454\u0442\u044C\u0441\u044F \u0432\u0430\u043C.",
+    "zone.a3_ashroad.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0430 \u0434\u043E\u0440\u043E\u0433\u0430",
+    "zone.a3_ashroad.story": "\u041F\u043E\u043F\u0456\u043B \u043F\u0430\u0434\u0430\u0454 \u0442\u0443\u0442, \u044F\u043A \u0441\u043D\u0456\u0433, \u0456 \u043D\u0435 \u0432\u0449\u0443\u0445\u0430\u0454. \u041C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u043A\u0438 \u043D\u0430 \u0434\u043E\u0440\u043E\u0437\u0456 \u0439\u0434\u0443\u0442\u044C \u0432\u0456\u0434\u0442\u043E\u0434\u0456, \u044F\u043A \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435.",
+    "zone.a3_emberwood.name": "\u041B\u0456\u0441 \u0436\u0430\u0440\u0438\u043D",
+    "zone.a3_emberwood.story": "\u041B\u0456\u0441, \u0449\u043E \u0433\u043E\u0440\u0438\u0442\u044C \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432 \u0456 \u043D\u0456\u044F\u043A \u043D\u0435 \u0437\u0433\u043E\u0440\u0438\u0442\u044C.",
+    "zone.a3_rim.name": "\u041A\u0440\u0430\u0439 \u043A\u0440\u0430\u0442\u0435\u0440\u0430",
+    "zone.a3_rim.story": "\u0417 \u043A\u0440\u0430\u044E \u0457\u0457 \u0432\u0438\u0434\u043D\u043E: \u0440\u0430\u043D\u0430 \u0443 \u0441\u0432\u0456\u0442\u0456, \u0456 \u0432\u043E\u043D\u0430 \u0441\u0432\u0456\u0442\u0438\u0442\u044C\u0441\u044F. \u041C\u0430\u0442\u0440\u043E\u043D\u0430 \u0433\u043D\u0456\u0437\u0434\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0457\u0457 \u043A\u0440\u0430\u044E \u0439 \u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0436\u0430\u0440\u0438\u043D\u0438, \u044F\u043A \u0434\u0456\u0442\u0435\u0439.",
+    "zone.a3_rim.bossText": "\u0412\u0438\u0432\u043E\u0434\u043E\u043A \u041C\u0430\u0442\u0440\u043E\u043D\u0438 \u0440\u043E\u0437\u0441\u0438\u043F\u0430\u0454\u0442\u044C\u0441\u044F \u0456\u0441\u043A\u0440\u0430\u043C\u0438. \u0428\u043B\u044F\u0445 \u0443\u043D\u0438\u0437, \u0443 \u043A\u0440\u0430\u0442\u0435\u0440, \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438\u0439.",
+    "zone.a3_molten.name": "\u0420\u043E\u0437\u043F\u043B\u0430\u0432\u043B\u0435\u043D\u0456 \u0441\u0445\u043E\u0434\u0438",
+    "zone.a3_molten.story": "\u0423\u043D\u0438\u0437 \u0432\u0435\u0434\u0443\u0442\u044C \u0441\u0445\u043E\u0434\u0438, \u0432\u0438\u0440\u0443\u0431\u0430\u043D\u0456 \u0432 \u043F\u043E\u0440\u043E\u0434\u0456, \u0449\u043E \u0445\u043E\u043B\u043E\u043D\u0435. \u0425\u0442\u043E\u0441\u044C \u0457\u0445 \u0437\u0431\u0443\u0434\u0443\u0432\u0430\u0432 - \u043E\u0442\u0436\u0435, \u0445\u0442\u043E\u0441\u044C \u0445\u043E\u0442\u0456\u0432 \u0442\u0443\u0434\u0438 \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u0438\u0441\u044F.",
+    "zone.a3_bellcourt.name": "\u0414\u0437\u0432\u043E\u043D\u043E\u0432\u0438\u0439 \u0441\u0443\u0434",
+    "zone.a3_bellcourt.story": "\u0416\u0435\u0440\u0446\u0456 \u043C\u0435\u0440\u0442\u0432\u043E\u0433\u043E \u0441\u043E\u043D\u0446\u044F \u0447\u0438\u043D\u044F\u0442\u044C \u0442\u0443\u0442 \u0441\u0443\u0434 \u043D\u0430\u0434 \u043A\u043E\u0436\u043D\u043E\u044E \u0436\u0430\u0440\u0438\u043D\u043E\u044E, \u0449\u043E \u0441\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0441\u0445\u043E\u0434\u0430\u043C\u0438.",
+    "zone.a3_bellcourt.bossText": "\u0414\u0437\u0432\u0456\u043D \u0421\u0443\u0434\u0434\u0456 \u0442\u0440\u0456\u0441\u043A\u0430\u0454. \u0417\u0430\u0441\u0456\u0434\u0430\u043D\u043D\u044F \u0437\u0430\u043A\u0440\u0438\u0442\u043E \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438.",
+    "zone.a3_heart.name": "\u0421\u0435\u0440\u0446\u0435 \u043A\u0440\u0430\u0442\u0435\u0440\u0430",
+    "zone.a3_heart.story": "\u0416\u0430\u0440, \u0441\u0432\u0456\u0442\u043B\u043E \u0456 \u0437\u0432\u0443\u043A, \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0434\u0438\u0445\u0430\u043D\u043D\u044F. \u0417\u0432\u0456\u0434\u0441\u0438 \u043F\u0440\u0438\u0439\u0448\u043B\u0430 \u043A\u043E\u0436\u043D\u0430 \u0436\u0430\u0440\u0438\u043D\u0430 \u041C\u0430\u0440\u043A\u0438.",
+    "zone.a3_sunfall.name": "\u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434",
+    "zone.a3_sunfall.story": "\u041D\u0430 \u0434\u043D\u0456 \u043B\u0435\u0436\u0438\u0442\u044C \u0442\u0435, \u0449\u043E \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F \u0432\u0456\u0434 \u0441\u043E\u043D\u0446\u044F. \u0412\u043E\u043D\u043E \u043D\u0435 \u043C\u0435\u0440\u0442\u0432\u0435. \u0412\u043E\u043D\u043E \u0447\u0435\u043A\u0430\u0454, \u0449\u043E \u0445\u0442\u043E\u0441\u044C \u043F\u0456\u0434\u043D\u0456\u043C\u0435 \u0439\u043E\u0433\u043E \u043D\u0430\u0437\u0430\u0434.",
+    "zone.a3_sunfall.bossText": "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0441\u0432\u0456\u0442\u0430\u043D\u043E\u043A \u0437\u0430\u0442\u0438\u0445\u0430\u0454 \u0443 \u0432\u0430\u0448\u0438\u0445 \u0440\u0443\u043A\u0430\u0445. \u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0431\u0435\u0437 \u043A\u0456\u043D\u0446\u044F \u0442\u044F\u0433\u043D\u0443\u0442\u044C\u0441\u044F \u0417\u0433\u0430\u0440\u0438\u0449\u0430. \u0422\u0443\u0434\u0438 \u0432\u0430\u0441 \u043F\u043E\u0432\u0435\u0434\u0443\u0442\u044C \u043A\u0430\u0440\u0442\u0438.",
+    "zone.a3_trial.name": "\u0412\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043D\u043D\u044F \u0436\u0430\u0440\u0438\u043D\u0430\u043C\u0438",
+    "zone.a3_trial.story": "\u0421\u0442\u0430\u0440\u0435 \u0432\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043B\u044C\u043D\u0435 \u043F\u043E\u043B\u0435 \u0436\u0435\u0440\u0446\u0456\u0432. \u0412\u0456\u0434\u0442\u043E\u0434\u0456, \u044F\u043A \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435, \u0439\u043E\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0439\u0448\u043E\u0432 \u043D\u0456\u0445\u0442\u043E.",
+    "zone.a3_trial.bossText": "\u0412\u0438\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u043B\u044C\u043D\u0438\u0439 \u0432\u043E\u0433\u043E\u043D\u044C \u0437\u0433\u0430\u0441\u0430\u0454. \u041A\u0438\u043C \u0431\u0438 \u0432\u0438 \u043D\u0435 \u0441\u0442\u0430\u0432\u0430\u043B\u0438, \u0436\u0430\u0440\u0438\u043D\u0430 \u0446\u0435 \u0441\u0445\u0432\u0430\u043B\u044E\u0454.",
+    "act.1.name": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0430 \u0434\u043E\u0440\u043E\u0433\u0430",
+    "act.1.intro": "\u0414\u043E\u0440\u043E\u0433\u0430 \u0432\u0433\u043B\u0438\u0431 \u0441\u0443\u0445\u043E\u0434\u043E\u043B\u0443 \u043F\u043E\u0447\u0438\u043D\u0430\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u043C\u043E\u0440\u0435\u043C.",
+    "act.1.outro": "\u0411\u0440\u0430\u043C\u0430 \u0437\u0430\u0447\u0438\u043D\u0435\u043D\u0430, \u0434\u043E\u0440\u043E\u0433\u0430 \u0441\u0443\u0445\u0430. \u0417\u0430 \u043D\u0435\u044E \u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0435 \u0442\u0435: \u043D\u0430\u0434\u0442\u043E \u044F\u0441\u043A\u0440\u0430\u0432\u0435, \u043D\u0430\u0434\u0442\u043E \u0431\u0456\u043B\u0435. \u0421\u043A\u043B\u043E.",
+    "act.2.name": "\u0421\u043A\u043B\u044F\u043D\u0430 \u043F\u0443\u0441\u0442\u043A\u0430",
+    "act.2.intro": "\u0422\u0430\u043C, \u0434\u0435 \u0441\u043E\u043D\u0446\u0435 \u0432\u043F\u0430\u043B\u043E \u043D\u0430\u0439\u0433\u0430\u0440\u044F\u0447\u0456\u0448\u0438\u043C, \u043F\u0443\u0441\u0442\u0435\u043B\u044F \u0441\u0442\u0430\u043B\u0430 \u0441\u043A\u043B\u043E\u043C.",
+    "act.2.outro": "\u0420\u0435\u0433\u0435\u043D\u0442\u043A\u0438 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454, \u0456 \u041F\u0443\u0441\u0442\u043A\u0430 \u0442\u0435\u043F\u0435\u0440 \u043D\u0456\u0447\u0438\u044F. \u041D\u0430 \u043F\u0456\u0432\u043D\u043E\u0447\u0456 \u043D\u0435\u0431\u043E \u043A\u043E\u043B\u044C\u043E\u0440\u0443 \u043F\u043E\u043F\u0435\u043B\u0443.",
+    "act.3.name": "\u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434",
+    "act.3.intro": "\u041A\u0440\u0430\u0442\u0435\u0440, \u043A\u0443\u0434\u0438 \u0432\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435. \u0422\u0443\u0442 \u043F\u043E\u0447\u0430\u043B\u0430\u0441\u044F \u043A\u043E\u0436\u043D\u0430 \u0436\u0430\u0440\u0438\u043D\u0430.",
+    "act.3.outro": "\u0412\u0438 \u0442\u0440\u0438\u043C\u0430\u0454\u0442\u0435 \u0442\u0435, \u0449\u043E \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F \u0432\u0456\u0434 \u0441\u043E\u043D\u0446\u044F. \u0426\u044C\u043E\u0433\u043E \u0437\u0430\u043C\u0430\u043B\u043E, \u0449\u043E\u0431 \u043E\u0441\u0432\u0456\u0442\u0438\u0442\u0438 \u041C\u0430\u0440\u043A\u0443. \u041F\u043E\u043A\u0438 \u0449\u043E \u0437\u0430\u043C\u0430\u043B\u043E. \u0417\u0430 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0447\u0435\u043A\u0430\u044E\u0442\u044C \u0417\u0433\u0430\u0440\u0438\u0449\u0430.",
+    // affixes: prefixes agree with the item's noun (m|f|n|p); suffixes are genitives after it
+    "affix.life.label": "\u041C\u0456\u0446\u043D\u0438\u0439|\u041C\u0456\u0446\u043D\u0430|\u041C\u0456\u0446\u043D\u0435|\u041C\u0456\u0446\u043D\u0456",
+    "affix.life.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F +{0}",
+    "affix.mana.label": "\u042F\u0441\u043D\u0438\u0439|\u042F\u0441\u043D\u0430|\u042F\u0441\u043D\u0435|\u042F\u0441\u043D\u0456",
+    "affix.mana.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u0438 +{0}",
+    "affix.es.label": "\u041C\u0435\u0440\u0435\u0445\u0442\u043B\u0438\u0432\u0438\u0439|\u041C\u0435\u0440\u0435\u0445\u0442\u043B\u0438\u0432\u0430|\u041C\u0435\u0440\u0435\u0445\u0442\u043B\u0438\u0432\u0435|\u041C\u0435\u0440\u0435\u0445\u0442\u043B\u0438\u0432\u0456",
+    "affix.es.text": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430 +{0}",
+    "affix.ar_local.label": "\u0417\u0430\u0433\u0430\u0440\u0442\u043E\u0432\u0430\u043D\u0438\u0439|\u0417\u0430\u0433\u0430\u0440\u0442\u043E\u0432\u0430\u043D\u0430|\u0417\u0430\u0433\u0430\u0440\u0442\u043E\u0432\u0430\u043D\u0435|\u0417\u0430\u0433\u0430\u0440\u0442\u043E\u0432\u0430\u043D\u0456",
+    "affix.ar_local.text": "\u0411\u0440\u043E\u043D\u044F +{0}",
+    "affix.ev_local.label": "\u0421\u043B\u0438\u0437\u044C\u043A\u0438\u0439|\u0421\u043B\u0438\u0437\u044C\u043A\u0430|\u0421\u043B\u0438\u0437\u044C\u043A\u0435|\u0421\u043B\u0438\u0437\u044C\u043A\u0456",
+    "affix.ev_local.text": "\u0423\u0445\u0438\u043B\u0435\u043D\u043D\u044F +{0}",
+    "affix.es_local.label": "\u0421\u044F\u0439\u043D\u0438\u0439|\u0421\u044F\u0439\u043D\u0430|\u0421\u044F\u0439\u043D\u0435|\u0421\u044F\u0439\u043D\u0456",
+    "affix.es_local.text": "\u0415\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 +{0}",
+    "affix.def_inc.label": "\u041F\u043E\u0441\u0438\u043B\u0435\u043D\u0438\u0439|\u041F\u043E\u0441\u0438\u043B\u0435\u043D\u0430|\u041F\u043E\u0441\u0438\u043B\u0435\u043D\u0435|\u041F\u043E\u0441\u0438\u043B\u0435\u043D\u0456",
+    "affix.def_inc.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0445\u0438\u0441\u0442\u0443",
+    "affix.armour_belt.label": "\u041A\u043B\u0435\u043F\u0430\u043D\u0438\u0439|\u041A\u043B\u0435\u043F\u0430\u043D\u0430|\u041A\u043B\u0435\u043F\u0430\u043D\u0435|\u041A\u043B\u0435\u043F\u0430\u043D\u0456",
+    "affix.armour_belt.text": "\u0411\u0440\u043E\u043D\u044F +{0}",
+    "affix.phys_local.label": "\u0412\u0456\u0434\u0442\u043E\u0447\u0435\u043D\u0438\u0439|\u0412\u0456\u0434\u0442\u043E\u0447\u0435\u043D\u0430|\u0412\u0456\u0434\u0442\u043E\u0447\u0435\u043D\u0435|\u0412\u0456\u0434\u0442\u043E\u0447\u0435\u043D\u0456",
+    "affix.phys_local.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "affix.phys_add_local.label": "\u0417\u0430\u0437\u0443\u0431\u043B\u0435\u043D\u0438\u0439|\u0417\u0430\u0437\u0443\u0431\u043B\u0435\u043D\u0430|\u0417\u0430\u0437\u0443\u0431\u043B\u0435\u043D\u0435|\u0417\u0430\u0437\u0443\u0431\u043B\u0435\u043D\u0456",
+    "affix.phys_add_local.text": "\u0414\u043E\u0434\u0430\u0454 {0}-{1} \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "affix.fire_add_local.label": "\u0416\u0430\u0440\u043A\u0438\u0439|\u0416\u0430\u0440\u043A\u0430|\u0416\u0430\u0440\u043A\u0435|\u0416\u0430\u0440\u043A\u0456",
+    "affix.fire_add_local.text": "\u0414\u043E\u0434\u0430\u0454 {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "affix.cold_add_local.label": "\u0417\u0430\u0456\u043D\u0435\u0454\u043D\u0438\u0439|\u0417\u0430\u0456\u043D\u0435\u0454\u043D\u0430|\u0417\u0430\u0456\u043D\u0435\u0454\u043D\u0435|\u0417\u0430\u0456\u043D\u0435\u0454\u043D\u0456",
+    "affix.cold_add_local.text": "\u0414\u043E\u0434\u0430\u0454 {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "affix.light_add_local.label": "\u0422\u0440\u0456\u0441\u043A\u0443\u0447\u0438\u0439|\u0422\u0440\u0456\u0441\u043A\u0443\u0447\u0430|\u0422\u0440\u0456\u0441\u043A\u0443\u0447\u0435|\u0422\u0440\u0456\u0441\u043A\u0443\u0447\u0456",
+    "affix.light_add_local.text": "\u0414\u043E\u0434\u0430\u0454 {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "affix.spell_inc.label": "\u0421\u043F\u0456\u0432\u043E\u0447\u0438\u0439|\u0421\u043F\u0456\u0432\u043E\u0447\u0430|\u0421\u043F\u0456\u0432\u043E\u0447\u0435|\u0421\u043F\u0456\u0432\u043E\u0447\u0456",
+    "affix.spell_inc.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "affix.spell_fire.label": "\u041F\u043E\u043B\u0443\u043C'\u044F\u043D\u0438\u0439|\u041F\u043E\u043B\u0443\u043C'\u044F\u043D\u0430|\u041F\u043E\u043B\u0443\u043C'\u044F\u043D\u0435|\u041F\u043E\u043B\u0443\u043C'\u044F\u043D\u0456",
+    "affix.spell_fire.text": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "affix.spell_light.label": "\u0413\u0440\u043E\u0437\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439|\u0413\u0440\u043E\u0437\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0430|\u0413\u0440\u043E\u0437\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0435|\u0413\u0440\u043E\u0437\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0456",
+    "affix.spell_light.text": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "affix.atk_phys.label": "\u0428\u0438\u043F\u0430\u0441\u0442\u0438\u0439|\u0428\u0438\u043F\u0430\u0441\u0442\u0430|\u0428\u0438\u043F\u0430\u0441\u0442\u0435|\u0428\u0438\u043F\u0430\u0441\u0442\u0456",
+    "affix.atk_phys.text": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C {0}-{1} \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "affix.atk_fire.label": "\u041F\u0435\u043A\u0443\u0447\u0438\u0439|\u041F\u0435\u043A\u0443\u0447\u0430|\u041F\u0435\u043A\u0443\u0447\u0435|\u041F\u0435\u043A\u0443\u0447\u0456",
+    "affix.atk_fire.text": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C {0}-{1} \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "affix.ele_inc.label": "\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0438\u0439|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0430|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0435|\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0456",
+    "affix.ele_inc.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0441\u0442\u0438\u0445\u0456\u0439",
+    "affix.phys_inc.label": "\u0416\u043E\u0440\u0441\u0442\u043E\u043A\u0438\u0439|\u0416\u043E\u0440\u0441\u0442\u043E\u043A\u0430|\u0416\u043E\u0440\u0441\u0442\u043E\u043A\u0435|\u0416\u043E\u0440\u0441\u0442\u043E\u043A\u0456",
+    "affix.phys_inc.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "affix.str.label": "\u0432\u043E\u043B\u0430",
+    "affix.str.text": "\u041C\u0456\u0446\u044C +{0}",
+    "affix.dex.label": "\u0447\u0430\u043F\u043B\u0456",
+    "affix.dex.text": "\u0413\u0440\u0430\u0446\u0456\u044F +{0}",
+    "affix.int.label": "\u0441\u043E\u0432\u0438",
+    "affix.int.text": "\u0420\u043E\u0437\u0443\u043C +{0}",
+    "affix.res_fire.label": "\u0432\u043E\u0433\u043D\u0438\u0449\u0430",
+    "affix.res_fire.text": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E +{0}%",
+    "affix.res_cold.label": "\u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "affix.res_cold.text": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "affix.res_light.label": "\u0448\u043A\u0432\u0430\u043B\u0443",
+    "affix.res_light.text": "\u041E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456 +{0}%",
+    "affix.res_chaos.label": "\u043F\u043E\u0440\u043E\u0436\u043D\u0435\u0447\u0456",
+    "affix.res_chaos.text": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "affix.aspd_local.label": "\u043F\u043E\u0441\u043F\u0456\u0445\u0443",
+    "affix.aspd_local.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "affix.aspd.label": "\u043A\u0432\u0430\u043F\u043B\u0438\u0432\u043E\u0441\u0442\u0456",
+    "affix.aspd.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "affix.cspd.label": "\u0441\u043F\u0456\u0432\u0456\u0432",
+    "affix.cspd.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "affix.crit_local.label": "\u0442\u043E\u0447\u043D\u043E\u0441\u0442\u0456",
+    "affix.crit_local.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "affix.crit.label": "\u0437\u043D\u0430\u043C\u0435\u043D\u044C",
+    "affix.crit.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "affix.critmulti.label": "\u0437\u0430\u0433\u0438\u0431\u0435\u043B\u0456",
+    "affix.critmulti.text": "\u041C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443 +{0}%",
+    "affix.accuracy.label": "\u044F\u0441\u0442\u0440\u0443\u0431\u0430",
+    "affix.accuracy.text": "\u0412\u043B\u0443\u0447\u043D\u0456\u0441\u0442\u044C +{0}",
+    "affix.leech.label": "\u043F'\u044F\u0432\u043A\u0438",
+    "affix.leech.text": "{0}% \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0430\u0442\u0430\u043A \u0432\u0438\u043A\u0440\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "affix.area.label": "\u0440\u043E\u0437\u043C\u0430\u0445\u0443",
+    "affix.area.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u0456 \u0434\u0456\u0457",
+    "affix.regen.label": "\u0437\u0446\u0456\u043B\u0435\u043D\u043D\u044F",
+    "affix.regen.text": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0} \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "affix.mana_regen.label": "\u044F\u0441\u043D\u043E\u0441\u0442\u0456",
+    "affix.mana_regen.text": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0} \u043C\u0430\u043D\u0438 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "affix.flask.label": "\u043A\u0440\u0438\u043D\u0438\u0446\u0456",
+    "affix.flask.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "affix.block.label": "\u0441\u0442\u0456\u043D\u0438",
+    "affix.block.text": "\u0428\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0443 +{0}%",
+    "affix.move.label": "\u0434\u043E\u0440\u043E\u0433\u0438",
+    "affix.move.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "affix.rarity.label": "\u0433\u0440\u0430\u0431\u0443\u043D\u043A\u0443",
+    "affix.rarity.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "affix.life_kill.label": "\u0441\u0442\u0435\u0440\u0432'\u044F\u0442\u043D\u0438\u043A\u0430",
+    "affix.life_kill.text": "{0} \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u043A\u043E\u0436\u043D\u0435 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E",
+    // affix groups (the loot filter's "with ...")
+    "group.life": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "group.mana": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u0438",
+    "group.es": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "group.defFlat": "\u0431\u0440\u043E\u043D\u044F, \u0443\u0445\u0438\u043B\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u0449\u0438\u0442 (\u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430)",
+    "group.defInc": "\u0437\u0430\u0445\u0438\u0441\u0442",
+    "group.armourFlat": "\u0431\u0440\u043E\u043D\u044F (\u043F\u043E\u044F\u0441)",
+    "group.physInc": "\u0444\u0456\u0437\u0438\u0447\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.physAdd": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0444\u0456\u0437\u0438\u0447\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.fireAdd": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E (\u0437\u0431\u0440\u043E\u044F)",
+    "group.coldAdd": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.lightAdd": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.spellInc": "\u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "group.spellAdd": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0434\u043E \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "group.atkPhys": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0444\u0456\u0437\u0438\u0447\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0434\u043E \u0430\u0442\u0430\u043A",
+    "group.atkFire": "\u0434\u043E\u0434\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E \u0434\u043E \u0430\u0442\u0430\u043A",
+    "group.eleInc": "\u0448\u043A\u043E\u0434\u0430 \u0432\u0456\u0434 \u0441\u0442\u0438\u0445\u0456\u0439",
+    "group.physGlobal": "\u0444\u0456\u0437\u0438\u0447\u043D\u0430 \u0448\u043A\u043E\u0434\u0430",
+    "group.str": "\u041C\u0456\u0446\u044C",
+    "group.dex": "\u0413\u0440\u0430\u0446\u0456\u044F",
+    "group.int": "\u0420\u043E\u0437\u0443\u043C",
+    "group.resFire": "\u043E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E",
+    "group.resCold": "\u043E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "group.resLight": "\u043E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456",
+    "group.resChaos": "\u043E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443",
+    "group.aspd": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.aspdGlobal": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438",
+    "group.cspd": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "group.crit": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443 (\u0437\u0431\u0440\u043E\u044F)",
+    "group.critGlobal": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "group.critMulti": "\u043C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "group.accuracy": "\u0432\u043B\u0443\u0447\u043D\u0456\u0441\u0442\u044C",
+    "group.leech": "\u0432\u0438\u043A\u0440\u0430\u0434\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "group.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0434\u0456\u0457",
+    "group.regen": "\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "group.manaRegen": "\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043C\u0430\u043D\u0438",
+    "group.flask": "\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "group.block": "\u0448\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0443",
+    "group.move": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "group.rarity": "\u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044C \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "group.lifeOnKill": "\u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E",
+    // rare names: "{b} {a}", the first word in the genitive ("Bite of Gloom")
+    "rare.a.grim": "\u041C\u043E\u0440\u043E\u043A\u0443",
+    "rare.a.salt": "\u0421\u043E\u043B\u0456",
+    "rare.a.hollow": "\u041F\u043E\u0440\u043E\u0436\u043D\u0435\u0447\u0456",
+    "rare.a.tide": "\u041F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "rare.a.dusk": "\u0421\u0443\u0442\u0456\u043D\u043A\u0456\u0432",
+    "rare.a.ember": "\u0416\u0430\u0440\u0438\u043D\u0438",
+    "rare.a.gloom": "\u0422\u0435\u043C\u0440\u044F\u0432\u0438",
+    "rare.a.wrack": "\u0423\u043B\u0430\u043C\u043A\u0456\u0432",
+    "rare.a.brine": "\u0411\u0435\u0437\u043E\u0434\u043D\u0456",
+    "rare.a.storm": "\u0411\u0443\u0440\u0456",
+    "rare.a.ash": "\u041F\u043E\u043F\u0435\u043B\u0443",
+    "rare.a.wither": "\u0412'\u044F\u043D\u0435\u043D\u043D\u044F",
+    "rare.a.lantern": "\u041B\u0456\u0445\u0442\u0430\u0440\u044F",
+    "rare.a.glass": "\u0421\u043A\u043B\u0430",
+    "rare.a.cinder": "\u0416\u0430\u0440\u0443",
+    "rare.a.mourn": "\u0421\u043A\u043E\u0440\u0431\u043E\u0442\u0438",
+    "rare.a.drift": "\u0422\u0435\u0447\u0456\u0457",
+    "rare.a.bone": "\u041A\u0456\u0441\u0442\u043A\u0438",
+    "rare.a.rust": "\u0406\u0440\u0436\u0456",
+    "rare.a.omen": "\u0417\u043D\u0430\u043C\u0435\u043D\u043D\u044F",
+    "rare.b.bite": "\u0423\u043A\u0443\u0441",
+    "rare.b.song": "\u041F\u0456\u0441\u043D\u044F",
+    "rare.b.ward": "\u041E\u0431\u0435\u0440\u0456\u0433",
+    "rare.b.mark": "\u041C\u0456\u0442\u043A\u0430",
+    "rare.b.coil": "\u0412\u0438\u0442\u043E\u043A",
+    "rare.b.veil": "\u041F\u043E\u043A\u0440\u043E\u0432",
+    "rare.b.fang": "\u0406\u043A\u043B\u043E",
+    "rare.b.shell": "\u041C\u0443\u0448\u043B\u044F",
+    "rare.b.grasp": "\u0425\u0432\u0430\u0442\u043A\u0430",
+    "rare.b.knell": "\u0414\u0437\u0432\u0456\u043D",
+    "rare.b.wake": "\u0421\u043B\u0456\u0434",
+    "rare.b.spire": "\u0428\u043F\u0438\u043B\u044C",
+    "rare.b.crest": "\u0413\u0440\u0435\u0431\u0456\u043D\u044C",
+    "rare.b.wail": "\u0413\u043E\u043B\u043E\u0441\u0456\u043D\u043D\u044F",
+    "rare.b.hook": "\u0413\u0430\u043A",
+    "rare.b.bloom": "\u0426\u0432\u0456\u0442\u0456\u043D\u043D\u044F",
+    "rare.b.scar": "\u0428\u0440\u0430\u043C",
+    "rare.b.turn": "\u041F\u043E\u0432\u043E\u0440\u043E\u0442",
+    "rare.b.keel": "\u041A\u0456\u043B\u044C",
+    "rare.b.hush": "\u0422\u0438\u0448\u0430",
+    // passive tree
+    "node.vigour": "\u0411\u0430\u0434\u044C\u043E\u0440\u0456\u0441\u0442\u044C",
+    "node.prism": "\u041F\u0440\u0438\u0437\u043C\u0430",
+    "node.might": "\u041C\u0456\u0446\u044C",
+    "node.grace": "\u0413\u0440\u0430\u0446\u0456\u044F",
+    "node.wit": "\u0420\u043E\u0437\u0443\u043C",
+    "node.ferocity": "\u041B\u044E\u0442\u0456\u0441\u0442\u044C",
+    "node.ember_seat": "\u0412\u0438\u0442\u0456\u043A \u0436\u0430\u0440\u0438\u043D\u0438",
+    "node.path_of_embers": "\u0421\u0442\u0435\u0436\u043A\u0430 \u0436\u0430\u0440\u0438\u043D",
+    "node.iron_skin": "\u0417\u0430\u043B\u0456\u0437\u043D\u0430 \u0448\u043A\u0456\u0440\u0430",
+    "node.thick_blood": "\u0413\u0443\u0441\u0442\u0430 \u043A\u0440\u043E\u0432",
+    "node.bulwark_oath": "\u041F\u0440\u0438\u0441\u044F\u0433\u0430 \u043E\u043F\u043B\u043E\u0442\u0443",
+    "node.unbroken": "\u041D\u0435\u0437\u043B\u0430\u043C\u043D\u0438\u0439",
+    "node.honed_edge": "\u0412\u0456\u0434\u0442\u043E\u0447\u0435\u043D\u0435 \u0432\u0456\u0441\u0442\u0440\u044F",
+    "node.quick_hands": "\u0428\u0432\u0438\u0434\u043A\u0456 \u0440\u0443\u043A\u0438",
+    "node.butcher_s_rhythm": "\u0420\u0438\u0442\u043C \u043C'\u044F\u0441\u043D\u0438\u043A\u0430",
+    "node.split_bone": "\u0420\u043E\u0437\u043A\u043E\u043B\u043E\u0442\u0430 \u043A\u0456\u0441\u0442\u043A\u0430",
+    "node.kindle": "\u0420\u043E\u0437\u043F\u0430\u043B",
+    "node.hearth_ward": "\u0417\u0430\u0445\u0438\u0441\u0442 \u0432\u043E\u0433\u043D\u0438\u0449\u0430",
+    "node.pyre_heart": "\u0421\u0435\u0440\u0446\u0435 \u0431\u0430\u0433\u0430\u0442\u0442\u044F",
+    "node.cinder_skin": "\u0416\u0430\u0440\u0438\u0441\u0442\u0430 \u0448\u043A\u0456\u0440\u0430",
+    "node.light_step": "\u041B\u0435\u0433\u043A\u0438\u0439 \u043A\u0440\u043E\u043A",
+    "node.fleet": "\u041F\u0440\u0443\u0434\u043A\u0456\u0441\u0442\u044C",
+    "node.gale_dancer": "\u0422\u0430\u043D\u0446\u044E\u0440\u0438\u0441\u0442 \u0432\u0456\u0442\u0440\u0443",
+    "node.afterimage": "\u0417\u0430\u043B\u0438\u0448\u043A\u043E\u0432\u0438\u0439 \u043E\u0431\u0440\u0430\u0437",
+    "node.fletching": "\u041E\u043F\u0435\u0440\u0435\u043D\u043D\u044F",
+    "node.keen_sight": "\u041F\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C",
+    "node.deadeye": "\u0412\u043B\u0443\u0447\u043D\u0435 \u043E\u043A\u043E",
+    "node.barbed_volley": "\u0417\u0430\u0437\u0443\u0431\u043B\u0435\u043D\u0438\u0439 \u0437\u0430\u043B\u043F",
+    "node.static": "\u0421\u0442\u0430\u0442\u0438\u043A\u0430",
+    "node.grounding": "\u0417\u0430\u0437\u0435\u043C\u043B\u0435\u043D\u043D\u044F",
+    "node.thunderhead": "\u0413\u0440\u043E\u0437\u043E\u0432\u0430 \u0445\u043C\u0430\u0440\u0430",
+    "node.rod_of_the_squall": "\u0413\u0440\u043E\u043C\u043E\u0432\u0456\u0434\u0432\u0456\u0434 \u0448\u043A\u0432\u0430\u043B\u0443",
+    "node.shimmer": "\u041C\u0435\u0440\u0435\u0445\u0442\u0456\u043D\u043D\u044F",
+    "node.focus": "\u0417\u043E\u0441\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F",
+    "node.mirror_mind": "\u0414\u0437\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u0438\u0439 \u0440\u043E\u0437\u0443\u043C",
+    "node.still_water": "\u0422\u0438\u0445\u0430 \u0432\u043E\u0434\u0430",
+    "node.chant": "\u041D\u0430\u0441\u043F\u0456\u0432",
+    "node.swift_words": "\u0428\u0432\u0438\u0434\u043A\u0456 \u0441\u043B\u043E\u0432\u0430",
+    "node.grand_litany": "\u0412\u0435\u043B\u0438\u043A\u0430 \u043B\u0456\u0442\u0430\u043D\u0456\u044F",
+    "node.fateweaver": "\u0422\u043A\u0430\u0447 \u0434\u043E\u043B\u0456",
+    "node.chill": "\u0425\u043E\u043B\u043E\u0434\u043E\u043A",
+    "node.tide_ward": "\u0417\u0430\u0445\u0438\u0441\u0442 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "node.heart_of_winter": "\u0421\u0435\u0440\u0446\u0435 \u0437\u0438\u043C\u0438",
+    "node.rime_coat": "\u041F\u043E\u043A\u0440\u043E\u0432 \u0456\u043D\u0435\u044E",
+    "node.threshold": "\u041F\u043E\u0440\u0456\u0433",
+    "node.glass_oath": "\u0421\u043A\u043B\u044F\u043D\u0430 \u043F\u0440\u0438\u0441\u044F\u0433\u0430",
+    "node.iron_vow": "\u0417\u0430\u043B\u0456\u0437\u043D\u0430 \u043E\u0431\u0456\u0442\u043D\u0438\u0446\u044F",
+    "node.ember_blood": "\u0416\u0430\u0440\u043E\u0432\u0430 \u043A\u0440\u043E\u0432",
+    "keystone.glass_oath": "\u0411\u0438\u0442\u0438 \u043D\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u0441\u0438\u043B\u044C\u043D\u0456\u0448\u0435. \u041B\u0430\u043C\u0430\u0442\u0438\u0441\u044F \u043D\u0430\u0431\u0430\u0433\u0430\u0442\u043E \u043B\u0435\u0433\u0448\u0435.",
+    "keystone.iron_vow": "\u0411\u0440\u043E\u043D\u044F \u0440\u043E\u0437\u0440\u043E\u0441\u0442\u0430\u0454\u0442\u044C\u0441\u044F; \u0443\u0445\u0438\u043B\u044F\u0442\u0438\u0441\u044F \u0432\u0438 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442\u0435.",
+    "keystone.ember_blood": "\u0413\u043E\u0440\u0456\u0442\u0438 \u0436\u0430\u0440\u043A\u043E \u0439 \u0448\u0432\u0438\u0434\u043A\u043E \u0433\u043E\u0457\u0442\u0438\u0441\u044F; \u0432\u043E\u0433\u043E\u043D\u044C \u0440\u0430\u043D\u0438\u0442\u044C \u0441\u0438\u043B\u044C\u043D\u0456\u0448\u0435.",
+    // ascendancies
+    "asc.bastion.name": "\u0411\u0430\u0441\u0442\u0456\u043E\u043D",
+    "asc.bastion.blurb": "\u0421\u0442\u0456\u043D\u0430, \u0449\u043E \u0445\u043E\u0434\u0438\u0442\u044C. \u041F\u043E\u0440\u0430\u043D\u0438\u0442\u0438 \u0432\u0430\u0436\u043A\u043E, \u0432\u0431\u0438\u0442\u0438 - \u0449\u0435 \u0432\u0430\u0436\u0447\u0435.",
+    "ascnode.bastion_1.name": "\u0421\u0442\u0456\u043D\u0430 \u0449\u0438\u0442\u0456\u0432",
+    "ascnode.bastion_2.name": "\u0417\u0432'\u044F\u0437\u0430\u043D\u0438\u0439 \u043F\u0440\u0438\u0441\u044F\u0433\u043E\u044E",
+    "ascnode.bastion_3.name": "\u0425\u0432\u0438\u043B\u0435\u043B\u043E\u043C",
+    "ascnode.bastion_4.name": "\u0421\u0456\u043B\u044C \u043D\u0430 \u0440\u0430\u043D\u0443",
+    "ascnode.bastion_5.name": "\u0417\u0430\u043B\u0456\u0437\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C",
+    "ascnode.bastion_6.name": "\u041D\u0435\u043F\u043E\u0445\u0438\u0442\u043D\u0438\u0439",
+    "asc.reaver.name": "\u0421\u043F\u0443\u0441\u0442\u043E\u0448\u0443\u0432\u0430\u0447",
+    "asc.reaver.blurb": "\u0416\u0430\u0440\u0438\u043D\u0430 \u0445\u043E\u0447\u0435 \u043A\u0440\u043E\u0432\u0456. \u0414\u0430\u0439\u0442\u0435 \u0457\u0439.",
+    "ascnode.reaver_1.name": "\u0427\u0435\u0440\u0432\u043E\u043D\u0456 \u0436\u043D\u0438\u0432\u0430",
+    "ascnode.reaver_2.name": "\u0421\u043F\u0440\u0430\u0433\u0430",
+    "ascnode.reaver_3.name": "\u0428\u0430\u043B",
+    "ascnode.reaver_4.name": "\u041A\u0430\u0442",
+    "ascnode.reaver_5.name": "\u0428\u0438\u0440\u043E\u043A\u0430 \u0440\u0456\u0437\u0430\u043D\u0438\u043D\u0430",
+    "ascnode.reaver_6.name": "\u041A\u0440\u043E\u0432 \u0437\u0430 \u0436\u0430\u0440\u0438\u043D\u0443",
+    "asc.windrunner.name": "\u0412\u0456\u0442\u0440\u043E\u0431\u0456\u0433",
+    "asc.windrunner.blurb": "\u0417\u0430\u0432\u0436\u0434\u0438 \u043D\u0435 \u0442\u0430\u043C, \u043A\u0443\u0434\u0438 \u043F\u0430\u0434\u0430\u0454 \u0443\u0434\u0430\u0440.",
+    "ascnode.windrunner_1.name": "\u041F\u043E\u043F\u0443\u0442\u043D\u0438\u0439 \u043F\u043E\u0442\u0456\u043A",
+    "ascnode.windrunner_2.name": "\u0414\u043E\u0432\u0433\u0430 \u0434\u043E\u0440\u043E\u0433\u0430",
+    "ascnode.windrunner_3.name": "\u0411\u0443\u0440\u044F \u0441\u0442\u0440\u0456\u043B",
+    "ascnode.windrunner_4.name": "\u041D\u0430\u0441\u043A\u0440\u0456\u0437\u044C",
+    "ascnode.windrunner_5.name": "\u041F\u043E\u043F\u0443\u0442\u043D\u0438\u0439 \u0432\u0456\u0442\u0435\u0440",
+    "ascnode.windrunner_6.name": "\u0417\u043D\u0438\u043A",
+    "asc.stormcaller.name": "\u0411\u0443\u0440\u0435\u0432\u0456\u0441\u043D\u0438\u043A",
+    "asc.stormcaller.blurb": "\u041D\u043E\u0441\u0438\u0442\u044C \u0448\u043A\u0432\u0430\u043B \u0443 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A\u0443.",
+    "ascnode.stormcaller_1.name": "\u0417\u0430\u0440\u044F\u0434\u0436\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0442\u0440\u044F",
+    "ascnode.stormcaller_2.name": "\u0417\u0430\u0437\u0435\u043C\u043B\u0435\u043D\u0438\u0439",
+    "ascnode.stormcaller_3.name": "\u0420\u043E\u0437\u043A\u043E\u043B\u043E\u0442\u0438 \u043D\u0435\u0431\u043E",
+    "ascnode.stormcaller_4.name": "\u041E\u043A\u043E \u0441\u0442\u0430\u0442\u0438\u043A\u0438",
+    "ascnode.stormcaller_5.name": "\u0413\u0443\u0440\u043A\u0456\u0442 \u0433\u0440\u043E\u043C\u0443",
+    "ascnode.stormcaller_6.name": "\u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439 \u0431\u0443\u0440\u0435\u044E",
+    "asc.lumen.name": "\u041B\u044E\u043C\u0435\u043D",
+    "asc.lumen.blurb": "\u041B\u0430\u043C\u043F\u0430, \u0449\u043E \u043D\u0430\u0432\u0447\u0438\u043B\u0430\u0441\u044F \u0431\u0438\u0442\u0438\u0441\u044F.",
+    "ascnode.lumen_1.name": "\u041D\u0456\u043C\u0431",
+    "ascnode.lumen_2.name": "\u042F\u0441\u043D\u0438\u0439 \u0440\u043E\u0437\u0443\u043C",
+    "ascnode.lumen_3.name": "\u041B\u0456\u0442\u0430\u043D\u0456\u044F \u0441\u0432\u0456\u0442\u043B\u0430",
+    "ascnode.lumen_4.name": "\u0428\u0432\u0438\u0434\u043A\u0438\u0439 \u044F\u0437\u0438\u043A",
+    "ascnode.lumen_5.name": "\u0421\u044F\u0439\u0432\u043E",
+    "ascnode.lumen_6.name": "\u041D\u0435\u0437\u0433\u0430\u0441\u043D\u0438\u0439",
+    "asc.hexwright.name": "\u041F\u0438\u0441\u0430\u0440 \u043F\u0440\u043E\u043A\u043B\u044C\u043E\u043D\u0456\u0432",
+    "asc.hexwright.blurb": "\u041F\u0438\u0448\u0435 \u043F\u0440\u043E\u043A\u043B\u044C\u043E\u043D\u0438 \u043D\u0430 \u0431\u0435\u0440\u0435\u0433\u0430\u0445 \u0436\u0430\u0440\u0438\u043D\u0438.",
+    "ascnode.hexwright_1.name": "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u043C\u043E\u0440\u0443",
+    "ascnode.hexwright_2.name": "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u0430 \u0456\u043D\u0435\u044E",
+    "ascnode.hexwright_3.name": "\u041E\u0431\u0435\u0440\u0456\u0433 \u043F\u043E\u0440\u043E\u0436\u043D\u0435\u0447\u0456",
+    "ascnode.hexwright_4.name": "\u0420\u043E\u0437\u043F\u043B\u0443\u0442\u0443\u0432\u0430\u043D\u043D\u044F",
+    "ascnode.hexwright_5.name": "\u041F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439 \u0437\u0430\u0433\u0438\u0431\u0435\u043B\u043B\u044E",
+    "ascnode.hexwright_6.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u0441\u043B\u043E\u0432\u043E",
+    // currency
+    "currency.kindling.name": "\u0420\u043E\u0437\u043F\u0430\u043B\u043A\u0430",
+    "currency.kindling.blurb": "\u0420\u043E\u0431\u0438\u0442\u044C \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0443 \u0440\u0456\u0447 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043E\u044E.",
+    "currency.reshaper.name": "\u041F\u0435\u0440\u0435\u043A\u0440\u0456\u0439",
+    "currency.reshaper.blurb": "\u041F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u0430\u0444\u0456\u043A\u0441\u0438 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u043E\u0457 \u0440\u0435\u0447\u0456.",
+    "currency.graft.name": "\u0429\u0435\u043F\u043B\u0435\u043D\u043D\u044F",
+    "currency.graft.blurb": "\u0414\u043E\u0434\u0430\u0454 \u0430\u0444\u0456\u043A\u0441 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456\u0439 \u0440\u0435\u0447\u0456, \u044F\u043A\u0449\u043E \u0454 \u043C\u0456\u0441\u0446\u0435.",
+    "currency.crownseal.name": "\u041F\u0435\u0447\u0430\u0442\u043A\u0430 \u043A\u043E\u0440\u043E\u043D\u0438",
+    "currency.crownseal.blurb": "\u041F\u0456\u0434\u043D\u043E\u0441\u0438\u0442\u044C \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0443 \u0440\u0456\u0447 \u0434\u043E \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0457 \u0439 \u0434\u043E\u0434\u0430\u0454 \u0430\u0444\u0456\u043A\u0441.",
+    "currency.forgeheart.name": "\u0421\u0435\u0440\u0446\u0435 \u0433\u043E\u0440\u043D\u0430",
+    "currency.forgeheart.blurb": "\u0420\u043E\u0431\u0438\u0442\u044C \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0443 \u0440\u0456\u0447 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u044E.",
+    "currency.tempest.name": "\u0423\u043B\u0430\u043C\u043E\u043A \u0431\u0443\u0440\u0456",
+    "currency.tempest.blurb": "\u041F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u0432\u0441\u0456 \u0430\u0444\u0456\u043A\u0441\u0438 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0457 \u0440\u0435\u0447\u0456.",
+    "currency.starfall.name": "\u0417\u043E\u0440\u0435\u043F\u0430\u0434",
+    "currency.starfall.blurb": "\u0414\u043E\u0434\u0430\u0454 \u0430\u0444\u0456\u043A\u0441 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0439 \u0440\u0435\u0447\u0456, \u044F\u043A\u0449\u043E \u0454 \u043C\u0456\u0441\u0446\u0435.",
+    "currency.salt.name": "\u0421\u0456\u043B\u044C \u0437\u0430\u0431\u0443\u0442\u0442\u044F",
+    "currency.salt.blurb": "\u0417\u043D\u0456\u043C\u0430\u0454 \u0432\u0441\u0456 \u0430\u0444\u0456\u043A\u0441\u0438; \u0440\u0456\u0447 \u0441\u0442\u0430\u0454 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u043E\u044E.",
+    "currency.unmaker.name": "\u0412\u0438\u043B\u0443\u0447\u0435\u043D\u043D\u044F",
+    "currency.unmaker.blurb": "\u041F\u0440\u0438\u0431\u0438\u0440\u0430\u0454 \u043E\u0434\u0438\u043D \u0432\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u0438\u0439 \u0430\u0444\u0456\u043A\u0441.",
+    "currency.temper.name": "\u0413\u0430\u0440\u0442\u0456\u0432\u043D\u0430 \u043E\u043B\u0456\u044F",
+    "currency.temper.blurb": "\u041F\u0435\u0440\u0435\u043A\u0438\u0434\u0430\u0454 \u0447\u0438\u0441\u043B\u0430, \u0430\u0444\u0456\u043A\u0441\u0438 \u043B\u0438\u0448\u0430\u044E\u0442\u044C\u0441\u044F.",
+    // relics
+    "relic.tidebreaker.name": "\u0412\u0456\u0434\u043C\u043E\u0432\u0430 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "relic.tidebreaker.flavour": "\u0419\u043E\u0433\u043E \u0432\u0438\u043A\u0443\u0432\u0430\u043B\u0438, \u0449\u043E\u0431 \u0441\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438 \u043C\u043E\u0440\u0435. \u0412\u0456\u043D \u0434\u043E\u0441\u0456 \u043D\u0430\u043C\u0430\u0433\u0430\u0454\u0442\u044C\u0441\u044F.",
+    "relic.tidebreaker.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "relic.tidebreaker.mod1": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidebreaker.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F +{0}",
+    "relic.lampwick.name": "\u0490\u043D\u0456\u0442",
+    "relic.lampwick.flavour": "\u0429\u0435 \u0442\u0435\u043F\u043B\u0438\u0439. \u0414\u043E\u0441\u0456 \u0447\u0435\u043A\u0430\u0454, \u0449\u043E \u0445\u0442\u043E\u0441\u044C \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F \u0434\u043E\u0434\u043E\u043C\u0443.",
+    "relic.lampwick.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "relic.lampwick.mod1": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.lampwick.mod2": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.lampwick.mod3": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0} \u043C\u0430\u043D\u0438 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.gullfeather.name": "\u0425\u043E\u0434\u0430 \u0447\u0430\u044F\u0447\u043E\u0433\u043E \u043F\u0435\u0440\u0430",
+    "relic.gullfeather.flavour": "\u0427\u0430\u0439\u043A\u0438 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0441\u0456\u0434\u0430\u044E\u0442\u044C. \u0422\u0435\u043F\u0435\u0440 \u0456 \u0432\u0438 \u0442\u0435\u0436.",
+    "relic.gullfeather.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "relic.gullfeather.mod1": "\u0423\u0445\u0438\u043B\u0435\u043D\u043D\u044F +{0}",
+    "relic.gullfeather.mod2": "\u0413\u0440\u0430\u0446\u0456\u044F +{0}",
+    "relic.chapelbell.name": "\u0414\u0437\u0432\u0456\u043D \u0445\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044F",
+    "relic.chapelbell.flavour": "\u0414\u0437\u0432\u043E\u043D\u0438\u0442\u044C \u0434\u043E \u0441\u043B\u0443\u0436\u0431\u0438, \u043D\u0430 \u044F\u043A\u0443 \u043D\u0456\u0445\u0442\u043E \u043D\u0435 \u043F\u0440\u0438\u0439\u0434\u0435.",
+    "relic.chapelbell.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "relic.chapelbell.mod1": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0}% \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.chapelbell.mod2": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.saltcrown.name": "\u0421\u043E\u043B\u044F\u043D\u0438\u0439 \u0432\u0456\u043D\u0435\u0446\u044C",
+    "relic.saltcrown.flavour": "\u0412\u0430\u0436\u043A\u0438\u0439 \u0432\u0456\u0434 \u043C\u043E\u0440\u044F. \u0429\u0435 \u0432\u0430\u0436\u0447\u0438\u0439 \u0432\u0456\u0434 \u043F\u0440\u0438\u0441\u044F\u0433\u0438.",
+    "relic.saltcrown.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0431\u0440\u043E\u043D\u0456",
+    "relic.saltcrown.mod1": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E +{0}%",
+    "relic.saltcrown.mod2": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.saltcrown.mod3": "\u041E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456 +{0}%",
+    "relic.emberknot.name": "\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0432\u0443\u0437\u043E\u043B",
+    "relic.emberknot.flavour": "\u0414\u0432\u0456 \u0436\u0430\u0440\u0438\u043D\u0438, \u0449\u043E \u043D\u0456\u044F\u043A \u043D\u0435 \u0442\u043E\u0440\u043A\u043D\u0443\u0442\u044C\u0441\u044F \u043E\u0434\u043D\u0430 \u043E\u0434\u043D\u043E\u0457.",
+    "relic.emberknot.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.emberknot.mod1": "{0}% \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u044E\u0454\u0442\u044C\u0441\u044F \u043D\u0430 \u0432\u043E\u0433\u043E\u043D\u044C",
+    "relic.emberknot.mod2": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 {0}%",
+    "relic.lastlight.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u0441\u0432\u0456\u0442\u043B\u043E",
+    "relic.lastlight.flavour": "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u043F\u0440\u043E\u043C\u0456\u043D\u044C \u0441\u043E\u043D\u0446\u044F \u041C\u0430\u0440\u043A\u0438, \u0437\u0430\u0433\u043E\u0441\u0442\u0440\u0435\u043D\u0438\u0439.",
+    "relic.lastlight.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "relic.lastlight.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "relic.lastlight.mod2": "\u041C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443 +{0}%",
+    "relic.lastlight.mod3": "{0}% \u0448\u043A\u043E\u0434\u0438 \u0432\u0438\u043A\u0440\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "relic.hollowheart.name": "\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0435 \u0441\u0435\u0440\u0446\u0435",
+    "relic.hollowheart.flavour": "\u0423 \u043D\u044C\u043E\u043C\u0443 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435\u043C\u0430\u0454. \u0423 \u0446\u044C\u043E\u043C\u0443 \u0439 \u0441\u0443\u0442\u044C.",
+    "relic.hollowheart.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.hollowheart.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.hollowheart.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F {0}%",
+    "relic.stormstring.name": "\u0413\u0440\u043E\u0437\u043E\u0432\u0430 \u0442\u044F\u0442\u0438\u0432\u0430",
+    "relic.stormstring.flavour": "\u0412\u043E\u043D\u0430 \u0433\u0443\u0434\u0435 \u0440\u0430\u043D\u0456\u0448\u0435, \u043D\u0456\u0436 \u0433\u0440\u043E\u0437\u0430.",
+    "relic.stormstring.mod0": "+{0} \u0434\u043E \u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "relic.stormstring.mod1": "+{0} \u0434\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "relic.stormstring.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "relic.stormstring.mod3": "\u0421\u043D\u0430\u0440\u044F\u0434\u0438 \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u044E\u0442\u044C \u0449\u0435 {0} \u0432\u043E\u0440\u043E\u0433\u0430",
+    "relic.wardenseye.name": "\u041E\u043A\u043E \u0432\u0430\u0440\u0442\u043E\u0432\u043E\u0433\u043E",
+    "relic.wardenseye.flavour": "\u0412\u043E\u043D\u043E \u0441\u0442\u0435\u0436\u0438\u043B\u043E \u0437\u0430 \u0431\u0440\u0430\u043C\u043E\u044E \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432 \u0456 \u0436\u043E\u0434\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0443 \u043D\u0435 \u043A\u043B\u0456\u043F\u043D\u0443\u043B\u043E.",
+    "relic.wardenseye.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "relic.wardenseye.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "relic.wardenseye.mod2": "\u0423\u0434\u0430\u0440\u0438 \u0456\u0433\u043D\u043E\u0440\u0443\u044E\u0442\u044C {0}% \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "relic.pilgrimsknot.name": "\u0412\u0443\u0437\u043E\u043B \u043F\u0440\u043E\u0447\u0430\u043D\u0438\u043D\u0430",
+    "relic.pilgrimsknot.flavour": "\u041F\u043E \u0432\u0443\u0437\u043B\u0443 \u0437\u0430 \u043A\u043E\u0436\u043D\u0435 \u0441\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435, \u0449\u043E \u0442\u0430\u043A \u0456 \u043D\u0435 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u043B\u043E.",
+    "relic.pilgrimsknot.mod0": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F +{0}",
+    "relic.pilgrimsknot.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "relic.pilgrimsknot.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u043D\u0438\u0445 \u0437\u0430\u0440\u044F\u0434\u0456\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430",
+    "relic.brineclutch.name": "\u0420\u043E\u0437\u0441\u0456\u043B\u044C\u043D\u0430 \u0445\u0432\u0430\u0442\u043A\u0430",
+    "relic.brineclutch.flavour": "\u041C\u043E\u043A\u0440\u0456 \u043F\u043E \u0437\u0430\u043F'\u044F\u0441\u0442\u044F. \u0417\u0430\u0432\u0436\u0434\u0438.",
+    "relic.brineclutch.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "relic.brineclutch.mod1": "{0} \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u043A\u043E\u0436\u043D\u0435 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E",
+    "relic.brineclutch.mod2": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidecaller.name": "\u041F\u0435\u0442\u043B\u044F \u0437\u0430\u043A\u043B\u0438\u043A\u0430\u0447\u0430 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "relic.tidecaller.flavour": "\u041F\u043E\u0432\u0435\u0440\u043D\u0456\u0442\u044C \u0439\u043E\u0433\u043E \u0440\u0430\u0437 - \u0456 \u043F\u0456\u0434\u043B\u043E\u0433\u0430 \u0432\u0436\u0435 \u043C\u043E\u043A\u0440\u0430.",
+    "relic.tidecaller.mod0": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "relic.tidecaller.mod1": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "relic.tidecaller.mod2": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.tidecaller.mod3": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u0438 +{0}",
+    "relic.bellwright.name": "\u0414\u0437\u0432\u0456\u043D \u0434\u0437\u0432\u043E\u043D\u0430\u0440\u044F",
+    "relic.bellwright.flavour": "\u041A\u043E\u0436\u0435\u043D \u0443\u0434\u0430\u0440 \u0434\u0437\u0432\u0435\u043D\u0438\u0442\u044C. \u0429\u043E\u0441\u044C \u0437\u0430\u0432\u0436\u0434\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454.",
+    "relic.bellwright.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "relic.bellwright.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u0456 \u0434\u0456\u0457",
+    "relic.bellwright.mod2": "\u041C\u0456\u0446\u044C +{0}",
+    "relic.glassveil.name": "\u0421\u043A\u043B\u044F\u043D\u0430 \u0432\u0443\u0430\u043B\u044C",
+    "relic.glassveil.flavour": "\u0412\u0438 \u0431\u0430\u0447\u0438\u0442\u0435 \u043F\u0443\u0441\u0442\u043A\u0443 \u0442\u0430\u043A, \u044F\u043A \u0432\u043E\u043D\u0430 \u0431\u0430\u0447\u0438\u0442\u044C \u0432\u0430\u0441: \u0448\u043C\u0430\u0442\u043A\u0430\u043C\u0438.",
+    "relic.glassveil.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "relic.glassveil.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "relic.glassveil.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u0438 +{0}",
+    "relic.glassveil.mod3": "\u041E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456 +{0}%",
+    "relic.hollowcrown.name": "\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0430 \u043A\u043E\u0440\u043E\u043D\u0430",
+    "relic.hollowcrown.flavour": "\u0407\u0457 \u043D\u043E\u0441\u0438\u0432 \u043A\u043E\u0436\u0435\u043D \u043A\u043E\u0440\u043E\u043B\u044C \u041C\u0430\u0440\u043A\u0438. \u0416\u043E\u0434\u0435\u043D - \u0434\u043E\u0432\u0433\u043E.",
+    "relic.hollowcrown.mod0": "\u041C\u0456\u0446\u044C +{0}",
+    "relic.hollowcrown.mod1": "\u0413\u0440\u0430\u0446\u0456\u044F +{0}",
+    "relic.hollowcrown.mod2": "\u0420\u043E\u0437\u0443\u043C +{0}",
+    "relic.hollowcrown.mod3": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.hollowcrown.mod4": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "relic.lanternheart.name": "\u0421\u0435\u0440\u0446\u0435 \u043B\u0456\u0445\u0442\u0430\u0440\u044F",
+    "relic.lanternheart.flavour": "\u0412\u043E\u043D\u043E \u0433\u043E\u0440\u0438\u0442\u044C \u0437\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0438 - \u0456 \u0432\u0438 \u0433\u043E\u0440\u0456\u0442\u0438\u043C\u0435\u0442\u0435.",
+    "relic.lanternheart.mod0": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0}% \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.lanternheart.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "relic.lanternheart.mod2": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E {0}%",
+    "relic.dunestrider.name": "\u041E\u0431\u043C\u043E\u0442\u043A\u0438 \u043C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u043A\u0430 \u0434\u044E\u043D",
+    "relic.dunestrider.flavour": "\u041F\u0456\u0441\u043E\u043A \u0437\u0430\u0431\u0443\u0432\u0430\u0454 \u0432\u0430\u0448\u0456 \u043A\u0440\u043E\u043A\u0438 \u0440\u0430\u043D\u0456\u0448\u0435, \u043D\u0456\u0436 \u0432\u0438 \u0457\u0445 \u0437\u0430\u043A\u0456\u043D\u0447\u0438\u0442\u0435.",
+    "relic.dunestrider.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "relic.dunestrider.mod1": "\u0423\u0445\u0438\u043B\u0435\u043D\u043D\u044F +{0}",
+    "relic.dunestrider.mod2": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E +{0}%",
+    "relic.dunestrider.mod3": "\u0413\u0440\u0430\u0446\u0456\u044F +{0}",
+    "relic.laststand.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0440\u0443\u0431\u0456\u0436 \u0432\u0430\u0440\u0442\u043E\u0432\u043E\u0433\u043E",
+    "relic.laststand.flavour": "\u0411\u0440\u0430\u043C\u0430 \u0432\u043F\u0430\u043B\u0430. \u0429\u0438\u0442 - \u043D\u0456.",
+    "relic.laststand.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0431\u0440\u043E\u043D\u0456",
+    "relic.laststand.mod1": "\u0428\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0443 +{0}%",
+    "relic.laststand.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F +{0}",
+    "relic.laststand.mod3": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "relic.sunshard.name": "\u0421\u0430\u0433\u0430\u0439\u0434\u0430\u043A \u0441\u043E\u043D\u044F\u0447\u043D\u0438\u0445 \u0443\u043B\u0430\u043C\u043A\u0456\u0432",
+    "relic.sunshard.flavour": "\u041A\u043E\u0436\u043D\u0430 \u0441\u0442\u0440\u0456\u043B\u0430 - \u0441\u043A\u0430\u043B\u043A\u0430 \u0432\u043F\u0430\u043B\u043E\u0433\u043E \u0441\u043E\u043D\u0446\u044F.",
+    "relic.sunshard.mod0": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.sunshard.mod1": "\u0410\u0442\u0430\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.sunshard.mod2": "\u0421\u043D\u0430\u0440\u044F\u0434\u0438 \u043F\u0440\u043E\u0431\u0438\u0432\u0430\u044E\u0442\u044C \u0449\u0435 {0} \u0432\u043E\u0440\u043E\u0433\u0430",
+    "relic.sunshard.mod3": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "relic.saltwedding.name": "\u0421\u043E\u043B\u044F\u043D\u0430 \u043E\u0431\u0440\u0443\u0447\u043A\u0430",
+    "relic.saltwedding.flavour": "\u041E\u0431\u0456\u0446\u044F\u043D\u0430 \u043C\u043E\u0440\u044E. \u041C\u043E\u0440\u0435 \u0434\u043E\u0442\u0440\u0438\u043C\u0443\u0454 \u043E\u0431\u0456\u0446\u044F\u043D\u043E\u043A.",
+    "relic.saltwedding.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "relic.saltwedding.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "relic.saltwedding.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E\u0433\u043E \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    "relic.voidsinger.name": "\u0421\u043F\u0456\u0432\u0435\u0446\u044C \u043F\u043E\u0440\u043E\u0436\u043D\u0435\u0447\u0456",
+    "relic.voidsinger.flavour": "\u0412\u0456\u043D \u043D\u0430\u0441\u043F\u0456\u0432\u0443\u0454 \u043D\u043E\u0442\u0443, \u043D\u0430 \u044F\u043A\u0456\u0439 \u0437\u0443\u043F\u0438\u043D\u0438\u0432\u0441\u044F \u0441\u0432\u0456\u0442.",
+    "relic.voidsinger.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "relic.voidsinger.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443 \u0437\u0430\u043A\u043B\u044F\u0442\u044C",
+    "relic.voidsinger.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043C\u0430\u043D\u0438",
+    "relic.cinderoath.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0430 \u043F\u0440\u0438\u0441\u044F\u0433\u0430",
+    "relic.cinderoath.flavour": "\u0414\u0430\u043D\u0430 \u0432 \u043F\u043E\u043F\u0435\u043B\u0456. \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430 \u0443 \u0432\u043E\u0433\u043D\u0456.",
+    "relic.cinderoath.mod0": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.cinderoath.mod1": "\u0417\u0430\u043A\u043B\u044F\u0442\u0442\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C +{0} \u0434\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.cinderoath.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "relic.cinderoath.mod3": "\u0423\u0434\u0430\u0440\u0438 \u0456\u0433\u043D\u043E\u0440\u0443\u044E\u0442\u044C {0}% \u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E",
+    "relic.cinderoath.mod4": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 {0}%",
+    "relic.drownedheart.name": "\u0421\u0435\u0440\u0446\u0435 \u043F\u043E\u0442\u043E\u043F\u0435\u043B\u044C\u043D\u0438\u043A\u0430",
+    "relic.drownedheart.flavour": "\u0412\u043E\u043D\u043E \u0434\u0430\u0432\u043D\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u0431\u0438\u0442\u0438\u0441\u044F. \u0422\u043E\u043D\u0443\u0442\u0438 \u0432\u043E\u043D\u043E \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u043E \u0442\u0456\u043B\u044C\u043A\u0438-\u043D\u043E.",
+    "relic.drownedheart.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0431\u0440\u043E\u043D\u0456",
+    "relic.drownedheart.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "relic.drownedheart.mod2": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "relic.drownedheart.mod3": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0} \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "relic.worldbreaker.name": "\u0421\u0432\u0456\u0442\u043E\u043B\u0430\u043C",
+    "relic.worldbreaker.flavour": "\u041A\u043E\u043B\u0438\u0441\u044C \u041C\u0430\u0440\u043A\u0430 \u0442\u0440\u0456\u0441\u043D\u0443\u043B\u0430. \u041E\u0441\u044C \u0449\u043E \u0457\u0457 \u0440\u043E\u0437\u043A\u043E\u043B\u043E\u043B\u043E.",
+    "relic.worldbreaker.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "relic.worldbreaker.mod1": "\u041C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443 +{0}%",
+    "relic.worldbreaker.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u0456 \u0434\u0456\u0457",
+    "relic.worldbreaker.mod3": "{0}% \u0448\u043A\u043E\u0434\u0438 \u0432\u0438\u043A\u0440\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "relic.lastember.name": "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u0436\u0430\u0440\u0438\u043D\u0430",
+    "relic.lastember.flavour": "\u041A\u043E\u043B\u0438 \u0432\u043E\u043D\u0430 \u0437\u0433\u0430\u0441\u043D\u0435, \u0437\u0433\u0430\u0441\u043D\u0435 \u0439 \u041C\u0430\u0440\u043A\u0430.",
+    "relic.lastember.mod0": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438",
+    "relic.lastember.mod1": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "relic.lastember.mod2": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "relic.lastember.mod3": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    // companions
+    "companion.saltcrab.name": "\u0421\u043E\u043B\u044F\u043D\u0438\u0439 \u043A\u0440\u0430\u0431",
+    "companion.saltcrab.blurb": "\u0412\u0456\u043D \u0437\u043D\u0430\u0439\u0448\u043E\u0432 \u0432\u0430\u0441 \u043D\u0430 \u0431\u0435\u0440\u0435\u0437\u0456 \u0439 \u0432\u0438\u0440\u0456\u0448\u0438\u0432, \u0449\u043E \u0432\u0438 \u0439\u043E\u0433\u043E \u0441\u043A\u0435\u043B\u044F.",
+    "companion.saltcrab.where": "\u0410\u043A\u0442 1: \u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "companion.saltcrab.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0431\u0440\u043E\u043D\u0456",
+    "companion.bogimp.name": "\u0411\u043E\u043B\u043E\u0442\u044F\u043D\u0438\u0439 \u0447\u043E\u0440\u0442\u0438\u043A",
+    "companion.bogimp.blurb": "\u041A\u0440\u0430\u0434\u0435 \u0431\u043B\u0438\u0441\u043A\u0443\u0447\u0435. \u0417\u0434\u0435\u0431\u0456\u043B\u044C\u0448\u043E\u0433\u043E \u0434\u043B\u044F \u0432\u0430\u0441.",
+    "companion.bogimp.where": "\u0411\u043E\u0441\u0438 \u0437 10 \u0440\u0456\u0432\u043D\u044F",
+    "companion.bogimp.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "companion.lanternwisp.name": "\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439 \u0432\u043E\u0433\u043D\u0438\u043A",
+    "companion.lanternwisp.blurb": "\u041F\u043E\u043B\u0443\u043C'\u044F, \u0449\u043E \u0437\u0430\u0431\u0443\u043B\u043E, \u0437 \u044F\u043A\u043E\u0457 \u0432\u043E\u043D\u043E \u043B\u0430\u043C\u043F\u0438.",
+    "companion.lanternwisp.where": "\u0411\u043E\u0441\u0438 \u0437 14 \u0440\u0456\u0432\u043D\u044F",
+    "companion.lanternwisp.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "companion.dunepup.name": "\u0414\u044E\u043D\u043D\u0435 \u0446\u0443\u0446\u0435\u043D\u044F",
+    "companion.dunepup.blurb": "\u0411\u0456\u0436\u0438\u0442\u044C \u0443\u043F\u0435\u0440\u0435\u0434, \u0431\u0456\u0436\u0438\u0442\u044C \u043D\u0430\u0437\u0430\u0434, \u0437\u043D\u043E\u0432\u0443 \u0431\u0456\u0436\u0438\u0442\u044C \u0443\u043F\u0435\u0440\u0435\u0434.",
+    "companion.dunepup.where": "\u0410\u043A\u0442 2: \u0421\u043A\u043B\u044F\u043D\u0430 \u0440\u0435\u0433\u0435\u043D\u0442\u043A\u0430",
+    "companion.dunepup.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "companion.prismlynx.name": "\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0430 \u0440\u0438\u0441\u044C",
+    "companion.prismlynx.blurb": "\u0412\u043E\u043D\u0430 \u0434\u0438\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0441\u043B\u0430\u0431\u043A\u0435 \u043C\u0456\u0441\u0446\u0435, \u0434\u043E\u043A\u0438 \u0439 \u0432\u0438 \u0439\u043E\u0433\u043E \u043D\u0435 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0435.",
+    "companion.prismlynx.where": "\u0411\u043E\u0441\u0438 \u0437 24 \u0440\u0456\u0432\u043D\u044F",
+    "companion.prismlynx.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "companion.drowned.name": "\u041C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u043F\u043E\u0442\u043E\u043F\u0435\u043B\u044C\u043D\u0438\u043A",
+    "companion.drowned.blurb": "\u0412\u0456\u043D \u043D\u0435 \u0434\u0438\u0445\u0430\u0454. \u0417\u0430\u0442\u0435 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u0434\u0438\u0445\u0430\u0442\u0438 \u0432\u0430\u043C.",
+    "companion.drowned.where": "\u0411\u043E\u0441\u0438 \u0437 30 \u0440\u0456\u0432\u043D\u044F",
+    "companion.drowned.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "companion.ashpup.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0435 \u0446\u0443\u0446\u0435\u043D\u044F",
+    "companion.ashpup.blurb": "\u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0435 \u0432 \u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434\u0456. \u0414\u043E\u0441\u0456 \u0442\u0435\u043F\u043B\u0435.",
+    "companion.ashpup.where": "\u0410\u043A\u0442 3: \u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0441\u0432\u0456\u0442\u0430\u043D\u043E\u043A",
+    "companion.ashpup.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "companion.cinderskull.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0438\u0439 \u0447\u0435\u0440\u0435\u043F",
+    "companion.cinderskull.blurb": "\u0413\u043E\u043B\u043E\u0432\u0430, \u0449\u043E \u0433\u043E\u0440\u0456\u043B\u0430 \u0434\u0430\u043B\u0456, \u043A\u043E\u043B\u0438 \u0440\u0435\u0448\u0442\u0430 \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B\u0430.",
+    "companion.cinderskull.where": "\u0411\u043E\u0441\u0438 \u0437 45 \u0440\u0456\u0432\u043D\u044F",
+    "companion.cinderskull.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "companion.whisperskull.name": "\u0428\u0435\u043F\u0456\u0442\u043D\u0438\u0439 \u0447\u0435\u0440\u0435\u043F",
+    "companion.whisperskull.blurb": "\u0412\u0456\u043D \u0440\u043E\u0437\u043F\u043E\u0432\u0456\u0434\u0430\u0454, \u0449\u043E \u0434\u0456\u0437\u043D\u0430\u043B\u0438\u0441\u044F \u043C\u0435\u0440\u0442\u0432\u0456. \u0414\u0435\u0449\u043E \u0437 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u043D\u0435.",
+    "companion.whisperskull.where": "\u0411\u043E\u0441\u0438 \u043A\u0430\u0440\u0442",
+    "companion.whisperskull.bonus": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E\u0433\u043E \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    // shrine
+    "blessing.insight.name": "\u041F\u0440\u043E\u0437\u0440\u0456\u043D\u043D\u044F",
+    "blessing.insight.text": "\u043D\u0430 {0}% \u0431\u0456\u043B\u044C\u0448\u0435 \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    "blessing.fortune.name": "\u0423\u0434\u0430\u0447\u0430",
+    "blessing.fortune.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "blessing.plenty.name": "\u0414\u043E\u0441\u0442\u0430\u0442\u043E\u043A",
+    "blessing.plenty.text": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "blessing.hoard.name": "\u0421\u043A\u0430\u0440\u0431",
+    "blessing.hoard.text": "\u043D\u0430 {0}% \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E\u0457 \u0432\u0430\u043B\u044E\u0442\u0438",
+    // maps, atlas, pinnacles
+    "mapArea.cinderfield.name": "\u0416\u0430\u0440\u0438\u0441\u0442\u0435 \u043F\u043E\u043B\u0435",
+    "mapArea.saltflats.name": "\u0421\u043E\u043B\u044F\u043D\u0456 \u0440\u0456\u0432\u043D\u0438\u043D\u0438",
+    "mapArea.drownedspire.name": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0438\u0439 \u0448\u043F\u0438\u043B\u044C",
+    "mapArea.glassmaze.name": "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u043B\u0430\u0431\u0456\u0440\u0438\u043D\u0442",
+    "mapArea.lanternrow.name": "\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439 \u0440\u044F\u0434",
+    "mapArea.bonecoast.name": "\u041A\u0456\u0441\u0442\u044F\u043D\u0438\u0439 \u0431\u0435\u0440\u0435\u0433",
+    "mapArea.ashcathedral.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u0441\u043E\u0431\u043E\u0440",
+    "mapArea.moltenweir.name": "\u0420\u043E\u0437\u043F\u043B\u0430\u0432\u043B\u0435\u043D\u0430 \u0437\u0430\u0433\u0430\u0442\u0430",
+    "mapArea.mirrorsea.name": "\u0414\u0437\u0435\u0440\u043A\u0430\u043B\u044C\u043D\u0435 \u043C\u043E\u0440\u0435",
+    "mapArea.sunscar.name": "\u0421\u043E\u043D\u044F\u0447\u043D\u0438\u0439 \u0448\u0440\u0430\u043C",
+    "mapMod.hardy.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u043C\u0430\u044E\u0442\u044C \u043D\u0430 40% \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "mapMod.savage.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0437\u0430\u0432\u0434\u0430\u044E\u0442\u044C \u043D\u0430 30% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438",
+    "mapMod.frenzied.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0430\u0442\u0430\u043A\u0443\u044E\u0442\u044C \u043D\u0430 20% \u0448\u0432\u0438\u0434\u0448\u0435",
+    "mapMod.searing.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0437\u0430\u0432\u0434\u0430\u044E\u0442\u044C 40% \u0434\u043E\u0434\u0430\u0442\u043A\u043E\u0432\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u043E\u0433\u043D\u0435\u043C",
+    "mapMod.freezing.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0437\u0430\u0432\u0434\u0430\u044E\u0442\u044C 40% \u0434\u043E\u0434\u0430\u0442\u043A\u043E\u0432\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0445\u043E\u043B\u043E\u0434\u043E\u043C",
+    "mapMod.shocking.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0437\u0430\u0432\u0434\u0430\u044E\u0442\u044C 40% \u0434\u043E\u0434\u0430\u0442\u043A\u043E\u0432\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u043E\u044E",
+    "mapMod.rotting.text": "\u0427\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A\u0430 \u0437\u0430\u0432\u0434\u0430\u044E\u0442\u044C 25% \u0434\u043E\u0434\u0430\u0442\u043A\u043E\u0432\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0445\u0430\u043E\u0441\u043E\u043C",
+    "mapMod.crowded.text": "\u041D\u0430 40% \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0433\u0440\u0430\u0439 \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A",
+    "mapMod.parched.text": "\u0412\u0430\u0448\u0435 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0432\u0456\u0434\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u043D\u0430 60% \u043C\u0435\u043D\u0448\u0435",
+    "mapMod.exposed.text": "\u0423\u0441\u0456 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0438 \u043E\u043F\u043E\u0440\u0443 -12%",
+    "mapMod.brittle.text": "\u0412\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u0435 \u043D\u0430 15% \u0431\u0456\u043B\u044C\u0448\u0435 \u0448\u043A\u043E\u0434\u0438",
+    "mapMod.dulled.text": "\u0412\u0438 \u0437\u0430\u0432\u0434\u0430\u0454\u0442\u0435 \u043D\u0430 15% \u043C\u0435\u043D\u0448\u0435 \u0448\u043A\u043E\u0434\u0438",
+    "atlas.a_cart.name": "\u041A\u0430\u0440\u0442\u043E\u0433\u0440\u0430\u0444",
+    "atlas.a_cart.text": "20% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u043A\u0430\u0440\u0442",
+    "atlas.a_cart2.name": "\u0417\u0435\u043C\u043B\u0435\u043C\u0456\u0440",
+    "atlas.a_cart2.text": "25% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u043A\u0430\u0440\u0442",
+    "atlas.a_climb.name": "\u0414\u0440\u0430\u0431\u0438\u043D\u0430 \u043F\u043E\u043F\u0435\u043B\u0443",
+    "atlas.a_climb.text": "10% \u0448\u0430\u043D\u0441, \u0449\u043E \u043A\u0430\u0440\u0442\u0430 \u0432\u0438\u043F\u0430\u0434\u0435 \u043D\u0430 \u044F\u0440\u0443\u0441 \u0432\u0438\u0449\u0435",
+    "atlas.a_climb2.name": "\u0417\u043E\u0440\u044F\u043D\u0456 \u0441\u0445\u043E\u0434\u0438",
+    "atlas.a_climb2.text": "15% \u0448\u0430\u043D\u0441, \u0449\u043E \u043A\u0430\u0440\u0442\u0430 \u0432\u0438\u043F\u0430\u0434\u0435 \u043D\u0430 \u044F\u0440\u0443\u0441 \u0432\u0438\u0449\u0435",
+    "atlas.a_qty.name": "\u0413\u0440\u0430\u0431\u0443\u043D\u043E\u043A",
+    "atlas.a_qty.text": "10% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_qty2.name": "\u0421\u043A\u0430\u0440\u0431",
+    "atlas.a_qty2.text": "15% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_rar.name": "\u041F\u043E\u0437\u043E\u043B\u043E\u0447\u0435\u043D\u0456 \u0448\u043B\u044F\u0445\u0438",
+    "atlas.a_rar.text": "25% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_rar2.name": "\u041A\u043E\u0440\u043E\u043D\u043E\u0432\u0430\u043D\u0456 \u0448\u043B\u044F\u0445\u0438",
+    "atlas.a_rar2.text": "35% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_cur.name": "\u0416\u0430\u0440\u043E\u043F\u0430\u0434",
+    "atlas.a_cur.text": "30% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u0432\u0430\u043B\u044E\u0442\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_cur2.name": "\u0416\u0438\u043B\u0438 \u0437\u043E\u0440\u0435\u043F\u0430\u0434\u0443",
+    "atlas.a_cur2.text": "40% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u0432\u0430\u043B\u044E\u0442\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_packs.name": "\u041A\u0438\u0448\u043B\u0438\u0432\u0456 \u043E\u0440\u0434\u0438",
+    "atlas.a_packs.text": "\u041D\u0430 15% \u0431\u0456\u043B\u044C\u0448\u0435 \u0437\u0433\u0440\u0430\u0439 \u0447\u0443\u0434\u043E\u0432\u0438\u0441\u044C\u043A \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_xp.name": "\u0421\u0443\u0432\u043E\u0440\u0456 \u0443\u0440\u043E\u043A\u0438",
+    "atlas.a_xp.text": "15% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0434\u043E\u0441\u0432\u0456\u0434\u0443 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_xp2.name": "\u041D\u0430\u0439\u0441\u0443\u0432\u043E\u0440\u0456\u0448\u0456 \u0443\u0440\u043E\u043A\u0438",
+    "atlas.a_xp2.text": "20% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0434\u043E\u0441\u0432\u0456\u0434\u0443 \u043D\u0430 \u043A\u0430\u0440\u0442\u0430\u0445",
+    "atlas.a_mods.name": "\u041D\u0435\u0431\u0435\u0437\u043F\u0435\u0447\u043D\u0430 \u0437\u0435\u043C\u043B\u044F",
+    "atlas.a_mods.text": "30% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0433\u043E\u0440\u043E\u0434 \u0432\u0456\u0434 \u043C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u0456\u0432 \u043A\u0430\u0440\u0442",
+    "atlas.a_mods2.name": "\u0421\u043C\u0435\u0440\u0442\u0435\u043B\u044C\u043D\u0430 \u0437\u0435\u043C\u043B\u044F",
+    "atlas.a_mods2.text": "40% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0433\u043E\u0440\u043E\u0434 \u0432\u0456\u0434 \u043C\u043E\u0434\u0438\u0444\u0456\u043A\u0430\u0442\u043E\u0440\u0456\u0432 \u043A\u0430\u0440\u0442",
+    "atlas.a_frag.name": "\u0428\u0443\u043A\u0430\u0447 \u043F\u0435\u0447\u0430\u0442\u043E\u043A",
+    "atlas.a_frag.text": "40% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u043F\u0435\u0447\u0430\u0442\u043E\u043A",
+    "atlas.a_frag2.name": "\u041C\u0438\u0441\u043B\u0438\u0432\u0435\u0446\u044C \u0437\u0430 \u043F\u0435\u0447\u0430\u0442\u043A\u0430\u043C\u0438",
+    "atlas.a_frag2.text": "60% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u0432\u0438\u043F\u0430\u0434\u0456\u043D\u043D\u044F \u043F\u0435\u0447\u0430\u0442\u043E\u043A",
+    "atlas.a_boss.name": "\u041C\u0438\u0441\u043B\u0438\u0432\u0435\u0446\u044C \u0437\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F\u043C\u0438",
+    "atlas.a_boss.text": "\u0411\u043E\u0441\u0438 \u043A\u0430\u0440\u0442 \u0456\u0437 \u0448\u0430\u043D\u0441\u043E\u043C 6% \u043A\u0438\u0434\u0430\u044E\u0442\u044C \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044E",
+    "pinnacle.drownedsun.name": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0435 \u0441\u043E\u043D\u0446\u0435",
+    "pinnacle.drownedsun.text": "\u0414\u0440\u0443\u0433\u0435 \u0441\u043E\u043D\u0446\u0435 \u0437\u0456\u0439\u0448\u043B\u043E \u0437 \u043C\u043E\u0440\u044F \u0439 \u0442\u0430\u043A \u0456 \u043D\u0435 \u043D\u0430\u0432\u0447\u0438\u043B\u043E\u0441\u044F \u0441\u0432\u0456\u0442\u0438\u0442\u0438.",
+    "pinnacle.drownedsun.sigil": "\u041F\u0435\u0447\u0430\u0442\u043A\u0430 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "pinnacle.glasschoir.name": "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0445\u043E\u0440",
+    "pinnacle.glasschoir.text": "\u0422\u0438\u0441\u044F\u0447\u0430 \u0443\u043B\u0430\u043C\u043A\u0456\u0432 \u0441\u043F\u0456\u0432\u0430\u0454 \u043E\u0434\u043D\u0443 \u043D\u043E\u0442\u0443. \u0426\u044F \u043D\u043E\u0442\u0430 - \u0432\u0430\u0448\u0435 \u0456\u043C'\u044F.",
+    "pinnacle.glasschoir.sigil": "\u041F\u0435\u0447\u0430\u0442\u043A\u0430 \u043F\u0440\u0438\u0437\u043C\u0438",
+    "pinnacle.ashenking.name": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "pinnacle.ashenking.text": "\u0419\u043E\u0433\u043E \u043A\u043E\u0440\u043E\u043D\u0443\u0432\u0430\u043B\u0438 \u0442\u043E\u0433\u043E \u0434\u043D\u044F, \u043A\u043E\u043B\u0438 \u0432\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435, \u0456 \u0432\u0456\u0434\u0442\u043E\u0434\u0456 \u0432\u0456\u043D \u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u043F\u0435\u043B\u043E\u043C.",
+    "pinnacle.ashenking.sigil": "\u041F\u0435\u0447\u0430\u0442\u043A\u0430 \u043F\u043E\u043F\u0435\u043B\u0443",
+    "pinnacle.hollowcrown.name": "\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0430 \u043A\u043E\u0440\u043E\u043D\u0430",
+    "pinnacle.hollowcrown.text": "\u041D\u0430 \u0434\u043D\u0456 \u0413\u043B\u0438\u0431\u0438\u043D \u0442\u0435, \u0449\u043E \u0437'\u0457\u043B\u043E \u0441\u0432\u0456\u0442\u043B\u043E \u0441\u043E\u043D\u0446\u044F, \u0447\u0435\u043A\u0430\u0454, \u043A\u043E\u043B\u0438 \u0439\u043E\u0433\u043E \u043D\u0430\u0433\u043E\u0434\u0443\u044E\u0442\u044C \u0437\u043D\u043E\u0432\u0443.",
+    "pinnacle.hollowcrown.sigil": "\u041F\u0435\u0447\u0430\u0442\u043A\u0430 \u043F\u043E\u0440\u043E\u0436\u043D\u0435\u0447\u0456",
+    // loot filter presets
+    "preset.starter.name": "\u041F\u043E\u0447\u0430\u0442\u043A\u043E\u0432\u0438\u0439",
+    "preset.starter.blurb": "\u041B\u0438\u0448\u0430\u0442\u0438 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0457; \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0442\u0438 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456 \u0439 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456 \u0440\u0435\u0447\u0456, \u0449\u043E \u0432\u0456\u0434\u0441\u0442\u0430\u044E\u0442\u044C \u043D\u0430 10+ \u0440\u0456\u0432\u043D\u0456\u0432.",
+    "preset.lean.name": "\u041E\u0449\u0430\u0434\u043B\u0438\u0432\u0438\u0439",
+    "preset.lean.blurb": "\u041B\u0438\u0448\u0430\u0442\u0438 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0457 \u0439 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456; \u0440\u043E\u0437\u0431\u0438\u0440\u0430\u0442\u0438 \u0432\u0441\u0456 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456 \u0439 \u0437\u0430\u0447\u0430\u0440\u043E\u0432\u0430\u043D\u0456.",
+    "preset.endgame.name": "\u041F\u0456\u0437\u043D\u044F \u0433\u0440\u0430",
+    "preset.endgame.blurb": "\u041B\u0438\u0448\u0435 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456 \u0437 5+ \u0430\u0444\u0456\u043A\u0441\u0430\u043C\u0438 \u0442\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0457; \u0440\u0435\u0448\u0442\u0430 - \u043D\u0430 \u043F\u0438\u043B.",
+    "preset.resists.name": "\u041C\u0438\u0441\u043B\u0438\u0432\u0435\u0446\u044C \u0437\u0430 \u043E\u043F\u043E\u0440\u043E\u043C",
+    "preset.resists.blurb": "\u042F\u043A \xAB\u041F\u0456\u0437\u043D\u044F \u0433\u0440\u0430\xBB, \u0430\u043B\u0435 \u0449\u0435 \u043B\u0438\u0448\u0430\u0442\u0438 \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456 \u043F\u0440\u0438\u043A\u0440\u0430\u0441\u0438 \u0437 \u043E\u043F\u043E\u0440\u043E\u043C.",
+    // modifier stats: "nominative|genitive" (flat lines use the first, "increased" and "more" lines the second)
+    "stat.life": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "stat.mana": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043C\u0430\u043D\u0438|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043C\u0430\u043D\u0438",
+    "stat.energyShield": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "stat.lifeRegen": "\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.lifeRegenPct": "\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.manaRegen": "\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043C\u0430\u043D\u0438 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443|\u0432\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u043C\u0430\u043D\u0438 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stat.armour": "\u0431\u0440\u043E\u043D\u044F|\u0431\u0440\u043E\u043D\u0456",
+    "stat.evasion": "\u0443\u0445\u0438\u043B\u0435\u043D\u043D\u044F|\u0443\u0445\u0438\u043B\u0435\u043D\u043D\u044F",
+    "stat.block": "\u0448\u0430\u043D\u0441 \u0431\u043B\u043E\u043A\u0443|\u0448\u0430\u043D\u0441\u0443 \u0431\u043B\u043E\u043A\u0443",
+    "stat.str": "\u043C\u0456\u0446\u044C|\u043C\u0456\u0446\u0456",
+    "stat.dex": "\u0433\u0440\u0430\u0446\u0456\u044F|\u0433\u0440\u0430\u0446\u0456\u0457",
+    "stat.int": "\u0440\u043E\u0437\u0443\u043C|\u0440\u043E\u0437\u0443\u043C\u0443",
+    "stat.accuracy": "\u0432\u043B\u0443\u0447\u043D\u0456\u0441\u0442\u044C|\u0432\u043B\u0443\u0447\u043D\u043E\u0441\u0442\u0456",
+    "stat.damage": "\u0448\u043A\u043E\u0434\u0430|\u0448\u043A\u043E\u0434\u0438",
+    "stat.critChance": "\u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443|\u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "stat.critMulti": "\u043C\u043D\u043E\u0436\u043D\u0438\u043A \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443|\u043C\u043D\u043E\u0436\u043D\u0438\u043A\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "stat.attackSpeed": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u0430\u0442\u0430\u043A\u0438|\u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438",
+    "stat.castSpeed": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F|\u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "stat.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0434\u0456\u0457|\u043E\u0431\u043B\u0430\u0441\u0442\u0456 \u0434\u0456\u0457",
+    "stat.pierce": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u0441\u043D\u0430\u0440\u044F\u0434\u0456\u0432|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u0441\u043D\u0430\u0440\u044F\u0434\u0456\u0432",
+    "stat.leech": "\u0432\u0438\u043A\u0440\u0430\u0434\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F|\u0432\u0438\u043A\u0440\u0430\u0434\u0435\u043D\u043D\u044F \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "stat.flaskHeal": "\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C|\u043B\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u0444\u043B\u0430\u043A\u043E\u043D\u043E\u043C",
+    "stat.flaskCharges": "\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0437\u0430\u0440\u044F\u0434\u0456\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430|\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0437\u0430\u0440\u044F\u0434\u0456\u0432 \u0444\u043B\u0430\u043A\u043E\u043D\u0430",
+    "stat.moveSpeed": "\u0448\u0432\u0438\u0434\u043A\u0456\u0441\u0442\u044C \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F|\u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "stat.itemRarity": "\u0440\u0456\u0434\u043A\u0456\u0441\u043D\u0456\u0441\u0442\u044C \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432|\u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "stat.itemQuantity": "\u043A\u0456\u043B\u044C\u043A\u0456\u0441\u0442\u044C \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432|\u043A\u0456\u043B\u044C\u043A\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "stat.xpGain": "\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u0438\u0439 \u0434\u043E\u0441\u0432\u0456\u0434|\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E\u0433\u043E \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    "stat.manaCost": "\u0432\u0438\u0442\u0440\u0430\u0442\u0430 \u043C\u0430\u043D\u0438|\u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u043C\u0430\u043D\u0438",
+    "stat.dmgTaken": "\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u0430 \u0448\u043A\u043E\u0434\u0430|\u043E\u0442\u0440\u0438\u043C\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "stat.lifeOnKill": "\u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E|\u0437\u0434\u043E\u0440\u043E\u0432'\u044F \u0437\u0430 \u0432\u0431\u0438\u0432\u0441\u0442\u0432\u043E",
+    "stat.baseCrit": "\u0431\u0430\u0437\u043E\u0432\u0438\u0439 \u0448\u0430\u043D\u0441 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443|\u0431\u0430\u0437\u043E\u0432\u043E\u0433\u043E \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "stat.skillEffect": "\u0435\u0444\u0435\u043A\u0442 \u0443\u043C\u0456\u043D\u043D\u044F|\u0435\u0444\u0435\u043A\u0442\u0443 \u0432\u043C\u0456\u043D\u043D\u044F",
+    "stat.res.phys": "\u043E\u043F\u0456\u0440 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456|\u043E\u043F\u043E\u0440\u0443 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456",
+    "stat.maxRes.phys": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043E\u043F\u043E\u0440\u0443 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456",
+    "stat.pen.phys": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0444\u0456\u0437\u0438\u0447\u043D\u0456\u0439 \u0448\u043A\u043E\u0434\u0456",
+    "stat.convert.phys": "\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438|\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "stat.addMin.phys": "\u043C\u0456\u043D\u0456\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438|\u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "stat.addMax.phys": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438",
+    "stat.res.fire": "\u043E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E|\u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E",
+    "stat.maxRes.fire": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E",
+    "stat.pen.fire": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0432\u043E\u0433\u043D\u044E",
+    "stat.convert.fire": "\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0432\u043E\u0433\u043E\u043D\u044C|\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0432\u043E\u0433\u043E\u043D\u044C",
+    "stat.addMin.fire": "\u043C\u0456\u043D\u0456\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E|\u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "stat.addMax.fire": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "stat.res.cold": "\u043E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443|\u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.maxRes.cold": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.pen.cold": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.convert.cold": "\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0445\u043E\u043B\u043E\u0434|\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0445\u043E\u043B\u043E\u0434",
+    "stat.addMin.cold": "\u043C\u0456\u043D\u0456\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443|\u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.addMax.cold": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stat.res.lightning": "\u043E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456|\u043E\u043F\u043E\u0440\u0443 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456",
+    "stat.maxRes.lightning": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043E\u043F\u043E\u0440\u0443 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456",
+    "stat.pen.lightning": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456",
+    "stat.convert.lightning": "\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0443|\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0443",
+    "stat.addMin.lightning": "\u043C\u0456\u043D\u0456\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438|\u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "stat.addMax.lightning": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "stat.res.chaos": "\u043E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443|\u043E\u043F\u043E\u0440\u0443 \u0445\u0430\u043E\u0441\u0443",
+    "stat.maxRes.chaos": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u043E\u043F\u043E\u0440\u0443 \u0445\u0430\u043E\u0441\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u043E\u043F\u043E\u0440\u0443 \u0445\u0430\u043E\u0441\u0443",
+    "stat.pen.chaos": "\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0445\u0430\u043E\u0441\u0443|\u043F\u0440\u043E\u0431\u0438\u0442\u0442\u044F \u043E\u043F\u043E\u0440\u0443 \u0445\u0430\u043E\u0441\u0443",
+    "stat.convert.chaos": "\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0445\u0430\u043E\u0441|\u043F\u0435\u0440\u0435\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0444\u0456\u0437\u0438\u0447\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u043D\u0430 \u0445\u0430\u043E\u0441",
+    "stat.addMin.chaos": "\u043C\u0456\u043D\u0456\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443|\u043C\u0456\u043D\u0456\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443",
+    "stat.addMax.chaos": "\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443|\u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0434\u043E\u0434\u0430\u043D\u043E\u0457 \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u0430\u043E\u0441\u0443",
+    "tag.attack": "\u0430\u0442\u0430\u043A\u0430",
+    "tag.spell": "\u0437\u0430\u043A\u043B\u044F\u0442\u0442\u044F",
+    "tag.melee": "\u0431\u043B\u0438\u0436\u043D\u0456\u0439 \u0431\u0456\u0439",
+    "tag.projectile": "\u0441\u043D\u0430\u0440\u044F\u0434",
+    "tag.area": "\u043E\u0431\u043B\u0430\u0441\u0442\u044C",
+    "tag.strike": "\u0443\u0434\u0430\u0440",
+    "tag.slam": "\u0442\u0440\u043E\u0449\u0435\u043D\u043D\u044F",
+    "tag.bow": "\u043B\u0443\u043A",
+    "tag.phys": "\u0444\u0456\u0437\u0438\u0447\u043D\u0430",
+    "tag.fire": "\u0432\u043E\u0433\u043E\u043D\u044C",
+    "tag.cold": "\u0445\u043E\u043B\u043E\u0434",
+    "tag.lightning": "\u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0430",
+    "tag.chaos": "\u0445\u0430\u043E\u0441",
+    "tag.elemental": "\u0441\u0442\u0438\u0445\u0456\u0457"
+  };
+  var BASE2 = {};
+  var GENDER2 = {};
+  var put2 = (id, [name, g]) => {
+    BASE2[`base.${id}.name`] = name;
+    GENDER2[id] = g;
+  };
+  var WEAPONS3 = {
+    sword: [["\u0406\u0440\u0436\u0430\u0432\u0438\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u041F\u043E\u0440\u043E\u043C\u043D\u0430 \u0448\u0430\u0431\u043B\u044F", "f"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u043D\u043E\u0457 \u0441\u0442\u0430\u043B\u0456", "m"], ["\u041E\u0447\u0435\u0440\u0435\u0442\u044F\u043D\u0438\u0439 \u0440\u0456\u0437\u0430\u043A", "m"], ["\u0421\u043A\u043B\u043E\u0440\u0456\u0437\u043D\u0430 \u0448\u0430\u0431\u043B\u044F", "f"], ["\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u0421\u043E\u043D\u0446\u0435\u043A\u043E\u0432\u0430\u043D\u0438\u0439 \u043A\u043B\u0438\u043D\u043E\u043A", "m"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u0436\u0430\u0440\u043E\u0432\u043E\u0433\u043E \u0441\u0435\u0440\u0446\u044F", "m"]],
+    axe: [["\u0421\u043E\u043A\u0438\u0440\u043A\u0430 \u0437 \u043F\u043B\u0430\u0432\u043D\u0438\u043A\u0430", "f"], ["\u0411\u043E\u0440\u043E\u0434\u0430\u0442\u0430 \u0441\u043E\u043A\u0438\u0440\u0430", "f"], ["\u0421\u043E\u043A\u0438\u0440\u0430 \u043B\u0430\u0433\u043E\u0434\u0438\u043B\u044C\u043D\u0438\u043A\u0430 \u0441\u0456\u0442\u0435\u0439", "f"], ["\u0420\u043E\u0437\u0441\u0456\u043A\u0430\u0447 \u043A\u0456\u043B\u0456\u0432", "m"], ["\u041F\u0440\u043E\u0441\u043E\u043B\u0435\u043D\u0430 \u0441\u043E\u043A\u0438\u0440\u0430", "f"], ["\u0414\u044E\u043D\u043E\u0433\u0440\u0438\u0437", "m"], ["\u041D\u0430\u0434\u0432\u0435\u0447\u0456\u0440\u043D\u0456\u0439 \u0442\u0435\u0441\u0430\u043A", "m"], ["\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u0436\u0435\u043D\u0435\u0446\u044C", "m"]],
+    mace: [["\u0421\u0443\u0447\u043A\u0443\u0432\u0430\u0442\u0430 \u043F\u0430\u043B\u0438\u0446\u044F", "f"], ["\u042F\u043A\u0456\u0440\u043D\u0430 \u0431\u0443\u043B\u0430\u0432\u0430", "f"], ["\u0427\u0435\u0440\u0435\u043F\u0430\u0448\u043A\u043E\u0432\u0438\u0439 \u043C\u043E\u043B\u043E\u0442", "m"], ["\u0411\u0443\u043B\u0430\u0432\u0430 \u0434\u0437\u0432\u043E\u043D\u0430\u0440\u044F", "f"], ["\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u043C\u043E\u0440\u0433\u0435\u043D\u0448\u0442\u0435\u0440\u043D", "m"], ["\u041F\u0440\u043E\u0447\u0430\u043D\u0441\u044C\u043A\u0438\u0439 \u0446\u0456\u043F", "m"], ["\u041C\u043E\u043B\u043E\u0442 \u0441\u0432\u0456\u0442\u0430\u043D\u043A\u0443", "m"], ["\u0416\u0430\u0440\u0438\u0441\u0442\u0438\u0439 \u0441\u043A\u0456\u043F\u0435\u0442\u0440", "m"]],
+    dagger: [["\u041D\u0456\u0436 \u0434\u043B\u044F \u043F\u0430\u0442\u0440\u0430\u043D\u043D\u044F", "m"], ["\u0427\u0438\u0441\u0442\u0438\u043B\u043A\u0430 \u043B\u0443\u0441\u043A\u0438", "f"], ["\u041A\u043E\u0440\u0442\u0438\u043A \u0437 \u0432\u0443\u0433\u0440\u043E\u0432\u043E\u0457 \u043A\u0456\u0441\u0442\u043A\u0438", "m"], ["\u041A\u0438\u043D\u0434\u0436\u0430\u043B \u0442\u0443\u043C\u0430\u043D\u043D\u043E\u0433\u043E \u043F\u043E\u0446\u0456\u043B\u0443\u043D\u043A\u0443", "m"], ["\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0441\u0442\u0438\u043B\u0435\u0442", "m"], ["\u041D\u0456\u0436 \u043A\u043B\u044F\u0442\u0432\u0438", "m"], ["\u041A\u0440\u0456\u0441 \u0441\u043E\u043D\u044F\u0447\u043D\u043E\u0433\u043E \u0443\u043B\u0430\u043C\u043A\u0430", "m"], ["\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u0441\u0432\u0456\u0442\u043B\u043E", "n"]],
+    greatsword: [["\u0413\u043D\u0443\u0442\u0438\u0439 \u0446\u0432\u0430\u0439\u0433\u0435\u043D\u0434\u0435\u0440", "m"], ["\u041F\u043E\u0440\u0442\u043E\u0432\u0438\u0439 \u0434\u0432\u043E\u0440\u0443\u0447\u043D\u0438\u043A", "m"], ["\u0425\u0432\u0438\u043B\u0435\u043B\u043E\u043C", "m"], ["\u041A\u043B\u0438\u043D\u043E\u043A \u0434\u0430\u043C\u0431\u0438", "m"], ["\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u043A\u043E\u043B\u043E\u0441", "m"], ["\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u043A\u043B\u044F\u0442\u0432\u0438", "m"], ["\u0414\u0432\u043E\u0440\u0443\u0447\u043D\u0438\u043A \u0421\u043E\u043D\u0446\u0435\u043F\u0430\u0434\u0443", "m"], ["\u0416\u0430\u0440\u0438\u043D\u0430 \u0441\u0432\u0456\u0442\u0443", "f"]],
+    greataxe: [["\u041A\u043E\u043B\u0443\u043D", "m"], ["\u041A\u0438\u0442\u043E\u0431\u0456\u0439\u043D\u0430 \u0441\u043E\u043A\u0438\u0440\u0430", "f"], ["\u0421\u043E\u043A\u0438\u0440\u0430 \u043B\u0435\u0432\u0456\u0430\u0444\u0430\u043D\u0430", "f"], ["\u0422\u0440\u043E\u0449\u0438\u0442\u0435\u043B\u044C \u0443\u043B\u0430\u043C\u043A\u0456\u0432", "m"], ["\u041A\u0430\u0442 \u0434\u044E\u043D", "m"], ["\u041F\u043E\u0445\u043E\u0440\u043E\u043D\u043D\u0430 \u0441\u043E\u043A\u0438\u0440\u0430", "f"], ["\u0422\u0435\u0441\u0430\u043A \u043E\u0431\u0440\u0456\u044E", "m"], ["\u0421\u043E\u043A\u0438\u0440\u0430 \u043E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0457 \u0436\u0430\u0440\u0438\u043D\u0438", "f"]],
+    staff: [["\u041A\u0440\u0438\u0432\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041F\u043E\u0441\u043E\u0445 \u0437\u0430\u043A\u043B\u0438\u043A\u0430\u0447\u0430 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443", "m"], ["\u041A\u043E\u0440\u0430\u043B\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041C\u0430\u044F\u0447\u043D\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041C\u0456\u0440\u0430\u0436\u043D\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u041F\u043E\u0441\u043E\u0445 \u0437\u0430\u0442\u0435\u043C\u043D\u0435\u043D\u043D\u044F", "m"], ["\u0421\u043E\u043D\u044F\u0447\u043D\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"], ["\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u043F\u0430\u0441\u0442\u0438\u0440\u0441\u044C\u043A\u0438\u0439 \u043F\u043E\u0441\u043E\u0445", "m"]],
+    bow: [["\u0420\u0438\u0431\u0430\u043B\u044C\u0441\u044C\u043A\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0427\u0430\u044F\u0447\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u041E\u0447\u0435\u0440\u0435\u0442\u044F\u043D\u0438\u0439 \u0434\u043E\u0432\u0433\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0421\u043A\u0435\u043B\u044C\u043D\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0421\u043A\u043B\u043E\u043A\u0440\u0438\u043B\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0413\u0440\u043E\u0437\u043E\u0432\u0438\u0439 \u043B\u0443\u043A", "m"], ["\u0422\u044F\u0442\u0438\u0432\u0430 \u0441\u0432\u0456\u0442\u0430\u043D\u043A\u0443", "f"], ["\u041F\u043E\u043B\u0456\u0442 \u0436\u0430\u0440\u0438\u043D", "m"]],
+    wand: [["\u0416\u0435\u0437\u043B \u0437 \u043F\u043B\u0430\u0432\u043D\u0438\u043A\u0430", "m"], ["\u0421\u0432\u0456\u0447\u043A\u043E\u0432\u0438\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u041F\u0435\u0440\u043B\u043E\u0432\u0438\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u041F\u0440\u0438\u0437\u043C\u0430\u0442\u0438\u0447\u043D\u0438\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0416\u0435\u0437\u043B \u0437\u043D\u0430\u043C\u0435\u043D\u043D\u044F", "m"], ["\u041A\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0436\u0435\u0437\u043B", "m"], ["\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0436\u0435\u0437\u043B", "m"]]
+  };
+  for (const [kind, names] of Object.entries(WEAPONS3)) names.forEach((n, i) => put2(`${kind}${i + 1}`, n));
+  var PLATE3 = [
+    "\u041F\u043E\u043C'\u044F\u0442\u0438\u0439|\u041F\u043E\u043C'\u044F\u0442\u0430|\u041F\u043E\u043C'\u044F\u0442\u0435|\u041F\u043E\u043C'\u044F\u0442\u0456",
+    "\u041F\u043E\u0440\u0442\u043E\u0432\u0438\u0439|\u041F\u043E\u0440\u0442\u043E\u0432\u0430|\u041F\u043E\u0440\u0442\u043E\u0432\u0435|\u041F\u043E\u0440\u0442\u043E\u0432\u0456",
+    "\u041E\u0431\u0440\u043E\u0441\u043B\u0438\u0439|\u041E\u0431\u0440\u043E\u0441\u043B\u0430|\u041E\u0431\u0440\u043E\u0441\u043B\u0435|\u041E\u0431\u0440\u043E\u0441\u043B\u0456",
+    "\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u0438\u0439|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u0430|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u0435|\u0411\u0435\u0440\u0435\u0433\u043E\u0432\u0456",
+    "\u0421\u043A\u043B\u044F\u043D\u0438\u0439|\u0421\u043A\u043B\u044F\u043D\u0430|\u0421\u043A\u043B\u044F\u043D\u0435|\u0421\u043A\u043B\u044F\u043D\u0456",
+    "\u041F\u0440\u043E\u0447\u0430\u043D\u0441\u044C\u043A\u0438\u0439|\u041F\u0440\u043E\u0447\u0430\u043D\u0441\u044C\u043A\u0430|\u041F\u0440\u043E\u0447\u0430\u043D\u0441\u044C\u043A\u0435|\u041F\u0440\u043E\u0447\u0430\u043D\u0441\u044C\u043A\u0456",
+    "\u0421\u0432\u0456\u0442\u0430\u043D\u043A\u043E\u0432\u0438\u0439|\u0421\u0432\u0456\u0442\u0430\u043D\u043A\u043E\u0432\u0430|\u0421\u0432\u0456\u0442\u0430\u043D\u043A\u043E\u0432\u0435|\u0421\u0432\u0456\u0442\u0430\u043D\u043A\u043E\u0432\u0456",
+    "\u0416\u0430\u0440\u043E\u0432\u0438\u0439|\u0416\u0430\u0440\u043E\u0432\u0430|\u0416\u0430\u0440\u043E\u0432\u0435|\u0416\u0430\u0440\u043E\u0432\u0456"
+  ];
+  var LEATHER3 = [
+    "\u041B\u0430\u0442\u0430\u043D\u0438\u0439|\u041B\u0430\u0442\u0430\u043D\u0430|\u041B\u0430\u0442\u0430\u043D\u0435|\u041B\u0430\u0442\u0430\u043D\u0456",
+    "\u0422\u044E\u043B\u0435\u043D\u044F\u0447\u0438\u0439|\u0422\u044E\u043B\u0435\u043D\u044F\u0447\u0430|\u0422\u044E\u043B\u0435\u043D\u044F\u0447\u0435|\u0422\u044E\u043B\u0435\u043D\u044F\u0447\u0456",
+    "\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u0438\u0439|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u0430|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u0435|\u041F\u0440\u043E\u043C\u0430\u0441\u043B\u0435\u043D\u0456",
+    "\u0421\u043A\u0435\u043B\u044C\u043D\u0438\u0439|\u0421\u043A\u0435\u043B\u044C\u043D\u0430|\u0421\u043A\u0435\u043B\u044C\u043D\u0435|\u0421\u043A\u0435\u043B\u044C\u043D\u0456",
+    "\u041F\u0456\u0449\u0430\u043D\u0438\u0439|\u041F\u0456\u0449\u0430\u043D\u0430|\u041F\u0456\u0449\u0430\u043D\u0435|\u041F\u0456\u0449\u0430\u043D\u0456",
+    "\u041F\u0440\u0438\u0441\u043C\u0435\u0440\u043A\u043E\u0432\u0438\u0439|\u041F\u0440\u0438\u0441\u043C\u0435\u0440\u043A\u043E\u0432\u0430|\u041F\u0440\u0438\u0441\u043C\u0435\u0440\u043A\u043E\u0432\u0435|\u041F\u0440\u0438\u0441\u043C\u0435\u0440\u043A\u043E\u0432\u0456",
+    "\u041E\u0431\u0440\u0456\u0439\u043D\u0438\u0439|\u041E\u0431\u0440\u0456\u0439\u043D\u0430|\u041E\u0431\u0440\u0456\u0439\u043D\u0435|\u041E\u0431\u0440\u0456\u0439\u043D\u0456",
+    "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439|\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0430|\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0435|\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0456"
+  ];
+  var SILK3 = [
+    "\u041F\u043E\u0442\u0435\u0440\u0442\u0438\u0439|\u041F\u043E\u0442\u0435\u0440\u0442\u0430|\u041F\u043E\u0442\u0435\u0440\u0442\u0435|\u041F\u043E\u0442\u0435\u0440\u0442\u0456",
+    "\u041A\u0430\u043F\u043B\u0438\u0447\u043D\u0438\u0439|\u041A\u0430\u043F\u043B\u0438\u0447\u043D\u0430|\u041A\u0430\u043F\u043B\u0438\u0447\u043D\u0435|\u041A\u0430\u043F\u043B\u0438\u0447\u043D\u0456",
+    "\u041F\u0440\u0438\u043F\u043B\u0438\u0432\u043D\u0438\u0439|\u041F\u0440\u0438\u043F\u043B\u0438\u0432\u043D\u0430|\u041F\u0440\u0438\u043F\u043B\u0438\u0432\u043D\u0435|\u041F\u0440\u0438\u043F\u043B\u0438\u0432\u043D\u0456",
+    "\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u0439|\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0430|\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0435|\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0456",
+    "\u041C\u0456\u0440\u0430\u0436\u043D\u0438\u0439|\u041C\u0456\u0440\u0430\u0436\u043D\u0430|\u041C\u0456\u0440\u0430\u0436\u043D\u0435|\u041C\u0456\u0440\u0430\u0436\u043D\u0456",
+    "\u0417\u0430\u0442\u044C\u043C\u0430\u0440\u0435\u043D\u0438\u0439|\u0417\u0430\u0442\u044C\u043C\u0430\u0440\u0435\u043D\u0430|\u0417\u0430\u0442\u044C\u043C\u0430\u0440\u0435\u043D\u0435|\u0417\u0430\u0442\u044C\u043C\u0430\u0440\u0435\u043D\u0456",
+    "\u0421\u043E\u043D\u044F\u0447\u043D\u0438\u0439|\u0421\u043E\u043D\u044F\u0447\u043D\u0430|\u0421\u043E\u043D\u044F\u0447\u043D\u0435|\u0421\u043E\u043D\u044F\u0447\u043D\u0456",
+    "\u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0438\u0439|\u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0430|\u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0435|\u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0456"
+  ];
+  var adj2 = (forms, g) => forms.split("|")["mfnp".indexOf(g)];
+  var NOUNS3 = {
+    body: [["\u043A\u0456\u0440\u0430\u0441\u0430", "f"], ["\u043A\u0443\u0440\u0442\u043A\u0430", "f"], ["\u043C\u0430\u043D\u0442\u0456\u044F", "f"], ["\u0431\u0440\u0438\u0433\u0430\u043D\u0442\u0438\u043D\u0430", "f"]],
+    helmet: [["\u0448\u043E\u043B\u043E\u043C", "m"], ["\u043A\u0430\u043F\u0442\u0443\u0440", "m"], ["\u043E\u0431\u0440\u0443\u0447", "m"], ["\u0441\u0430\u043B\u0430\u0434", "m"]],
+    gloves: [["\u0440\u0443\u043A\u0430\u0432\u0438\u0446\u0456", "p"], ["\u0440\u0443\u043A\u0430\u0432\u0438\u0447\u043A\u0438", "p"], ["\u043E\u0431\u043C\u043E\u0442\u043A\u0438", "p"], ["\u043D\u0430\u0440\u0443\u0447\u0456", "p"]],
+    boots: [["\u043F\u043E\u043D\u043E\u0436\u0456", "p"], ["\u0447\u043E\u0431\u043E\u0442\u0438", "p"], ["\u0442\u0443\u0444\u043B\u0456", "p"], ["\u0447\u0435\u0440\u0435\u0432\u0438\u043A\u0438", "p"]]
+  };
+  var armour2 = (kind, slot, adjs, [noun, g]) => adjs.forEach((a, i) => put2(`${kind}_${slot}${i + 1}`, [`${adj2(a, g)} ${noun}`, g]));
+  for (const [slot, [plate, leather, silk, brigand]] of Object.entries(NOUNS3)) {
+    armour2("plate", slot, PLATE3, plate);
+    armour2("leather", slot, LEATHER3, leather);
+    armour2("silk", slot, SILK3, silk);
+    armour2("brigand", slot, LEATHER3, brigand);
+  }
+  armour2("shield", "offhand", PLATE3, ["\u0431\u0430\u0448\u0442\u043E\u0432\u0438\u0439 \u0449\u0438\u0442", "m"]);
+  armour2("buckler", "offhand", LEATHER3, ["\u0431\u0430\u043A\u043B\u0435\u0440", "m"]);
+  armour2("focus", "offhand", SILK3, ["\u0444\u043E\u043A\u0443\u0441", "m"]);
+  ["\u041F\u043E\u0442\u0435\u0440\u0442\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0427\u0430\u044F\u0447\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u041E\u0447\u0435\u0440\u0435\u0442\u044F\u043D\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0421\u043A\u0435\u043B\u044C\u043D\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0413\u0440\u043E\u0437\u043E\u0432\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0421\u0432\u0456\u0442\u0430\u043D\u043A\u043E\u0432\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A", "\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0441\u0430\u0433\u0430\u0439\u0434\u0430\u043A"].forEach((n, i) => put2(`quiver${i + 1}`, [n, "m"]));
+  var JEWELS2 = {
+    amulet_might: ["\u0417\u0430\u043B\u0456\u0437\u043D\u0430 \u0433\u0440\u0438\u0432\u043D\u044F", "f"],
+    amulet_grace: ["\u041A\u0443\u043B\u043E\u043D \u0456\u0437 \u043C\u0443\u0448\u043B\u0456", "m"],
+    amulet_wit: ["\u041F\u0435\u0440\u043B\u043E\u0432\u0438\u0439 \u043C\u0435\u0434\u0430\u043B\u044C\u0439\u043E\u043D", "m"],
+    amulet_life: ["\u041A\u043E\u0440\u0430\u043B\u043E\u0432\u0438\u0439 \u043E\u0431\u0435\u0440\u0456\u0433", "m"],
+    amulet_ember: ["\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0440\u0435\u043B\u0456\u043A\u0432\u0430\u0440\u0456\u0439", "m"],
+    ring_iron: ["\u0417\u0430\u043B\u0456\u0437\u043D\u0438\u0439 \u043F\u0435\u0440\u0441\u0442\u0435\u043D\u044C", "m"],
+    ring_tide: ["\u041F\u0435\u0440\u0441\u0442\u0435\u043D\u044C \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443", "m"],
+    ring_ember: ["\u0412\u0443\u0433\u0456\u043B\u044C\u043D\u0438\u0439 \u043F\u0435\u0440\u0441\u0442\u0435\u043D\u044C", "m"],
+    ring_storm: ["\u0413\u0440\u043E\u0437\u043E\u0432\u0438\u0439 \u043F\u0435\u0440\u0441\u0442\u0435\u043D\u044C", "m"],
+    ring_mana: ["\u041F\u0435\u0440\u0441\u0442\u0435\u043D\u044C \u0456\u0437 \u043C\u0456\u0441\u044F\u0447\u043D\u0438\u043C \u043A\u0430\u043C\u0435\u043D\u0435\u043C", "m"],
+    ring_glass: ["\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u043F\u0435\u0440\u0441\u0442\u0435\u043D\u044C", "m"],
+    ring_void: ["\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0438\u0439 \u043F\u0435\u0440\u0441\u0442\u0435\u043D\u044C", "m"],
+    belt_rope: ["\u041C\u043E\u0442\u0443\u0437\u044F\u043D\u0438\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_leather: ["\u0414\u0443\u0431\u043B\u0435\u043D\u0438\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_chain: ["\u041B\u0430\u043D\u0446\u044E\u0433\u043E\u0432\u0438\u0439 \u043F\u043E\u044F\u0441", "m"],
+    belt_plate: ["\u041A\u0443\u0448\u0430\u043A \u0456\u0437 \u043F\u043B\u0430\u0441\u0442\u0438\u043D\u0430\u043C\u0438", "m"]
+  };
+  for (const [id, n] of Object.entries(JEWELS2)) put2(id, n);
+  var UK = { ...CONTENT2, ...BASE2, ...UI3 };
+  var UK_GENDER = GENDER2;
+
+  // src/i18n/index.ts
+  var TABLES = { en: EN, ru: RU, uk: UK };
+  var GENDERS = { en: {}, ru: RU_GENDER, uk: UK_GENDER };
+  var current = "en";
+  var strict = false;
+  function normLang(code) {
+    const c = String(code ?? "").toLowerCase().split(/[-_]/)[0];
+    return c === "ru" ? "ru" : c === "uk" || c === "ua" ? "uk" : "en";
+  }
+  function setLang(code) {
+    const l = normLang(code);
+    if (l === current) return false;
+    current = l;
+    return true;
+  }
+  var lang = () => current;
+  function raw(key, l = current) {
+    const s = TABLES[l][key];
+    if (s !== void 0) return s;
+    if (l !== "en" && strict) throw new Error(`missing ${l} string: ${key}`);
+    return EN[key] ?? key;
+  }
+  var has = (key, l = current) => TABLES[l][key] !== void 0;
+  function fill(s, params) {
+    if (!params) return s;
+    return s.replace(/\{(\w+)\}/g, (m4, k) => params[k] !== void 0 ? String(params[k]) : m4);
+  }
+  var tr = (l, key, params) => fill(raw(key, l), params);
+  var t = (key, params) => tr(current, key, params);
+  function pluralIndex(l, n) {
+    if (l === "en") return Math.abs(n) === 1 ? 0 : 1;
+    if (!Number.isInteger(n)) return 1;
+    const a = Math.abs(n), d = a % 10, dd = a % 100;
+    if (d === 1 && dd !== 11) return 0;
+    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 1;
+    return 2;
+  }
+  function trn(l, key, n, params) {
+    const forms = raw(key, l).split("|");
+    return fill(forms[Math.min(pluralIndex(l, n), forms.length - 1)], { n, ...params });
+  }
+  var tn = (key, n, params) => trn(current, key, n, params);
+  function form(s, g) {
+    if (!s.includes("|")) return s;
+    const forms = s.split("|");
+    return forms["mfnp".indexOf(g)] ?? forms[0];
+  }
+  var genderOf = (base, l = current) => GENDERS[l][base] ?? "m";
+  var capFirst = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+  var lowFirst = (s) => s.length > 1 && s[1] === s[1].toLowerCase() ? s[0].toLowerCase() + s.slice(1) : s;
+
+  // src/i18n/names.ts
+  var L = (l) => l ?? lang();
+  var zoneName = (id, l) => tr(L(l), `zone.${id}.name`);
+  var zoneStory = (id, l) => tr(L(l), `zone.${id}.story`);
+  var actName = (id, l) => tr(L(l), `act.${id}.name`);
+  var actIntro = (id, l) => tr(L(l), `act.${id}.intro`);
+  var actOutro = (id, l) => tr(L(l), `act.${id}.outro`);
+  var className = (id, l) => tr(L(l), `class.${id}.name`);
+  var classBlurb = (id, l) => tr(L(l), `class.${id}.blurb`);
+  var skillName = (id, l) => tr(L(l), `skill.${id}.name`);
+  var skillBlurb = (id, l) => tr(L(l), `skill.${id}.blurb`);
+  var supportName = (id, l) => tr(L(l), `support.${id}.name`);
+  var supportBlurb = (id, l) => tr(L(l), `support.${id}.blurb`);
+  var monsterName = (id, l) => tr(L(l), `monster.${id}.name`);
+  var baseName = (id, l) => tr(L(l), `base.${id}.name`);
+  var currencyName = (id, l) => tr(L(l), `currency.${id}.name`);
+  var currencyBlurb = (id, l) => tr(L(l), `currency.${id}.blurb`);
+  var relicName = (id, l) => tr(L(l), `relic.${id}.name`);
+  var relicFlavour = (id, l) => tr(L(l), `relic.${id}.flavour`);
+  var companionName = (id, l) => tr(L(l), `companion.${id}.name`);
+  var companionBlurb = (id, l) => tr(L(l), `companion.${id}.blurb`);
+  var companionWhere = (id, l) => tr(L(l), `companion.${id}.where`);
+  var blessingName = (id, l) => tr(L(l), `blessing.${id}.name`);
+  var blessingText = (id, value, l) => tr(L(l), `blessing.${id}.text`, { 0: value });
+  var mapAreaName = (id, l) => tr(L(l), `mapArea.${id}.name`);
+  var mapModText = (id, l) => tr(L(l), `mapMod.${id}.text`);
+  var atlasName = (id, l) => tr(L(l), `atlas.${id}.name`);
+  var atlasText = (id, l) => tr(L(l), `atlas.${id}.text`);
+  var pinName = (id, l) => tr(L(l), `pinnacle.${id}.name`);
+  var pinText = (id, l) => tr(L(l), `pinnacle.${id}.text`);
+  var sigilName = (pinnacle, l) => tr(L(l), `pinnacle.${pinnacle}.sigil`);
+  var ascName = (id, l) => tr(L(l), `asc.${id}.name`);
+  var ascBlurb = (id, l) => tr(L(l), `asc.${id}.blurb`);
+  var ascNodeName = (id, l) => tr(L(l), `ascnode.${id}.name`);
+  var nodeName = (n, l) => tr(L(l), `node.${slug(n.name)}`);
+  var keystoneText = (name, l) => tr(L(l), `keystone.${slug(name)}`);
+  var presetName = (id, l) => tr(L(l), `preset.${id}.name`);
+  var presetBlurb = (id, l) => tr(L(l), `preset.${id}.blurb`);
+  var groupName = (group, l) => tr(L(l), `group.${group}`);
+  var tagName = (tag, l) => tr(L(l), `tag.${tag}`);
+  function tierName2(tier, l) {
+    const lg = L(l);
+    return tier === 0 ? tr(lg, "tier.outskirts") : tier <= MAX_TIER ? tr(lg, "tier.tier", { n: tier }) : tr(lg, "tier.depth", { n: tier - MAX_TIER });
+  }
+  var mapLabel = (m4, l) => tr(L(l), "map.label", { area: MAP_AREAS[m4.area] ? mapAreaName(m4.area, l) : m4.area, tier: tierName2(m4.tier, l) });
+  function runMapName(m4, l) {
+    if (m4.pinnacle) return pinName(m4.pinnacle, l);
+    return tr(L(l), "map.zone", { area: mapAreaName(MAP_AREAS[m4.area] ? m4.area : "cinderfield", l), tier: tierName2(m4.tier, l) });
+  }
+  function placeName(s, l) {
+    const run = s.activity.run;
+    if (run?.map) return runMapName(run.map, l);
+    return zoneName(run?.zone ?? s.activity.zone, l);
+  }
+  function rareName2(name, l) {
+    const lg = L(l);
+    if (lg === "en") return name;
+    const [a, b, ...rest] = name.split(" ");
+    if (!a || !b || rest.length || !RARE_NAMES_A.includes(a) || !RARE_NAMES_B.includes(b)) return name;
+    return tr(lg, "item.rareName", { a: tr(lg, `rare.a.${slug(a)}`), b: tr(lg, `rare.b.${slug(b)}`) });
+  }
+  function enchantedName(base, prefix, suffix, lg) {
+    const b = baseName(base, lg);
+    const p = prefix && AFFIXES[prefix] ? form(tr(lg, `affix.${prefix}.label`), genderOf(base, lg)) : "";
+    const s = suffix && AFFIXES[suffix] ? tr(lg, `affix.${suffix}.label`) : "";
+    return [p, p && lg !== "en" ? lowFirst(b) : b, s].filter(Boolean).join(" ");
+  }
+  function itemName(item, l) {
+    const lg = L(l);
+    if (item.relic && RELICS[item.relic]) return relicName(item.relic, lg);
+    if (item.rarity === "rare" && item.name) return rareName2(item.name, lg);
+    if (item.rarity === "enchanted") {
+      const p = item.affixes.find((a) => affixOf(a).type === "prefix")?.id ?? "";
+      const s = item.affixes.find((a) => affixOf(a).type === "suffix")?.id ?? "";
+      return enchantedName(item.base, p, s, lg);
+    }
+    return baseName(item.base, lg);
+  }
+  function affixLine(a, l) {
+    const params = {};
+    a.rolls.forEach((v, i) => {
+      params[i] = v;
+    });
+    return fill(tr(L(l), `affix.${a.id}.text`).replace(/\{(\d)\}/g, (m4, i) => params[i] === void 0 ? "?" : m4), params);
+  }
+  var affixTemplate = (id, l) => tr(L(l), `affix.${id}.text`).replace(/\{\d\}/g, "#");
+  function relicLines(item, l) {
+    const def2 = item.relic ? RELICS[item.relic] : void 0;
+    if (!def2) return [];
+    return def2.mods.map((m4, i) => tr(L(l), `relic.${def2.id}.mod${i}`, { 0: item.relicRolls?.[i] ?? m4.range[0] }));
+  }
+  function companionBonus(id, level, l) {
+    const m4 = companionMod(id, level);
+    return m4 && COMPANIONS[id] ? tr(L(l), `companion.${id}.bonus`, { 0: m4.value }) : "";
+  }
+  function modLine(m4, l) {
+    const lg = L(l);
+    const [nom, gen = nom] = tr(lg, `stat.${m4.stat}`).split("|");
+    const v = Math.abs(m4.value);
+    let s;
+    if (m4.kind === "inc") s = tr(lg, m4.value >= 0 ? "mod.inc" : "mod.red", { v, stat: gen });
+    else if (m4.kind === "more") s = tr(lg, m4.value >= 0 ? "mod.more" : "mod.less", { v, stat: gen });
+    else s = tr(lg, "mod.flat", { v: `${m4.value >= 0 ? "+" : ""}${m4.value}${PCT_STATS.has(m4.stat) ? "%" : ""}`, stat: nom });
+    const tags = m4.tags?.length ? ` (${m4.tags.map((x) => tagName(x, lg)).join(", ")})` : "";
+    return capFirst(s + tags);
+  }
+  var contractGoal = (kind, target, tier, l) => trn(L(l), `contract.${kind}`, target, { tier: tier ?? 1 });
+  function fmtDuration(ms, l) {
+    const lg = L(l);
+    const s = Math.floor(ms / 1e3);
+    const d = Math.floor(s / 86400), h2 = Math.floor(s % 86400 / 3600), m4 = Math.floor(s % 3600 / 60);
+    if (d) return tr(lg, "time.dh", { d, h: h2 });
+    if (h2) return tr(lg, "time.hm", { h: h2, m: m4 });
+    if (m4) return tr(lg, "time.m", { m: m4 });
+    return tr(lg, "time.s", { s });
+  }
+  function resolveParam(v, l) {
+    if (typeof v !== "string" || v[0] !== "@") return v;
+    const lg = L(l);
+    const i = v.indexOf(":");
+    const kind = v.slice(1, i), rest = v.slice(i + 1);
+    switch (kind) {
+      case "zone":
+        return zoneName(rest, lg);
+      case "monster":
+        return monsterName(rest, lg);
+      case "companion":
+        return companionName(rest, lg);
+      case "pin":
+        return pinName(rest, lg);
+      case "sigil":
+        return sigilName(rest, lg);
+      case "tier":
+        return tierName2(Number(rest), lg);
+      case "base":
+        return baseName(rest, lg);
+      case "relic":
+        return relicName(rest, lg);
+      case "key":
+        return tr(lg, rest);
+      case "map": {
+        const [area = "", tier = "0", pin = ""] = rest.split(":");
+        return runMapName({ area, tier: Number(tier), level: 0, mods: [], ...pin ? { pinnacle: pin } : {} }, lg);
+      }
+      case "contract": {
+        const [k = "kills", target = "0", tier = "1"] = rest.split(":");
+        return contractGoal(k, Number(target), Number(tier), lg);
+      }
+      case "item": {
+        const [base = "", rarity = "plain", p = "", s = "", relic = "", ...name] = rest.split(":");
+        if (relic && RELICS[relic]) return relicName(relic, lg);
+        if (rarity === "rare" && name.length) return rareName2(name.join(":"), lg);
+        if (rarity === "enchanted") return enchantedName(base, p, s, lg);
+        return baseName(base, lg);
+      }
+      default:
+        return v;
+    }
+  }
+  function resolveParams(params, l) {
+    if (!params) return params;
+    const out = {};
+    for (const [k, v] of Object.entries(params)) out[k] = resolveParam(v, l);
+    return out;
+  }
+  function logLine(key, params, l) {
+    const lg = L(l);
+    const p = resolveParams(params, lg);
+    return typeof params?.n === "number" && tr(lg, key).includes("|") ? trn(lg, key, params.n, p) : tr(lg, key, p);
+  }
+  var logText = (e, l) => e.key ? logLine(e.key, e.params, l) : e.text;
+  var storyText = (key, l) => tr(L(l), key);
+
+  // src/i18n/refs.ts
+  var ref = {
+    zone: (id) => `@zone:${id}`,
+    monster: (id) => `@monster:${id}`,
+    companion: (id) => `@companion:${id}`,
+    pinnacle: (id) => `@pin:${id}`,
+    /** A pinnacle's sigil, by the pinnacle id. */
+    sigil: (pinnacle) => `@sigil:${pinnacle}`,
+    tier: (tier) => `@tier:${tier}`,
+    base: (id) => `@base:${id}`,
+    relic: (id) => `@relic:${id}`,
+    /** A place a run was in: a story zone, or a map (area and tier) or pinnacle. */
+    place: (zone, map) => map ? `@map:${map.area}:${map.tier}:${map.pinnacle ?? ""}` : `@zone:${zone}`,
+    /** A contract's goal ("Slay 1800 monsters"). */
+    contract: (kind, target, tier) => `@contract:${kind}:${target}:${tier ?? 1}`,
+    /** Another string of the tables, by key. */
+    key: (key) => `@key:${key}`,
+    /** An item as its label shows it: base, rarity, first prefix and suffix, relic, rare name. */
+    item: (it) => {
+      const p = it.affixes.find((a) => affixOf(a).type === "prefix")?.id ?? "", s = it.affixes.find((a) => affixOf(a).type === "suffix")?.id ?? "";
+      return `@item:${it.base}:${it.rarity}:${p}:${s}:${it.relic ?? ""}:${it.name ?? ""}`;
+    }
+  };
 
   // src/core/state.ts
   var newTotals = () => ({ kills: 0, deaths: 0, runs: 0, items: 0, salvaged: 0, dust: 0, simMs: 0 });
@@ -3080,7 +7485,7 @@
       log: []
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
-    pushLog(state, "info", `${opts.name} wakes on the shore.`);
+    pushLog(state, "info", "log.wake", { name: opts.name });
     return state;
   }
   var cache = /* @__PURE__ */ new WeakMap();
@@ -3091,8 +7496,10 @@
     cache.set(state.hero, { rev: state.hero.rev, sheet });
     return sheet;
   }
-  function pushLog(state, kind, text) {
-    state.log.push({ t: state.simTo, kind, text });
+  function pushLog(state, kind, key, params) {
+    const e = { t: state.simTo, kind, text: logLine(key, params, "en"), key };
+    if (params) e.params = params;
+    state.log.push(e);
     if (state.log.length > LOG_MAX) state.log.splice(0, state.log.length - LOG_MAX);
   }
   function buildScore(s) {
@@ -3145,8 +7552,8 @@
     return v;
   }
   function upkeepVictims(state, n, below = Infinity) {
-    const L = state.hero.level;
-    const pool = state.stash.filter((x) => !guarded(x) && stashWorth(x, L) < below).sort((a, b) => stashWorth(a, L) - stashWorth(b, L) || a.uid - b.uid);
+    const L2 = state.hero.level;
+    const pool = state.stash.filter((x) => !guarded(x) && stashWorth(x, L2) < below).sort((a, b) => stashWorth(a, L2) - stashWorth(b, L2) || a.uid - b.uid);
     const out = [];
     for (const x of pool) {
       if (out.length >= n) break;
@@ -3301,7 +7708,7 @@
     if (state.settings.autoEquip) {
       const slot = upgradeSlot(state, item);
       if (slot && equipWithRoom(state, item, slot)) {
-        pushLog(state, "loot", `Equipped a new ${BASES[item.base].name}.`);
+        pushLog(state, "loot", "log.equippedNew", { base: ref.base(item.base) });
         return { kept: true, equipped: true };
       }
     }
@@ -3330,7 +7737,7 @@
         }
         if (!v && !state.stashFull) {
           state.stashFull = true;
-          pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged.");
+          pushLog(state, "loot", "log.stashFull");
         }
       }
     }
@@ -3386,7 +7793,7 @@
         home.push(best.item);
         break;
       }
-      pushLog(state, "loot", `Equipped ${itemLabel(best.item)} from the ${home === state.stash ? "stash" : "relic case"}.`);
+      pushLog(state, "loot", home === state.stash ? "log.equippedFromStash" : "log.equippedFromCase", { item: ref.item(best.item) });
       n++;
     }
     return n;
@@ -3511,9 +7918,6 @@
     const area = rng.pick(Object.keys(MAP_AREAS).sort());
     return { uid, tier: Math.max(1, tier), area, mods: rollMods(rng, n), rarity };
   }
-  function mapLabel(m4) {
-    return `${MAP_AREAS[m4.area]?.name ?? m4.area} (${tierName(m4.tier)})`;
-  }
   function craftMap(state, currency, uid) {
     const m4 = state.maps.find((x) => x.uid === uid);
     if (!m4) return "map not found";
@@ -3580,9 +7984,9 @@
   function autoXpCap(state) {
     const act = state.activity;
     if (!act.autoPush || act.mapTier > 0 || state.hero.level >= MAX_LEVEL) return 0;
-    let t = 1;
-    while (mapLevel(t + 1) <= state.hero.level + 4) t++;
-    return t;
+    let t2 = 1;
+    while (mapLevel(t2 + 1) <= state.hero.level + 4) t2++;
+    return t2;
   }
   function startMapRun(state) {
     const act = state.activity;
@@ -3591,13 +7995,13 @@
       act.pinnacle = void 0;
       if ((state.sigils[pin.sigil] ?? 0) >= pin.cost) {
         state.sigils[pin.sigil] -= pin.cost;
-        pushLog(state, "zone", `The way to ${pin.name} opens.`);
+        pushLog(state, "zone", "log.pinOpens", { pin: ref.pinnacle(pin.id) });
         return { tier: MAX_TIER, area: "sunscar", mods: [], level: pin.level, pinnacle: pin.id };
       }
     }
     if (state.maps.length) {
       const xpCap = autoXpCap(state);
-      const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter((t) => t > 0);
+      const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter((t2) => t2 > 0);
       const want = caps.length ? Math.min(...caps) : 0;
       const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
       const pick = want > 0 ? sorted.find((m4) => m4.tier <= want) ?? sorted[sorted.length - 1] : sorted[0];
@@ -3658,7 +8062,7 @@
       state.pinnacleKills[m4.pinnacle] = (state.pinnacleKills[m4.pinnacle] ?? 0) + 1;
       if (first) {
         state.atlas.points += 2;
-        pushLog(state, "boss", `${PINNACLES[m4.pinnacle].name} is defeated: +2 atlas points.`);
+        pushLog(state, "boss", "log.pinDefeated", { pin: ref.pinnacle(m4.pinnacle), n: 2 });
       }
       return;
     }
@@ -3666,7 +8070,7 @@
       state.atlas.tiers.push(m4.tier);
       if (m4.tier <= MAX_TIER || (m4.tier - MAX_TIER) % 5 === 0) {
         state.atlas.points++;
-        pushLog(state, "info", `${tierName(m4.tier)} completed for the first time: +1 atlas point.`);
+        pushLog(state, "info", "log.tierFirst", { tier: ref.tier(m4.tier), n: 1 });
       }
     }
   }
@@ -3744,8 +8148,8 @@
       }
       if (!it.affixes.length) return "no affixes";
       for (const a of it.affixes) {
-        const t = affixOf(a).tiers[a.tier];
-        if (t) a.rolls = t.ranges.map(([lo, hi]) => rng.int(lo, hi));
+        const t2 = affixOf(a).tiers[a.tier];
+        if (t2) a.rolls = t2.ranges.map(([lo, hi]) => rng.int(lo, hi));
       }
       return null;
     }
@@ -3845,7 +8249,7 @@
   }
   function maxIlvl(state) {
     const zones = state.world.unlocked.map((z) => ZONES[z]?.level ?? 1);
-    const maps = (state.atlas?.tiers ?? []).map((t) => mapLevel(t + 1));
+    const maps = (state.atlas?.tiers ?? []).map((t2) => mapLevel(t2 + 1));
     return Math.max(1, Math.min(state.hero.level + 2, Math.max(...zones, ...maps)));
   }
   var forgeCost = (state) => Math.round(40 + 6 * state.hero.level);
@@ -3919,12 +8323,12 @@
     const owned = state.companions[id] !== void 0;
     if (!owned) {
       state.companions[id] = 0;
-      pushLog(state, "loot", `A ${def2.name} joins you.`);
+      pushLog(state, "loot", "log.petJoins", { pet: ref.companion(id) });
       if (!state.hero.pet) setCompanion(state, id);
       return true;
     }
     addBond(state, id, DUPLICATE_BOND);
-    pushLog(state, "loot", `Another ${def2.name}: your ${def2.name} grows closer.`);
+    pushLog(state, "loot", "log.petDuplicate", { pet: ref.companion(id) });
     return false;
   }
   function setCompanion(state, id) {
@@ -3948,7 +8352,7 @@
     if (!pet || pet.id !== id || pet.level >= COMPANION_MAX_LEVEL || bond < bondFor(pet.level + 1)) return false;
     pet.level = companionLevel(bond);
     state.hero.rev++;
-    pushLog(state, "level", `${COMPANIONS[id].name} reached level ${pet.level}.`);
+    pushLog(state, "level", "log.petLevel", { pet: ref.companion(id), level: pet.level });
     return true;
   }
   function petKill(state) {
@@ -3968,40 +8372,23 @@
 
   // src/core/contracts.ts
   var BOARD_SIZE = 3;
-  var KIND_TEXT = {
-    kills: (c) => `Slay ${c.target} monsters`,
-    champions: (c) => `Slay ${c.target} champions`,
-    bosses: (c) => `Defeat ${c.target} bosses`,
-    runs: (c) => `Clear ${c.target} runs on the road`,
-    maps: (c) => `Complete ${c.target} maps of tier ${c.tier ?? 1} or deeper`,
-    rares: (c) => `Find ${c.target} rare items`
-  };
-  var contractText = (c) => KIND_TEXT[c.kind](c);
+  var KINDS = ["kills", "champions", "bosses", "runs", "maps", "rares"];
   var contractDust = (s, c) => Math.max(c.dust, Math.round((60 + 25 * s.hero.level) * 0.9));
-  function rewardText(c, s) {
-    const parts = [`${s ? contractDust(s, c) : c.dust} dust`];
-    if (c.currency) parts.push(`${c.currency[1]} ${CURRENCIES[c.currency[0]]?.name ?? c.currency[0]}`);
-    if (c.extra === "relic") parts.push("a relic not in your codex");
-    if (c.extra === "companion") parts.push("a companion you haven't met");
-    if (c.extra === "maps") parts.push("3 maps");
-    if (c.extra === "sigil") parts.push("a sigil");
-    return parts.join(", ");
-  }
   var deepest = (s) => Math.max(1, ...s.atlas?.tiers ?? []);
   function missingRelics(s) {
     const ilvl = maxIlvl(s);
     return Object.values(RELICS).filter((r3) => r3.level <= ilvl && !s.codex[r3.id]).map((r3) => r3.id);
   }
   function rollContract(s, rng) {
-    const L = s.hero.level;
+    const L2 = s.hero.level;
     const endgame = endgameOpen(s);
     const taken = new Set(s.contracts.list.map((c2) => c2.kind));
     const kinds = ["kills", "champions", "bosses", endgame ? "maps" : "runs", "rares"].filter((k) => !taken.has(k));
     const kind = rng.pick(kinds.length ? kinds : ["kills"]);
-    const SIZE = { kills: 1800, champions: 80, bosses: 24, runs: 36, maps: 40, rares: 12 + Math.round(L * 0.9) };
+    const SIZE = { kills: 1800, champions: 80, bosses: 24, runs: 36, maps: 40, rares: 12 + Math.round(L2 * 0.9) };
     const size = SIZE[kind];
     const target = Math.max(3, Math.round(size * (0.8 + rng.next() * 0.4)));
-    const c = { kind, target, n: 0, dust: Math.round((60 + 25 * L) * (0.9 + rng.next() * 0.3)) };
+    const c = { kind, target, n: 0, dust: Math.round((60 + 25 * L2) * (0.9 + rng.next() * 0.3)) };
     if (kind === "maps") c.tier = Math.max(1, Math.min(MAX_TIER, deepest(s) - 2));
     const cur = rng.weighted(CURRENCY_ORDER, (id) => 1 / Math.sqrt(CURRENCIES[id].drop));
     const rare = CURRENCIES[cur].drop < 200;
@@ -4026,7 +8413,7 @@
       if (c.kind !== kind || c.n >= c.target) continue;
       if (kind === "maps" && tier < (c.tier ?? 1)) continue;
       c.n++;
-      if (c.n >= c.target) pushLog(s, "info", `Contract done: ${contractText(c)}. Claim it on the World tab.`);
+      if (c.n >= c.target) pushLog(s, "info", "log.contractDone", { goal: ref.contract(c.kind, c.target, c.tier) });
     }
   }
   var claimable = (s) => s.contracts?.list.filter((c) => c.n >= c.target).length ?? 0;
@@ -4045,7 +8432,7 @@
       if (def2) {
         const item = { uid: s.nextUid++, base: def2.base, ilvl: Math.max(def2.level, maxIlvl(s)), rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m4) => rng.int(m4.range[0], m4.range[1])) };
         receiveItem(s, item);
-        pushLog(s, "loot", `Contract reward: ${def2.name}.`);
+        pushLog(s, "loot", "log.contractRelic", { relic: ref.relic(def2.id) });
       } else s.dust += dust;
     }
     if (c.extra === "companion") {
@@ -4080,9 +8467,9 @@
     return null;
   }
   function cleanContracts(s) {
-    const raw = s.contracts;
-    const b = raw && typeof raw === "object" ? raw : { list: [], seq: 0, done: 0 };
-    const kinds = Object.keys(KIND_TEXT);
+    const raw2 = s.contracts;
+    const b = raw2 && typeof raw2 === "object" ? raw2 : { list: [], seq: 0, done: 0 };
+    const kinds = KINDS;
     const ok = (v, min = 0) => typeof v === "number" && Number.isFinite(v) && v >= min;
     b.list = (Array.isArray(b.list) ? b.list : []).filter((c) => c && kinds.includes(c.kind) && ok(c.target, 1) && ok(c.n) && ok(c.dust)).slice(0, BOARD_SIZE).map((c) => {
       const out = { kind: c.kind, target: Math.round(c.target), n: Math.min(Math.round(c.n), Math.round(c.target)), dust: Math.round(c.dust) };
@@ -4095,61 +8482,6 @@
     b.done = ok(b.done) ? Math.round(b.done) : 0;
     s.contracts = b;
     ensureContracts(s);
-  }
-
-  // src/core/shrine.ts
-  var BLESSINGS = [
-    { id: "insight", name: "Insight", text: "{0}% more experience", value: 20 },
-    { id: "fortune", name: "Fortune", text: "{0}% increased item rarity", value: 40 },
-    { id: "plenty", name: "Plenty", text: "{0}% increased item quantity", value: 15 },
-    { id: "hoard", name: "Hoard", text: "{0}% more currency found", value: 30 }
-  ];
-  var BLESSING = Object.fromEntries(BLESSINGS.map((b) => [b.id, b]));
-  var BLESSING_MS = 36e5;
-  var ORB_RESERVE = 50;
-  var blessingCost = (s) => Math.round((100 + 25 * Math.pow(s.hero.level, 1.3)) / 10) * 10;
-  function blessing(s, id) {
-    const until = s.blessings?.[id] ?? 0;
-    return until > s.simTo ? BLESSING[id]?.value ?? 0 : 0;
-  }
-  function spareOrbValue(s) {
-    let v = 0;
-    for (const id of CURRENCY_ORDER) v += Math.max(0, (s.currency[id] ?? 0) - ORB_RESERVE) * CURRENCIES[id].cost;
-    return v;
-  }
-  function pay(s, cost, orbs) {
-    if ((orbs ? spareOrbValue(s) : 0) + s.dust < cost) return false;
-    let left = cost;
-    if (orbs) {
-      const kinds = CURRENCY_ORDER.filter((id) => (s.currency[id] ?? 0) > ORB_RESERVE).sort((a, b) => (s.currency[b] ?? 0) - (s.currency[a] ?? 0));
-      for (const id of kinds) {
-        const price = CURRENCIES[id].cost;
-        const n = Math.min((s.currency[id] ?? 0) - ORB_RESERVE, Math.ceil(left / price));
-        if (n <= 0) continue;
-        s.currency[id] -= n;
-        left -= n * price;
-        if (left <= 0) break;
-      }
-    }
-    if (left > 0) s.dust -= left;
-    return true;
-  }
-  function bless(s, id, orbs = s.shrine?.orbs ?? true) {
-    if (!BLESSING[id]) return "unknown blessing";
-    const cost = blessingCost(s);
-    if (!pay(s, cost, orbs)) return `needs ${cost} ember dust${orbs ? " (or spare orbs)" : ""}`;
-    s.blessings ??= {};
-    s.blessings[id] = Math.max(s.simTo, s.blessings[id] ?? 0) + BLESSING_MS;
-    return null;
-  }
-  function tickShrine(s) {
-    const keep = s.shrine?.keep;
-    if (!keep?.length) return;
-    for (const id of keep) if ((s.blessings?.[id] ?? 0) <= s.simTo) bless(s, id);
-  }
-  function setKeep(s, id, on) {
-    s.shrine ??= { keep: [], orbs: true };
-    s.shrine.keep = on ? [.../* @__PURE__ */ new Set([...s.shrine.keep, id])] : s.shrine.keep.filter((x) => x !== id);
   }
 
   // src/core/sim/engine.ts
@@ -4331,13 +8663,13 @@
       }
       const crit = rng.chance(sk.critChance / 100);
       let dmg = 0;
-      for (const t of DAMAGE_TYPES) {
-        const [lo, hi] = sk.hit[t];
+      for (const t2 of DAMAGE_TYPES) {
+        const [lo, hi] = sk.hit[t2];
         if (hi <= 0) continue;
         let x = rng.range(lo, hi);
         if (crit) x *= sk.critMulti / 100;
-        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m4.level) * d.armour * 0.5, x);
-        else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
+        if (t2 === "phys") x *= 1 - armourReduction(monsterDefence(m4.level) * d.armour * 0.5, x);
+        else x *= 1 - ((d.res?.[t2] ?? 0) - sk.pen[t2]) / 100;
         dmg += Math.max(0, x);
       }
       dmg = Math.max(1, dmg);
@@ -4376,15 +8708,15 @@
       const mapBoss = d.boss && run.map && !run.map.pinnacle ? MAP_BOSS_DAMAGE : 1;
       const base = monsterDamage(m4.level) * d.damage * mapBoss * (m4.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
       let dmg = 0;
-      for (const t of DAMAGE_TYPES) {
-        let share = d.split[t] ?? 0;
+      for (const t2 of DAMAGE_TYPES) {
+        let share = d.split[t2] ?? 0;
         if (eff) {
-          for (const [et, es] of eff.extra) if (et === t) share += es;
+          for (const [et, es] of eff.extra) if (et === t2) share += es;
         }
         if (!share) continue;
         let x = base * share;
-        if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
-        else x *= 1 - sheet.res[t] / 100;
+        if (t2 === "phys") x *= 1 - armourReduction(sheet.armour, x);
+        else x *= 1 - sheet.res[t2] / 100;
         dmg += x;
       }
       dmg *= sheet.dmgTaken;
@@ -4445,7 +8777,7 @@
         ev.companion?.(pet, had[pet] === void 0);
         changed = true;
       }
-      pushLog(state, "boss", `${d.name} falls.`);
+      pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m4.def) });
     }
     return changed ? runSheet(state) : sheet;
   }
@@ -4466,7 +8798,7 @@
       if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
         const p = eligible[rng.int(0, eligible.length - 1)];
         state.sigils[p.sigil] = (state.sigils[p.sigil] ?? 0) + 1;
-        pushLog(state, "loot", `Found a ${p.sigilName}.`);
+        pushLog(state, "loot", "log.sigilFound", { sigil: ref.sigil(p.id) });
       }
     }
   }
@@ -4481,7 +8813,7 @@
       hero.rev++;
       up = true;
       if (state.activity.capBackoff) state.activity.capBackoff = 0;
-      pushLog(state, "level", `Reached level ${hero.level}.`);
+      pushLog(state, "level", "log.levelUp", { level: hero.level });
       ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
@@ -4496,7 +8828,7 @@
     const act = state.activity;
     act.streak = 0;
     act.deaths++;
-    pushLog(state, "death", `Died in ${runZone(state, run).name}.`);
+    pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {
       state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
@@ -4504,14 +8836,14 @@
         act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
         act.deaths = 0;
         act.capBackoff = Math.min(3, (act.capBackoff ?? 0) + 1);
-        pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
+        pushLog(state, "zone", "log.tooDeep", { tier: ref.tier(act.autoCap) });
       }
       return;
     }
     if (act.autoPush && act.deaths >= 3 && ZONES[act.zone]?.trial) {
       const road = [...ZONE_ORDER].reverse().find((id) => state.world.unlocked.includes(id) && (state.world.clears[id] ?? 0) > 0) ?? ZONE_ORDER[0];
       ev.zone?.(act.zone, road, "retreat");
-      pushLog(state, "zone", `Fell back to ${zoneOf(road).name}.`);
+      pushLog(state, "zone", "log.fellBack", { zone: ref.zone(road) });
       act.zone = road;
       act.deaths = 0;
     } else if (act.autoPush && act.deaths >= 3) {
@@ -4519,7 +8851,7 @@
       if (i > 0) {
         const to = ZONE_ORDER[i - 1];
         ev.zone?.(act.zone, to, "retreat");
-        pushLog(state, "zone", `Fell back to ${zoneOf(to).name}.`);
+        pushLog(state, "zone", "log.fellBack", { zone: ref.zone(to) });
         act.zone = to;
         act.deaths = 0;
       }
@@ -4529,12 +8861,12 @@
     const z = zoneOf(zoneId);
     const hero = state.hero;
     if (z.bossText) {
-      pushLog(state, "boss", z.bossText);
-      ev.story?.(z.bossText);
+      pushLog(state, "boss", `zone.${z.id}.bossText`);
+      ev.story?.(`zone.${z.id}.bossText`);
     }
     void hero;
     const actDef = ACTS.find((a) => a.zones[a.zones.length - 1] === zoneId);
-    if (actDef) ev.story?.(actDef.outro);
+    if (actDef) ev.story?.(`act.${actDef.id}.outro`);
     reconcileRewards(state, ev);
   }
   function reconcileRewards(state, ev = {}) {
@@ -4547,7 +8879,7 @@
         w2.rewards.push(key);
         hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
         hero.rev++;
-        pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
+        pushLog(state, "info", "log.actDone", { act: a.id, n: ACT_BOSS_POINTS });
       }
       const petKey = `pet:act${a.id}`, pet = ACT_COMPANION[a.id];
       if (pet && cleared(a.zones[a.zones.length - 1]) && !w2.rewards.includes(petKey)) {
@@ -4561,7 +8893,7 @@
     for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
       if (cleared(after) && !w2.unlocked.includes(trial)) {
         w2.unlocked.push(trial);
-        pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+        pushLog(state, "zone", "log.zoneOpen", { zone: ref.zone(trial) });
         ev.zone?.(after, trial, "unlock");
       }
       const key = `trial:${trial}`;
@@ -4569,7 +8901,7 @@
         w2.rewards.push(key);
         hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
         hero.rev++;
-        pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
+        pushLog(state, "info", "log.trialPassed", { zone: ref.zone(trial), n: TRIAL_POINTS });
       }
     }
     ZONE_ORDER.forEach((z, i) => {
@@ -4578,16 +8910,16 @@
     });
   }
   function tryTrial(state, ev) {
-    const w2 = state.world, act = state.activity, L = state.hero.level;
+    const w2 = state.world, act = state.activity, L2 = state.hero.level;
     w2.trialTry ??= {};
     for (const a of ACTS) {
-      const t = a.trial;
-      if (!w2.unlocked.includes(t) || (w2.clears[t] ?? 0) > 0) continue;
-      if (L < zoneOf(t).level + 2 || L < (w2.trialTry[t] ?? 0)) continue;
-      w2.trialTry[t] = L + 3;
-      ev.zone?.(act.zone, t, "push");
-      pushLog(state, "zone", `Attempting ${zoneOf(t).name}.`);
-      act.zone = t;
+      const t2 = a.trial;
+      if (!w2.unlocked.includes(t2) || (w2.clears[t2] ?? 0) > 0) continue;
+      if (L2 < zoneOf(t2).level + 2 || L2 < (w2.trialTry[t2] ?? 0)) continue;
+      w2.trialTry[t2] = L2 + 3;
+      ev.zone?.(act.zone, t2, "push");
+      pushLog(state, "zone", "log.attempting", { zone: ref.zone(t2) });
+      act.zone = t2;
       act.streak = 0;
       act.deaths = 0;
       return true;
@@ -4608,7 +8940,7 @@
         act.autoCap++;
         act.streak = 0;
         if (act.autoCap > Math.max(0, ...state.maps.map((m4) => m4.tier))) act.autoCap = 0;
-        else pushLog(state, "zone", `Pushing deeper: ${tierName(act.autoCap)} and below.`);
+        else pushLog(state, "zone", "log.pushDeeper", { tier: ref.tier(act.autoCap) });
       }
       ev.runDone?.(run.zone);
       act.runIndex++;
@@ -4626,7 +8958,7 @@
     const next = ZONE_ORDER[i + 1];
     if (next && !state.world.unlocked.includes(next)) {
       state.world.unlocked.push(next);
-      pushLog(state, "zone", `${zoneOf(next).name} is open.`);
+      pushLog(state, "zone", "log.zoneOpen", { zone: ref.zone(next) });
       ev.zone?.(run.zone, next, "unlock");
     }
     const z = zoneOf(run.zone);
@@ -4640,7 +8972,7 @@
     } else if (act.autoPush && act.zone === run.zone && tryTrial(state, ev)) {
     } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone && zoneOf(next).level <= state.hero.level + PUSH_LEVEL_MARGIN) {
       ev.zone?.(act.zone, next, "push");
-      pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
+      pushLog(state, "zone", "log.pushedOn", { zone: ref.zone(next) });
       act.zone = next;
       act.streak = 0;
     }
@@ -4687,9 +9019,9 @@
       loot: (item, kept, equipped) => {
         if (item.relic && !seen.has(item.relic)) {
           seen.add(item.relic);
-          report.newRelics.push(itemLabel(item));
+          report.newRelics.push(item.relic);
         }
-        if (equipped) report.equipped.push(itemLabel(item));
+        if (equipped) report.equipped.push(item);
         else if (kept) report.kept++;
         else report.salvaged++;
         if (kept && (item.rarity === "rare" || item.rarity === "relic")) {
@@ -4698,13 +9030,13 @@
         }
       },
       zone: (_from, to, why) => {
-        if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to);
+        if (why === "unlock") report.zones.push(to);
       },
-      story: (text) => {
-        report.story.push(text);
+      story: (key) => {
+        report.story.push(key);
       },
       companion: (id, isNew) => {
-        if (isNew) report.newCompanions.push(COMPANIONS[id]?.name ?? id);
+        if (isNew) report.newCompanions.push(id);
       }
     };
     return {
@@ -4787,9 +9119,9 @@
   function wrap(state, savedAt) {
     return { game: "hollowmarch", v: SAVE_VERSION, savedAt, state };
   }
-  function unwrap(raw, migrations = MIGRATIONS, target = SAVE_VERSION) {
-    if (!raw || typeof raw !== "object") throw new SaveError("not a save");
-    const env = raw;
+  function unwrap(raw2, migrations = MIGRATIONS, target = SAVE_VERSION) {
+    if (!raw2 || typeof raw2 !== "object") throw new SaveError("not a save");
+    const env = raw2;
     if (env.game !== "hollowmarch") throw new SaveError("not a Hollowmarch save");
     if (typeof env.v !== "number" || !Number.isInteger(env.v) || env.v < 1) throw new SaveError("bad save version");
     if (env.v > target) throw new SaveError(`save is from a newer version (${env.v})`);
@@ -4809,11 +9141,11 @@
     return "HM1:" + btoa(bin);
   }
   function importText(text) {
-    const t = text.trim();
-    if (!t.startsWith("HM1:")) throw new SaveError("not a Hollowmarch export");
+    const t2 = text.trim();
+    if (!t2.startsWith("HM1:")) throw new SaveError("not a Hollowmarch export");
     let bin;
     try {
-      bin = atob(t.slice(4));
+      bin = atob(t2.slice(4));
     } catch {
       throw new SaveError("export is damaged");
     }
@@ -4848,8 +9180,8 @@
       a.rolls.forEach((r3) => num(r3, "affix roll"));
     }
     for (const a of i.affixes) {
-      const t = AFFIXES[a.id].tiers[a.tier];
-      a.rolls = a.rolls.map((r3, k) => Math.min(t.ranges[k][1], Math.max(t.ranges[k][0], Math.round(r3))));
+      const t2 = AFFIXES[a.id].tiers[a.tier];
+      a.rolls = a.rolls.map((r3, k) => Math.min(t2.ranges[k][1], Math.max(t2.ranges[k][0], Math.round(r3))));
     }
     if (i.rarity === "relic") {
       const def2 = i.relic ? RELICS[i.relic] : void 0;
@@ -4906,6 +9238,21 @@
     if (typeof r3.group === "string") out.group = r3.group;
     return out;
   }
+  var LOG_KINDS = ["level", "loot", "death", "zone", "boss", "info"];
+  function cleanLog(v) {
+    if (!v || typeof v !== "object") return null;
+    const e = v;
+    if (typeof e.text !== "string" || !LOG_KINDS.includes(e.kind)) return null;
+    const out = { t: typeof e.t === "number" && Number.isFinite(e.t) ? e.t : 0, kind: e.kind, text: e.text };
+    if (typeof e.key === "string" && has(e.key, "en")) {
+      out.key = e.key;
+      if (e.params && typeof e.params === "object" && !Array.isArray(e.params)) {
+        const params = Object.fromEntries(Object.entries(e.params).filter(([, x]) => typeof x === "string" || typeof x === "number" && Number.isFinite(x)));
+        if (Object.keys(params).length) out.params = params;
+      }
+    }
+    return out;
+  }
   function cleanPassives(hero) {
     const wanted = new Set(strs(hero.passives, (id) => !!PASSIVES[id] && PASSIVES[id].kind !== "start") ?? []);
     const start = CLASSES[hero.cls].startNode;
@@ -4923,8 +9270,8 @@
     }
     return kept.slice(0, Math.max(0, passivePoints(hero.level, hero.bonusPoints)));
   }
-  function validateState(raw) {
-    const s = obj(raw, "state");
+  function validateState(raw2) {
+    const s = obj(raw2, "state");
     num(s.seed, "seed");
     num(s.simTo, "time");
     num(s.nextUid, "item counter", 0);
@@ -5004,7 +9351,7 @@
     s.mapCap = Number.isInteger(s.mapCap) && s.mapCap > 0 ? s.mapCap : 40;
     const atlas = s.atlas && typeof s.atlas === "object" ? s.atlas : { points: 0, nodes: [], tiers: [] };
     atlas.points = Number.isFinite(atlas.points) && atlas.points >= 0 ? atlas.points : 0;
-    atlas.tiers = Array.isArray(atlas.tiers) ? [...new Set(atlas.tiers.filter((t) => Number.isInteger(t) && t >= 1))] : [];
+    atlas.tiers = Array.isArray(atlas.tiers) ? [...new Set(atlas.tiers.filter((t2) => Number.isInteger(t2) && t2 >= 1))] : [];
     const nodes = [];
     for (const id of Array.isArray(atlas.nodes) ? atlas.nodes : []) {
       if (ATLAS[id] && !nodes.includes(id) && ATLAS[id].requires.every((r3) => nodes.includes(r3)) && nodes.length < atlas.points) nodes.push(id);
@@ -5023,7 +9370,7 @@
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
-    s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
+    s.log = (Array.isArray(s.log) ? s.log : []).map(cleanLog).filter((e) => !!e).slice(-60);
     reconcileRewards(s);
     cleanContracts(s);
     return s;
@@ -5120,7 +9467,10 @@
     "\u042C": ["#....", "#....", "#....", "####.", "#...#", "#...#", "####."],
     "\u042D": [".###.", "#...#", "....#", ".####", "....#", "#...#", ".###."],
     "\u042E": ["#..##.", "#.#..#", "#.#..#", "###..#", "#.#..#", "#.#..#", "#..##."],
-    "\u042F": [".####", "#...#", "#...#", ".####", "..#.#", ".#..#", "#...#"]
+    "\u042F": [".####", "#...#", "#...#", ".####", "..#.#", ".#..#", "#...#"],
+    // Guillemets, the quotation marks of Russian and Ukrainian text.
+    "\xAB": [".....", "..#.#", ".#.#.", "#.#..", ".#.#.", "..#.#", "....."],
+    "\xBB": [".....", "#.#..", ".#.#.", "..#.#", ".#.#.", "#.#..", "....."]
   };
   var GLYPH_H = 7;
   var glyphOf = (ch) => G[ch] ?? G[ch.toUpperCase()] ?? G["?"];
@@ -5591,32 +9941,32 @@
         heroMiss: (i) => {
           if (this.quiet) return;
           const p = this.positions(state())[i];
-          if (p) this.pushFloat({ x: p[0], y: p[1] - 44, text: "miss", color: "#9aa0a6", t: now(), big: false });
+          if (p) this.pushFloat({ x: p[0], y: p[1] - 44, text: t("battle.miss"), color: "#9aa0a6", t: now(), big: false });
         },
         monsterHit: (i, dmg, avoided) => {
           if (this.quiet) return;
           this.monAtk.set(i, now());
-          if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 56, text: avoided, color: "#7fd1ff", t: now(), big: false });
+          if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 56, text: t(avoided === "evade" ? "battle.evade" : "battle.block"), color: "#7fd1ff", t: now(), big: false });
           else {
             this.heroHurt = now();
             this.pushFloat({ x: this.HERO_X - 6, y: this.GROUND - 56, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false });
           }
         },
         flask: () => {
-          if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 66, text: "+flask", color: "#3fbf5f", t: now(), big: false });
+          if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 66, text: t("battle.flask"), color: "#3fbf5f", t: now(), big: false });
         },
         level: (l) => {
           if (!this.quiet) {
-            this.pushFloat({ x: this.HERO_X, y: this.GROUND - 74, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true });
+            this.pushFloat({ x: this.HERO_X, y: this.GROUND - 74, text: t("battle.level", { n: l }), color: "#ffc233", t: now(), big: true });
             this.kick(now(), 2);
           }
         }
       };
     }
     /** A short screen shake. */
-    kick(t, amp) {
-      this.shakeAmp = t - this.shake < 140 ? Math.max(amp, this.shakeAmp) : amp;
-      this.shake = t;
+    kick(t2, amp) {
+      this.shakeAmp = t2 - this.shake < 140 ? Math.max(amp, this.shakeAmp) : amp;
+      this.shake = t2;
     }
     pushFx(f) {
       this.fx.push(f);
@@ -5695,7 +10045,7 @@
           const bw = Math.min(200, this.W - 120), bx = Math.round(this.W / 2 - bw / 2);
           g.fillStyle = "#111";
           g.fillRect(bx - 2, 3, bw + 4, 19);
-          drawText(g, MONSTERS[boss.def].name.toUpperCase(), this.W / 2, 3, "#ffffff", "center");
+          drawText(g, monsterName(boss.def).toUpperCase(), this.W / 2, 3, "#ffffff", "center");
           bar(g, bx, 15, bw, 4, boss.life / boss.maxLife, "#e5383b");
         }
       }
@@ -5759,8 +10109,8 @@
         g.fillStyle = "rgba(10,10,14,0.6)";
         g.fillRect(0, 0, this.W, this.H);
         const cy = Math.round(this.H / 2) - 12;
-        drawText(g, "THE EMBER RELIGHTS", this.W / 2, cy, "#ff5a36", "center");
-        drawText(g, `BACK IN ${Math.max(0, run.timer).toFixed(0)}S`, this.W / 2, cy + 12, "#ffffff", "center");
+        drawText(g, t("battle.relights"), this.W / 2, cy, "#ff5a36", "center");
+        drawText(g, t("battle.backIn", { n: Math.max(0, run.timer).toFixed(0) }), this.W / 2, cy + 12, "#ffffff", "center");
       }
       if (run) {
         for (let i = 0; i < run.packs + (run.boss ? 1 : 0); i++) {
@@ -5851,8 +10201,8 @@
         }
       } else if (f.kind === "bolt") {
         const end = targets[targets.length - 1] ?? [this.W - 20, G2 - 20];
-        const t = Math.min(1, k * 2);
-        const x = HX + 14 + (end[0] - HX - 14) * t, y = G2 - 24 + (end[1] - 20 - G2 + 24) * t;
+        const t2 = Math.min(1, k * 2);
+        const x = HX + 14 + (end[0] - HX - 14) * t2, y = G2 - 24 + (end[1] - 20 - G2 + 24) * t2;
         if (projectile === "fireball" && spriteOf("fx.fireball")) drawSprite(g, "fx.fireball", now / 60, x, y + 12);
         else if (projectile === "arrow") {
           g.fillStyle = "#111";
@@ -6013,13 +10363,13 @@
     const color = look.cape;
     const step2 = walk ? Math.round(Math.sin(walk / 90) * 2) : 0;
     const skin = hurt ? "#ffd0c0" : "#f0c9a0";
-    const armour = hurt ? "#e5a0a0" : "#6b7280";
+    const armour3 = hurt ? "#e5a0a0" : "#6b7280";
     box(g, x - 7, y - 20, 4, 12, color);
-    box(g, x - 3, y - 5, 3, 5 + step2, armour);
-    box(g, x + 1, y - 5, 3, 5 - step2, armour);
-    box(g, x - 4, y - 16, 9, 11, armour);
+    box(g, x - 3, y - 5, 3, 5 + step2, armour3);
+    box(g, x + 1, y - 5, 3, 5 - step2, armour3);
+    box(g, x - 4, y - 16, 9, 11, armour3);
     box(g, x - 3, y - 23, 7, 7, skin);
-    box(g, x - 4, y - 25, 9, 3, armour);
+    box(g, x - 4, y - 25, 9, 3, armour3);
     g.fillStyle = "#ff5a36";
     g.fillRect(x, y - 13, 2, 3);
     g.fillStyle = "#111";
@@ -6673,14 +11023,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     if (a >= 10) return n.toFixed(1);
     return n.toFixed(2).replace(/\.?0+$/, "") || "0";
   }
-  function fmtDuration(ms) {
-    const s = Math.floor(ms / 1e3);
-    const d = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600), mm = Math.floor(s % 3600 / 60);
-    if (d) return `${d}d ${hh}h`;
-    if (hh) return `${hh}h ${mm}m`;
-    if (mm) return `${mm}m`;
-    return `${s}s`;
-  }
+  var fmtDuration2 = (ms) => fmtDuration(ms);
   var pct = (x, digits = 0) => (x * 100).toFixed(digits) + "%";
 
   // src/ui/glyphs.ts
@@ -6948,7 +11291,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   }
 
   // src/ui/gfx/pix.ts
-  var DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~\u0401\u0404\u0406\u0407\u0410-\u042f\u0490]+$/;
+  var DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~\u00ab\u00bb\u0401\u0404\u0406\u0407\u0410-\u042f\u0490]+$/;
   var SELECTOR = "h3:not(.split), h3.split > span, .btn, .sec, .nav .lbl, .plaque";
   function pixText(text, colour, scale = 3, outline = "") {
     const src = textSprite(text.toUpperCase(), colour, outline);
@@ -7081,8 +11424,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (d.esMax > 0) this.ring(22, 24, 21, d.es / d.esMax, "#7fd1ff");
       this.globe(W2 - 22, 24, 19, d.manaMax ? d.mana / d.manaMax : 0, "#3a7bff", "#1f47a8", "#9dbbff", now, 1.7);
       if (d.dead) {
-        drawText(g, "DEAD", 22, 17, "#ff8a8c", "center");
-        drawText(g, `${Math.max(0, Math.ceil(d.respawn ?? 0))}S`, 22, 27, CREAM, "center");
+        drawText(g, fit(t("hud.dead"), 36), 22, 17, "#ff8a8c", "center");
+        drawText(g, t("hud.secs", { n: Math.max(0, Math.ceil(d.respawn ?? 0)) }), 22, 27, CREAM, "center");
       } else drawText(g, fmt(Math.floor(Math.max(0, d.life))), 22, 20, CREAM, "center");
       drawText(g, fmt(Math.floor(Math.max(0, d.mana))), W2 - 22, 20, CREAM, "center");
       if (!d.dead && d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
@@ -7094,12 +11437,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (leftRoom >= 60) {
         const z = fit(d.zone.toUpperCase(), leftRoom - 4);
         drawText(g, z, 48, 13, CREAM);
-        drawText(g, `AREA ${d.zoneLevel}`, 48, 24, "#b5a48b");
-        drawText(g, `${fmt(d.packDps)} DPS`, 48, 33, GOLD);
+        drawText(g, fit(t("hud.area", { n: d.zoneLevel }), leftRoom - 4), 48, 24, "#b5a48b");
+        drawText(g, fit(t("hud.dps", { dps: fmt(d.packDps) }), leftRoom - 4), 48, 33, GOLD);
       }
       if (rightRoom >= 60) {
         const rx = W2 - 48;
-        drawText(g, `${Math.floor(d.xpFrac * 100)}% XP`, rx, 13, GOLD, "right");
+        drawText(g, fit(t("hud.xp", { n: Math.floor(d.xpFrac * 100) }), rightRoom - 4), rx, 13, GOLD, "right");
         if (d.eta) drawText(g, fit(d.eta.toUpperCase(), rightRoom - 4), rx, 24, "#b5a48b", "right");
       }
     }
@@ -7194,16 +11537,16 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       g.fillStyle = GOLD;
       g.fillRect(x, y, 28, 2);
       g.fillRect(x, y + 26, 28, 2);
-      drawText(g, "LV", x + 14, y + 4, "#b5a48b", "center");
+      drawText(g, t("hud.lv"), x + 14, y + 4, "#b5a48b", "center");
       drawText(g, String(lv), x + 14, y + 14, GOLD, "center");
     }
   };
   var clamp01 = (v) => Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
   function fit(text, max) {
     if (textWidth(text) + 2 <= max) return text;
-    let t = text;
-    while (t.length > 1 && textWidth(t + ".") + 2 > max) t = t.slice(0, -1);
-    return t.trimEnd() + ".";
+    let t2 = text;
+    while (t2.length > 1 && textWidth(t2 + ".") + 2 > max) t2 = t2.slice(0, -1);
+    return t2.trimEnd() + ".";
   }
 
   // src/ui/sfx.ts
@@ -7262,83 +11605,83 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const now = performance.now(), gap = GAP[s] ?? 0;
       if (gap && now - (this.last.get(s) ?? -1e9) < gap) return;
       this.last.set(s, now);
-      const t = this.ctx.currentTime + 5e-3;
+      const t2 = this.ctx.currentTime + 5e-3;
       switch (s) {
         case "hit":
-          this.tone("square", 220, 90, t, 0.06, 0.18);
-          this.hiss(t, 0.04, 0.12, 2400);
+          this.tone("square", 220, 90, t2, 0.06, 0.18);
+          this.hiss(t2, 0.04, 0.12, 2400);
           break;
         case "crit":
-          this.tone("square", 520, 140, t, 0.1, 0.22);
-          this.hiss(t, 0.08, 0.2, 5e3);
-          this.tone("triangle", 1040, 780, t, 0.08, 0.1);
+          this.tone("square", 520, 140, t2, 0.1, 0.22);
+          this.hiss(t2, 0.08, 0.2, 5e3);
+          this.tone("triangle", 1040, 780, t2, 0.08, 0.1);
           break;
         case "kill":
-          this.tone("triangle", 150, 50, t, 0.14, 0.3);
-          this.hiss(t, 0.1, 0.12, 900);
+          this.tone("triangle", 150, 50, t2, 0.14, 0.3);
+          this.hiss(t2, 0.1, 0.12, 900);
           break;
         case "hurt":
-          this.tone("sawtooth", 140, 70, t, 0.1, 0.16);
+          this.tone("sawtooth", 140, 70, t2, 0.1, 0.16);
           break;
         case "flask":
-          [440, 560, 700].forEach((f, i) => this.tone("sine", f, f * 1.2, t + i * 0.05, 0.06, 0.14));
+          [440, 560, 700].forEach((f, i) => this.tone("sine", f, f * 1.2, t2 + i * 0.05, 0.06, 0.14));
           break;
         case "loot1":
-          [660, 880].forEach((f, i) => this.tone("triangle", f, f, t + i * 0.07, 0.09, 0.18));
+          [660, 880].forEach((f, i) => this.tone("triangle", f, f, t2 + i * 0.07, 0.09, 0.18));
           break;
         case "loot2":
-          [784, 988, 1319].forEach((f, i) => this.tone("square", f, f, t + i * 0.07, 0.1, 0.12));
+          [784, 988, 1319].forEach((f, i) => this.tone("square", f, f, t2 + i * 0.07, 0.1, 0.12));
           break;
         case "loot3":
-          [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone("square", f, f, t + i * 0.07, 0.14, 0.13));
-          this.hiss(t + 0.3, 0.5, 0.06, 7e3);
+          [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone("square", f, f, t2 + i * 0.07, 0.14, 0.13));
+          this.hiss(t2 + 0.3, 0.5, 0.06, 7e3);
           break;
         case "level":
           [392, 523, 659, 784, 1047].forEach((f, i) => {
-            this.tone("square", f, f, t + i * 0.09, 0.16, 0.14);
-            this.tone("triangle", f / 2, f / 2, t + i * 0.09, 0.16, 0.12);
+            this.tone("square", f, f, t2 + i * 0.09, 0.16, 0.14);
+            this.tone("triangle", f / 2, f / 2, t2 + i * 0.09, 0.16, 0.12);
           });
           break;
         case "death":
-          this.tone("sawtooth", 330, 55, t, 0.9, 0.2);
-          this.hiss(t, 0.5, 0.1, 600);
+          this.tone("sawtooth", 330, 55, t2, 0.9, 0.2);
+          this.hiss(t2, 0.5, 0.1, 600);
           break;
         case "boss":
-          this.tone("sawtooth", 55, 50, t, 1.1, 0.25);
-          this.tone("square", 82, 80, t + 0.05, 0.9, 0.12);
+          this.tone("sawtooth", 55, 50, t2, 1.1, 0.25);
+          this.tone("square", 82, 80, t2 + 0.05, 0.9, 0.12);
           break;
         case "click":
-          this.tone("square", 1200, 900, t, 0.025, 0.06);
+          this.tone("square", 1200, 900, t2, 0.025, 0.06);
           break;
       }
     }
-    env(t, dur, peak) {
+    env(t2, dur, peak) {
       const g = this.ctx.createGain();
-      g.gain.setValueAtTime(1e-4, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.01, dur / 4));
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      g.gain.setValueAtTime(1e-4, t2);
+      g.gain.exponentialRampToValueAtTime(peak, t2 + Math.min(0.01, dur / 4));
+      g.gain.exponentialRampToValueAtTime(1e-4, t2 + dur);
       g.connect(this.master);
       return g;
     }
-    tone(type, f0, f1, t, dur, peak) {
+    tone(type, f0, f1, t2, dur, peak) {
       const o = this.ctx.createOscillator();
       o.type = type;
-      o.frequency.setValueAtTime(f0, t);
-      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-      o.connect(this.env(t, dur, peak));
-      o.start(t);
-      o.stop(t + dur + 0.02);
+      o.frequency.setValueAtTime(f0, t2);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t2 + dur);
+      o.connect(this.env(t2, dur, peak));
+      o.start(t2);
+      o.stop(t2 + dur + 0.02);
     }
-    hiss(t, dur, peak, cutoff) {
+    hiss(t2, dur, peak, cutoff) {
       const src = this.ctx.createBufferSource();
       src.buffer = this.noise;
       const f = this.ctx.createBiquadFilter();
       f.type = "lowpass";
       f.frequency.value = cutoff;
       src.connect(f);
-      f.connect(this.env(t, dur, peak));
-      src.start(t);
-      src.stop(t + dur + 0.02);
+      f.connect(this.env(t2, dur, peak));
+      src.start(t2);
+      src.stop(t2 + dur + 0.02);
     }
   };
 
@@ -7353,14 +11696,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       tip = null;
       owner = null;
     };
-    const find = (t) => t instanceof Element ? t.closest("[title], [data-tip]") : null;
+    const find = (t2) => t2 instanceof Element ? t2.closest("[title], [data-tip]") : null;
     const adopt = (el) => {
-      const t = el.getAttribute("title");
-      if (t !== null) {
+      const t2 = el.getAttribute("title");
+      if (t2 !== null) {
         el.removeAttribute("title");
-        if (t) {
-          el.dataset.tip = t;
-          if (!el.hasAttribute("aria-label")) el.setAttribute("aria-description", t);
+        if (t2) {
+          el.dataset.tip = t2;
+          if (!el.hasAttribute("aria-label")) el.setAttribute("aria-description", t2);
         }
       }
       return el.dataset.tip ?? "";
@@ -7398,16 +11741,16 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     scope.addEventListener("pointerdown", hide);
     scope.addEventListener("wheel", hide, { passive: true });
     scope.addEventListener("focusin", (e) => {
-      const t = e.target;
-      const el = find(t);
-      if (el && t.matches(":focus-visible")) show(el, 200);
+      const t2 = e.target;
+      const el = find(t2);
+      if (el && t2.matches(":focus-visible")) show(el, 200);
     });
     scope.addEventListener("focusout", hide);
     return { busy: () => !!owner && owner.isConnected };
   }
 
   // src/ui/gfx/font.gen.ts
-  var PIXEL_FONT = "AAEAAAAKAIAAAwAgT1MvMmOgYNIAAACsAAAAYGNtYXAS4hRHAAABDAAAAGxnbHlmX8LAMAAAAXgAADPsaGVhZClDYH4AADVkAAAANmhoZWEHAgOrAAA1nAAAACRobXR4xgACAAAANcAAAAKobG9jYQARHkgAADhoAAACrG1heHAAtgAuAAA7FAAAACBuYW1lEJ0ovgAAOzQAAADwcG9zdP+DAIAAADwkAAAAIAAEAqwBkAAFAAACgAKAAAAAgAKAAoAAAAIAAIABgAAAAAAAAAAAAAAAAAAAAgEAAAAAAAAAAAAAAABOT05FAEAAIASRBAD/AAAABAABAAAAAAUAAAAAAoADgAAAACAAAQAAAAEAAwABAAAADAAEAGAAAAAUABAAAwAEAH4EAQQEBAcETwRRBFQEVwSR//8AAAAgBAEEBAQGBBAEUQRUBFYEkP///+H8X/xd/Fz8VPxT/FH8UPwYAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAIAA4AAAwAHAAsADwAAMTUhFQE1IRUBETMRIREzEQIA/gACAP4AgAEAgICAAwCAgP2AAoD9gAKA/YAAAgAAAAAAgAOAAAMABwAAEREzEQM1MxWAgIABAAKA/YD/AICAAAAAAAIAAAKAAYADgAADAAcAABERMxEzETMRgICAAoABAP8AAQD/AAAAAAAIAAAAAAKAA4AAAwAHAAsADwATABcAGwAfAAATETMRMxEzEQU1IRUFNTMVMzUzFQU1IRUBETMRMxEzEYCAgID+AAKA/gCAgID+AAKA/gCAgIACgAEA/wABAP8AgICAgICAgICAgID/AAEA/wABAP8AAAAAAAkAAAAAAoADgAADAAcACwAPABMAFwAbAB8AIwAAATUzFQU1IRUFNTMVMzUzFQU1IRUFNTMVMzUzFQU1IRUFNTMVAQCA/wACAP2AgICA/wABgP8AgICA/YACAP8AgAMAgICAgICAgICAgICAgICAgICAgICAgICAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARESERJTUzFQERMxEFNTMVAREzERcRIREhNTMVAQABAID/AID/AID/AICAAQD9gIACgAEA/wCAgID/AAEA/wCAgID/AAEA/wCAAQD/AICAAAAAAAsAAAAAAoADgAADAAcACwAPABMAFwAbAB8AIwAnACsAABM1IRUBETMRJTUzFQU1MxUFNTMVAREzETc1MxUzNTMVBTUzFQU1IRUzNTMVgAEA/oCAAQCA/wCA/wCA/wCAgICAgP8AgP6AAQCAgAMAgID/AAEA/wCAgICAgICAgID/AAEA/wCAgICAgICAgICAgICAAAABAAACgACAA4AAAwAAEREzEYACgAEA/wAAAAAAAwAAAAABAAOAAAMABwALAAATNTMVAREzERU1MxWAgP8AgIADAICA/YACgP2AgICAAAAAAAMAAAAAAQADgAADAAcACwAAETUzFRERMxEFNTMVgID/AIADAICA/YACgP2AgICAAAkAAACAAoADAAADAAcACwAPABMAFwAbAB8AIwAAETUzFTM1MxUzNTMVBTUhFQU1IRUFNSEVBTUzFTM1MxUzNTMVgICAgID+AAGA/gACgP4AAYD+AICAgICAAoCAgICAgICAgICAgICAgICAgICAgICAAAAAAwAAAIACgAMAAAMABwALAAABETMRBTUhFQERMxEBAID+gAKA/oCAAgABAP8AgICA/wABAP8AAAACAAAAAAEAAYAAAwAHAAA3ETMRBTUzFYCA/wCAgAEA/wCAgIAAAAAAAQAAAYACAAIAAAMAABE1IRUCAAGAgIAAAQAAAAABAAEAAAMAADERIREBAAEA/wAABQAAAAACgAOAAAMABwALAA8AEwAAATUzFQERMxEFNTMVAREzEQU1MxUCAID/AID/AID/AID/AIADAICA/wABAP8AgICA/wABAP8AgICAAAAJAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAABM1IRUBETMRATUzFQU1IRUFNTMVExEzESU1IRUFNTMVFTUhFYABgP4AgAGAgP8AAQD+gICAgP2AAQD/AIABgAMAgID+gAGA/oABAICAgICAgICA/wABgP6AgICAgICAgICAAAQAgAAAAgADgAADAAcACwAPAAABNTMVBTUhFQMRMxEFNSEVAQCA/wABAICA/wABgAMAgICAgID+AAIA/gCAgIAAAAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABM1IRUFNTMVBREzEQU1MxUFNTMVBTUzFQU1IRWAAYD+AIABgID/AID/AID/AID/AAKAAwCAgICAgIABAP8AgICAgICAgICAgICAAAUAAAAAAoADgAADAAcACwAPABMAABE1IRURETMRBTUhFRERMxEFNSEVAgCA/gABgID9gAIAAwCAgP8AAQD/AICAgP8AAQD/AICAgAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAATUzFQU1IRUFNTMVFxEzESE1MxUHNSEVAREzEQGAgP8AAQD+gICAgP4AgIACgP8AgAMAgICAgICAgICAAQD/AICAgICA/wABAP8AAAAAAAYAAAAAAoADgAADAAcACwAPABMAFwAAETUhFQU1MxUHNSEVEREzESE1MxUVNSEVAoD9gICAAgCA/YCAAYADAICAgICAgICA/oABgP6AgICAgIAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAABNSEVBTUzFQU1MxUHNSEVAREzESERMxEFNSEVAQABAP6AgP8AgIACAP4AgAGAgP4AAYADAICAgICAgICAgICA/wABAP8AAQD/AICAgAAABQAAAAACgAOAAAMABwALAA8AEwAAETUhFQc1MxUFNTMVBTUzFQERMxECgICA/wCA/wCA/wCAAwCAgICAgICAgICAgP6AAYD+gAAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVAREzESERMxEFNSEVAREzESERMxEFNSEVgAGA/gCAAYCA/gABgP4AgAGAgP4AAYADAICA/wABAP8AAQD/AICAgP8AAQD/AAEA/wCAgIAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVAREzESERMxEFNSEVBzUzFQU1MxUFNSEVgAGA/gCAAYCA/gACAICA/wCA/oABAAMAgID/AAEA/wABAP8AgICAgICAgICAgICAAAAAAgAAAIABAAMAAAMABwAAEREhEQERIREBAP8AAQACAAEA/wD+gAEA/wAAAAAEAAAAAAEAAwAAAwAHAAsADwAAEREhEQE1IRUHNTMVBTUzFQEA/wABAICA/wCAAgABAP8A/wCAgICAgICAgAAABwAAAAACAAOAAAMABwALAA8AEwAXABsAAAE1MxUFNTMVBTUzFQU1MxUVNTMVFTUzFRU1MxUBgID/AID/AID/AICAgIADAICAgICAgICAgICAgICAgICAgICAAAACAAABAAIAAoAAAwAHAAARNSEVATUhFQIA/gACAAIAgID/AICAAAAABwAAAAACAAOAAAMABwALAA8AEwAXABsAABE1MxUVNTMVFTUzFRU1MxUFNTMVBTUzFQU1MxWAgICA/wCA/wCA/wCAAwCAgICAgICAgICAgICAgICAgICAgAAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABM1IRUFNTMVBREzEQU1MxUFNTMVAzUzFYABgP4AgAGAgP8AgP8AgICAAwCAgICAgIABAP8AgICAgICA/wCAgAAACAAAAAACgAOAAAMABwALAA8AEwAXABsAHwAAEzUhFQERMxEBNTMVBTUhFQU1MxUzNTMVBTUhFQE1IRWAAYD+AIABgID+gAGA/oCAgID+gAGA/gABgAMAgID9gAKA/YACAICAgICAgICAgICAgID/AICAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABM1IRUBETMRIREzEQU1IRUBETMRIREzEYABgP4AgAGAgP2AAoD9gIABgIADAICA/wABAP8AAQD/AICAgP6AAYD+gAGA/oAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAETUhFQERMxEhETMRBTUhFQERMxEhETMRBTUhFQIA/gCAAYCA/YACAP4AgAGAgP2AAgADAICA/wABAP8AAQD/AICAgP8AAQD/AAEA/wCAgIAAAAAFAAAAAAKAA4AAAwAHAAsADwATAAATNSEVAREzEQE1MxUDNTMVBTUhFYABgP4AgAGAgICA/gABgAMAgID9gAKA/YACAICA/gCAgICAgAAAAAYAAAAAAoADgAADAAcACwAPABMAFwAAETUhFQERMxEBNTMVEREzEQU1MxUFNSEVAYD+gIABAICA/wCA/gABgAMAgID9gAKA/YACAICA/oABgP6AgICAgICAAAAABQAAAAACgAOAAAMABwALAA8AEwAAETUhFQERMxEHNSEVAREzEQc1IRUCgP2AgIACAP4AgIACgAMAgID/AAEA/wCAgID/AAEA/wCAgIAAAAAEAAAAAAKAA4AAAwAHAAsADwAAETUhFQERMxEHNSEVAREzEQKA/YCAgAIA/gCAAwCAgP8AAQD/AICAgP6AAYD+gAAAAAYAAAAAAoADgAADAAcACwAPABMAFwAAEzUhFQERMxEBNTMVATUhFQMRMxEFNSEVgAGA/gCAAYCA/oABgICA/gACAAMAgID9gAKA/YACAICA/wCAgP8AAQD/AICAgAAAAAUAAAAAAoADgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAGAgP2AAoD9gIABgIACAAGA/oABgP6AgICA/oABgP6AAYD+gAAAAwCAAAACAAOAAAMABwALAAATNSEVAREzEQU1IRWAAYD/AID/AAGAAwCAgP2AAoD9gICAgAAAAAAEAAAAAAKAA4AAAwAHAAsADwAAATUhFQERMxEhNTMVFTUhFQEAAYD/AID+AIABAAMAgID9gAKA/YCAgICAgAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAARETMRATUzFQU1MxUFNTMVBTUhFQERMxETNTMVFTUzFRU1MxWAAYCA/wCA/wCA/oABAP8AgICAgIACAAGA/oABAICAgICAgICAgICA/oABgP6AAQCAgICAgICAgAAAAAIAAAAAAoADgAADAAcAADURMxEHNSEVgIACgIADAP0AgICAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARNTMVITUzFQU1IRUzNSEVAREzERMRMxETETMRgAGAgP2AAQCAAQD9gICAgICAAwCAgICAgICAgID9gAKA/YABgAEA/wD+gAKA/YAAAAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABERMxEBETMRJTUhFQERMxETNTMVFTUhFQMRMxGAAYCA/YABAP8AgICAAQCAgAKAAQD/AP8AAgD+AICAgP4AAgD+AAGAgICAgID/AAEA/wAAAAAABAAAAAACgAOAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAYD+AIABgID+AAGAAwCAgP2AAoD9gAKA/YCAgIAAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARNSEVAREzESERMxEFNSEVAREzEQIA/gCAAYCA/YACAP4AgAMAgID/AAEA/wABAP8AgICA/oABgP6AAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVAREzESURMxEhNTMVFTUzFQU1IRUzNTMVgAGA/gCAAYCA/oCAgP6AAQCAgAMAgID9gAKA/YCAAgD+AICAgICAgICAgIAAAAAIAAAAAAKAA4AAAwAHAAsADwATABcAGwAfAAARNSEVAREzESERMxEFNSEVAREzERM1MxUVNTMVFTUzFQIA/gCAAYCA/YACAP4AgICAgIADAICA/wABAP8AAQD/AICAgP6AAYD+gAEAgICAgICAgIAABQAAAAACgAOAAAMABwALAA8AEwAAEzUhFQERMxEVNSEVEREzEQU1IRWAAgD9gIABgID9gAIAAwCAgP8AAQD/AICAgP8AAQD/AICAgAAAAAACAAAAAAKAA4AAAwAHAAARNSEVAREzEQKA/oCAAwCAgP0AAwD9AAAAAwAAAAACgAOAAAMABwALAAA1ETMRIREzEQU1IRWAAYCA/gABgIADAP0AAwD9AICAgAAAAAUAAAAAAoADgAADAAcACwAPABMAABERMxEhETMRBTUzFTM1MxUFNTMVgAGAgP4AgICA/wCAAQACgP2AAoD9gICAgICAgICAAAUAAAAAAoADgAADAAcACwAPABMAADURMxEhETMRIREzEQU1MxUzNTMVgAGAgP6AgP8AgICAgAMA/QADAP0AAYD+gICAgICAAAkAAAAAAoADgAADAAcACwAPABMAFwAbAB8AIwAAEREzESERMxEFNTMVMzUzFQU1MxUFNTMVMzUzFQERMxEhETMRgAGAgP4AgICA/wCA/wCAgID+AIABgIACgAEA/wABAP8AgICAgICAgICAgICAgP8AAQD/AAEA/wAAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARETMRIREzEQU1MxUzNTMVAREzEYABgID+AICAgP8AgAKAAQD/AAEA/wCAgICAgP4AAgD+AAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABE1IRUHNTMVBTUzFQU1MxUFNTMVBTUzFQc1IRUCgICA/wCA/wCA/wCA/wCAgAKAAwCAgICAgICAgICAgICAgICAgICAgAAAAwAAAAABAAOAAAMABwALAAARNSEVAREzEQc1IRUBAP8AgIABAAMAgID9gAKA/YCAgIAAAAUAAAAAAoADgAADAAcACwAPABMAABE1MxURETMRFTUzFRERMxEVNTMVgICAgIADAICA/wABAP8AgICA/wABAP8AgICAAAAAAAMAAAAAAQADgAADAAcACwAAETUhFQMRMxEFNSEVAQCAgP8AAQADAICA/YACgP2AgICAAAAFAAACAAKAA4AAAwAHAAsADwATAAABNTMVBTUzFTM1MxUFNTMVITUzFQEAgP8AgICA/gCAAYCAAwCAgICAgICAgICAgIAAAAABAAD/gAIAAAAAAwAAFTUhFQIAgICAAAACAAACgAEAA4AAAwAHAAARNTMVFTUzFYCAAwCAgICAgAAAAAAGAAAAAAIAAoAAAwAHAAsADwATABcAABM1IRUVNTMVBTUhFQU1MxUhNTMVBTUhFYABAID+gAGA/gCAAQCA/oABgAIAgICAgICAgICAgICAgICAgAAFAAAAAAIAA4AAAwAHAAsADwATAAARETMRBzUhFQERMxEhETMRBTUhFYCAAYD+gIABAID+AAGAAoABAP8AgICA/oABgP6AAYD+gICAgAAAAAMAAAAAAgACgAADAAcACwAAEzUhFQERMxEVNSEVgAGA/gCAAYACAICA/oABgP6AgICAAAAFAAAAAAIAA4AAAwAHAAsADwATAAABETMRBTUhFQERMxEhETMRBTUhFQGAgP6AAYD+AIABAID+gAGAAoABAP8AgICA/oABgP6AAYD+gICAgAAAAAAGAAAAAAIAAoAAAwAHAAsADwATABcAABM1IRUFNTMVITUzFQU1IRUFNTMVFTUhFYABAP6AgAEAgP4AAgD+AIABgAIAgICAgICAgICAgICAgICAgAAEAAAAAAGAA4AAAwAHAAsADwAAEzUhFQU1MxUHNSEVAREzEYABAP6AgIABgP6AgAMAgICAgICAgID+AAIA/gAABgAA/wACAAKAAAMABwALAA8AEwAXAAATNSEVAREzESERMxEFNSEVBzUzFQU1IRWAAYD+AIABAID+gAGAgID+gAEAAgCAgP6AAYD+gAGA/oCAgICAgICAgIAAAAAEAAAAAAIAA4AAAwAHAAsADwAAEREzEQc1IRUBETMRIREzEYCAAYD+gIABAIACgAEA/wCAgID+AAIA/gACAP4AAAAAAAIAAAAAAIADgAADAAcAABE1MxUDETMRgICAAwCAgP0AAoD9gAAAAAADAAD/AAGAA4AAAwAHAAsAAAE1MxUDETMRBTUhFQEAgICA/oABAAMAgID8gAMA/QCAgIAABwAAAAACAAOAAAMABwALAA8AEwAXABsAABERMxElNTMVBTUzFQU1IRUBETMRNzUzFRU1MxWAAQCA/wCA/oABAP8AgICAgAGAAgD+AICAgICAgICAgP8AAQD/AICAgICAgAAAAAIAAAAAAQADgAADAAcAADURMxEVNTMVgICAAwD9AICAgAAAAAUAAAAAAoACgAADAAcACwAPABMAABE1IRUzNTMVAREzETMRMxEzETMRAQCAgP4AgICAgIACAICAgID+AAIA/gACAP4AAgD+AAAAAAADAAAAAAIAAoAAAwAHAAsAABE1IRUBETMRIREzEQGA/oCAAQCAAgCAgP4AAgD+AAIA/gAABAAAAAACAAKAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAQD+gIABAID+gAEAAgCAgP6AAYD+gAGA/oCAgIAAAAAFAAD/AAIAAoAAAwAHAAsADwATAAARNSEVAREzESERMxEFNSEVAREzEQGA/oCAAQCA/gABgP6AgAIAgID+gAGA/oABgP6AgICA/wABAP8AAAUAAP8AAgACgAADAAcACwAPABMAABM1IRUBETMRIREzEQU1IRUDETMRgAGA/gCAAQCA/oABgICAAgCAgP6AAYD+gAGA/oCAgID/AAEA/wAABAAAAAACAAKAAAMABwALAA8AABE1MxUzNSEVBTUhFQERMxGAgAEA/gABAP8AgAIAgICAgICAgP6AAYD+gAAAAAUAAAAAAgACgAADAAcACwAPABMAABM1IRUFNTMVFTUhFRU1MxUFNSEVgAGA/gCAAQCA/gABgAIAgICAgICAgICAgICAgIAAAAQAAAAAAYADAAADAAcACwAPAAATNTMVBTUhFQERMxEVNTMVgID/AAGA/wCAgAKAgICAgID+gAGA/oCAgIAAAAADAAAAAAIAAoAAAwAHAAsAADURMxEhETMRBTUhFYABAID+gAGAgAIA/gACAP4AgICAAAAABQAAAAACgAKAAAMABwALAA8AEwAAEREzESERMxEFNTMVMzUzFQU1MxWAAYCA/gCAgID/AIABAAGA/oABgP6AgICAgICAgIAABQAAAAACgAKAAAMABwALAA8AEwAANREzESERMxEhETMRBTUzFTM1MxWAAYCA/oCA/wCAgICAAgD+AAIA/gABAP8AgICAgIAABQAAAAACAAKAAAMABwALAA8AEwAAEREzESERMxEFNSEVAREzESERMxGAAQCA/oABAP6AgAEAgAGAAQD/AAEA/wCAgID/AAEA/wABAP8AAAAFAAD/AAIAAoAAAwAHAAsADwATAAA1ETMRIREzEQU1IRUHNTMVBTUhFYABAID+gAGAgID+gAEAgAIA/gACAP4AgICAgICAgICAAAAABQAAAAACAAKAAAMABwALAA8AEwAAETUhFQc1MxUFNSEVBTUzFQc1IRUCAICA/oABAP6AgIACAAIAgICAgICAgICAgICAgIAABQAAAAABgAOAAAMABwALAA8AEwAAATUzFQERMxEFNTMVEREzERU1MxUBAID/AID/AICAgAMAgID/AAEA/wCAgID/AAEA/wCAgIAAAAEAAP+AAIADgAADAAAVETMRgIAEAPwAAAUAAAAAAYADgAADAAcACwAPABMAABE1MxURETMRFTUzFQERMxEFNTMVgICA/wCA/wCAAwCAgP8AAQD/AICAgP8AAQD/AICAgAAAAAAEAAABgAKAAoAAAwAHAAsADwAAEzUzFSE1MxUFNTMVMzUhFYCAAQCA/YCAgAEAAgCAgICAgICAgIAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUzFTM1MxUBNSEVBTUzFQc1IRUFNTMVBzUhFYCAgID+AAKA/YCAgAIA/gCAgAKAAwCAgICA/wCAgICAgICAgICAgICAgAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxElNTMVATUhFQERMxEhNTMVBTUhFYABgP4AgAGAgP2AAgD+AIABgID+AAGAAwCAgP8AAQD/AICAgP8AgID/AAEA/wCAgICAgAAAAAADAIAAAAIAA4AAAwAHAAsAABM1IRUBETMRBTUhFYABgP8AgP8AAYADAICA/YACgP2AgICAAAAAAAUAgAAAAgADgAADAAcACwAPABMAABM1MxUzNTMVATUhFQERMxEFNSEVgICAgP6AAYD/AID/AAGAAwCAgICA/wCAgP6AAYD+gICAgAAGAAAAAAKAA4AAAwAHAAsADwATABcAABM1IRUBETMRIREzEQU1IRUBETMRIREzEYABgP4AgAGAgP2AAoD9gIABgIADAICA/wABAP8AAQD/AICAgP6AAYD+gAGA/oAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABE1IRUBETMRBzUhFQERMxEhETMRBTUhFQKA/YCAgAIA/gCAAYCA/YACAAMAgID/AAEA/wCAgID/AAEA/wABAP8AgICAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARNSEVAREzESERMxEFNSEVAREzESERMxEFNSEVAgD+AIABgID9gAIA/gCAAYCA/YACAAMAgID/AAEA/wABAP8AgICA/wABAP8AAQD/AICAgAAAAAIAAAAAAoADgAADAAcAABE1IRUBETMRAoD9gIADAICA/QADAP0AAAAGAAAAAAKAA4AAAwAHAAsADwATABcAAAE1IRUBETMRMxEzEQU1IRUFNTMVITUzFQEAAQD+gICAgP4AAoD9gIABgIADAICA/gACAP4AAgD+AICAgICAgICAAAAAAAUAAAAAAoADgAADAAcACwAPABMAABE1IRUBETMRBzUhFQERMxEHNSEVAoD9gICAAgD+AICAAoADAICA/wABAP8AgICA/wABAP8AgICAAAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAARETMRMxEzETMRMxEFNSEVBTUzFQU1IRUBETMRMxEzETMRMxGAgICAgP4AAYD/AID/AAGA/gCAgICAgAKAAQD/AAEA/wABAP8AgICAgICAgICA/wABAP8AAQD/AAEA/wAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQU1MxUFETMRBTUhFRERMxEhNTMVFTUhFYABgP4AgAGAgP6AAQCA/YCAAYADAICAgICAgAEA/wCAgID/AAEA/wCAgICAgAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABERMxEBETMRBTUhFQU1MxUTETMRATUhFQERMxGAAYCA/wABAP6AgICA/YABAP8AgAGAAgD+AAEAAQD/AICAgICAgP6AAgD+AAEAgID/AAEA/wAACgAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjACcAABM1MxUzNTMVBTUzFQERMxEBNTMVBTUhFQU1MxUTETMRJTUhFQU1MxWAgICA/wCA/oCAAYCA/wABAP6AgICA/YABAP8AgAMAgICAgICAgP6AAYD+gAEAgICAgICAgID/AAGA/oCAgICAgIAAAAAJAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAABERMxEBNTMVBTUzFQU1MxUFNSEVAREzERM1MxUVNTMVFTUzFYABgID/AID/AID+gAEA/wCAgICAgAIAAYD+gAEAgICAgICAgICAgID+gAGA/oABAICAgICAgICAAAAABAAAAAACgAOAAAMABwALAA8AABM1IRUBETMRBREzESE1MxWAAgD+AIABAID9gIADAICA/YACgP2AgAMA/QCAgAAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAETUzFSE1MxUFNSEVMzUhFQERMxETETMRExEzEYABgID9gAEAgAEA/YCAgICAgAMAgICAgICAgICA/YACgP2AAYABAP8A/oACgP2AAAAAAAUAAAAAAoADgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAGAgP2AAoD9gIABgIACAAGA/oABgP6AgICA/oABgP6AAYD+gAAABAAAAAACgAOAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAYD+AIABgID+AAGAAwCAgP2AAoD9gAKA/YCAgIAAAAADAAAAAAKAA4AAAwAHAAsAABE1IRUBETMRIREzEQKA/YCAAYCAAwCAgP0AAwD9AAMA/QAABQAAAAACgAOAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxECAP4AgAGAgP2AAgD+AIADAICA/wABAP8AAQD/AICAgP6AAYD+gAAFAAAAAAKAA4AAAwAHAAsADwATAAATNSEVAREzEQE1MxUDNTMVBTUhFYABgP4AgAGAgICA/gABgAMAgID9gAKA/YACAICA/gCAgICAgAAAAAIAAAAAAoADgAADAAcAABE1IRUBETMRAoD+gIADAICA/QADAP0AAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABERMxEhETMRBTUhFQMRMxEhNTMVFTUhFYABgID+AAIAgID9gIABgAIAAYD+gAGA/oCAgID/AAEA/wCAgICAgAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAAAE1MxUFNSEVAREzETMRMxEzETMRBTUhFQERMxEBAID/AAGA/gCAgICAgP4AAYD/AIADAICAgICA/wABAP8AAQD/AAEA/wCAgID/AAEA/wAAAAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAARETMRIREzEQU1MxUzNTMVBTUzFQU1MxUzNTMVAREzESERMxGAAYCA/gCAgID/AID/AICAgP4AgAGAgAKAAQD/AAEA/wCAgICAgICAgICAgICA/wABAP8AAQD/AAAAAAQAAAAAAoADgAADAAcACwAPAAARETMRIREzEQU1IRUHNTMVgAEAgP4AAoCAgAEAAoD9gAKA/YCAgICAgIAAAAAEAAAAAAKAA4AAAwAHAAsADwAAEREzESERMxEFNSEVAxEzEYABgID+AAIAgIACAAGA/oABgP6AgICA/oABgP6AAAAAAAQAAAAAAoADgAADAAcACwAPAAA1ETMRMxEzETMRMxEFNSEVgICAgID9gAKAgAMA/QADAP0AAwD9AICAgAAAAAAFAAAAAAMAA4AAAwAHAAsADwATAAARETMRMxEzETMRMxEFNSEVBzUzFYCAgICA/YADAICAAQACgP2AAoD9gAKA/YCAgICAgIAAAAAABgAAAAACgAOAAAMABwALAA8AEwAXAAARNSEVAxEzEQc1IRUBETMRIREzEQU1IRUBAICAgAGA/oCAAQCA/gABgAMAgID/AAEA/wCAgID/AAEA/wABAP8AgICAAAAGAAAAAAMAA4AAAwAHAAsADwATABcAABERMxEBETMRATUhFQERMxEhETMRBTUhFYACAID9AAGA/oCAAQCA/gABgAIAAYD+gP4AA4D8gAGAgID/AAEA/wABAP8AgICAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARETMRBzUhFQERMxEhETMRBTUhFYCAAgD+AIABgID9gAIAAgABgP6AgICA/wABAP8AAQD/AICAgAAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVBTUzFQURMxEFNSEVAxEzESE1MxUVNSEVgAGA/gCAAYCA/gACAICA/YCAAYADAICAgICAgAEA/wCAgID/AAEA/wCAgICAgAAIAAAAAAMAA4AAAwAHAAsADwATABcAGwAfAAARETMRATUhFQERMxEBETMRATUhFQERMxE3ETMRFTUhFYABAAEA/oCAAQCA/QABgP6AgICAAQACAAGA/oABAICA/wABAP8A/oACgP2AAQCAgP6AAYD+gIABAP8AgICAAAAACAAAAAACgAOAAAMABwALAA8AEwAXABsAHwAAEzUhFQERMxEhETMRBTUhFQU1MxUTETMRJTUzFQU1MxWAAgD9gIABgID+AAIA/oCAgID+AID/AIADAICA/wABAP8AAQD/AICAgICAgP8AAYD+gICAgICAgAAGAAAAAAIAAoAAAwAHAAsADwATABcAABM1IRUVNTMVBTUhFQU1MxUhNTMVBTUhFYABAID+gAGA/gCAAQCA/oABgAIAgICAgICAgICAgICAgICAgAAGAAAAAAIAA4AAAwAHAAsADwATABcAABM1IRUFNTMVBzUhFQERMxEhETMRBTUhFYABgP4AgIABgP6AgAEAgP6AAQADAICAgICAgICA/oABgP6AAYD+gICAgAAAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAARNSEVBTUzFSE1MxUFNSEVBTUzFSE1MxUFNSEVAYD+gIABAID+AAGA/oCAAQCA/gABgAIAgICAgICAgICAgICAgICAgICAAAIAAAAAAYACgAADAAcAABE1IRUBETMRAYD+gIACAICA/gACAP4AAAAGAAD/gAKAAoAAAwAHAAsADwATABcAAAE1IRUBETMRMxEzEQU1IRUFNTMVITUzFQEAAQD+gICAgP4AAoD9gIABgIACAICA/oABgP6AAYD+gICAgICAgICAAAAAAAYAAAAAAgACgAADAAcACwAPABMAFwAAEzUhFQU1MxUhNTMVBTUhFQU1MxUVNSEVgAEA/oCAAQCA/gACAP4AgAGAAgCAgICAgICAgICAgICAgICAAAkAAAAAAoACgAADAAcACwAPABMAFwAbAB8AIwAAETUzFTM1MxUzNTMVBTUhFQU1MxUFNSEVBTUzFTM1MxUzNTMVgICAgID+AAGA/wCA/wABgP4AgICAgIACAICAgICAgICAgICAgICAgICAgICAgIAAAAAABQAAAAACAAKAAAMABwALAA8AEwAAETUhFRU1MxUFNSEVFTUzFQU1IRUBgID+gAEAgP4AAYACAICAgICAgICAgICAgICAAAAABgAAAAACAAKAAAMABwALAA8AEwAXAAARETMRJREzEQU1IRUFNSEVFxEzESE1MxWAAQCA/wABAP4AAQCAgP4AgAEAAYD+gIABAP8AgICAgICAgAEA/wCAgAAAAAAHAAAAAAIAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxElETMRBTUhFQU1IRUXETMRITUzFYABAP6AgAEAgP8AAQD+AAEAgID+AIADAICA/gABgP6AgAEA/wCAgICAgICAAQD/AICAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAARETMRJTUzFQU1MxUFNSEVAREzETc1MxUVNTMVgAEAgP8AgP6AAQD/AICAgIABgAEA/wCAgICAgICAgID/AAEA/wCAgICAgIAAAAAEAAAAAAIAAoAAAwAHAAsADwAAEzUhFQERMxEXETMRITUzFYABgP6AgICA/gCAAgCAgP6AAYD+gIACAP4AgIAABwAAAAACgAKAAAMABwALAA8AEwAXABsAABE1MxUhNTMVBTUhFTM1IRUBETMREzUzFRMRMxGAAYCA/YABAIABAP2AgICAgIACAICAgICAgICAgP6AAYD+gAEAgID/AAGA/oAAAAUAAAAAAgACgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAEAgP4AAgD+AIABAIABgAEA/wABAP8AgICA/wABAP8AAQD/AAAABAAAAAACAAKAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAQD+gIABAID+gAEAAgCAgP6AAYD+gAGA/oCAgIAAAAADAAAAAAIAAoAAAwAHAAsAABE1IRUBETMRIREzEQIA/gCAAQCAAgCAgP4AAgD+AAIA/gAABQAA/wACAAKAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxEBgP6AgAEAgP4AAYD+gIACAICA/oABgP6AAYD+gICAgP8AAQD/AAADAAAAAAIAAoAAAwAHAAsAABM1IRUBETMRFTUhFYABgP4AgAGAAgCAgP6AAYD+gICAgAAAAgAAAAACgAKAAAMABwAAETUhFQERMxECgP6AgAIAgID+AAIA/gAAAAUAAP8AAgACgAADAAcACwAPABMAADURMxEhETMRBTUhFQc1MxUFNSEVgAEAgP6AAYCAgP6AAQCAAgD+AAIA/gCAgICAgICAgIAAAAAHAAD/AAKAA4AAAwAHAAsADwATABcAGwAAAREzEQU1IRUBETMRMxEzETMRMxEFNSEVAREzEQEAgP8AAYD+AICAgICA/gABgP8AgAKAAQD/AICAgP6AAYD+gAGA/oABgP6AgICA/wABAP8AAAAFAAAAAAIAAoAAAwAHAAsADwATAAARETMRIREzEQU1IRUBETMRIREzEYABAID+gAEA/oCAAQCAAYABAP8AAQD/AICAgP8AAQD/AAEA/wAAAAQAAP+AAoACgAADAAcACwAPAAA1ETMRIREzEQU1IRUHNTMVgAEAgP4AAoCAgIACAP4AAgD+AICAgICAgAAAAAAEAAAAAAIAAoAAAwAHAAsADwAAEREzESERMxEFNSEVAxEzEYABAID+gAGAgIABgAEA/wABAP8AgICA/wABAP8AAAAAAAQAAAAAAoACgAADAAcACwAPAAA1ETMRMxEzETMRMxEFNSEVgICAgID9gAKAgAIA/gACAP4AAgD+AICAgAAAAAAFAAD/gAMAAoAAAwAHAAsADwATAAA1ETMRMxEzETMRMxEFNSEVBzUzFYCAgICA/YADAICAgAIA/gACAP4AAgD+AICAgICAgAAGAAAAAAIAAoAAAwAHAAsADwATABcAABE1IRUHNTMVBzUhFQU1MxUzNTMVBTUhFQEAgICAAQD/AICAgP6AAQACAICAgICAgICAgICAgICAgIAAAAAGAAAAAAMAAoAAAwAHAAsADwATABcAABERMxEBETMRATUhFQU1MxUhNTMVBTUhFYACAID9AAGA/oCAAQCA/gABgAGAAQD/AP6AAoD9gAEAgICAgICAgICAgAAAAAUAAAAAAgACgAADAAcACwAPABMAABERMxEHNSEVBTUzFSE1MxUFNSEVgIABgP6AgAEAgP4AAYABgAEA/wCAgICAgICAgICAgAAAAAAFAAAAAAIAAoAAAwAHAAsADwATAAARNSEVFTUzFQU1IRUHNTMVBTUhFQGAgP6AAYCAgP4AAYACAICAgICAgICAgICAgICAAAAIAAAAAAMAAoAAAwAHAAsADwATABcAGwAfAAARETMRJTUhFQU1MxUBETMRJTUhFQERMxE3NTMVFTUhFYABAAEA/oCAAQCA/QABgP6AgICAAQABgAEA/wCAgICAgID/AAGA/oCAgID/AAEA/wCAgICAgIAAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAATNSEVBTUzFSE1MxUFNSEVBTUzFRcRMxEhNTMVgAGA/gCAAQCA/oABgP6AgICA/gCAAgCAgICAgICAgICAgICAgAEA/wCAgAAAAAAIAAAAAAIAA4AAAwAHAAsADwATABcAGwAfAAARNTMVITUzFQE1IRUFNTMVITUzFQU1IRUFNTMVFTUhFYABAID+gAEA/oCAAQCA/gACAP4AgAGAAwCAgICA/wCAgICAgICAgICAgICAgICAAAAFAAAAAAIAAoAAAwAHAAsADwATAAATNSEVBTUzFQc1IRUFNTMVFTUhFYABgP4AgIABgP6AgAGAAgCAgICAgICAgICAgICAgAACAAAAAACAA4AAAwAHAAARNTMVAxEzEYCAgAMAgID9AAKA/YAAAAAAAwAAAAABgAOAAAMABwALAAARNTMVMzUzFQERMxGAgID/AIADAICAgID9AAKA/YAAAwAAAAACgAOAAAMABwALAAABNTMVBTUhFQERMxECAID9gAKA/YCAAwCAgICAgP2AAoD9gAAAAAADAAAAAAGAA4AAAwAHAAsAAAERMxEFNSEVAREzEQEAgP6AAYD+gIACgAEA/wCAgID+AAIA/gAAAAEAAAABAADqsxyFXw889QALBAAAAAAA45IOgAAAAADjkg6AAAD/AAMAA4AAAAAIAAIAAQAAAAAAAQAABAD/AAAAA4AAAACAAwAAAQAAAAAAAAAAAAAAAAAAAKoCgAAAAYAAAAEAAAACAAAAAwAAAAMAAAADAAAAAwAAAAEAAAABgAAAAYAAAAMAAAADAAAAAYAAAAKAAAABgAAAAwAAAAMAAAADAACAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAABgAAAAYAAAAKAAAACgAAAAoAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAACAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAABgAAAAwAAAAGAAAADAAAAAoAAAAGAAAACgAAAAoAAAAKAAAACgAAAAoAAAAIAAAACgAAAAoAAAAEAAAACAAAAAoAAAAGAAAADAAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAgAAAAKAAAADAAAAAwAAAAKAAAACgAAAAoAAAAIAAAABAAAAAgAAAAMAAAADAAAAAwAAAAMAAIADAACAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAOAAAADAAAAA4AAAAMAAAADAAAAA4AAAAMAAAACgAAAAoAAAAKAAAACAAAAAwAAAAKAAAADAAAAAoAAAAKAAAACgAAAAoAAAAKAAAADAAAAAoAAAAKAAAACgAAAAoAAAAKAAAADAAAAAoAAAAMAAAACgAAAAwAAAAKAAAADAAAAA4AAAAKAAAADgAAAAoAAAAKAAAADgAAAAoAAAAKAAAACgAAAAQAAAAIAAAADAAAAAgAAAAAAAAAAAABAAAAAQAAAAGgAAACQAAABBAAAAXwAAAHoAAACfAAAApgAAALMAAAC/AAAA3AAAAOoAAAD0AAAA+gAAAQAAAAEUAAABNAAAAUUAAAFeAAABcQAAAYsAAAGgAAABugAAAc0AAAHoAAACAgAAAg0AAAIdAAACNAAAAj4AAAJVAAACawAAAogAAAKgAAACuwAAAs8AAALmAAAC+gAAAwsAAAMjAAADNwAAA0UAAANVAAADdAAAA30AAAOXAAADsgAAA8MAAAPXAAAD8AAABAwAAAQgAAAEKgAABDcAAARJAAAEWwAABHoAAASNAAAEpQAABLIAAATEAAAE0QAABOMAAATpAAAE8gAABQcAAAUbAAAFKAAABT0AAAVSAAAFYgAABXkAAAWKAAAFlAAABaEAAAW6AAAFwwAABdYAAAXjAAAF9AAABggAAAYcAAAGLAAABj4AAAZOAAAGWwAABm0AAAZ/AAAGkwAABqYAAAa4AAAGywAABtEAAAbkAAAG8wAABwsAAAcmAAAHNAAAB0cAAAdfAAAHdgAAB5EAAAebAAAHsgAAB8YAAAfmAAAH/wAACBoAAAg9AAAIXAAACG0AAAiHAAAImwAACKwAAAi5AAAIzQAACOEAAAjrAAAJAQAACRwAAAk7AAAJSwAACVwAAAlsAAAJfwAACZYAAAmuAAAJwgAACdsAAAn6AAAKFwAACiwAAApDAAAKWwAACmUAAAp8AAAKkQAACq4AAArAAAAK1wAACvEAAAsKAAALGgAACzMAAAtHAAALWAAAC2UAAAt5AAALhgAAC5AAAAujAAALvgAAC9IAAAviAAAL8wAADAMAAAwVAAAMKgAADEEAAAxUAAAMZgAADIMAAAycAAAMtwAADMkAAAzTAAAM3wAADO0AAAz7AABAAAAqgAsAAsAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAABgBOAAMAAQQJAAEAGAAAAAMAAQQJAAIADgAYAAMAAQQJAAMAKAAmAAMAAQQJAAQAGABOAAMAAQQJAAUAFgBmAAMAAQQJAAYAJgB8AEgAbwBsAGwAbwB3ACAAUABpAHgAZQBsAFIAZQBnAHUAbABhAHIASABvAGwAbABvAHcAIABQAGkAeABlAGwAIABSAGUAZwB1AGwAYQByAEgAbwBsAGwAbwB3ACAAUABpAHgAZQBsAFYAZQByAHMAaQBvAG4AIAAxAC4AMABIAG8AbABsAG8AdwBQAGkAeABlAGwALQBSAGUAZwB1AGwAYQByAAMAAAAAAAD/gACAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  var PIXEL_FONT = "AAEAAAAKAIAAAwAgT1MvMmOgYNMAAACsAAAAYGNtYXAT+xV+AAABDAAAAHxnbHlmLm9LEgAAAYgAADTkaGVhZClDYH4AADZsAAAANmhoZWEHAgOtAAA2pAAAACRobXR4zAACAAAANsgAAAKwbG9jYQARnwQAADl4AAACtG1heHAAuAAuAAA8LAAAACBuYW1lEJ0ovgAAPEwAAADwcG9zdP+DAIAAAD08AAAAIAAEAq0BkAAFAAACgAKAAAAAgAKAAoAAAAIAAIABgAAAAAAAAAAAAAAAAAAAAgEAAAAAAAAAAAAAAABOT05FAEAAIASRBAD/AAAABAABAAAAAAUAAAAAAoADgAAAACAAAQAAAAEAAwABAAAADAAEAHAAAAAYABAAAwAIAH4AqwC7BAEEBAQHBE8EUQRUBFcEkf//AAAAIACrALsEAQQEBAYEEARRBFQEVgSQ////4f+1/6b8Yfxf/F78VvxV/FP8UvwaAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAACAAOAAAMABwALAA8AADE1IRUBNSEVAREzESERMxECAP4AAgD+AIABAICAgAMAgID9gAKA/YACgP2AAAIAAAAAAIADgAADAAcAABERMxEDNTMVgICAAQACgP2A/wCAgAAAAAACAAACgAGAA4AAAwAHAAARETMRMxEzEYCAgAKAAQD/AAEA/wAAAAAACAAAAAACgAOAAAMABwALAA8AEwAXABsAHwAAExEzETMRMxEFNSEVBTUzFTM1MxUFNSEVAREzETMRMxGAgICA/gACgP4AgICA/gACgP4AgICAAoABAP8AAQD/AICAgICAgICAgICA/wABAP8AAQD/AAAAAAAJAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAAAE1MxUFNSEVBTUzFTM1MxUFNSEVBTUzFTM1MxUFNSEVBTUzFQEAgP8AAgD9gICAgP8AAYD/AICAgP2AAgD/AIADAICAgICAgICAgICAgICAgICAgICAgICAgAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEREhESU1MxUBETMRBTUzFQERMxEXESERITUzFQEAAQCA/wCA/wCA/wCAgAEA/YCAAoABAP8AgICA/wABAP8AgICA/wABAP8AgAEA/wCAgAAAAAALAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAJwArAAATNSEVAREzESU1MxUFNTMVBTUzFQERMxE3NTMVMzUzFQU1MxUFNSEVMzUzFYABAP6AgAEAgP8AgP8AgP8AgICAgID/AID+gAEAgIADAICA/wABAP8AgICAgICAgICA/wABAP8AgICAgICAgICAgICAgAAAAQAAAoAAgAOAAAMAABERMxGAAoABAP8AAAAAAAMAAAAAAQADgAADAAcACwAAEzUzFQERMxEVNTMVgID/AICAAwCAgP2AAoD9gICAgAAAAAADAAAAAAEAA4AAAwAHAAsAABE1MxURETMRBTUzFYCA/wCAAwCAgP2AAoD9gICAgAAJAAAAgAKAAwAAAwAHAAsADwATABcAGwAfACMAABE1MxUzNTMVMzUzFQU1IRUFNSEVBTUhFQU1MxUzNTMVMzUzFYCAgICA/gABgP4AAoD+AAGA/gCAgICAgAKAgICAgICAgICAgICAgICAgICAgICAgAAAAAMAAACAAoADAAADAAcACwAAAREzEQU1IRUBETMRAQCA/oACgP6AgAIAAQD/AICAgP8AAQD/AAAAAgAAAAABAAGAAAMABwAANxEzEQU1MxWAgP8AgIABAP8AgICAAAAAAAEAAAGAAgACAAADAAARNSEVAgABgICAAAEAAAAAAQABAAADAAAxESERAQABAP8AAAUAAAAAAoADgAADAAcACwAPABMAAAE1MxUBETMRBTUzFQERMxEFNTMVAgCA/wCA/wCA/wCA/wCAAwCAgP8AAQD/AICAgP8AAQD/AICAgAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAATNSEVAREzEQE1MxUFNSEVBTUzFRMRMxElNSEVBTUzFRU1IRWAAYD+AIABgID/AAEA/oCAgID9gAEA/wCAAYADAICA/oABgP6AAQCAgICAgICAgP8AAYD+gICAgICAgICAgAAEAIAAAAIAA4AAAwAHAAsADwAAATUzFQU1IRUDETMRBTUhFQEAgP8AAQCAgP8AAYADAICAgICA/gACAP4AgICAAAAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVBTUzFQURMxEFNTMVBTUzFQU1MxUFNSEVgAGA/gCAAYCA/wCA/wCA/wCA/wACgAMAgICAgICAAQD/AICAgICAgICAgICAgAAFAAAAAAKAA4AAAwAHAAsADwATAAARNSEVEREzEQU1IRURETMRBTUhFQIAgP4AAYCA/YACAAMAgID/AAEA/wCAgID/AAEA/wCAgIAABwAAAAACgAOAAAMABwALAA8AEwAXABsAAAE1MxUFNSEVBTUzFRcRMxEhNTMVBzUhFQERMxEBgID/AAEA/oCAgID+AICAAoD/AIADAICAgICAgICAgAEA/wCAgICAgP8AAQD/AAAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABE1IRUFNTMVBzUhFRERMxEhNTMVFTUhFQKA/YCAgAIAgP2AgAGAAwCAgICAgICAgP6AAYD+gICAgICAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAATUhFQU1MxUFNTMVBzUhFQERMxEhETMRBTUhFQEAAQD+gID/AICAAgD+AIABgID+AAGAAwCAgICAgICAgICAgP8AAQD/AAEA/wCAgIAAAAUAAAAAAoADgAADAAcACwAPABMAABE1IRUHNTMVBTUzFQU1MxUBETMRAoCAgP8AgP8AgP8AgAMAgICAgICAgICAgID+gAGA/oAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxEhETMRBTUhFQERMxEhETMRBTUhFYABgP4AgAGAgP4AAYD+AIABgID+AAGAAwCAgP8AAQD/AAEA/wCAgID/AAEA/wABAP8AgICAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxEhETMRBTUhFQc1MxUFNTMVBTUhFYABgP4AgAGAgP4AAgCAgP8AgP6AAQADAICA/wABAP8AAQD/AICAgICAgICAgICAgAAAAAIAAACAAQADAAADAAcAABERIREBESERAQD/AAEAAgABAP8A/oABAP8AAAAABAAAAAABAAMAAAMABwALAA8AABERIREBNSEVBzUzFQU1MxUBAP8AAQCAgP8AgAIAAQD/AP8AgICAgICAgIAAAAcAAAAAAgADgAADAAcACwAPABMAFwAbAAABNTMVBTUzFQU1MxUFNTMVFTUzFRU1MxUVNTMVAYCA/wCA/wCA/wCAgICAAwCAgICAgICAgICAgICAgICAgICAgAAAAgAAAQACAAKAAAMABwAAETUhFQE1IRUCAP4AAgACAICA/wCAgAAAAAcAAAAAAgADgAADAAcACwAPABMAFwAbAAARNTMVFTUzFRU1MxUVNTMVBTUzFQU1MxUFNTMVgICAgP8AgP8AgP8AgAMAgICAgICAgICAgICAgICAgICAgIAAAAAABgAAAAACgAOAAAMABwALAA8AEwAXAAATNSEVBTUzFQURMxEFNTMVBTUzFQM1MxWAAYD+AIABgID/AID/AICAgAMAgICAgICAAQD/AICAgICAgP8AgIAAAAgAAAAAAoADgAADAAcACwAPABMAFwAbAB8AABM1IRUBETMRATUzFQU1IRUFNTMVMzUzFQU1IRUBNSEVgAGA/gCAAYCA/oABgP6AgICA/oABgP4AAYADAICA/YACgP2AAgCAgICAgICAgICAgICA/wCAgAAABgAAAAACgAOAAAMABwALAA8AEwAXAAATNSEVAREzESERMxEFNSEVAREzESERMxGAAYD+AIABgID9gAKA/YCAAYCAAwCAgP8AAQD/AAEA/wCAgID+gAGA/oABgP6AAAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABE1IRUBETMRIREzEQU1IRUBETMRIREzEQU1IRUCAP4AgAGAgP2AAgD+AIABgID9gAIAAwCAgP8AAQD/AAEA/wCAgID/AAEA/wABAP8AgICAAAAABQAAAAACgAOAAAMABwALAA8AEwAAEzUhFQERMxEBNTMVAzUzFQU1IRWAAYD+AIABgICAgP4AAYADAICA/YACgP2AAgCAgP4AgICAgIAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABE1IRUBETMRATUzFRERMxEFNTMVBTUhFQGA/oCAAQCAgP8AgP4AAYADAICA/YACgP2AAgCAgP6AAYD+gICAgICAgAAAAAUAAAAAAoADgAADAAcACwAPABMAABE1IRUBETMRBzUhFQERMxEHNSEVAoD9gICAAgD+AICAAoADAICA/wABAP8AgICA/wABAP8AgICAAAAABAAAAAACgAOAAAMABwALAA8AABE1IRUBETMRBzUhFQERMxECgP2AgIACAP4AgAMAgID/AAEA/wCAgID+gAGA/oAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABM1IRUBETMRATUzFQE1IRUDETMRBTUhFYABgP4AgAGAgP6AAYCAgP4AAgADAICA/YACgP2AAgCAgP8AgID/AAEA/wCAgIAAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARETMRIREzEQU1IRUBETMRIREzEYABgID9gAKA/YCAAYCAAgABgP6AAYD+gICAgP6AAYD+gAGA/oAAAAMAgAAAAgADgAADAAcACwAAEzUhFQERMxEFNSEVgAGA/wCA/wABgAMAgID9gAKA/YCAgIAAAAAABAAAAAACgAOAAAMABwALAA8AAAE1IRUBETMRITUzFRU1IRUBAAGA/wCA/gCAAQADAICA/YACgP2AgICAgIAAAAkAAAAAAoADgAADAAcACwAPABMAFwAbAB8AIwAAEREzEQE1MxUFNTMVBTUzFQU1IRUBETMREzUzFRU1MxUVNTMVgAGAgP8AgP8AgP6AAQD/AICAgICAAgABgP6AAQCAgICAgICAgICAgP6AAYD+gAEAgICAgICAgIAAAAACAAAAAAKAA4AAAwAHAAA1ETMRBzUhFYCAAoCAAwD9AICAgAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAETUzFSE1MxUFNSEVMzUhFQERMxETETMRExEzEYABgID9gAEAgAEA/YCAgICAgAMAgICAgICAgICA/YACgP2AAYABAP8A/oACgP2AAAAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARETMRAREzESU1IRUBETMREzUzFRU1IRUDETMRgAGAgP2AAQD/AICAgAEAgIACgAEA/wD/AAIA/gCAgID+AAIA/gABgICAgICA/wABAP8AAAAAAAQAAAAAAoADgAADAAcACwAPAAATNSEVAREzESERMxEFNSEVgAGA/gCAAYCA/gABgAMAgID9gAKA/YACgP2AgICAAAAABQAAAAACgAOAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxECAP4AgAGAgP2AAgD+AIADAICA/wABAP8AAQD/AICAgP6AAYD+gAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxElETMRITUzFRU1MxUFNSEVMzUzFYABgP4AgAGAgP6AgID+gAEAgIADAICA/YACgP2AgAIA/gCAgICAgICAgICAAAAACAAAAAACgAOAAAMABwALAA8AEwAXABsAHwAAETUhFQERMxEhETMRBTUhFQERMxETNTMVFTUzFRU1MxUCAP4AgAGAgP2AAgD+AICAgICAAwCAgP8AAQD/AAEA/wCAgID+gAGA/oABAICAgICAgICAAAUAAAAAAoADgAADAAcACwAPABMAABM1IRUBETMRFTUhFRERMxEFNSEVgAIA/YCAAYCA/YACAAMAgID/AAEA/wCAgID/AAEA/wCAgIAAAAAAAgAAAAACgAOAAAMABwAAETUhFQERMxECgP6AgAMAgID9AAMA/QAAAAMAAAAAAoADgAADAAcACwAANREzESERMxEFNSEVgAGAgP4AAYCAAwD9AAMA/QCAgIAAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARETMRIREzEQU1MxUzNTMVBTUzFYABgID+AICAgP8AgAEAAoD9gAKA/YCAgICAgICAgAAFAAAAAAKAA4AAAwAHAAsADwATAAA1ETMRIREzESERMxEFNTMVMzUzFYABgID+gID/AICAgIADAP0AAwD9AAGA/oCAgICAgAAJAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAABERMxEhETMRBTUzFTM1MxUFNTMVBTUzFTM1MxUBETMRIREzEYABgID+AICAgP8AgP8AgICA/gCAAYCAAoABAP8AAQD/AICAgICAgICAgICAgID/AAEA/wABAP8AAAAABQAAAAACgAOAAAMABwALAA8AEwAAEREzESERMxEFNTMVMzUzFQERMxGAAYCA/gCAgID/AIACgAEA/wABAP8AgICAgID+AAIA/gAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARNSEVBzUzFQU1MxUFNTMVBTUzFQU1MxUHNSEVAoCAgP8AgP8AgP8AgP8AgIACgAMAgICAgICAgICAgICAgICAgICAgIAAAAMAAAAAAQADgAADAAcACwAAETUhFQERMxEHNSEVAQD/AICAAQADAICA/YACgP2AgICAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARNTMVEREzERU1MxURETMRFTUzFYCAgICAAwCAgP8AAQD/AICAgP8AAQD/AICAgAAAAAADAAAAAAEAA4AAAwAHAAsAABE1IRUDETMRBTUhFQEAgID/AAEAAwCAgP2AAoD9gICAgAAABQAAAgACgAOAAAMABwALAA8AEwAAATUzFQU1MxUzNTMVBTUzFSE1MxUBAID/AICAgP4AgAGAgAMAgICAgICAgICAgICAAAAAAQAA/4ACAAAAAAMAABU1IRUCAICAgAAAAgAAAoABAAOAAAMABwAAETUzFRU1MxWAgAMAgICAgIAAAAAABgAAAAACAAKAAAMABwALAA8AEwAXAAATNSEVFTUzFQU1IRUFNTMVITUzFQU1IRWAAQCA/oABgP4AgAEAgP6AAYACAICAgICAgICAgICAgICAgIAABQAAAAACAAOAAAMABwALAA8AEwAAEREzEQc1IRUBETMRIREzEQU1IRWAgAGA/oCAAQCA/gABgAKAAQD/AICAgP6AAYD+gAGA/oCAgIAAAAADAAAAAAIAAoAAAwAHAAsAABM1IRUBETMRFTUhFYABgP4AgAGAAgCAgP6AAYD+gICAgAAABQAAAAACAAOAAAMABwALAA8AEwAAAREzEQU1IRUBETMRIREzEQU1IRUBgID+gAGA/gCAAQCA/oABgAKAAQD/AICAgP6AAYD+gAGA/oCAgIAAAAAABgAAAAACAAKAAAMABwALAA8AEwAXAAATNSEVBTUzFSE1MxUFNSEVBTUzFRU1IRWAAQD+gIABAID+AAIA/gCAAYACAICAgICAgICAgICAgICAgIAABAAAAAABgAOAAAMABwALAA8AABM1IRUFNTMVBzUhFQERMxGAAQD+gICAAYD+gIADAICAgICAgICA/gACAP4AAAYAAP8AAgACgAADAAcACwAPABMAFwAAEzUhFQERMxEhETMRBTUhFQc1MxUFNSEVgAGA/gCAAQCA/oABgICA/oABAAIAgID+gAGA/oABgP6AgICAgICAgICAAAAABAAAAAACAAOAAAMABwALAA8AABERMxEHNSEVAREzESERMxGAgAGA/oCAAQCAAoABAP8AgICA/gACAP4AAgD+AAAAAAACAAAAAACAA4AAAwAHAAARNTMVAxEzEYCAgAMAgID9AAKA/YAAAAAAAwAA/wABgAOAAAMABwALAAABNTMVAxEzEQU1IRUBAICAgP6AAQADAICA/IADAP0AgICAAAcAAAAAAgADgAADAAcACwAPABMAFwAbAAARETMRJTUzFQU1MxUFNSEVAREzETc1MxUVNTMVgAEAgP8AgP6AAQD/AICAgIABgAIA/gCAgICAgICAgID/AAEA/wCAgICAgIAAAAACAAAAAAEAA4AAAwAHAAA1ETMRFTUzFYCAgAMA/QCAgIAAAAAFAAAAAAKAAoAAAwAHAAsADwATAAARNSEVMzUzFQERMxEzETMRMxEzEQEAgID+AICAgICAAgCAgICA/gACAP4AAgD+AAIA/gAAAAAAAwAAAAACAAKAAAMABwALAAARNSEVAREzESERMxEBgP6AgAEAgAIAgID+AAIA/gACAP4AAAQAAAAAAgACgAADAAcACwAPAAATNSEVAREzESERMxEFNSEVgAEA/oCAAQCA/oABAAIAgID+gAGA/oABgP6AgICAAAAABQAA/wACAAKAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxEBgP6AgAEAgP4AAYD+gIACAICA/oABgP6AAYD+gICAgP8AAQD/AAAFAAD/AAIAAoAAAwAHAAsADwATAAATNSEVAREzESERMxEFNSEVAxEzEYABgP4AgAEAgP6AAYCAgAIAgID+gAGA/oABgP6AgICA/wABAP8AAAQAAAAAAgACgAADAAcACwAPAAARNTMVMzUhFQU1IRUBETMRgIABAP4AAQD/AIACAICAgICAgID+gAGA/oAAAAAFAAAAAAIAAoAAAwAHAAsADwATAAATNSEVBTUzFRU1IRUVNTMVBTUhFYABgP4AgAEAgP4AAYACAICAgICAgICAgICAgICAAAAEAAAAAAGAAwAAAwAHAAsADwAAEzUzFQU1IRUBETMRFTUzFYCA/wABgP8AgIACgICAgICA/oABgP6AgICAAAAAAwAAAAACAAKAAAMABwALAAA1ETMRIREzEQU1IRWAAQCA/oABgIACAP4AAgD+AICAgAAAAAUAAAAAAoACgAADAAcACwAPABMAABERMxEhETMRBTUzFTM1MxUFNTMVgAGAgP4AgICA/wCAAQABgP6AAYD+gICAgICAgICAAAUAAAAAAoACgAADAAcACwAPABMAADURMxEhETMRIREzEQU1MxUzNTMVgAGAgP6AgP8AgICAgAIA/gACAP4AAQD/AICAgICAAAUAAAAAAgACgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAEAgP6AAQD+gIABAIABgAEA/wABAP8AgICA/wABAP8AAQD/AAAABQAA/wACAAKAAAMABwALAA8AEwAANREzESERMxEFNSEVBzUzFQU1IRWAAQCA/oABgICA/oABAIACAP4AAgD+AICAgICAgICAgAAAAAUAAAAAAgACgAADAAcACwAPABMAABE1IRUHNTMVBTUhFQU1MxUHNSEVAgCAgP6AAQD+gICAAgACAICAgICAgICAgICAgICAAAUAAAAAAYADgAADAAcACwAPABMAAAE1MxUBETMRBTUzFRERMxEVNTMVAQCA/wCA/wCAgIADAICA/wABAP8AgICA/wABAP8AgICAAAABAAD/gACAA4AAAwAAFREzEYCABAD8AAAFAAAAAAGAA4AAAwAHAAsADwATAAARNTMVEREzERU1MxUBETMRBTUzFYCAgP8AgP8AgAMAgID/AAEA/wCAgID/AAEA/wCAgIAAAAAABAAAAYACgAKAAAMABwALAA8AABM1MxUhNTMVBTUzFTM1IRWAgAEAgP2AgIABAAIAgICAgICAgICAAAAACgAAAIACgAMAAAMABwALAA8AEwAXABsAHwAjACcAAAE1MxUzNTMVBTUzFTM1MxUFNTMVMzUzFQU1MxUzNTMVBTUzFTM1MxUBAICAgP4AgICA/gCAgID/AICAgP8AgICAAoCAgICAgICAgICAgICAgICAgICAgICAgIAAAAoAAACAAoADAAADAAcACwAPABMAFwAbAB8AIwAnAAARNTMVMzUzFQU1MxUzNTMVBTUzFTM1MxUFNTMVMzUzFQU1MxUzNTMVgICA/wCAgID/AICAgP4AgICA/gCAgIACgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUzFTM1MxUBNSEVBTUzFQc1IRUFNTMVBzUhFYCAgID+AAKA/YCAgAIA/gCAgAKAAwCAgICA/wCAgICAgICAgICAgICAgAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxElNTMVATUhFQERMxEhNTMVBTUhFYABgP4AgAGAgP2AAgD+AIABgID+AAGAAwCAgP8AAQD/AICAgP8AgID/AAEA/wCAgICAgAAAAAADAIAAAAIAA4AAAwAHAAsAABM1IRUBETMRBTUhFYABgP8AgP8AAYADAICA/YACgP2AgICAAAAAAAUAgAAAAgADgAADAAcACwAPABMAABM1MxUzNTMVATUhFQERMxEFNSEVgICAgP6AAYD/AID/AAGAAwCAgICA/wCAgP6AAYD+gICAgAAGAAAAAAKAA4AAAwAHAAsADwATABcAABM1IRUBETMRIREzEQU1IRUBETMRIREzEYABgP4AgAGAgP2AAoD9gIABgIADAICA/wABAP8AAQD/AICAgP6AAYD+gAGA/oAAAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABE1IRUBETMRBzUhFQERMxEhETMRBTUhFQKA/YCAgAIA/gCAAYCA/YACAAMAgID/AAEA/wCAgID/AAEA/wABAP8AgICAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAARNSEVAREzESERMxEFNSEVAREzESERMxEFNSEVAgD+AIABgID9gAIA/gCAAYCA/YACAAMAgID/AAEA/wABAP8AgICA/wABAP8AAQD/AICAgAAAAAIAAAAAAoADgAADAAcAABE1IRUBETMRAoD9gIADAICA/QADAP0AAAAGAAAAAAKAA4AAAwAHAAsADwATABcAAAE1IRUBETMRMxEzEQU1IRUFNTMVITUzFQEAAQD+gICAgP4AAoD9gIABgIADAICA/gACAP4AAgD+AICAgICAgICAAAAAAAUAAAAAAoADgAADAAcACwAPABMAABE1IRUBETMRBzUhFQERMxEHNSEVAoD9gICAAgD+AICAAoADAICA/wABAP8AgICA/wABAP8AgICAAAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAARETMRMxEzETMRMxEFNSEVBTUzFQU1IRUBETMRMxEzETMRMxGAgICAgP4AAYD/AID/AAGA/gCAgICAgAKAAQD/AAEA/wABAP8AgICAgICAgICA/wABAP8AAQD/AAEA/wAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAEzUhFQU1MxUFETMRBTUhFRERMxEhNTMVFTUhFYABgP4AgAGAgP6AAQCA/YCAAYADAICAgICAgAEA/wCAgID/AAEA/wCAgICAgAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAABERMxEBETMRBTUhFQU1MxUTETMRATUhFQERMxGAAYCA/wABAP6AgICA/YABAP8AgAGAAgD+AAEAAQD/AICAgICAgP6AAgD+AAEAgID/AAEA/wAACgAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjACcAABM1MxUzNTMVBTUzFQERMxEBNTMVBTUhFQU1MxUTETMRJTUhFQU1MxWAgICA/wCA/oCAAYCA/wABAP6AgICA/YABAP8AgAMAgICAgICAgP6AAYD+gAEAgICAgICAgID/AAGA/oCAgICAgIAAAAAJAAAAAAKAA4AAAwAHAAsADwATABcAGwAfACMAABERMxEBNTMVBTUzFQU1MxUFNSEVAREzERM1MxUVNTMVFTUzFYABgID/AID/AID+gAEA/wCAgICAgAIAAYD+gAEAgICAgICAgICAgID+gAGA/oABAICAgICAgICAAAAABAAAAAACgAOAAAMABwALAA8AABM1IRUBETMRBREzESE1MxWAAgD+AIABAID9gIADAICA/YACgP2AgAMA/QCAgAAAAAAHAAAAAAKAA4AAAwAHAAsADwATABcAGwAAETUzFSE1MxUFNSEVMzUhFQERMxETETMRExEzEYABgID9gAEAgAEA/YCAgICAgAMAgICAgICAgICA/YACgP2AAYABAP8A/oACgP2AAAAAAAUAAAAAAoADgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAGAgP2AAoD9gIABgIACAAGA/oABgP6AgICA/oABgP6AAYD+gAAABAAAAAACgAOAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAYD+AIABgID+AAGAAwCAgP2AAoD9gAKA/YCAgIAAAAADAAAAAAKAA4AAAwAHAAsAABE1IRUBETMRIREzEQKA/YCAAYCAAwCAgP0AAwD9AAMA/QAABQAAAAACgAOAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxECAP4AgAGAgP2AAgD+AIADAICA/wABAP8AAQD/AICAgP6AAYD+gAAFAAAAAAKAA4AAAwAHAAsADwATAAATNSEVAREzEQE1MxUDNTMVBTUhFYABgP4AgAGAgICA/gABgAMAgID9gAKA/YACAICA/gCAgICAgAAAAAIAAAAAAoADgAADAAcAABE1IRUBETMRAoD+gIADAICA/QADAP0AAAAGAAAAAAKAA4AAAwAHAAsADwATABcAABERMxEhETMRBTUhFQMRMxEhNTMVFTUhFYABgID+AAIAgID9gIABgAIAAYD+gAGA/oCAgID/AAEA/wCAgICAgAAABwAAAAACgAOAAAMABwALAA8AEwAXABsAAAE1MxUFNSEVAREzETMRMxEzETMRBTUhFQERMxEBAID/AAGA/gCAgICAgP4AAYD/AIADAICAgICA/wABAP8AAQD/AAEA/wCAgID/AAEA/wAAAAAACQAAAAACgAOAAAMABwALAA8AEwAXABsAHwAjAAARETMRIREzEQU1MxUzNTMVBTUzFQU1MxUzNTMVAREzESERMxGAAYCA/gCAgID/AID/AICAgP4AgAGAgAKAAQD/AAEA/wCAgICAgICAgICAgICA/wABAP8AAQD/AAAAAAQAAAAAAoADgAADAAcACwAPAAARETMRIREzEQU1IRUHNTMVgAEAgP4AAoCAgAEAAoD9gAKA/YCAgICAgIAAAAAEAAAAAAKAA4AAAwAHAAsADwAAEREzESERMxEFNSEVAxEzEYABgID+AAIAgIACAAGA/oABgP6AgICA/oABgP6AAAAAAAQAAAAAAoADgAADAAcACwAPAAA1ETMRMxEzETMRMxEFNSEVgICAgID9gAKAgAMA/QADAP0AAwD9AICAgAAAAAAFAAAAAAMAA4AAAwAHAAsADwATAAARETMRMxEzETMRMxEFNSEVBzUzFYCAgICA/YADAICAAQACgP2AAoD9gAKA/YCAgICAgIAAAAAABgAAAAACgAOAAAMABwALAA8AEwAXAAARNSEVAxEzEQc1IRUBETMRIREzEQU1IRUBAICAgAGA/oCAAQCA/gABgAMAgID/AAEA/wCAgID/AAEA/wABAP8AgICAAAAGAAAAAAMAA4AAAwAHAAsADwATABcAABERMxEBETMRATUhFQERMxEhETMRBTUhFYACAID9AAGA/oCAAQCA/gABgAIAAYD+gP4AA4D8gAGAgID/AAEA/wABAP8AgICAAAAFAAAAAAKAA4AAAwAHAAsADwATAAARETMRBzUhFQERMxEhETMRBTUhFYCAAgD+AIABgID9gAIAAgABgP6AgICA/wABAP8AAQD/AICAgAAAAAcAAAAAAoADgAADAAcACwAPABMAFwAbAAATNSEVBTUzFQURMxEFNSEVAxEzESE1MxUVNSEVgAGA/gCAAYCA/gACAICA/YCAAYADAICAgICAgAEA/wCAgID/AAEA/wCAgICAgAAIAAAAAAMAA4AAAwAHAAsADwATABcAGwAfAAARETMRATUhFQERMxEBETMRATUhFQERMxE3ETMRFTUhFYABAAEA/oCAAQCA/QABgP6AgICAAQACAAGA/oABAICA/wABAP8A/oACgP2AAQCAgP6AAYD+gIABAP8AgICAAAAACAAAAAACgAOAAAMABwALAA8AEwAXABsAHwAAEzUhFQERMxEhETMRBTUhFQU1MxUTETMRJTUzFQU1MxWAAgD9gIABgID+AAIA/oCAgID+AID/AIADAICA/wABAP8AAQD/AICAgICAgP8AAYD+gICAgICAgAAGAAAAAAIAAoAAAwAHAAsADwATABcAABM1IRUVNTMVBTUhFQU1MxUhNTMVBTUhFYABAID+gAGA/gCAAQCA/oABgAIAgICAgICAgICAgICAgICAgAAGAAAAAAIAA4AAAwAHAAsADwATABcAABM1IRUFNTMVBzUhFQERMxEhETMRBTUhFYABgP4AgIABgP6AgAEAgP6AAQADAICAgICAgICA/oABgP6AAYD+gICAgAAAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAARNSEVBTUzFSE1MxUFNSEVBTUzFSE1MxUFNSEVAYD+gIABAID+AAGA/oCAAQCA/gABgAIAgICAgICAgICAgICAgICAgICAAAIAAAAAAYACgAADAAcAABE1IRUBETMRAYD+gIACAICA/gACAP4AAAAGAAD/gAKAAoAAAwAHAAsADwATABcAAAE1IRUBETMRMxEzEQU1IRUFNTMVITUzFQEAAQD+gICAgP4AAoD9gIABgIACAICA/oABgP6AAYD+gICAgICAgICAAAAAAAYAAAAAAgACgAADAAcACwAPABMAFwAAEzUhFQU1MxUhNTMVBTUhFQU1MxUVNSEVgAEA/oCAAQCA/gACAP4AgAGAAgCAgICAgICAgICAgICAgICAAAkAAAAAAoACgAADAAcACwAPABMAFwAbAB8AIwAAETUzFTM1MxUzNTMVBTUhFQU1MxUFNSEVBTUzFTM1MxUzNTMVgICAgID+AAGA/wCA/wABgP4AgICAgIACAICAgICAgICAgICAgICAgICAgICAgIAAAAAABQAAAAACAAKAAAMABwALAA8AEwAAETUhFRU1MxUFNSEVFTUzFQU1IRUBgID+gAEAgP4AAYACAICAgICAgICAgICAgICAAAAABgAAAAACAAKAAAMABwALAA8AEwAXAAARETMRJREzEQU1IRUFNSEVFxEzESE1MxWAAQCA/wABAP4AAQCAgP4AgAEAAYD+gIABAP8AgICAgICAgAEA/wCAgAAAAAAHAAAAAAIAA4AAAwAHAAsADwATABcAGwAAEzUhFQERMxElETMRBTUhFQU1IRUXETMRITUzFYABAP6AgAEAgP8AAQD+AAEAgID+AIADAICA/gABgP6AgAEA/wCAgICAgICAAQD/AICAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAARETMRJTUzFQU1MxUFNSEVAREzETc1MxUVNTMVgAEAgP8AgP6AAQD/AICAgIABgAEA/wCAgICAgICAgID/AAEA/wCAgICAgIAAAAAEAAAAAAIAAoAAAwAHAAsADwAAEzUhFQERMxEXETMRITUzFYABgP6AgICA/gCAAgCAgP6AAYD+gIACAP4AgIAABwAAAAACgAKAAAMABwALAA8AEwAXABsAABE1MxUhNTMVBTUhFTM1IRUBETMREzUzFRMRMxGAAYCA/YABAIABAP2AgICAgIACAICAgICAgICAgP6AAYD+gAEAgID/AAGA/oAAAAUAAAAAAgACgAADAAcACwAPABMAABERMxEhETMRBTUhFQERMxEhETMRgAEAgP4AAgD+AIABAIABgAEA/wABAP8AgICA/wABAP8AAQD/AAAABAAAAAACAAKAAAMABwALAA8AABM1IRUBETMRIREzEQU1IRWAAQD+gIABAID+gAEAAgCAgP6AAYD+gAGA/oCAgIAAAAADAAAAAAIAAoAAAwAHAAsAABE1IRUBETMRIREzEQIA/gCAAQCAAgCAgP4AAgD+AAIA/gAABQAA/wACAAKAAAMABwALAA8AEwAAETUhFQERMxEhETMRBTUhFQERMxEBgP6AgAEAgP4AAYD+gIACAICA/oABgP6AAYD+gICAgP8AAQD/AAADAAAAAAIAAoAAAwAHAAsAABM1IRUBETMRFTUhFYABgP4AgAGAAgCAgP6AAYD+gICAgAAAAgAAAAACgAKAAAMABwAAETUhFQERMxECgP6AgAIAgID+AAIA/gAAAAUAAP8AAgACgAADAAcACwAPABMAADURMxEhETMRBTUhFQc1MxUFNSEVgAEAgP6AAYCAgP6AAQCAAgD+AAIA/gCAgICAgICAgIAAAAAHAAD/AAKAA4AAAwAHAAsADwATABcAGwAAAREzEQU1IRUBETMRMxEzETMRMxEFNSEVAREzEQEAgP8AAYD+AICAgICA/gABgP8AgAKAAQD/AICAgP6AAYD+gAGA/oABgP6AgICA/wABAP8AAAAFAAAAAAIAAoAAAwAHAAsADwATAAARETMRIREzEQU1IRUBETMRIREzEYABAID+gAEA/oCAAQCAAYABAP8AAQD/AICAgP8AAQD/AAEA/wAAAAQAAP+AAoACgAADAAcACwAPAAA1ETMRIREzEQU1IRUHNTMVgAEAgP4AAoCAgIACAP4AAgD+AICAgICAgAAAAAAEAAAAAAIAAoAAAwAHAAsADwAAEREzESERMxEFNSEVAxEzEYABAID+gAGAgIABgAEA/wABAP8AgICA/wABAP8AAAAAAAQAAAAAAoACgAADAAcACwAPAAA1ETMRMxEzETMRMxEFNSEVgICAgID9gAKAgAIA/gACAP4AAgD+AICAgAAAAAAFAAD/gAMAAoAAAwAHAAsADwATAAA1ETMRMxEzETMRMxEFNSEVBzUzFYCAgICA/YADAICAgAIA/gACAP4AAgD+AICAgICAgAAGAAAAAAIAAoAAAwAHAAsADwATABcAABE1IRUHNTMVBzUhFQU1MxUzNTMVBTUhFQEAgICAAQD/AICAgP6AAQACAICAgICAgICAgICAgICAgIAAAAAGAAAAAAMAAoAAAwAHAAsADwATABcAABERMxEBETMRATUhFQU1MxUhNTMVBTUhFYACAID9AAGA/oCAAQCA/gABgAGAAQD/AP6AAoD9gAEAgICAgICAgICAgAAAAAUAAAAAAgACgAADAAcACwAPABMAABERMxEHNSEVBTUzFSE1MxUFNSEVgIABgP6AgAEAgP4AAYABgAEA/wCAgICAgICAgICAgAAAAAAFAAAAAAIAAoAAAwAHAAsADwATAAARNSEVFTUzFQU1IRUHNTMVBTUhFQGAgP6AAYCAgP4AAYACAICAgICAgICAgICAgICAAAAIAAAAAAMAAoAAAwAHAAsADwATABcAGwAfAAARETMRJTUhFQU1MxUBETMRJTUhFQERMxE3NTMVFTUhFYABAAEA/oCAAQCA/QABgP6AgICAAQABgAEA/wCAgICAgID/AAGA/oCAgID/AAEA/wCAgICAgIAAAAcAAAAAAgACgAADAAcACwAPABMAFwAbAAATNSEVBTUzFSE1MxUFNSEVBTUzFRcRMxEhNTMVgAGA/gCAAQCA/oABgP6AgICA/gCAAgCAgICAgICAgICAgICAgAEA/wCAgAAAAAAIAAAAAAIAA4AAAwAHAAsADwATABcAGwAfAAARNTMVITUzFQE1IRUFNTMVITUzFQU1IRUFNTMVFTUhFYABAID+gAEA/oCAAQCA/gACAP4AgAGAAwCAgICA/wCAgICAgICAgICAgICAgICAAAAFAAAAAAIAAoAAAwAHAAsADwATAAATNSEVBTUzFQc1IRUFNTMVFTUhFYABgP4AgIABgP6AgAGAAgCAgICAgICAgICAgICAgAACAAAAAACAA4AAAwAHAAARNTMVAxEzEYCAgAMAgID9AAKA/YAAAAAAAwAAAAABgAOAAAMABwALAAARNTMVMzUzFQERMxGAgID/AIADAICAgID9AAKA/YAAAwAAAAACgAOAAAMABwALAAABNTMVBTUhFQERMxECAID9gAKA/YCAAwCAgICAgP2AAoD9gAAAAAADAAAAAAGAA4AAAwAHAAsAAAERMxEFNSEVAREzEQEAgP6AAYD+gIACgAEA/wCAgID+AAIA/gAAAAEAAAABAAA/Ivo9Xw889QALBAAAAAAA45IOgAAAAADjkg6AAAD/AAMAA4AAAAAIAAIAAQAAAAAAAQAABAD/AAAAA4AAAACAAwAAAQAAAAAAAAAAAAAAAAAAAKwCgAAAAYAAAAEAAAACAAAAAwAAAAMAAAADAAAAAwAAAAEAAAABgAAAAYAAAAMAAAADAAAAAYAAAAKAAAABgAAAAwAAAAMAAAADAACAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAABgAAAAYAAAAKAAAACgAAAAoAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAACAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAABgAAAAwAAAAGAAAADAAAAAoAAAAGAAAACgAAAAoAAAAKAAAACgAAAAoAAAAIAAAACgAAAAoAAAAEAAAACAAAAAoAAAAGAAAADAAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAAAgAAAAKAAAADAAAAAwAAAAKAAAACgAAAAoAAAAIAAAABAAAAAgAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAgAMAAIADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAA4AAAAMAAAADgAAAAwAAAAMAAAADgAAAAwAAAAKAAAACgAAAAoAAAAIAAAADAAAAAoAAAAMAAAACgAAAAoAAAAKAAAACgAAAAoAAAAMAAAACgAAAAoAAAAKAAAACgAAAAoAAAAMAAAACgAAAAwAAAAKAAAADAAAAAoAAAAMAAAADgAAAAoAAAAOAAAACgAAAAoAAAAOAAAACgAAAAoAAAAKAAAABAAAAAgAAAAMAAAACAAAAAAAAAAAAAEAAAABAAAAAaAAAAJAAAAEEAAABfAAAAegAAAJ8AAACmAAAAswAAAL8AAADcAAAA6gAAAPQAAAD6AAABAAAAARQAAAE0AAABRQAAAV4AAAFxAAABiwAAAaAAAAG6AAABzQAAAegAAAICAAACDQAAAh0AAAI0AAACPgAAAlUAAAJrAAACiAAAAqAAAAK7AAACzwAAAuYAAAL6AAADCwAAAyMAAAM3AAADRQAAA1UAAAN0AAADfQAAA5cAAAOyAAADwwAAA9cAAAPwAAAEDAAABCAAAAQqAAAENwAABEkAAARbAAAEegAABI0AAASlAAAEsgAABMQAAATRAAAE4wAABOkAAATyAAAFBwAABRsAAAUoAAAFPQAABVIAAAViAAAFeQAABYoAAAWUAAAFoQAABboAAAXDAAAF1gAABeMAAAX0AAAGCAAABhwAAAYsAAAGPgAABk4AAAZbAAAGbQAABn8AAAaTAAAGpgAABrgAAAbLAAAG0QAABuQAAAbzAAAHEgAABzEAAAdJAAAHZAAAB3IAAAeFAAAHnQAAB7QAAAfPAAAH2QAAB/AAAAgEAAAIJAAACD0AAAhYAAAIewAACJoAAAirAAAIxQAACNkAAAjqAAAI9wAACQsAAAkfAAAJKQAACT8AAAlaAAAJeQAACYkAAAmaAAAJqgAACb0AAAnUAAAJ7AAACgAAAAoZAAAKOAAAClUAAApqAAAKgQAACpkAAAqjAAAKugAACs8AAArsAAAK/gAACxUAAAsvAAALSAAAC1gAAAtxAAALhQAAC5YAAAujAAALtwAAC8QAAAvOAAAL4QAAC/wAAAwQAAAMIAAADDEAAAxBAAAMUwAADGgAAAx/AAAMkgAADKQAAAzBAAAM2gAADPUAAA0HAAANEQAADR0AAA0rAAANOQAAQAAAKwALAALAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAYATgADAAEECQABABgAAAADAAEECQACAA4AGAADAAEECQADACgAJgADAAEECQAEABgATgADAAEECQAFABYAZgADAAEECQAGACYAfABIAG8AbABsAG8AdwAgAFAAaQB4AGUAbABSAGUAZwB1AGwAYQByAEgAbwBsAGwAbwB3ACAAUABpAHgAZQBsACAAUgBlAGcAdQBsAGEAcgBIAG8AbABsAG8AdwAgAFAAaQB4AGUAbABWAGUAcgBzAGkAbwBuACAAMQAuADAASABvAGwAbABvAHcAUABpAHgAZQBsAC0AUgBlAGcAdQBsAGEAcgADAAAAAAAA/4AAgAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
   // src/ui/gfx/webfont.ts
   var PIXEL_FAMILY = "Hollow Pixel";
@@ -7505,72 +11848,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return copy(c);
   }
 
-  // src/ui/text.ts
-  var NAMES = {
-    life: "maximum life",
-    mana: "maximum mana",
-    energyShield: "maximum energy shield",
-    lifeRegen: "life regenerated per second",
-    lifeRegenPct: "% of life regenerated per second",
-    manaRegen: "mana regenerated per second",
-    armour: "armour",
-    evasion: "evasion",
-    block: "% chance to block",
-    str: "Might",
-    dex: "Grace",
-    int: "Wit",
-    accuracy: "accuracy",
-    damage: "damage",
-    critChance: "critical chance",
-    critMulti: "% critical multiplier",
-    attackSpeed: "attack speed",
-    castSpeed: "cast speed",
-    area: "area of effect",
-    pierce: "projectile pierce",
-    leech: "% of damage leeched as life",
-    flaskHeal: "flask healing",
-    flaskCharges: "flask charges gained",
-    moveSpeed: "movement speed",
-    itemRarity: "rarity of items found",
-    itemQuantity: "quantity of items found",
-    xpGain: "experience gained",
-    manaCost: "mana cost",
-    dmgTaken: "damage taken",
-    lifeOnKill: "life gained per kill",
-    baseCrit: "% base critical chance"
-  };
-  var TYPES = { phys: "physical", fire: "fire", cold: "cold", lightning: "lightning", chaos: "chaos" };
-  function statName(stat) {
-    const [head, t] = stat.split(".");
-    if (t && head && TYPES[t]) {
-      switch (head) {
-        case "res":
-          return `% ${TYPES[t]} resistance`;
-        case "maxRes":
-          return `% maximum ${TYPES[t]} resistance`;
-        case "pen":
-          return `% ${TYPES[t]} penetration`;
-        case "convert":
-          return `% of physical damage converted to ${TYPES[t]}`;
-        case "addMin":
-          return `minimum added ${TYPES[t]} damage`;
-        case "addMax":
-          return `maximum added ${TYPES[t]} damage`;
-      }
-    }
-    return NAMES[stat] ?? stat;
-  }
-  function modText(m4) {
-    const tags = m4.tags?.length ? ` (${m4.tags.map((t) => TYPES[t] ?? t).join(", ")})` : "";
-    const name = statName(m4.stat);
-    if (m4.kind === "inc") return `${Math.abs(m4.value)}% ${m4.value >= 0 ? "increased" : "reduced"} ${name}${tags}`;
-    if (m4.kind === "more") return `${Math.abs(m4.value)}% ${m4.value >= 0 ? "more" : "less"} ${name}${tags}`;
-    const sign = m4.value >= 0 ? "+" : "";
-    return name.startsWith("%") ? `${sign}${m4.value}${name}${tags}` : `${sign}${m4.value} ${name}${tags}`;
-  }
-
   // src/ui/forge.ts
-  var SLOT_NAMES = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
+  var SLOT_NAMES = (slot) => t(`slot.${slot}`);
   var forgeOpts = { until: false };
   function forgeView(c) {
     const st = c.state;
@@ -7578,7 +11857,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const cellFor = (it) => {
       const cell = h("div", {
         class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`,
-        attrs: { "aria-label": itemLabel(it), role: "button", tabindex: "0" },
+        attrs: { "aria-label": itemName(it), role: "button", tabindex: "0" },
         on: { click: () => {
           c.sel = { uid: it.uid };
           c.rerender();
@@ -7590,19 +11869,19 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     };
     const group = (label, list7, worn = false) => {
       if (!list7.length) return;
-      rack.append(h("div", { class: "gridsep", text: `${label} (${list7.length})` }));
+      rack.append(h("div", { class: "gridsep", text: t("common.count", { label, n: list7.length }) }));
       for (const it of list7) {
         const cell = cellFor(it);
         if (worn) markWorn(cell, SLOTS.find((s) => st.hero.equipment[s] === it));
         rack.append(cell);
       }
     };
-    group("Worn", SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), true);
-    group("Stash", st.stash);
-    group("Relic case", st.relics);
+    group(t("forge.worn"), SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), true);
+    group(t("forge.stash"), st.stash);
+    group(t("forge.case"), st.relics);
     const found = c.sel.uid !== void 0 ? findItem(st, c.sel.uid) : null;
     const inStash = !!found && !found.slot;
-    const anvil = h("div", { class: "card anvilcard" }, h("h3", { text: "On the anvil" }));
+    const anvil = h("div", { class: "card anvilcard" }, h("h3", { text: t("forge.anvil") }));
     if (found) {
       const it = found.item;
       const big = itemIcon(it);
@@ -7615,89 +11894,90 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (canHone) work.append(h(
         "div",
         { class: "wrow" },
-        h("b", { text: "Hone" }),
-        h("div", { class: "qbar", title: `${q}% / ${MAX_QUALITY}% quality` }, h("i", { style: `width:${q / MAX_QUALITY * 100}%` })),
+        h("b", { text: t("forge.hone") }),
+        h("div", { class: "qbar", title: t("forge.qualityTip", { q, max: MAX_QUALITY }) }, h("i", { style: `width:${q / MAX_QUALITY * 100}%` })),
         h("span", { class: "num", text: `${q}%` }),
         h("button", {
           class: "btn small",
-          text: hc === null ? "Max" : `+1% for ${fmt(hc)}`,
+          text: hc === null ? t("forge.max") : t("forge.honeFor", { cost: fmt(hc) }),
           attrs: { "data-key": "h", ...hc === null || st.dust < hc ? { disabled: "" } : {} },
-          title: hc === null ? "Fully honed" : `Each point of quality is 1% increased ${baseOf(it).weapon ? "physical damage" : "defences"} on the item itself (H)`,
+          title: hc === null ? t("forge.fullyHoned") : t(baseOf(it).weapon ? "forge.honeTipWeapon" : "forge.honeTipArmour"),
           on: { click: () => c.act((s) => hone(s, it.uid)) }
         })
       ));
       const opts = benchOptions(it);
       if (it.rarity === "enchanted" || it.rarity === "rare") {
-        const pick = h("select", { attrs: { "aria-label": "Affix to add at the bench" } });
+        const pick = h("select", { attrs: { "aria-label": t("forge.benchAria") } });
         const benched = it.affixes.find((a) => a.bench);
-        for (const a of opts.sort((x, y) => x.type === y.type ? x.text.localeCompare(y.text) : x.type === "prefix" ? -1 : 1)) {
-          pick.append(h("option", { text: `${a.type === "prefix" ? "P" : "S"}: ${a.text.replace(/\{\d\}/g, "#")}`, attrs: { value: a.id } }));
+        for (const a of opts.sort((x, y) => x.type === y.type ? affixTemplate(x.id).localeCompare(affixTemplate(y.id), lang()) : x.type === "prefix" ? -1 : 1)) {
+          pick.append(h("option", { text: t("forge.benchOption", { ps: t(a.type === "prefix" ? "item.prefix" : "item.suffix"), text: affixTemplate(a.id) }), attrs: { value: a.id } }));
         }
         const dust2 = benchDust(it), grafts = st.currency.graft ?? 0;
         const ok = opts.length > 0 && grafts >= BENCH_GRAFTS && st.dust >= dust2;
         work.append(h(
           "div",
           { class: "wrow" },
-          h("b", { text: "Bench" }),
-          opts.length ? pick : h("span", { class: "muted grow", text: "No room for another affix." }),
+          h("b", { text: t("forge.bench") }),
+          opts.length ? pick : h("span", { class: "muted grow", text: t("forge.noRoom") }),
           h("button", {
             class: "btn small",
-            text: `${benched ? "Replace" : "Add"}: ${BENCH_GRAFTS} Graft + ${fmt(dust2)}`,
+            text: t(benched ? "forge.benchReplace" : "forge.benchAdd", { n: BENCH_GRAFTS, dust: fmt(dust2) }),
             attrs: ok ? {} : { disabled: "" },
-            title: `Adds the chosen affix at a random tier the item level allows.${benched ? " Replaces the affix benched before." : ""} You have ${grafts} Graft.`,
-            on: { click: () => c.act((s) => benchCraft(s, it.uid, pick.value), "Benched") }
+            title: [t("forge.benchTip"), benched ? t("forge.benchTipReplace") : "", t("forge.benchHave", { n: grafts })].filter(Boolean).join(" "),
+            on: { click: () => c.act((s) => benchCraft(s, it.uid, pick.value), t("forge.benched")) }
           })
         ));
       }
       work.append(h(
         "div",
         { class: "wrow" },
-        h("b", { text: "Keep" }),
-        h("span", { class: "muted grow", style: "font-size:12px", text: it.locked ? "Locked: upkeep and bulk salvage leave it alone." : "Unlocked: upkeep may swap it for a better drop." }),
-        h("button", { class: "btn alt small", text: it.locked ? "Unlock" : "Lock", attrs: { "data-key": "l" }, on: { click: () => c.act((s) => setLocked(s, it.uid, !it.locked)) } })
+        h("b", { text: t("forge.keep") }),
+        h("span", { class: "muted grow", style: "font-size:12px", text: it.locked ? t("forge.lockedNote") : t("forge.unlockedNote") }),
+        h("button", { class: "btn alt small", text: it.locked ? t("gear.unlock") : t("gear.lock"), attrs: { "data-key": "l" }, on: { click: () => c.act((s) => setLocked(s, it.uid, !it.locked)) } })
       ));
       anvil.append(work);
-    } else anvil.append(h("div", { class: "anvil-plate empty" }, glyph("forge", 44)), h("div", { class: "muted", style: "text-align:center", text: "Pick an item from the rack to work on it." }));
+    } else anvil.append(h("div", { class: "anvil-plate empty" }, glyph("forge", 44)), h("div", { class: "muted", style: "text-align:center", text: t("forge.pick") }));
     const shelf = h("div", { class: "shelf" });
     for (const id of CURRENCY_ORDER) {
       const def2 = CURRENCIES[id];
       const have = st.currency[id] ?? 0;
       const art = spriteCanvas(`cur.${id}`) ?? h("span", { style: `display:block;width:24px;height:24px;background:${def2.color};border:2px solid #111` });
       const reroll = REROLLS.includes(id);
+      const cur = currencyName(id);
       const buy = (e) => {
         const n = e.shiftKey ? 10 : 1;
-        c.act((s) => buyCurrency(s, id, n), n > 1 ? `Bought ${n} ${def2.name}` : void 0);
+        c.act((s) => buyCurrency(s, id, n), n > 1 ? t("forge.bought", { n, cur }) : void 0);
       };
       shelf.append(h(
         "div",
         { class: `cur${have ? "" : " none"}` },
         h("div", { class: "orb" }, art, h("span", { class: "count num", text: have > 999 ? "999+" : String(have) })),
-        h("div", { class: "grow" }, h("b", { text: def2.name }), h("span", { text: def2.blurb })),
+        h("div", { class: "grow" }, h("b", { text: cur }), h("span", { text: currencyBlurb(id) })),
         h(
           "div",
           { class: "col", style: "gap:4px" },
           h("button", {
             class: "btn small",
-            text: "Use",
+            text: t("forge.use"),
             attrs: have > 0 && found ? {} : { disabled: "" },
-            title: found ? `Use on ${itemLabel(found.item)}` : "Pick an item first",
-            on: { click: () => c.act((s) => applyCurrency(s, id, c.sel.uid), `${def2.name} used`) }
+            title: found ? t("forge.useOn", { item: itemName(found.item) }) : t("forge.pickFirst"),
+            on: { click: () => c.act((s) => applyCurrency(s, id, c.sel.uid), t("forge.used", { cur })) }
           }),
           reroll ? h("button", {
             class: "btn small",
-            text: "Until upgrade",
+            text: t("forge.until"),
             attrs: have > 0 && inStash ? {} : { disabled: "" },
-            title: inStash ? `Use ${def2.name} again and again (up to 20) until ${itemLabel(found.item)} beats what you wear` : "Pick a stash item first",
+            title: inStash ? t("forge.untilTip", { cur, item: itemName(found.item) }) : t("forge.pickStash"),
             on: { click: () => c.act((s) => {
               const r3 = craftUntilUpgrade(s, id, c.sel.uid, 20);
-              if (!r3.err) c.toast(r3.upgrade ? `Upgrade after ${r3.used} ${def2.name}` : `No upgrade after ${r3.used} ${def2.name}`);
+              if (!r3.err) c.toast(t(r3.upgrade ? "forge.upAfter" : "forge.noUpAfter", { n: r3.used, cur }));
               return r3.err;
             }) }
           }) : null,
           h("button", {
             class: "btn alt small",
-            text: `Buy ${def2.cost}`,
-            title: `Costs ${def2.cost} ember dust; shift-click buys 10`,
+            text: t("forge.buy", { cost: def2.cost }),
+            title: t("forge.buyTip", { cost: def2.cost }),
             attrs: st.dust >= def2.cost ? {} : { disabled: "" },
             on: { click: buy }
           })
@@ -7707,21 +11987,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const cost = forgeCost(st);
     const smith = h("div", { class: "smith" });
     for (const slot of SLOTS) {
+      const slotName = SLOT_NAMES(slot).toLowerCase();
       smith.append(h("button", {
         class: "btn alt small",
-        text: SLOT_NAMES[slot],
-        title: st.dust >= cost ? forgeOpts.until ? `Forge rares for the ${SLOT_NAMES[slot].toLowerCase()} slot until one beats what you wear (up to 10 at ${fmt(cost)} dust each; misses are salvaged)` : `Forge a rare ${SLOT_NAMES[slot].toLowerCase()} for ${fmt(cost)} dust` : `Needs ${fmt(cost)} ember dust`,
+        text: SLOT_NAMES(slot),
+        title: st.dust >= cost ? t(forgeOpts.until ? "forge.smithUntilTip" : "forge.smithTip", { slot: slotName, cost: fmt(cost) }) : t("forge.needsDust", { cost: fmt(cost) }),
         attrs: st.dust >= cost ? {} : { disabled: "" },
         on: { click: () => c.act((s) => {
           if (forgeOpts.until) {
             const r4 = forgeUntilUpgrade(s, slot, 10);
-            if (!r4.err) c.toast(r4.item ? `Forged ${r4.made}: wearing ${itemLabel(r4.item)}` : `Forged ${r4.made}, none better than what you wear`);
+            if (!r4.err) c.toast(r4.item ? t("forge.forgedWearing", { n: r4.made, item: itemName(r4.item) }) : t("forge.forgedNone", { n: r4.made }));
             return r4.err;
           }
           const r3 = forgeRare(s, slot);
           if (!r3.err && r3.item) c.sel = { uid: r3.item.uid };
           return r3.err;
-        }, forgeOpts.until ? void 0 : "Forged a rare") }
+        }, forgeOpts.until ? void 0 : t("forge.forged")) }
       }));
     }
     const until = h(
@@ -7731,21 +12012,21 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         c.rerender();
       } } },
       h("i"),
-      h("span", null, h("b", { text: "Until upgrade" }), h("small", { text: "Up to 10 rares, stop at the first worth wearing; misses become dust." }))
+      h("span", null, h("b", { text: t("forge.until") }), h("small", { text: t("forge.untilNote") }))
     );
-    const dust = h("div", { class: "dust" }, glyph("forge", 20), h("b", { class: "num", text: fmt(st.dust) }), h("span", { text: "ember dust" }));
+    const dust = h("div", { class: "dust" }, glyph("forge", 20), h("b", { class: "num", text: fmt(st.dust) }), h("span", { text: t("forge.dust") }));
     return h(
       "div",
       { class: "col", style: "gap:14px" },
       h(
         "div",
         { class: "card" },
-        h("h3", { class: "split" }, h("span", { text: "Forge a rare" }), h("span", { class: "num", text: `${fmt(cost)} dust / item level ${maxIlvl(st)}` })),
+        h("h3", { class: "split" }, h("span", { text: t("forge.title") }), h("span", { class: "num", text: t("forge.costLine", { cost: fmt(cost), ilvl: maxIlvl(st) }) })),
         h(
           "div",
           { class: "row", style: "align-items:center;gap:12px" },
           dust,
-          h("div", { class: "muted grow", style: "font-size:12px", text: "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust." }),
+          h("div", { class: "muted grow", style: "font-size:12px", text: t("forge.note") }),
           until
         ),
         smith,
@@ -7753,17 +12034,66 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           "div",
           { class: "note", style: "margin-top:10px" },
           glyph("forge", 16),
-          h("span", { text: `${fmt(cost - st.dust)} more ember dust for a rare. Salvaging drops on the Gear tab (or a loot rule that salvages) makes dust.` })
+          h("span", { text: t("forge.moreDust", { n: fmt(cost - st.dust) }) })
         ) : null
       ),
       h(
         "div",
         { class: "smithy" },
-        h("div", { class: "card" }, h("h3", { text: "Rack" }), rack),
+        h("div", { class: "card" }, h("h3", { text: t("forge.rack") }), rack),
         anvil,
-        h("div", { class: "card" }, h("h3", { text: "Currency" }), shelf)
+        h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)
       )
     );
+  }
+
+  // src/i18n/errors.ts
+  var idByName = (table, name) => Object.values(table).find((x) => x.name === name)?.id;
+  var FIXED = Object.fromEntries(Object.entries(EN).filter(([k, v]) => k.startsWith("err.") && !v.includes("{")).map(([k, v]) => [v, k]));
+  var PATTERNS = [
+    [/^needs (\d+) ember dust$/, (m4) => t("err.needsDust", { n: m4[1] })],
+    [/^needs (\d+) ember dust \(or spare orbs\)$/, (m4) => t("err.needsDustOrbs", { n: m4[1] })],
+    [/^needs level (\d+)$/, (m4) => t("err.needsLevel", { n: m4[1] })],
+    [/^(\w+): needs level (\d+)$/, (m4) => t("err.slotNeedsLevel", { slot: t(`slot.${m4[1]}`), n: m4[2] })],
+    [/^(.+) needs level (\d+)$/, (m4) => {
+      const id = idByName(SUPPORTS, m4[1]);
+      return t("err.supportNeedsLevel", { name: id ? supportName(id) : m4[1], n: m4[2] });
+    }],
+    [/^(.+) can't be used with this weapon$/, (m4) => {
+      const id = idByName(SKILLS, m4[1]);
+      return t("err.cantUseWith", { skill: id ? skillName(id) : m4[1] });
+    }],
+    [/^(.+) can't be used with no weapon$/, (m4) => {
+      const id = idByName(SKILLS, m4[1]);
+      return t("err.cantUseUnarmed", { skill: id ? skillName(id) : m4[1] });
+    }],
+    [/^(.+) does not support (.+)$/, (m4) => {
+      const sup = idByName(SUPPORTS, m4[1]), sk = idByName(SKILLS, m4[2]);
+      return t("err.noSupport", { support: sup ? supportName(sup) : m4[1], skill: sk ? skillName(sk) : m4[2] });
+    }],
+    [/^needs (\d+) (.+)s$/, (m4) => {
+      const pin = Object.values(PINNACLES).find((p) => p.sigilName === m4[2]);
+      return pin ? t("err.needsSigils", { n: m4[1], sigil: sigilName(pin.id) }) : m4[0];
+    }],
+    [/^no (.+) left$/, (m4) => {
+      const id = idByName(CURRENCIES, m4[1]);
+      return t("err.noneLeft", { cur: id ? currencyName(id) : m4[1] });
+    }],
+    [/^already at (\d+)% quality$/, (m4) => t("err.maxQuality", { n: m4[1] })],
+    [/^needs (\d+) Graft$/, (m4) => t("err.needsGraft", { n: m4[1] })],
+    [/^save is from a newer version \((\d+)\)$/, (m4) => t("err.saveNewer", { n: m4[1] })],
+    [/^no migration from version (\d+)$/, (m4) => t("err.saveNoMigration", { n: m4[1] })],
+    // The rest of the save checks name a part of the state: one message, the detail kept as is.
+    [/^(bad|missing|unknown) .+$|^relic (data|with) .+$/, (m4) => t("err.saveBroken", { what: m4[0] })]
+  ];
+  function tErr(msg) {
+    const k = FIXED[msg];
+    if (k) return t(k);
+    for (const [re, f] of PATTERNS) {
+      const m4 = msg.match(re);
+      if (m4) return f(m4);
+    }
+    return msg;
   }
 
   // src/ui/tree.ts
@@ -7782,13 +12112,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const head = h(
       "div",
       { class: "row" },
-      h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: `${pts} point${pts === 1 ? "" : "s"} left` }),
-      h("span", { class: "tag", text: `${hero.passives.length} taken` }),
-      h("span", { class: "muted", style: "font-size:12px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
+      h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: tn("tree.left", pts) }),
+      h("span", { class: "tag", text: t("tree.taken", { n: hero.passives.length }) }),
+      h("span", { class: "muted", style: "font-size:12px", text: t("tree.help") }),
       h("span", { class: "grow" }),
       h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
       h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
-      h("button", { class: "btn alt", text: "Centre", on: { click: () => {
+      h("button", { class: "btn alt", text: t("tree.centre"), on: { click: () => {
         cam.centred = "";
         centre();
         draw2();
@@ -7851,7 +12181,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           }
         }
       }
-      const gem = (x, y, r3, fill, edge) => {
+      const gem = (x, y, r3, fill2, edge) => {
         r3 = Math.round(r3);
         x = Math.round(x);
         y = Math.round(y);
@@ -7860,7 +12190,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           const span = r3 + 2 - Math.abs(i);
           g.fillRect(x - span, y + i, span * 2 + 1, 1);
         }
-        g.fillStyle = fill;
+        g.fillStyle = fill2;
         for (let i = -r3; i <= r3; i++) {
           const span = r3 - Math.abs(i);
           g.fillRect(x - span, y + i, span * 2 + 1, 1);
@@ -7874,11 +12204,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const r3 = radius(n);
         const own = taken.has(n.id) || n.id === start.id;
         const open = isOpen(n);
-        let fill = own ? "#ffc233" : open ? "#f3e7d3" : "#4a3d31";
-        if (n.kind === "keystone") fill = own ? "#ff5a36" : open ? "#ffb3a3" : "#5a3328";
-        if (n.kind === "notable" && !own) fill = open ? "#c9b6ff" : "#3d3052";
+        let fill2 = own ? "#ffc233" : open ? "#f3e7d3" : "#4a3d31";
+        if (n.kind === "keystone") fill2 = own ? "#ff5a36" : open ? "#ffb3a3" : "#5a3328";
+        if (n.kind === "notable" && !own) fill2 = open ? "#c9b6ff" : "#3d3052";
         if (open && !own) gem(x, y, r3 + 3, "rgba(255,194,51,.25)", "rgba(255,194,51,.12)");
-        gem(x, y, r3, fill, "#000000");
+        gem(x, y, r3, fill2, "#000000");
         if (n.kind === "ring" && !own) {
           g.fillStyle = "#19b3a3";
           g.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3);
@@ -7890,9 +12220,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           g.strokeRect(Math.round(x - r3 - 6), Math.round(y - r3 - 6), Math.round(2 * r3 + 12), Math.round(2 * r3 + 12));
         }
         if ((n.kind === "notable" || n.kind === "keystone" || n.kind === "start") && cam.z > 0.45) {
-          const label = n.kind === "start" ? (n.cls ?? "").toUpperCase() : n.name.toUpperCase();
-          const t = textSprite(label, own ? "#ffc233" : "#e6d9b8", "#000000");
-          g.drawImage(t, Math.round(x - t.width), Math.round(y + r3 + 6), t.width * 2, t.height * 2);
+          const label = (n.kind === "start" ? n.cls ? className(n.cls) : "" : nodeName(n)).toUpperCase();
+          const t2 = textSprite(label, own ? "#ffc233" : "#e6d9b8", "#000000");
+          g.drawImage(t2, Math.round(x - t2.width), Math.round(y + r3 + 6), t2.width * 2, t2.height * 2);
         }
       }
     }
@@ -7903,28 +12233,31 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const pinned = n === selected;
       info.classList.toggle("pinned", pinned);
       const own = taken.has(n.id);
-      info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
-      for (const m4 of n.mods) info.append(h("div", { text: modText(m4) }));
-      if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: KEYSTONE_TEXT[n.name] }));
-      if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? "Your ember seat." : "Another calling starts here." }));
+      const name = n.kind === "start" && n.cls ? `${nodeName(n)} - ${className(n.cls)}` : nodeName(n);
+      info.append(h("h3", { text: n.kind === "notable" ? t("tree.notable", { name }) : n.kind === "keystone" ? t("tree.keystone", { name }) : name }));
+      for (const m4 of n.mods) info.append(h("div", { text: modLine(m4) }));
+      if (n.kind === "keystone" && KEYSTONE_TEXT[n.name]) info.append(h("div", { class: "muted", style: "font-style:italic", text: keystoneText(n.name) }));
+      if (n.kind === "start") info.append(h("div", { class: "muted", text: n.cls === hero.cls ? t("tree.yourSeat") : t("tree.otherSeat") }));
       const row = h("div", { class: "row", style: "margin-top:6px" });
       if (own) {
         const ok = canRefund(hero, n.id);
         row.append(h("button", {
           class: "btn alt",
-          text: `Refund (${refundCost(hero)} dust)`,
+          text: t("tree.refund", { n: refundCost(hero) }),
           attrs: ok ? {} : { disabled: "" },
-          title: ok ? "" : "Other taken nodes depend on it",
+          title: ok ? "" : t("tree.depends"),
           on: { click: () => c.act((s) => refund(s, n.id)) }
         }));
       } else if (n.kind !== "start") {
         const err = canAllocate(hero, n.id);
-        row.append(h("button", { class: "btn", text: "Take", attrs: err ? { disabled: "" } : {}, title: err ?? "", on: { click: () => c.act((s) => allocate(s, n.id)) } }));
-        if (err) row.append(h("span", { class: "muted", text: err }));
+        row.append(h("button", { class: "btn", text: t("tree.take"), attrs: err ? { disabled: "" } : {}, title: err ? tErr(err) : "", on: { click: () => c.act((s) => allocate(s, n.id)) } }));
+        if (err) row.append(h("span", { class: "muted", text: tErr(err) }));
       }
       if (pinned) info.append(row);
-      else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
-      else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: "Click to pin it (refund)." }));
+      else if (!own && n.kind !== "start") {
+        const e = canAllocate(hero, n.id);
+        info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: e ? tErr(e) : t("tree.clickTake") }));
+      } else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: t("tree.clickPin") }));
       pixelize(info);
       place(n);
     }
@@ -8039,9 +12372,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const hero = c.state.hero;
     const card = h("div", { class: "card col" });
     const left = ascPointsLeft(hero);
-    card.append(h("h3", { text: `Ascendancy${hero.asc ? `: ${ASCENDANCIES[hero.asc].name}` : ""} (${left} point${left === 1 ? "" : "s"} left)` }));
+    card.append(h("h3", { text: hero.asc && ASCENDANCIES[hero.asc] ? tn("asc.titleNamed", left, { name: ascName(hero.asc) }) : tn("asc.title", left) }));
     if (!hero.asc) {
-      card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? "Choose your path. This is permanent for this hero." : "Pass a Trial (the first opens in Act 1 after the Sunken Chapel) to earn ascendancy points." }));
+      card.append(h("div", { class: "muted", text: hero.ascPoints > 0 ? t("asc.choose") : t("asc.earn") }));
       const row = h("div", { class: "grid2" });
       for (const a2 of Object.values(ASCENDANCIES).filter((x) => x.cls === hero.cls)) {
         row.append(h(
@@ -8051,13 +12384,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           h(
             "div",
             { class: "grow" },
-            h("div", { class: "nm", text: a2.name }),
-            h("div", { class: "ds", text: a2.blurb }),
-            ...a2.nodes.map((n) => h("div", { class: "ds muted", text: `${n.name}: ${n.mods.map(modText).join(", ")}` })),
+            h("div", { class: "nm", text: ascName(a2.id) }),
+            h("div", { class: "ds", text: ascBlurb(a2.id) }),
+            ...a2.nodes.map((n) => h("div", { class: "ds muted", text: t("asc.node", { name: ascNodeName(n.id), mods: n.mods.map((m4) => modLine(m4)).join(t("common.list")) }) })),
             h("button", {
               class: "btn",
               style: "margin-top:6px",
-              text: `Become ${a2.name}`,
+              text: t("asc.become", { name: ascName(a2.id) }),
               attrs: hero.ascPoints > 0 ? {} : { disabled: "" },
               on: { click: () => c.act((s) => chooseAscendancy(s, a2.id)) }
             })
@@ -8076,8 +12409,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         { class: `skill${own ? " on" : ""}`, on: { click: () => {
           if (!own) c.act((s) => takeAscNode(s, n.id));
         } } },
-        h("div", { class: "grow" }, h("div", { class: "nm", text: n.name }), ...n.mods.map((md) => h("div", { class: "ds", text: modText(md) }))),
-        h("div", { class: "tag", text: own ? "taken" : left > 0 ? "take" : "locked" })
+        h("div", { class: "grow" }, h("div", { class: "nm", text: ascNodeName(n.id) }), ...n.mods.map((md) => h("div", { class: "ds", text: modLine(md) }))),
+        h("div", { class: "tag", text: own ? t("asc.taken") : left > 0 ? t("asc.take") : t("asc.locked") })
       ));
     }
     card.append(grid);
@@ -8133,25 +12466,25 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const acts = h("div", { class: "gate-acts" }, ...ACTS.map((a) => {
         const done = !!st.world.clears[a.zones[a.zones.length - 1]];
         const here = a.zones.includes(st.activity.zone) || a.trial === st.activity.zone;
-        return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: `Act ${a.id}${done ? ": cleared" : here ? ": here" : ""}` });
+        return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: t(done ? "atlas.actCleared" : here ? "atlas.actHere" : "atlas.act", { n: a.id }) });
       }));
       return h(
         "div",
         { class: "card col atlas-locked" },
-        h("h3", { text: "The Cinderlands" }),
+        h("h3", { text: t("atlas.lands") }),
         h("div", { class: "gate" }, pic, h("span", { class: "lock" }, glyph("block", 22))),
-        h("div", { class: "story", text: "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it." }),
+        h("div", { class: "story", text: t("atlas.story") }),
         h(
           "div",
           { class: "row" },
-          h("span", { class: "sub", style: "margin:0", text: "Opens after" }),
-          h("b", { text: `${gate.name} (area level ${gate.level})` }),
-          h("span", { class: "muted", text: `the hero is level ${st.hero.level}` })
+          h("span", { class: "sub", style: "margin:0", text: t("atlas.opensAfter") }),
+          h("b", { text: t("atlas.gate", { zone: zoneName(gate.id), level: gate.level }) }),
+          h("span", { class: "muted", text: t("atlas.heroLevel", { n: st.hero.level }) })
         ),
         acts,
-        h("div", { class: "sub", style: "margin:4px 0 0", text: `Then ${MAX_TIER} map tiers and the endless Depths` }),
+        h("div", { class: "sub", style: "margin:4px 0 0", text: t("atlas.then", { n: MAX_TIER }) }),
         tierChips([]),
-        h("div", { class: "muted", text: st.maps.length ? `${st.maps.length} map${st.maps.length === 1 ? "" : "s"} already found and kept for later.` : "Maps start to drop in Act 3; they are kept for later." })
+        h("div", { class: "muted", text: st.maps.length ? tn("atlas.kept", st.maps.length) : t("atlas.dropLater") })
       );
     }
     const root = h("div", { class: "col" });
@@ -8160,32 +12493,32 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "button",
       { class: `toggle${onMaps ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(onMaps) }, on: { click: () => c.act((s) => setMapMode(s, !onMaps)) } },
       h("i"),
-      h("span", null, h("b", { text: "Run maps" }), h("small", { text: "Instead of story zones. With no maps left: the Outskirts, which drop Tier 1 maps." }))
+      h("span", null, h("b", { text: t("atlas.runMaps") }), h("small", { text: t("atlas.runMapsNote") }))
     );
     const tiers = [.../* @__PURE__ */ new Set([...st.maps.map((m4) => m4.tier), ...st.activity.mapTier ? [st.activity.mapTier] : []])].sort((a, b) => a - b);
     const tierSel = h("select");
-    tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
-    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below${st.maps.some((m4) => m4.tier === t) ? "" : " (none in stash)"}`, attrs: { value: String(t) } }));
+    tierSel.append(h("option", { text: t("atlas.highest"), attrs: { value: "0" } }));
+    for (const tier of tiers) tierSel.append(h("option", { text: t(st.maps.some((m4) => m4.tier === tier) ? "atlas.andBelow" : "atlas.andBelowNone", { tier: tierName2(tier) }), attrs: { value: String(tier) } }));
     tierSel.value = String(st.activity.mapTier);
     tierSel.addEventListener("change", () => c.act((s) => setMapTier(s, +tierSel.value)));
     const deepest2 = Math.max(0, ...st.atlas.tiers);
     root.append(h(
       "div",
       { class: "card col" },
-      h("h3", { text: "The map device" }),
+      h("h3", { text: t("atlas.device") }),
       mode,
       h(
         "div",
         { class: "row" },
-        "Order",
+        t("atlas.order"),
         tierSel,
-        h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
-        h("span", { class: "tag", text: `Deepest: ${deepest2 ? tierName(deepest2) : "none"}` }),
-        autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
-        st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
+        h("span", { class: "tag", text: t("atlas.count", { n: st.maps.length, cap: st.mapCap }) }),
+        h("span", { class: "tag", text: t("atlas.deepest", { tier: deepest2 ? tierName2(deepest2) : t("atlas.none") }) }),
+        autoXpCap(st) ? h("span", { class: "tag", title: t("atlas.xpCapTip"), text: t("atlas.xpCap", { tier: tierName2(autoXpCap(st)) }) }) : null,
+        st.activity.autoCap ? h("span", { class: "tag ember", text: t("atlas.autoCap", { tier: tierName2(st.activity.autoCap) }) }) : null
       ),
       tierChips(st.atlas.tiers),
-      h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
+      h("div", { class: "muted", style: "font-size:12px", text: t("atlas.deathNote", { n: MAP_DEATH_XP * 100 }) })
     ));
     const list7 = h("div", { class: "col", style: "gap:4px" });
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
@@ -8204,12 +12537,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "grow" },
-          h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m4.rarity]};color:#1a1410`, text: tierName(m4.tier) }), h("b", { text: mapLabel(m4) })),
-          m4.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m4.mods.map((id) => MAP_MODS[id]?.text ?? id).join(" / ") }) : null
+          h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m4.rarity]};color:#1a1410`, text: tierName2(m4.tier) }), h("b", { text: mapLabel(m4) })),
+          m4.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m4.mods.map((id) => mapModText(id)).join(" / ") }) : null
         )
       ));
     }
-    if (!maps.length) list7.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    if (!maps.length) list7.append(h("div", { class: "muted", text: t("atlas.noMaps") }));
     const sel = st.maps.find((m4) => m4.uid === c.sel.uid);
     const bench = h("div", { class: "row", style: "gap:4px" });
     if (sel) {
@@ -8217,8 +12550,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const have = st.currency[id] ?? 0;
         bench.append(h("button", {
           class: "btn alt",
-          text: `${CURRENCIES[id].name} (${have})`,
-          title: CURRENCIES[id].blurb,
+          text: t("common.count", { label: currencyName(id), n: have }),
+          title: currencyBlurb(id),
           attrs: have ? {} : { disabled: "" },
           on: { click: () => c.act((s) => craftMap(s, id, sel.uid)) }
         }));
@@ -8227,9 +12560,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     root.append(h(
       "div",
       { class: "card col" },
-      h("h3", { text: "Maps" }),
+      h("h3", { text: t("atlas.maps") }),
       list7,
-      sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null
+      sel ? h("div", { class: "col" }, h("div", { class: "muted", text: t("atlas.craft", { map: mapLabel(sel) }) }), bench) : null
     ));
     const left = atlasPointsLeft(st);
     const grid = h("div", { class: "grid2" });
@@ -8245,18 +12578,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "grow" },
-          h("div", { class: "nm", text: n.name }),
-          h("div", { class: "ds", text: n.text }),
-          n.requires.length ? h("div", { class: "ds muted", text: `After: ${n.requires.map((r3) => ATLAS[r3]?.name ?? r3).join(", ")}` }) : null
+          h("div", { class: "nm", text: atlasName(n.id) }),
+          h("div", { class: "ds", text: atlasText(n.id) }),
+          n.requires.length ? h("div", { class: "ds muted", text: t("atlas.after", { list: n.requires.map((r3) => ATLAS[r3] ? atlasName(r3) : r3).join(t("common.list")) }) }) : null
         ),
-        h("div", { class: "tag", text: own ? "taken" : err ? locked ? "locked" : "no points" : "take" })
+        h("div", { class: "tag", text: own ? t("atlas.taken") : err ? locked ? t("atlas.locked") : t("atlas.noPoints") : t("atlas.take") })
       ));
     }
     root.append(h(
       "div",
       { class: "card col" },
-      h("h3", { text: `Atlas (${left} point${left === 1 ? "" : "s"} left)` }),
-      h("div", { class: "muted", style: "font-size:12px", text: `First clears of tiers 1-${MAX_TIER} give a point each, every fifth Depth one more, pinnacles two.` }),
+      h("h3", { text: tn("atlas.tree", left) }),
+      h("div", { class: "muted", style: "font-size:12px", text: t("atlas.pointsNote", { n: MAX_TIER }) }),
       grid
     ));
     const pins = h("div", { class: "grid2" });
@@ -8273,23 +12606,23 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "grow" },
-          h("div", { class: "nm", text: p.name }),
-          h("div", { class: "ds", text: p.text }),
-          h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
+          h("div", { class: "nm", text: pinName(p.id) }),
+          h("div", { class: "ds", text: pinText(p.id) }),
+          h("div", { class: "ds muted", text: t("atlas.pinInfo", { level: p.level, sigil: sigilName(p.id), tier: tierName2(p.minTier), kills: st.pinnacleKills[p.id] ?? 0 }) }),
           scoutLine(c, p.id),
           h(
             "div",
             { class: "row", style: "margin-top:6px;gap:6px" },
             h("button", {
               class: "btn hot",
-              text: queued ? "Next run" : `Challenge (${have}/${p.cost})`,
+              text: queued ? t("atlas.nextRun") : t("atlas.challenge", { have, cost: p.cost }),
               attrs: have >= p.cost && !queued ? {} : { disabled: "" },
-              on: { click: () => c.act((s) => queuePinnacle(s, p.id), `${p.name} is next`) }
+              on: { click: () => c.act((s) => queuePinnacle(s, p.id), t("atlas.isNext", { name: pinName(p.id) })) }
             }),
             h("button", {
               class: "btn alt",
-              text: "Scout",
-              title: "Fight it five times on a copy of your hero (nothing is spent) to see the odds",
+              text: t("atlas.scout"),
+              title: t("atlas.scoutTip"),
               on: { click: () => {
                 scouted.set(scoutKey(st, p.id), scoutPinnacle(st, p.id, 5));
                 c.rerender();
@@ -8299,7 +12632,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         )
       ));
     }
-    root.append(h("div", { class: "card col" }, h("h3", { text: "Pinnacles" }), pins));
+    root.append(h("div", { class: "card col" }, h("h3", { text: t("atlas.pinnacles") }), pins));
     return root;
   }
   var scouted = /* @__PURE__ */ new Map();
@@ -8308,26 +12641,26 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const r3 = scouted.get(scoutKey(c.state, id));
     if (!r3) return null;
     const odds = r3.wins / Math.max(1, r3.trials);
-    const verdict = odds >= 0.8 ? "ready" : odds >= 0.4 ? "risky" : "not yet";
-    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: `Scouted: won ${r3.wins} of ${r3.trials}${r3.wins ? `, about ${r3.seconds} s each` : ""} - ${verdict}` });
+    const verdict = t(odds >= 0.8 ? "atlas.ready" : odds >= 0.4 ? "atlas.risky" : "atlas.notYet");
+    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: t(r3.wins ? "atlas.scoutedTime" : "atlas.scouted", { wins: r3.wins, n: r3.trials, s: r3.seconds, verdict }) });
   }
   function tierChips(done) {
-    const row = h("div", { class: "ladder", attrs: { "aria-label": `Tiers cleared: ${done.length} of ${MAX_TIER}` } });
-    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: `rung${done.includes(t) ? " done" : ""}`, title: `${tierName(t)}${done.includes(t) ? ": cleared" : ""}`, text: String(t) }));
+    const row = h("div", { class: "ladder", attrs: { "aria-label": t("atlas.ladderAria", { n: done.length, max: MAX_TIER }) } });
+    for (let k = 1; k <= MAX_TIER; k++) row.append(h("span", { class: `rung${done.includes(k) ? " done" : ""}`, title: done.includes(k) ? t("atlas.rungCleared", { tier: tierName2(k) }) : tierName2(k), text: String(k) }));
     return row;
   }
 
   // src/ui/views.ts
   var VIEWS = [
-    { id: "hero", label: "Hero" },
-    { id: "gear", label: "Gear" },
-    { id: "forge", label: "Forge" },
-    { id: "skills", label: "Skills" },
-    { id: "tree", label: "Tree" },
-    { id: "world", label: "World" },
-    { id: "atlas", label: "Atlas" },
-    { id: "log", label: "Log" },
-    { id: "menu", label: "Menu" }
+    { id: "hero" },
+    { id: "gear" },
+    { id: "forge" },
+    { id: "skills" },
+    { id: "tree" },
+    { id: "world" },
+    { id: "atlas" },
+    { id: "log" },
+    { id: "menu" }
   ];
   function viewSig(id, c) {
     const s = c.state;
@@ -8375,7 +12708,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
   }
   var TYPE_COLOR = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
-  var TYPE_NAME = { phys: "Physical", fire: "Fire", cold: "Cold", lightning: "Lightning", chaos: "Chaos" };
+  var TYPE_NAME = (t0) => t(`type.${t0}`);
   function kv(rows) {
     const el = h("div", { class: "kv" });
     for (const [k, v, click] of rows) {
@@ -8398,9 +12731,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
       const list7 = h("div", { class: "kv" });
-      for (const m4 of mods) list7.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list7.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list7, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const src = sourceNames(st);
+      for (const m4 of mods) {
+        const v = m4.kind === "flat" ? `+${m4.value}` : t(m4.kind === "more" ? "hero.more" : "hero.inc", { v: m4.value });
+        list7.append(h("div", { text: m4.src ? src(m4.src) : "?" }), h("div", { class: "num", text: `${v}${m4.tags ? " [" + m4.tags.map((x) => tagName(x)).join(", ") + "]" : ""}` }));
+      }
+      if (!mods.length) list7.append(h("div", { text: t("hero.noMods") }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list7, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: t("common.close"), on: { click: () => close() } }))));
     };
     const run = st.activity.run;
     const zone = run ? runZone(st, run) : ZONES[st.activity.zone];
@@ -8408,91 +12745,91 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     por.className = "portrait";
     por.style.width = por.width * 2 + "px";
     por.style.height = por.height * 2 + "px";
-    const asc = hero.asc ? ASCENDANCIES[hero.asc]?.name : null;
+    const asc = hero.asc && ASCENDANCIES[hero.asc] ? ascName(hero.asc) : null;
     const xpNeed = xpToNext(hero.level);
     const xpF = isFinite(xpNeed) ? hero.xp / xpNeed : 1;
     const who = h(
       "div",
       { class: "card sheet-who" },
       h("h3", { text: hero.name }),
-      h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: zone.name })),
+      h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: placeName(st) })),
       h(
         "div",
         { class: "row", style: "gap:5px;margin-top:8px" },
-        h("span", { class: "tag lv", text: `Level ${hero.level}` }),
-        h("span", { class: "tag", text: CLASSES[hero.cls]?.name ?? hero.cls }),
+        h("span", { class: "tag lv", text: t("common.level", { n: hero.level }) }),
+        h("span", { class: "tag", text: CLASSES[hero.cls] ? className(hero.cls) : hero.cls }),
         asc ? h("span", { class: "tag asc", text: asc }) : null
       ),
-      h("div", { class: "xpbar", title: isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)} experience` : "max level" }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
-      h("div", { class: "attrs" }, ...[["might", "Might", s.str], ["grace", "Grace", s.dex], ["wit", "Wit", s.int]].map(([g, label, v]) => h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
-      ...s.problems.map((p) => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: p }))
+      h("div", { class: "xpbar", title: isFinite(xpNeed) ? t("hero.xpTitle", { xp: fmt(hero.xp), need: fmt(xpNeed) }) : t("hero.maxLevel") }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
+      h("div", { class: "attrs" }, ...[["might", t("attr.str"), s.str], ["grace", t("attr.dex"), s.dex], ["wit", t("attr.int"), s.int]].map(([g, label, v]) => h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
+      ...s.problems.map((p) => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: tErr(p) }))
     );
     const rate = Math.min(sk.speed, sk.sustain);
     const chip = (label, value, click, total = false) => h(click ? "button" : "div", { class: `fchip${total ? " total" : ""}`, on: click ? { click } : {} }, h("span", { text: label }), h("b", { class: "num", text: value }));
-    const op = (t) => h("span", { class: "fop", text: t });
+    const op = (t2) => h("span", { class: "fop", text: t2 });
     const formula = h(
       "div",
       { class: "formula" },
-      chip("Hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")),
+      chip(t("hero.hit"), fmt(sk.avgHit), breakdown("damage", t("hero.bdDamage"))),
       op("x"),
-      chip("Crit", critFactor.toFixed(2), breakdown("critChance", "Critical chance")),
+      chip(t("hero.crit"), critFactor.toFixed(2), breakdown("critChance", t("hero.bdCrit"))),
       op("x"),
-      chip(sk.kind === "attack" ? "Attacks" : "Casts", `${rate.toFixed(2)}/s`, breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")),
-      ...sk.kind === "attack" ? [op("x"), chip("Hit chance", pct(sk.hitChance), breakdown("accuracy", "Accuracy"))] : [],
+      chip(sk.kind === "attack" ? t("hero.attacks") : t("hero.casts"), t("hero.perSec", { n: rate.toFixed(2) }), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", t("hero.bdSpeed"))),
+      ...sk.kind === "attack" ? [op("x"), chip(t("hero.hitChance"), pct(sk.hitChance), breakdown("accuracy", t("hero.bdAccuracy")))] : [],
       op("="),
-      chip("DPS", fmt(sk.dps), void 0, true)
+      chip(t("hero.dps"), fmt(sk.dps), void 0, true)
     );
     const big = (label, value, colour, note) => h("div", { class: "bigstat" }, pixText(value, colour, 4), h("div", null, h("b", { text: label }), h("span", { text: note })));
     const off = h(
       "div",
       { class: "card" },
-      h("h3", { text: `Offence - ${sk.name}` }),
-      h("div", { class: "bigrow" }, big("Single target", fmt(sk.dps), "#ffc233", "damage per second"), big("Against packs", fmt(sk.packDps), "#ff8a5c", `${sk.targets} target${sk.targets > 1 ? "s" : ""} hit`)),
+      h("h3", { text: t("hero.offence", { skill: skillName(sk.id) }) }),
+      h("div", { class: "bigrow" }, big(t("hero.single"), fmt(sk.dps), "#ffc233", t("hero.singleNote")), big(t("hero.packs"), fmt(sk.packDps), "#ff8a5c", tn("hero.targets", sk.targets))),
       formula,
       kv([
-        ...DAMAGE_TYPES.filter((t) => sk.hit[t][1] > 0).map((t) => [`${TYPE_NAME[t]} damage`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`]),
-        ["Critical chance", `${sk.critChance.toFixed(1)}%`, breakdown("critChance", "Critical chance")],
-        ["Critical multiplier", `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", "Critical multiplier")],
-        ["Mana cost", fmt(sk.manaCost)],
-        ...sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`]] : [],
-        ...sk.leech ? [["Life leech", `${sk.leech}%`]] : []
+        ...DAMAGE_TYPES.filter((d) => sk.hit[d][1] > 0).map((d) => [t(`dmg.${d}`), `${fmt(sk.hit[d][0])}-${fmt(sk.hit[d][1])}`]),
+        [t("hero.critChance"), `${sk.critChance.toFixed(1)}%`, breakdown("critChance", t("hero.bdCrit"))],
+        [t("hero.critMulti"), `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", t("hero.bdCritMulti"))],
+        [t("hero.manaCost"), fmt(sk.manaCost)],
+        ...sk.sustain < sk.speed ? [[t("hero.manaLimited"), t("hero.perSec", { n: sk.sustain.toFixed(2) })]] : [],
+        ...sk.leech ? [[t("hero.leech"), `${sk.leech}%`]] : []
       ])
     );
     const RES_GLYPH = { fire: "skills", cold: "cold", lightning: "lightning", chaos: "chaos" };
     const res = h(
       "div",
       { class: "card" },
-      h("h3", { text: "Resistances" }),
-      h("div", { class: "resrow" }, ...["fire", "cold", "lightning", "chaos"].map((t) => {
-        const v = s.res[t], raw = s.resRaw[t], max = s.maxRes[t];
+      h("h3", { text: t("hero.resistances") }),
+      h("div", { class: "resrow" }, ...["fire", "cold", "lightning", "chaos"].map((d) => {
+        const v = s.res[d], raw2 = s.resRaw[d], max = s.maxRes[d];
         return h(
           "button",
-          { class: `res ${t}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: `${TYPE_NAME[t]} resistance - click for where it comes from`, on: { click: breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`) } },
-          glyph(RES_GLYPH[t], 22),
+          { class: `res ${d}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: t("hero.whereTip", { name: t(`res.${d}`) }), on: { click: breakdown(`res.${d}`, t(`res.${d}`)) } },
+          glyph(RES_GLYPH[d], 22),
           h("b", { class: "num", text: `${v}%` }),
-          h("span", { text: raw > max ? `over cap (${raw})` : `max ${max}` })
+          h("span", { text: raw2 > max ? t("hero.overCap", { n: raw2 }) : t("hero.max", { n: max }) })
         );
       }))
     );
-    const tile = (g, label, value, stat) => h("button", { class: `stat ${g}`, title: `${label} - click for where it comes from`, on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
+    const tile = (g, label, value, stat) => h("button", { class: `stat ${g}`, title: t("hero.whereTip", { name: label }), on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
     const pool = s.life + s.es;
     const def2 = h(
       "div",
       { class: "card" },
-      h("h3", { text: "Defence" }),
+      h("h3", { text: t("hero.defence") }),
       h(
         "div",
         { class: "tiles" },
-        tile("heart", "Life", fmt(s.life), "life"),
-        tile("esorb", "Energy shield", fmt(s.es), "energyShield"),
-        tile("regen", "Life regen", `${fmt(s.lifeRegen)}/s`, "lifeRegen"),
-        tile("armour", "Armour", fmt(s.armour), "armour"),
-        tile("evasion", "Evasion", fmt(s.evasion), "evasion"),
-        tile("block", "Block", `${s.block.toFixed(0)}%`, "block")
+        tile("heart", t("hero.life"), fmt(s.life), "life"),
+        tile("esorb", t("hero.es"), fmt(s.es), "energyShield"),
+        tile("regen", t("hero.regen"), t("hero.perSec", { n: fmt(s.lifeRegen) }), "lifeRegen"),
+        tile("armour", t("hero.armour"), fmt(s.armour), "armour"),
+        tile("evasion", t("hero.evasion"), fmt(s.evasion), "evasion"),
+        tile("block", t("hero.block"), `${s.block.toFixed(0)}%`, "block")
       ),
-      h("div", { class: "sub" }, `Effective HP against each type (pool ${fmt(pool)})`),
+      h("div", { class: "sub" }, t("hero.ehp", { n: fmt(pool) })),
       ehpBars(s),
-      kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", codexRarity(st) ? `+${s.rarity + codexRarity(st)}% (codex +${codexRarity(st)}%)` : `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]])
+      kv([[t("hero.move"), pct(s.moveSpeed)], [t("hero.rarity"), codexRarity(st) ? t("hero.rarityCodex", { total: s.rarity + codexRarity(st), codex: codexRarity(st) }) : `+${s.rarity}%`], [t("hero.flask"), pct(s.flaskHeal)], [t("hero.score"), fmt(buildScore(s))]])
     );
     return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res), def2);
   }
@@ -8511,7 +12848,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const st = c.state;
     const pet = st.hero.pet;
     const owned = COMPANION_ORDER.filter((id) => st.companions[id] !== void 0);
-    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: "Companion" }), h("span", { class: "num", text: `${owned.length} / ${COMPANION_ORDER.length} found` })));
+    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: t("pets.title") }), h("span", { class: "num", text: t("pets.found", { n: owned.length, total: COMPANION_ORDER.length }) })));
     if (pet && COMPANIONS[pet.id]) {
       const def2 = COMPANIONS[pet.id];
       const bond = st.companions[pet.id] ?? 0;
@@ -8524,59 +12861,60 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "col grow", style: "gap:4px;min-width:0" },
-          h("div", { class: "row", style: "gap:6px" }, h("b", { text: def2.name }), h("span", { class: "tag lv", text: `Level ${pet.level}` })),
-          h("span", { class: "pet-bonus", text: companionText(pet.id, pet.level) }),
-          h("div", { class: "xpbar", title: max ? "Fully bonded" : `${fmt(bond - lo)} / ${fmt(hi - lo)} bond: every kill while it is out` }, h("i", { style: `width:${max ? 100 : Math.min(100, (bond - lo) / (hi - lo) * 100).toFixed(1)}%` })),
-          h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: def2.blurb })
+          h("div", { class: "row", style: "gap:6px" }, h("b", { text: companionName(def2.id) }), h("span", { class: "tag lv", text: t("common.level", { n: pet.level }) })),
+          h("span", { class: "pet-bonus", text: companionBonus(pet.id, pet.level) }),
+          h("div", { class: "xpbar", title: max ? t("pets.fullBond") : t("pets.bond", { have: fmt(bond - lo), need: fmt(hi - lo) }) }, h("i", { style: `width:${max ? 100 : Math.min(100, (bond - lo) / (hi - lo) * 100).toFixed(1)}%` })),
+          h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: companionBlurb(def2.id) })
         )
       ));
     } else {
-      card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? "No companion out: pick one below." : "No companion yet. The Tide-Warden guards the first one; bosses sometimes bring others." }));
+      card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? t("pets.noneOut") : t("pets.none") }));
     }
     const grid = h("div", { class: "pet-grid" });
     for (const id of COMPANION_ORDER) {
       const def2 = COMPANIONS[id];
-      const has = st.companions[id] !== void 0;
+      const has2 = st.companions[id] !== void 0;
       const out = pet?.id === id;
-      const lvl = has ? companionLevel(st.companions[id]) : 0;
+      const lvl = has2 ? companionLevel(st.companions[id]) : 0;
+      const name = companionName(id), where = companionWhere(id);
       const tile = h(
-        has ? "button" : "div",
+        has2 ? "button" : "div",
         {
-          class: `pet${out ? " on" : ""}${has ? "" : " unknown"}`,
-          attrs: has ? { "aria-pressed": String(out), "aria-label": `${def2.name}, level ${lvl}` } : { role: "img", "aria-label": `Not found yet: ${def2.where}` },
-          on: has && !out ? { click: () => c.act((s) => setCompanion(s, id), `${def2.name} walks with you`) } : {}
+          class: `pet${out ? " on" : ""}${has2 ? "" : " unknown"}`,
+          attrs: has2 ? { "aria-pressed": String(out), "aria-label": t("pets.aria", { name, level: lvl }) } : { role: "img", "aria-label": t("pets.notFoundAria", { where }) },
+          on: has2 && !out ? { click: () => c.act((s) => setCompanion(s, id), t("pets.walks", { name })) } : {}
         },
-        h("span", { class: "pic" }, has ? petArt(def2, 1) : h("span", { class: "q", text: "?" })),
-        h("b", { text: has ? def2.name : "Unknown" }),
-        h("span", { text: has ? `Lv ${lvl}${out ? " - out" : ""}` : def2.where })
+        h("span", { class: "pic" }, has2 ? petArt(def2, 1) : h("span", { class: "q", text: "?" })),
+        h("b", { text: has2 ? name : t("pets.unknown") }),
+        h("span", { text: has2 ? t(out ? "pets.lvOut" : "pets.lv", { n: lvl }) : where })
       );
-      tile.dataset.tip = has ? `${def2.name}, level ${lvl}: ${companionText(id, lvl)}.${out ? " At your side now." : " Click to send it out."}` : `Not found yet. ${def2.where}.`;
+      tile.dataset.tip = has2 ? t(out ? "pets.tipOut" : "pets.tipIn", { name, level: lvl, bonus: companionBonus(id, lvl) }) : t("pets.tipUnknown", { where });
       grid.append(tile);
     }
     card.append(grid);
     return card;
   }
   function ehpBars(s) {
-    const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
+    const max = Math.max(...DAMAGE_TYPES.map((d) => s.ehp[d]));
     const el = h("div", { class: "col", style: "gap:3px" });
-    for (const t of DAMAGE_TYPES) {
-      const m4 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
-      m4.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
+    for (const d of DAMAGE_TYPES) {
+      const m4 = h("div", { class: "meter", title: d === "phys" ? t("hero.ehpPhys") : t("hero.ehpEle") });
+      m4.append(h("i", { style: `width:${s.ehp[d] / max * 100}%;background:${TYPE_COLOR[d]}` }), h("span", { text: `${TYPE_NAME(d)} ${fmt(s.ehp[d])}` }));
       el.append(m4);
     }
     return el;
   }
-  var SLOT_LABEL = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
+  var SLOT_LABEL = (s) => t(`slot.${s === "ring2" ? "ring" : s}`);
   function itemCell(item, slot, selected, onClick) {
     const cell = h("div", {
       class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
-      attrs: { "aria-label": item ? itemLabel(item) : slot ? `${SLOT_LABEL[slot]}: empty` : "empty", ...item || slot ? { role: "button", tabindex: "0" } : {}, ...selected ? { "aria-pressed": "true" } : {} },
+      attrs: { "aria-label": item ? itemName(item) : slot ? t("gear.slotEmpty", { slot: SLOT_LABEL(slot) }) : t("gear.empty"), ...item || slot ? { role: "button", tabindex: "0" } : {}, ...selected ? { "aria-pressed": "true" } : {} },
       on: { click: onClick }
     });
     if (item) cell.append(itemIcon(item));
     if (slot) {
       cell.dataset.slot = slot;
-      cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] }));
+      cell.append(h("span", { class: "lbl", text: SLOT_LABEL(slot) }));
     }
     return cell;
   }
@@ -8585,24 +12923,24 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     tipEl?.remove();
     tipEl = null;
   }
-  function showTip(anchor, content) {
+  function showTip(anchor, content2) {
     hideTip();
     const body = anchor.closest(".body");
     if (!body || !anchor.isConnected) return;
-    tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content);
+    tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content2);
     body.append(tipEl);
     placeBeside(tipEl, anchor, body);
   }
   function withTip(cell, c, make) {
-    let t = null;
+    let t2 = null;
     const show = () => {
       c.hold = true;
-      t = window.setTimeout(() => {
+      t2 = window.setTimeout(() => {
         if (!drag && !cell.classList.contains("sel")) showTip(cell, make());
       }, 130);
     };
     const hide = () => {
-      if (t !== null) clearTimeout(t);
+      if (t2 !== null) clearTimeout(t2);
       hideTip();
       if (!drag) c.hold = false;
     };
@@ -8617,46 +12955,51 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   function itemCard(item, c, opts = {}) {
     const b = baseOf(item);
     const st = itemStats(item);
-    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemLabel(item) }));
+    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
     const lines = [];
-    if (item.rarity === "rare" || item.rarity === "relic") lines.push(b.name);
-    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : b.kind].filter(Boolean).join(" - ")}  ilvl ${item.ilvl}, needs level ${levelReq(item)}` }));
+    if (item.rarity === "rare" || item.rarity === "relic") lines.push(baseName(b.id));
+    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : t(`kind.${b.kind}`)].filter(Boolean).join(" - ")}  ${t("item.levels", { ilvl: item.ilvl, req: levelReq(item) })}` }));
     if (item.quality || item.locked) card.append(h(
       "div",
       { class: "row", style: "gap:4px;margin-top:3px" },
-      item.quality ? h("span", { class: "tag q", text: `Quality +${item.quality}%` }) : null,
-      item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " Locked") : null
+      item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
+      item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " " + t("item.locked")) : null
     ));
     if (st.weapon) {
       const w2 = st.weapon;
-      const rows = [["Physical", `${w2.phys[0]}-${w2.phys[1]}`]];
-      for (const [t, r3] of Object.entries(w2.added)) rows.push([TYPE_NAME[t], `${r3[0]}-${r3[1]}`]);
-      rows.push(["Attacks per second", w2.aps.toFixed(2)], ["Critical chance", `${w2.crit.toFixed(1)}%`], ["Hands", String(w2.hands)]);
+      const rows = [[t("item.physical"), `${w2.phys[0]}-${w2.phys[1]}`]];
+      for (const [d, r3] of Object.entries(w2.added)) rows.push([TYPE_NAME(d), `${r3[0]}-${r3[1]}`]);
+      rows.push([t("item.aps"), w2.aps.toFixed(2)], [t("item.crit"), `${w2.crit.toFixed(1)}%`], [t("item.hands"), String(w2.hands)]);
       card.append(kv(rows));
     }
     if (st.defence) {
       const d = st.defence;
       const rows = [];
-      if (d.armour) rows.push(["Armour", String(d.armour)]);
-      if (d.evasion) rows.push(["Evasion", String(d.evasion)]);
-      if (d.energyShield) rows.push(["Energy shield", String(d.energyShield)]);
-      if (d.block) rows.push(["Block", `${d.block}%`]);
+      if (d.armour) rows.push([t("item.armour"), String(d.armour)]);
+      if (d.evasion) rows.push([t("item.evasion"), String(d.evasion)]);
+      if (d.energyShield) rows.push([t("item.es"), String(d.energyShield)]);
+      if (d.block) rows.push([t("item.block"), `${d.block}%`]);
       card.append(kv(rows));
     }
     if (b.implicit?.length) {
       card.append(h("hr"));
-      for (const m4 of b.implicit) card.append(h("div", { class: "aff", text: modText(m4) }));
+      for (const m4 of b.implicit) card.append(h("div", { class: "aff", text: modLine(m4) }));
     }
     if (item.affixes.length) {
       card.append(h("hr"));
       const sorted = [...item.affixes].sort((a, z) => affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1);
-      for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? "Added at the bench" : "" }, affixText(a), h("b", { text: `${a.bench ? "Bench " : ""}${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+      for (const a of sorted) card.append(h(
+        "div",
+        { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" },
+        affixLine(a),
+        h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })
+      ));
     }
     const relic = relicOf(item);
     if (relic) {
       card.append(h("hr"));
       for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
-      card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relic.flavour }));
+      card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(relic.id) }));
     }
     if (c && opts.compareSlot !== void 0) {
       const slot = opts.compareSlot ?? slotsFor(b).find((s) => !c.state.hero.equipment[s]) ?? slotsFor(b)[0];
@@ -8664,28 +13007,28 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (trial) {
         card.append(h("hr"), compareRows(c.sheet(), trial));
       } else {
-        card.append(h("hr"), h("div", { class: "down", text: canEquip(c.state, item, slot) ?? "can't equip" }));
+        card.append(h("hr"), h("div", { class: "down", text: tErr(canEquip(c.state, item, slot) ?? t("item.cantEquip")) }));
       }
     }
     return card;
   }
   function compareRows(now, next) {
     const rows = [
-      ["DPS", now.skill.dps, next.skill.dps],
-      ["Pack DPS", now.skill.packDps, next.skill.packDps],
-      ["Life", now.life, next.life],
-      ["Energy shield", now.es, next.es],
-      ["EHP physical", now.ehp.phys, next.ehp.phys],
-      ["EHP elemental", (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3]
+      [t("cmp.dps"), now.skill.dps, next.skill.dps],
+      [t("cmp.packDps"), now.skill.packDps, next.skill.packDps],
+      [t("cmp.life"), now.life, next.life],
+      [t("cmp.es"), now.es, next.es],
+      [t("cmp.ehpPhys"), now.ehp.phys, next.ehp.phys],
+      [t("cmp.ehpEle"), (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3]
     ];
     const el = h("div", { class: "kv" });
     for (const [k, a, b] of rows) {
       if (Math.abs(b - a) < 5e-3 * Math.max(1, a)) continue;
       const d = b - a;
-      el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + (d / a * 100).toFixed(0) + "%" : "new"})` }));
+      el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + (d / a * 100).toFixed(0) + "%" : t("cmp.new")})` }));
     }
     const sa = buildScore(now), sb = buildScore(next);
-    el.append(h("div", { text: "Build score" }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
+    el.append(h("div", { text: t("cmp.score") }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
     return el;
   }
   var gearOpts = { filter: "all", sort: "rarity", marks: /* @__PURE__ */ new Set() };
@@ -8723,8 +13066,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
   function markWorn(cell, slot) {
     cell.classList.add("wornc");
-    cell.append(h("span", { class: "worn", text: "worn" }));
-    cell.setAttribute("aria-label", `${cell.getAttribute("aria-label") ?? ""} (worn${slot ? ", " + SLOT_LABEL[slot].toLowerCase() : ""})`);
+    cell.append(h("span", { class: "worn", text: t("gear.worn") }));
+    const label = cell.getAttribute("aria-label") ?? "";
+    cell.setAttribute("aria-label", slot ? t("gear.wornAriaSlot", { label, slot: SLOT_LABEL(slot).toLowerCase() }) : t("gear.wornAria", { label }));
     return cell;
   }
   var gridSep = (text) => h("div", { class: "gridsep", text });
@@ -8763,9 +13107,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
         const bow = wb.kind === "bow";
         cell.classList.add(bow ? "only" : "blocked");
-        cell.querySelector(".lbl").textContent = bow ? "Quiver" : "2-hand";
-        cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
-        cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+        cell.querySelector(".lbl").textContent = bow ? t("gear.quiverOnly") : t("gear.twoHand");
+        cell.title = bow ? t("gear.quiverTip") : t("gear.twoHandTip", { base: baseName(wb.id) });
+        cell.setAttribute("aria-label", t("gear.offhandAria", { why: cell.title }));
         if (!bow) cell.tabIndex = -1;
       }
       cell.addEventListener("mouseenter", () => {
@@ -8824,7 +13168,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return;
           e.stopImmediatePropagation();
           if (it.locked) {
-            c.toast("Locked items can't be marked for salvage");
+            c.toast(t("gear.noMarkLocked"));
             return;
           }
           if (gearOpts.marks.has(it.uid)) gearOpts.marks.delete(it.uid);
@@ -8837,7 +13181,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       cell.addEventListener("mouseenter", () => {
         if (drag) return;
         const targets = slotsFor(baseOf(it));
-        const cmp = upgradeOf(st, it) ?? targets.find((t) => !eq[t]) ?? targets[0];
+        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
         root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
       });
       cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e) => e.classList.remove("cmp")));
@@ -8846,13 +13190,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       else if (levelReq(it) > st.hero.level) cell.classList.add("req");
       withTip(cell, c, () => {
         const targets = slotsFor(baseOf(it));
-        const cmp = upgradeOf(st, it) ?? targets.find((t) => !eq[t]) ?? targets[0];
+        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
         const worn = eq[cmp];
         return h(
           "div",
           { class: "tipcols" },
           itemCard(it, c, { compareSlot: cmp }),
-          worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: "Equipped" }), itemCard(worn, null)) : null
+          worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: t("gear.equippedLbl") }), itemCard(worn, null)) : null
         );
       });
       cell.draggable = true;
@@ -8861,7 +13205,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         c.hold = true;
         hideTip();
         root.classList.add("dragging");
-        for (const t of slotsFor(baseOf(it))) if (!canEquip(st, it, t)) root.querySelector(`.doll [data-slot="${t}"]`)?.classList.add("drop-ok");
+        for (const t2 of slotsFor(baseOf(it))) if (!canEquip(st, it, t2)) root.querySelector(`.doll [data-slot="${t2}"]`)?.classList.add("drop-ok");
         e.dataTransfer?.setData("text/plain", "stash:" + it.uid);
         if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
       });
@@ -8876,7 +13220,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const grid = h("div", { class: `stash${relicsTab ? " codex" : ""}` });
     if (relicsTab) {
       const worn = new Map(SLOTS.map((s) => eq[s]).filter((x) => !!x?.relic).map((x) => [x.relic, x]));
-      for (const def2 of Object.values(RELICS).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))) {
+      for (const def2 of Object.values(RELICS).sort((a, b) => a.level - b.level || relicName(a.id).localeCompare(relicName(b.id), lang()))) {
         const own = st.relics.find((x) => x.relic === def2.id);
         const seen = st.codex[def2.id] ?? 0;
         if (own) {
@@ -8894,15 +13238,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           grid.append(cell);
           continue;
         }
-        const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? `${def2.name}: found ${seen}, none kept` : "A relic not found yet" } });
+        const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? t("gear.ghostAria", { name: relicName(def2.id), n: seen }) : t("gear.unknownRelicAria") } });
         if (seen) ghost.append(itemIcon({ uid: -1, base: def2.base, ilvl: def2.level, rarity: "relic", affixes: [], relic: def2.id }), h("span", { class: "cnt num", text: `x${seen}` }));
         else ghost.append(h("span", { class: "q", text: "?" }));
         withTip(ghost, c, () => h(
           "div",
           { class: "card item" },
-          h("div", { class: "name relic", text: seen ? def2.name : "Unknown relic" }),
-          h("div", { class: "muted", text: seen ? `Found ${seen} time${seen === 1 ? "" : "s"}; none kept. Relics that roll better replace the case's copy.` : `Drops from monsters of level ${def2.level} and up.` }),
-          seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: def2.flavour }) : null
+          h("div", { class: "name relic", text: seen ? relicName(def2.id) : t("gear.unknownRelic") }),
+          h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : t("gear.dropsFrom", { n: def2.level }) }),
+          seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(def2.id) }) : null
         ));
         grid.append(ghost);
       }
@@ -8913,7 +13257,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
       const worn = grouped ? SLOTS.filter((s) => eq[s] && groupOf(eq[s]) === gearOpts.filter) : [];
       if (worn.length) {
-        grid.append(gridSep("Worn"));
+        grid.append(gridSep(t("gear.wornSep")));
         for (const s of worn) {
           const w2 = eq[s];
           const cell = markWorn(itemCell(w2, null, c.sel.slot === s && c.sel.uid === void 0, () => {
@@ -8924,12 +13268,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           withTip(cell, c, () => itemCard(w2, c));
           grid.append(cell);
         }
-        grid.append(gridSep(`In the stash (${shown.length})`));
+        grid.append(gridSep(t("gear.inStash", { n: shown.length })));
       }
       for (const it of shown) grid.append(ownedCell(it, true));
       if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
-      if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
-      else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
+      if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: t("gear.stashEmpty") }));
+      else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? t("gear.noUpgrades") : t("gear.noneHere") }));
     }
     grid.addEventListener("dragover", (e) => {
       if (drag?.slot) {
@@ -8944,8 +13288,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       endDrag();
       if (s) c.act((x) => unequip(x, s));
     });
-    const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
-    for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]]) {
+    const sort = h("select", { attrs: { "aria-label": t("gear.sortAria") } });
+    for (const [v, label] of [["rarity", t("gear.sortRarity")], ["level", t("gear.sortLevel")], ["slot", t("gear.sortSlot")]]) {
       const o = h("option", { text: label, attrs: { value: v } });
       if (gearOpts.sort === v) o.selected = true;
       sort.append(o);
@@ -8958,23 +13302,23 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const room = stashRoomCost(st);
     const roomBtn = room === null ? null : h("button", {
       class: "btn alt small",
-      text: `+${STASH_STEP} slots`,
+      text: t("gear.roomBtn", { n: STASH_STEP }),
       attrs: st.dust >= room ? {} : { disabled: "" },
-      title: `Ten more stash slots for ${fmt(room)} ember dust (up to ${STASH_MAX})`,
-      on: { click: () => c.act(buyStashRoom, `Stash: ${st.stashCap + STASH_STEP} slots`) }
+      title: t("gear.roomTip", { cost: fmt(room), max: STASH_MAX }),
+      on: { click: () => c.act(buyStashRoom, t("gear.roomToast", { n: st.stashCap + STASH_STEP })) }
     });
     const found = Object.keys(st.codex).length, total = Object.keys(RELICS).length;
-    const head = relicsTab ? h("h3", { class: "split" }, h("span", { text: "Relic codex" }), h("span", { class: "num", title: "Every different relic found adds 1% item rarity", text: `${found} / ${total} found, +${codexRarity(st)}% rarity` })) : h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
-    const note = relicsTab ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "The relic case keeps the best-rolled copy of every relic, outside the stash. Drag one onto a slot to wear it." }) : st.stashFull ? h(
+    const head = relicsTab ? h("h3", { class: "split" }, h("span", { text: t("gear.codex") }), h("span", { class: "num", title: t("gear.codexTip"), text: t("gear.codexCount", { found, total, n: codexRarity(st) }) })) : h("h3", { class: "split" }, h("span", { text: t("gear.stash") }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
+    const note = relicsTab ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("gear.caseNote") }) : st.stashFull ? h(
       "div",
       { class: "warnbar", attrs: { role: "status" } },
       glyph("forge", 14),
-      h("span", { text: st.settings.upkeep ? "Stash full of locked items and upgrades: new keepers are salvaged. Unlock, salvage or buy room." : "Stash full: new drops are salvaged into dust. Salvage, buy room, or switch on upkeep (Menu)." })
+      h("span", { text: st.settings.upkeep ? t("gear.fullUpkeep") : t("gear.fullNoUpkeep") })
     ) : full && st.settings.upkeep ? h(
       "div",
       { class: "note", style: "margin-bottom:8px" },
       glyph("forge", 14),
-      h("span", { text: "Stash full: upkeep swaps the least-worth unlocked item for each better keeper. Lock what you want to keep." })
+      h("span", { text: t("gear.fullNote") })
     ) : null;
     const stashCard = h(
       "div",
@@ -8985,7 +13329,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         "div",
         { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
         chips(
-          [["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")], ["relics", "Relics", count("relics")]],
+          ["all", "upgrades", "weapons", "armour", "jewellery", "relics"].map((f) => [f, t(`gear.${f}`), count(f)]),
           gearOpts.filter,
           (v) => {
             gearOpts.filter = v;
@@ -9003,17 +13347,17 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const marked = st.stash.filter((x) => gearOpts.marks.has(x.uid));
     const bulk = (label, xs, title, key) => h("button", {
       class: "btn alt small",
-      text: `${label} (${xs.length})`,
+      text: t("common.count", { label, n: xs.length }),
       title,
       attrs: { ...xs.length ? {} : { disabled: "" }, ...key ? { "data-key": key } : {} },
       on: { click: () => c.act((s) => {
         const n = salvage(s, xs.map((x) => x.uid));
         for (const x of xs) gearOpts.marks.delete(x.uid);
         c.sel = {};
-        c.toast(`Salvaged ${n} for dust`);
+        c.toast(t("gear.salvaged", { n }));
       }) }
     });
-    const anvil = h("div", { class: "anvil", title: "Drop a stash item here to salvage it", attrs: { "aria-label": "Salvage: drop a stash item here" } }, glyph("forge", 18), h("span", { text: "Salvage" }));
+    const anvil = h("div", { class: "anvil", title: t("gear.anvilTip"), attrs: { "aria-label": t("gear.anvilAria") } }, glyph("forge", 18), h("span", { text: t("gear.salvage") }));
     anvil.addEventListener("dragover", (e) => {
       if (drag?.uid !== void 0) {
         e.preventDefault();
@@ -9026,7 +13370,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const uid = drag?.uid;
       endDrag();
       if (uid !== void 0) c.act((x) => {
-        if (!salvage(x, [uid])) return "locked items can't be salvaged";
+        if (!salvage(x, [uid])) return t("gear.lockedNoSalvage");
         c.sel = {};
       });
     });
@@ -9035,22 +13379,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "row tools" },
       anvil,
-      h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
+      h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
       h("button", {
         class: "btn small",
-        text: `Equip upgrades (${upCount})`,
-        title: "Wear every stash item that raises the build score, the best first",
+        text: t("gear.equipUps", { n: upCount }),
+        title: t("gear.equipUpsTip"),
         attrs: upCount ? {} : { disabled: "" },
         on: { click: () => c.act((s) => {
           const n = equipUpgrades(s);
-          c.toast(n ? `Equipped ${n} upgrade${n === 1 ? "" : "s"}` : "Nothing to equip");
+          c.toast(n ? tn("gear.equippedN", n) : t("gear.nothingToEquip"));
         }) }
       }),
-      bulk("Salvage outdated", old, "Unlocked items on a base 10+ levels behind the hero that are not upgrades"),
-      bulk("Salvage plain", plain, "Every unlocked plain item in the stash"),
-      bulk("Salvage enchanted", ench, "Every unlocked enchanted item in the stash"),
-      marked.length ? bulk("Salvage marked", marked, "The items you shift-clicked") : null,
-      marked.length ? h("button", { class: "btn alt small", text: "Clear marks", on: { click: () => {
+      bulk(t("gear.salvageOutdated"), old, t("gear.salvageOutdatedTip")),
+      bulk(t("gear.salvagePlain"), plain, t("gear.salvagePlainTip")),
+      bulk(t("gear.salvageEnchanted"), ench, t("gear.salvageEnchantedTip")),
+      marked.length ? bulk(t("gear.salvageMarked"), marked, t("gear.salvageMarkedTip")) : null,
+      marked.length ? h("button", { class: "btn alt small", text: t("gear.clearMarks"), on: { click: () => {
         gearOpts.marks.clear();
         c.rerender();
       } } }) : null
@@ -9058,32 +13402,32 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const selItem = c.sel.uid !== void 0 ? ownedItem(st, c.sel.uid) : void 0;
     const selSlot = c.sel.slot;
     let pop = null;
-    const close = h("button", { class: "x popx", text: "x", title: "Put it back (Esc)", attrs: { "aria-label": "Close", "data-esc": "" }, on: { click: () => {
+    const close = h("button", { class: "x popx", text: "x", title: t("gear.putBack"), attrs: { "aria-label": t("common.close"), "data-esc": "" }, on: { click: () => {
       c.sel = {};
       c.rerender();
     } } });
     const lockBtn = (it) => h("button", {
       class: "btn alt",
-      text: it.locked ? "Unlock" : "Lock",
+      text: it.locked ? t("gear.unlock") : t("gear.lock"),
       attrs: { "data-key": "l" },
-      title: it.locked ? "Let upkeep and bulk salvage take it again (L)" : "Keep it: upkeep, auto-equip and bulk salvage leave it alone (L)",
+      title: it.locked ? t("gear.unlockTip") : t("gear.lockTip"),
       on: { click: () => c.act((s) => setLocked(s, it.uid, !it.locked)) }
     });
     if (selItem) {
       const targets = slotsFor(baseOf(selItem));
-      const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t) => !eq[t]) ?? targets[0] : targets[0]);
+      const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t2) => !eq[t2]) ?? targets[0] : targets[0]);
       const card = itemCard(selItem, c, { compareSlot: cmp });
       const row = h("div", { class: "row popacts" });
-      targets.forEach((t, i) => {
-        const err = canEquip(st, selItem, t);
+      targets.forEach((ts, i) => {
+        const err = canEquip(st, selItem, ts);
         row.append(h("button", {
           class: "btn",
-          text: targets.length > 1 ? `Equip ${t === "ring1" ? "left" : "right"}` : "Equip",
+          text: targets.length > 1 ? t(ts === "ring1" ? "gear.equipLeft" : "gear.equipRight") : t("gear.equip"),
           attrs: { ...err ? { disabled: "" } : {}, ...i === 0 ? { "data-key": "e" } : {} },
-          title: err ?? (i === 0 ? "Equip (E)" : ""),
+          title: err ? tErr(err) : i === 0 ? t("gear.equipKey") : "",
           on: { click: () => c.act((s) => {
-            const e = equip(s, selItem.uid, t);
-            if (!e) c.sel = { slot: t };
+            const e = equip(s, selItem.uid, ts);
+            if (!e) c.sel = { slot: ts };
             return e;
           }) }
         }));
@@ -9091,8 +13435,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       row.append(lockBtn(selItem));
       row.append(h("button", {
         class: "btn alt",
-        text: `Salvage +${salvageValue(selItem)}`,
-        title: selItem.locked ? "Unlock it first" : "Salvage into ember dust (S)",
+        text: t("gear.salvageFor", { n: salvageValue(selItem) }),
+        title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
         attrs: { "data-key": "s", ...selItem.locked ? { disabled: "" } : {} },
         on: { click: () => c.act((s) => {
           salvage(s, [selItem.uid]);
@@ -9100,20 +13444,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }) }
       }));
       card.append(row);
-      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(selItem) } }, card, close);
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(selItem) } }, card, close);
     } else if (selSlot && eq[selSlot]) {
       const it = eq[selSlot];
       const card = itemCard(it, c);
-      card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: it.relic ? "Back to the relic case" : "Back to the stash", on: { click: () => c.act((s) => unequip(s, selSlot)) } }), lockBtn(it)));
-      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(it) } }, card, close);
+      card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: t("gear.unequip"), title: it.relic ? t("gear.toCase") : t("gear.toStash"), on: { click: () => c.act((s) => unequip(s, selSlot)) } }), lockBtn(it)));
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(it) } }, card, close);
     }
-    const help = h("button", {
-      class: "info",
-      text: "i",
-      attrs: { "aria-label": "How gear works" },
-      title: "Hover an item to compare it with what you wear; click it to pin its card with Equip, Lock and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nShift-click stash items to mark them, then Salvage marked.\nA green corner marks an upgrade; faded items need a higher level; a lock keeps an item safe from upkeep and bulk salvage.\nKeys: E equips the picked item, L locks it, S salvages it, Esc puts it back."
-    });
-    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), doll);
+    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": t("gear.helpAria") }, title: t("gear.help") });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("gear.equippedHead") }), help), doll);
     root.append(equipped, h("div", { class: "col" }, stashCard, tools));
     root.addEventListener("click", (e) => {
       if ((c.sel.uid !== void 0 || c.sel.slot) && !e.target.closest(".cell, .gpop, button, select, .anvil")) {
@@ -9149,15 +13488,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   function skillsView(c) {
     const hero = c.state.hero;
     const cur = c.sheet();
-    const colourOf = (tags) => tags.includes("spell") ? "#3a7bff" : tags.some((t) => t === "projectile" || t === "bow") ? "#3fbf5f" : tags.some((t) => t === "attack" || t === "melee") ? "#e5383b" : "#e6d9b8";
+    const colourOf = (tags) => tags.includes("spell") ? "#3a7bff" : tags.some((t2) => t2 === "projectile" || t2 === "bow") ? "#3fbf5f" : tags.some((t2) => t2 === "attack" || t2 === "melee") ? "#e5383b" : "#e6d9b8";
     const gem = (colour, big = false, size = big ? 36 : 26) => h("span", { class: `gem${big ? " big" : ""}`, style: `color:${colour}` }, glyph("gem", size), h("span", { class: "shine" }, glyph("gemshine", size)));
     const skills = h("div", { class: "list" });
     for (const s of Object.values(SKILLS)) {
       const locked = s.level > hero.level;
       const on = hero.skill === s.id;
       let meta;
-      if (locked) meta = h("span", { class: "tag", text: `level ${s.level}` });
-      else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: `${fmt(cur.skill.packDps)} dps` });
+      if (locked) meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
+      else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: t("skills.dps", { dps: fmt(cur.skill.packDps) }) });
       else {
         const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
         const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
@@ -9173,15 +13512,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         {
           class: `li${on ? " on" : ""}${locked ? " locked" : ""}`,
           attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
-          title: locked ? `Unlocks at level ${s.level}` : on ? "Your main skill" : "Pack DPS with your current gear and supports",
+          title: locked ? t("skills.unlocksAt", { n: s.level }) : on ? t("skills.main") : t("skills.packTip"),
           on: { click: () => {
-            if (!locked && !on) c.act((st) => setSkill(st, s.id), `${s.name} selected`);
+            if (!locked && !on) c.act((st) => setSkill(st, s.id), t("skills.selected", { name: skillName(s.id) }));
           } }
         },
-        h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: s.name })),
+        h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: skillName(s.id) })),
         h("div", { class: "meta" }, meta),
-        h("div", { class: "ds", text: s.blurb }),
-        h("div", { class: "tags" }, ...s.tags.map((t) => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))
+        h("div", { class: "ds", text: skillBlurb(s.id) }),
+        h("div", { class: "tags" }, ...s.tags.map((x) => h("span", { class: "tag", text: tagName(x) })), h("span", { class: "tag", text: t("skills.eff", { n: s.effectiveness }) }))
       ));
     }
     const slots = supportSlots(hero.level);
@@ -9191,7 +13530,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const rows = Object.values(SUPPORTS).map((s) => {
       const locked = s.level > hero.level;
       const on = active.includes(s.id);
-      const fits = !s.requires.length || s.requires.some((t) => cur.skill.tags.includes(t));
+      const fits = !s.requires.length || s.requires.some((t2) => cur.skill.tags.includes(t2));
       let d = null, swap;
       if (!locked && fits) {
         if (on) d = pctDelta(cur.skill.packDps, trial(active.filter((x) => x !== s.id)));
@@ -9212,36 +13551,38 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     for (const r3 of rows) {
       const { s, on, locked, fits, d, swap } = r3;
       let meta, tip;
+      const needs = s.requires.map((x) => tagName(x)).join(t("common.or"));
       if (locked) {
-        meta = h("span", { class: "tag", text: `level ${s.level}` });
-        tip = `Unlocks at level ${s.level}`;
+        meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
+        tip = t("skills.unlocksAt", { n: s.level });
       } else if (!fits) {
-        meta = h("span", { class: "tag", text: "no fit" });
-        tip = `Needs a ${s.requires.join(" or ")} skill`;
+        meta = h("span", { class: "tag", text: t("skills.noFit") });
+        tip = t("skills.needs", { tags: needs });
       } else if (on) {
-        meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: "slotted" }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: `worth ${fmtPct(-(d ?? 0))}` }));
-        tip = `Click to remove: ${fmtPct(d ?? 0)} pack DPS`;
+        meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) }));
+        tip = t("skills.clickRemove", { pct: fmtPct(d ?? 0) });
       } else {
         const good = (d ?? 0) > 0;
+        const swapName = swap && SUPPORTS[swap] ? supportName(swap) : swap ?? "";
         meta = h(
           "span",
           { class: "col", style: "gap:1px;align-items:flex-end" },
           h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
-          swap ? h("span", { class: "muted", style: "font-size:8px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null
+          swap ? h("span", { class: "muted", style: "font-size:8px", text: t("skills.for", { name: swapName }) }) : null
         );
-        tip = swap ? `Click to swap out ${SUPPORTS[swap]?.name}: ${fmtPct(d ?? 0)} pack DPS` : `Click to add: ${fmtPct(d ?? 0)} pack DPS`;
+        tip = swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) });
       }
       sups.append(h(
         "div",
         { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
           if (locked || !fits) return;
-          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)), `${s.name} removed`);
-          else if (!full) c.act((st) => setSupports(st, [...active, s.id]), `${s.name} added`);
-          else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
+          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)), t("skills.removed", { name: supportName(s.id) }));
+          else if (!full) c.act((st) => setSupports(st, [...active, s.id]), t("skills.added", { name: supportName(s.id) }));
+          else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), t("skills.swapped", { out: supportName(swap), name: supportName(s.id) }));
         } } },
-        h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: s.name })),
+        h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: supportName(s.id) })),
         h("div", { class: "meta" }, meta),
-        h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })
+        h("div", { class: "ds", text: supportBlurb(s.id) + (s.requires.length ? "  " + t("skills.needsShort", { tags: needs }) : "") })
       ));
     }
     const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
@@ -9249,7 +13590,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const links = h(
       "div",
       { class: "links" },
-      h("div", { class: "sock main", title: main?.blurb ?? "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main?.name ?? hero.skill }))
+      h("div", { class: "sock main", title: main ? skillBlurb(main.id) : "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main ? skillName(main.id) : hero.skill }))
     );
     [1, 1, 8, 18, 32].forEach((lvl, i) => {
       links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
@@ -9261,29 +13602,29 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           "button",
           {
             class: "sock",
-            title: `${sup.name}: ${sup.blurb} Click to take it out.${row?.d != null ? ` Worth ${fmtPct(-row.d)} pack DPS.` : ""}`,
-            on: { click: () => c.act((st) => setSupports(st, active.filter((x) => x !== id)), `${sup.name} removed`) }
+            title: t("skills.sockTip", { name: supportName(sup.id), blurb: supportBlurb(sup.id) }) + (row?.d != null ? " " + t("skills.sockWorth", { pct: fmtPct(-row.d) }) : ""),
+            on: { click: () => c.act((st) => setSupports(st, active.filter((x) => x !== id)), t("skills.removed", { name: supportName(sup.id) })) }
           },
           gem(colourOf(sup.requires)),
-          h("b", { text: sup.name })
+          h("b", { text: supportName(sup.id) })
         ));
       } else if (i < slots) {
-        links.append(h("div", { class: "sock empty", title: "An empty socket: pick a support below" }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: "Empty" })));
+        links.append(h("div", { class: "sock empty", title: t("skills.emptyTip") }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("skills.empty") })));
       } else {
-        links.append(h("div", { class: "sock locked", title: `Opens at level ${lvl}` }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: `Level ${lvl}` })));
+        links.append(h("div", { class: "sock locked", title: t("skills.opensAt", { n: lvl }) }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("common.level", { n: lvl }) })));
       }
     });
-    const bar2 = h("div", { class: "card socketbar" }, h("h3", { text: "Skill links" }), links);
+    const bar2 = h("div", { class: "card socketbar" }, h("h3", { text: t("skills.links") }), links);
     return h("div", { class: "col", style: "gap:14px" }, bar2, h(
       "div",
       { class: "grid2" },
-      h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
+      h("div", null, h("div", { class: "sec", text: t("skills.mainSkill") }), skills),
       h("div", null, h(
         "div",
         { class: "sec" },
-        "Supports ",
+        t("skills.supports") + " ",
         h("span", { class: "num", text: `${active.length}/${slots}` }),
-        next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null
+        next ? h("span", { class: "muted", text: t("skills.nextSlot", { n: next }) }) : null
       ), sups)
     ));
   }
@@ -9302,27 +13643,27 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }) }
       },
       h("i"),
-      h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." }))
+      h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") }))
     );
     root.append(push, contractBoard(c), shrineCard(c));
-    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
+    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
       if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
       const done = !!st.world.clears[act.zones[act.zones.length - 1]];
-      const current = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
-      if (done && !current && !openActs.has(act.id)) {
+      const current2 = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
+      if (done && !current2 && !openActs.has(act.id)) {
         const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
         root.append(h(
           "div",
           { class: "card act folded" },
-          h("h3", { text: `Act ${act.id} - ${act.name}` }),
+          h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
           h(
             "div",
             { class: "row" },
-            h("span", { class: "tag done", text: "Cleared" }),
-            h("span", { class: "muted grow", text: `${act.zones.length} places, ${fmt(total)} clears. Open it to go back and farm.` }),
-            h("button", { class: "btn alt small", text: "Open road", on: { click: () => {
+            h("span", { class: "tag done", text: t("world.cleared") }),
+            h("span", { class: "muted grow", text: t("world.folded", { places: act.zones.length, clears: fmt(total) }) }),
+            h("button", { class: "btn alt small", text: t("world.openRoad"), on: { click: () => {
               openActs.add(act.id);
               c.rerender();
             } } })
@@ -9338,14 +13679,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const clears = st.world.clears[id] ?? 0;
         const thumb = scenery(z, 112, 62);
         thumb.className = "thumb";
+        const name = zoneName(id);
         const el = h(
           "button",
           {
             class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
-            attrs: { "aria-label": `${z.name}, area level ${z.level}${open ? `, ${clears} clears` : ", locked"}` },
-            title: open ? z.story ?? z.name : "Not reached yet",
+            attrs: { "aria-label": open ? t("world.stopAria", { name, level: z.level, clears }) : t("world.stopAriaLocked", { name, level: z.level }) },
+            title: open ? z.story ? zoneStory(id) : name : t("world.notReached"),
             on: { click: () => {
-              if (open && !here) c.act((s) => setZone(s, id), `Travelling to ${z.name}`);
+              if (open && !here) c.act((s) => setZone(s, id), t("world.travelling", { zone: name }));
             } }
           },
           h(
@@ -9353,7 +13695,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
             { class: "pic" },
             thumb,
             h("span", { class: "num-badge", text: n }),
-            z.boss ? h("span", { class: "flag boss", text: "Boss" }) : z.trial ? h("span", { class: "flag trial", text: "Trial" }) : null,
+            z.boss ? h("span", { class: "flag boss", text: t("world.boss") }) : z.trial ? h("span", { class: "flag trial", text: t("world.trial") }) : null,
             here && hc ? (() => {
               const a = spriteCanvas(hc.idle);
               if (a) a.className = "hero-mark";
@@ -9361,8 +13703,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
             })() : null,
             open ? null : h("span", { class: "lock" }, glyph("block", 18))
           ),
-          h("b", { text: z.name }),
-          h("span", { class: "meta" }, h("span", { class: "tag", text: `L${z.level}` }), h("span", { text: open ? `${clears} clear${clears === 1 ? "" : "s"}` : "locked" }))
+          h("b", { text: name }),
+          h("span", { class: "meta" }, h("span", { class: "tag", text: t("world.lvl", { n: z.level }) }), h("span", { text: open ? tn("world.clears", clears) : t("world.locked") }))
         );
         return el;
       };
@@ -9370,18 +13712,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
         road.append(stop(id, String(i + 1)));
       });
-      const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: "Off the road" }), stop(act.trial, "T"));
+      const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: t("world.offRoad") }), stop(act.trial, "T"));
       root.append(h(
         "div",
         { class: "card act" },
-        h("h3", { text: `Act ${act.id} - ${act.name}` }),
-        h("div", { class: "story muted", text: done ? act.outro : act.intro }),
+        h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
+        h("div", { class: "story muted", text: done ? actOutro(act.id) : actIntro(act.id) }),
         road,
         trial,
-        done && !current ? h(
+        done && !current2 ? h(
           "div",
           { class: "row", style: "justify-content:flex-end;margin-top:8px" },
-          h("button", { class: "btn alt small", text: "Fold road", on: { click: () => {
+          h("button", { class: "btn alt small", text: t("world.foldRoad"), on: { click: () => {
             openActs.delete(act.id);
             c.rerender();
           } } })
@@ -9412,20 +13754,26 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "grow col", style: "gap:3px;min-width:0" },
-          h("b", { text: contractText(k) }),
+          h("b", { text: contractGoal(k.kind, k.target, k.tier) }),
           h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, k.n / k.target * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
-          h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k, st)}` })
+          h("span", { class: "muted", style: "font-size:12px", text: t("contracts.reward", { text: rewardLine(k, st) }) })
         ),
-        done ? h("button", { class: "btn small", text: "Claim", on: { click: () => c.act((s) => claimContract(s, i), "Contract claimed") } }) : h("button", {
+        done ? h("button", { class: "btn small", text: t("contracts.claim"), on: { click: () => c.act((s) => claimContract(s, i), t("contracts.claimed")) } }) : h("button", {
           class: "btn alt small",
-          text: `Reroll ${fmt(cost)}`,
-          title: `A different contract for ${fmt(cost)} ember dust; progress on this one is lost`,
+          text: t("contracts.reroll", { cost: fmt(cost) }),
+          title: t("contracts.rerollTip", { cost: fmt(cost) }),
           attrs: st.dust >= cost ? {} : { disabled: "" },
           on: { click: () => c.act((s) => rerollContract(s, i)) }
         })
       ));
     });
-    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("contracts.title") }), h("span", { class: "num", text: t("contracts.done", { n: fmt(st.contracts.done) }) })), rows);
+  }
+  function rewardLine(k, s) {
+    const parts = [t("reward.dust", { n: contractDust(s, k) })];
+    if (k.currency && CURRENCIES[k.currency[0]]) parts.push(t("reward.currency", { n: k.currency[1], name: currencyName(k.currency[0]) }));
+    if (k.extra) parts.push(t(`reward.${k.extra}`));
+    return parts.join(t("common.list"));
   }
   function shrineSig(s) {
     const cost = blessingCost(s);
@@ -9448,24 +13796,24 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h(
           "div",
           { class: "grow col", style: "gap:2px;min-width:0" },
-          h("b", { text: `${b.name}: ${b.text.replace("{0}", String(b.value))}` }),
-          h("span", { class: "muted", style: "font-size:12px", text: left ? `${fmtDuration(left)} left${keep ? ", kept up" : ""}` : keep ? "Kept up: renews when it can be paid" : "Not running" })
+          h("b", { text: t("shrine.line", { name: blessingName(b.id), text: blessingText(b.id, b.value) }) }),
+          h("span", { class: "muted", style: "font-size:12px", text: left ? t(keep ? "shrine.leftKept" : "shrine.left", { time: fmtDuration2(left) }) : keep ? t("shrine.keptUp") : t("shrine.notRunning") })
         ),
         h("button", {
           class: `chip${keep ? " on" : ""}`,
           attrs: { role: "switch", "aria-checked": String(keep) },
-          title: "Offer again on its own whenever it runs out (while it can be paid)",
+          title: t("shrine.keepTip"),
           on: { click: () => c.act((s) => {
             setKeep(s, b.id, !keep);
             if (!keep && !left) return bless(s, b.id);
           }) }
-        }, "Keep up"),
+        }, t("shrine.keep")),
         h("button", {
           class: "btn small",
-          text: `+1 h`,
-          title: `An hour of ${b.name} for ${fmt(cost)} dust${st.shrine.orbs ? " (spare orbs pay first)" : ""}`,
+          text: t("shrine.hour"),
+          title: t(st.shrine.orbs ? "shrine.hourTipOrbs" : "shrine.hourTip", { name: blessingName(b.id), cost: fmt(cost) }),
           attrs: canPay ? {} : { disabled: "" },
-          on: { click: () => c.act((s) => bless(s, b.id), `${b.name} blessed`) }
+          on: { click: () => c.act((s) => bless(s, b.id), t("shrine.blessed", { name: blessingName(b.id) })) }
         })
       ));
     }
@@ -9479,57 +13827,57 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }) }
       },
       h("i"),
-      h("span", null, h("b", { text: "Spare orbs pay first" }), h("small", { text: `Orbs above ${ORB_RESERVE} of a kind count at their shop price (now worth ${fmt(spare)} dust).` }))
+      h("span", null, h("b", { text: t("shrine.orbs") }), h("small", { text: t("shrine.orbsNote", { n: ORB_RESERVE, v: fmt(spare) }) }))
     );
     return h(
       "div",
       { class: "card" },
-      h("h3", { class: "split" }, h("span", { text: "Ember shrine" }), h("span", { class: "num", text: `${fmt(cost)} dust / hour` })),
-      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "Blessings run on the hero's time, so they count while you are away too." }),
+      h("h3", { class: "split" }, h("span", { text: t("shrine.title") }), h("span", { class: "num", text: t("shrine.cost", { cost: fmt(cost) }) })),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("shrine.note") }),
       rows,
       h("div", { style: "margin-top:8px" }, orbs)
     );
   }
   var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
-  var LOG_KINDS = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
+  var LOG_KINDS2 = { level: "var(--gold)", loot: "var(--r-enchanted)", death: "var(--ember)", zone: "var(--teal)", boss: "var(--violet)", info: "var(--paper2)" };
   var logFilter = "all";
   function logView(c) {
     const log = c.state.log;
     const n = (k) => log.filter((e) => e.kind === k).length;
     const filter = chips(
-      [["all", "All", log.length], ...Object.entries(LOG_KINDS).filter(([k]) => n(k)).map(([k, [label]]) => [k, label, n(k)])],
+      [["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS2).filter((k) => n(k)).map((k) => [k, t(`logkind.${k}`), n(k)])],
       logFilter,
       (v) => {
         logFilter = v;
         c.rerender();
       }
     );
-    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }), h("div", { style: "margin-bottom:8px" }, filter));
+    const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter));
     const now = Date.now();
     for (const e of [...log].reverse()) {
       if (logFilter !== "all" && e.kind !== logFilter) continue;
-      const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
+      const color = LOG_KINDS2[e.kind] ?? "var(--paper2)";
       el.append(h(
         "div",
         { class: `entry k-${e.kind}` },
-        h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)),
-        h("span", { class: "grow", text: e.text }),
+        h("span", { class: "lg", style: `background:${color}`, title: t(`logkind.${e.kind}`) }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)),
+        h("span", { class: "grow", text: logText(e) }),
         h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })
       ));
     }
     return el;
   }
   function fmtAgo(ms) {
-    if (ms < 6e4) return "now";
+    if (ms < 6e4) return t("ago.now");
     const m4 = Math.floor(ms / 6e4);
-    if (m4 < 60) return `${m4}m`;
+    if (m4 < 60) return t("ago.m", { n: m4 });
     const hh = Math.floor(m4 / 60);
-    return hh < 48 ? `${hh}h` : `${Math.floor(hh / 24)}d`;
+    return hh < 48 ? t("ago.h", { n: hh }) : t("ago.d", { n: Math.floor(hh / 24) });
   }
   function menuView(c) {
     const st = c.state;
     const keep = h("select");
-    for (const [v, label] of [["plain", "Keep everything"], ["enchanted", "Keep enchanted and better"], ["rare", "Keep rares only"]]) {
+    for (const [v, label] of [["plain", t("menu.keepAll")], ["enchanted", t("menu.keepEnchanted")], ["rare", t("menu.keepRares")]]) {
       const o = h("option", { text: label, attrs: { value: v } });
       if (st.settings.keep === v) o.selected = true;
       keep.append(o);
@@ -9543,7 +13891,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         s.settings.autoEquip = !s.settings.autoEquip;
       }) } },
       h("i"),
-      h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score; on level-ups, the stash's too." }))
+      h("span", null, h("b", { text: t("menu.autoEquip") }), h("small", { text: t("menu.autoEquipNote") }))
     );
     const upkeep = h(
       "button",
@@ -9551,74 +13899,74 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         s.settings.upkeep = !s.settings.upkeep;
       }) } },
       h("i"),
-      h("span", null, h("b", { text: "Stash upkeep" }), h("small", { text: "When the stash is full, a better keeper replaces its least-worth unlocked item instead of being salvaged." }))
+      h("span", null, h("b", { text: t("menu.upkeep") }), h("small", { text: t("menu.upkeepNote") }))
     );
-    const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
-    const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
-    const t = st.totals;
+    const out = h("textarea", { attrs: { readonly: "", placeholder: t("menu.exportPh") } });
+    const inp = h("textarea", { attrs: { placeholder: t("menu.importPh") } });
+    const tot = st.totals;
     return h(
       "div",
       { class: "grid2" },
       h(
         "div",
         { class: "card col" },
-        h("h3", { text: "Loot" }),
+        h("h3", { text: t("menu.loot") }),
         auto,
         upkeep,
         filterEditor(c),
-        h("div", { class: "row" }, "Otherwise", keep),
-        h("div", { class: "muted", style: "font-size:12px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })
+        h("div", { class: "row" }, t("menu.otherwise"), keep),
+        h("div", { class: "muted", style: "font-size:12px", text: t("menu.rulesNote") })
       ),
       h(
         "div",
         { class: "card col" },
-        h("h3", { text: "Save" }),
-        h("div", { class: "muted", style: "font-size:12px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
+        h("h3", { text: t("menu.save") }),
+        h("div", { class: "muted", style: "font-size:12px", text: c.storeKind === "indexeddb" ? t("menu.savedIdb") : t("menu.savedMem") }),
         h(
           "div",
           { class: "row" },
-          h("button", { class: "btn", text: "Export", on: { click: () => {
+          h("button", { class: "btn", text: t("menu.export"), on: { click: () => {
             out.value = c.exportSave();
             out.select();
           } } }),
-          h("button", { class: "btn alt", text: "Copy", on: { click: () => {
+          h("button", { class: "btn alt", text: t("menu.copy"), on: { click: () => {
             out.select();
-            void navigator.clipboard?.writeText(out.value).then(() => c.toast("Copied"), () => c.toast("Select and copy it by hand"));
+            void navigator.clipboard?.writeText(out.value).then(() => c.toast(t("menu.copied")), () => c.toast(t("menu.copyByHand")));
           } } })
         ),
         out,
         inp,
-        h("div", { class: "row" }, h("button", { class: "btn alt", text: "Import", on: { click: () => {
-          void c.importSave(inp.value).then((e) => c.toast(e ?? "Save loaded"));
+        h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), on: { click: () => {
+          void c.importSave(inp.value).then((e) => c.toast(e ? tErr(e) : t("menu.loaded")));
         } } }))
       ),
-      h("div", { class: "card" }, h("h3", { text: "Totals" }), kv([
-        ["Runs", fmt(t.runs)],
-        ["Kills", fmt(t.kills)],
-        ["Deaths", fmt(t.deaths)],
-        ["Items found", fmt(t.items)],
-        ["Salvaged", fmt(t.salvaged)],
-        ["Swapped out by upkeep", fmt(t.swapped ?? 0)],
-        ["Time simulated", `${(t.simMs / 36e5).toFixed(1)} h`]
+      h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
+        [t("menu.runs"), fmt(tot.runs)],
+        [t("menu.kills"), fmt(tot.kills)],
+        [t("menu.deaths"), fmt(tot.deaths)],
+        [t("menu.items"), fmt(tot.items)],
+        [t("menu.salvaged"), fmt(tot.salvaged)],
+        [t("menu.swapped"), fmt(tot.swapped ?? 0)],
+        [t("menu.time"), t("menu.hours", { n: (tot.simMs / 36e5).toFixed(1) })]
       ])),
       h(
         "div",
         { class: "card col" },
-        h("h3", { text: "Danger" }),
-        h("button", { class: "btn hot", text: "Start a new hero", on: { click: () => {
+        h("h3", { text: t("menu.danger") }),
+        h("button", { class: "btn hot", text: t("menu.newHero"), on: { click: () => {
           const close = c.modal(h(
             "div",
             { class: "card col" },
-            h("h3", { text: "Start over?" }),
-            h("div", { text: "This deletes the current hero. Export first if you want to keep it." }),
+            h("h3", { text: t("menu.startOver") }),
+            h("div", { text: t("menu.startOverNote") }),
             h(
               "div",
               { class: "row" },
-              h("button", { class: "btn hot", text: "Delete and start over", on: { click: () => {
+              h("button", { class: "btn hot", text: t("menu.deleteStart"), on: { click: () => {
                 close();
                 c.resetGame();
               } } }),
-              h("button", { class: "btn alt", text: "Cancel", on: { click: () => close() } })
+              h("button", { class: "btn alt", text: t("common.cancel"), on: { click: () => close() } })
             )
           ));
         } } })
@@ -9641,28 +13989,28 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         "div",
         { class: "row", style: "gap:4px;flex-wrap:nowrap" },
         on,
-        h("span", { class: "grow", style: `font-size:12px;${r3.on ? "" : "opacity:.5"}`, text: describeRule(r3) }),
-        h("button", { class: "x", text: "^", title: "Move up", attrs: i === 0 ? { disabled: "", "aria-label": "Move up" } : { "aria-label": "Move up" }, on: { click: () => edit((rs) => {
+        h("span", { class: "grow", style: `font-size:12px;${r3.on ? "" : "opacity:.5"}`, text: ruleText(r3) }),
+        h("button", { class: "x", text: "^", title: t("filter.moveUp"), attrs: i === 0 ? { disabled: "", "aria-label": t("filter.moveUp") } : { "aria-label": t("filter.moveUp") }, on: { click: () => edit((rs) => {
           if (i > 0) [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]];
         }) } }),
-        h("button", { class: "x", text: "x", title: "Delete", attrs: { "aria-label": `Delete rule: ${describeRule(r3)}` }, on: { click: () => edit((rs) => {
+        h("button", { class: "x", text: "x", title: t("filter.delete"), attrs: { "aria-label": t("filter.deleteAria", { rule: ruleText(r3) }) }, on: { click: () => edit((rs) => {
           rs.splice(i, 1);
         }) } })
       ));
     });
     const action = h("select");
-    for (const a of ["keep", "salvage"]) action.append(h("option", { text: a, attrs: { value: a } }));
+    for (const a of ["keep", "salvage"]) action.append(h("option", { text: t(`filter.${a}`), attrs: { value: a } }));
     const rarity = h("select");
-    for (const [v, t] of [["", "any rarity"], ["plain", "plain"], ["enchanted", "enchanted"], ["rare", "rare"], ["relic", "relic"]]) rarity.append(h("option", { text: t, attrs: { value: v } }));
+    for (const v of ["", "plain", "enchanted", "rare", "relic"]) rarity.append(h("option", { text: v ? t(`rarity.${v}`) : t("filter.anyRarity"), attrs: { value: v } }));
     const slot = h("select");
-    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v || "any slot", attrs: { value: v } }));
+    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v ? t(`slot.${v}`).toLowerCase() : t("filter.anySlot"), attrs: { value: v } }));
     const minAff = h("select");
-    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
-    const behind = h("select", { attrs: { "aria-label": "Base level behind the hero" } });
-    for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? "any base" : `base ${v}+ behind`, attrs: { value: v } }));
-    const group = h("select", { attrs: { "aria-label": "Has an affix" } });
-    group.append(h("option", { text: "any affix", attrs: { value: "" } }));
-    for (const g of AFFIX_GROUPS()) group.append(h("option", { text: `with ${g.label}`, attrs: { value: g.group } }));
+    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? t("filter.anyAffixes") : t("filter.minAffixes", { n: v }), attrs: { value: v } }));
+    const behind = h("select", { attrs: { "aria-label": t("filter.behindAria") } });
+    for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? t("filter.anyBase") : t("filter.behind", { n: v }), attrs: { value: v } }));
+    const group = h("select", { attrs: { "aria-label": t("filter.groupAria") } });
+    group.append(h("option", { text: t("filter.anyAffix"), attrs: { value: "" } }));
+    for (const g of affixGroups()) group.append(h("option", { text: t("filter.with", { group: g.label }), attrs: { value: g.group } }));
     box2.append(h(
       "div",
       { class: "row", style: "gap:4px" },
@@ -9672,7 +14020,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       minAff,
       behind,
       group,
-      h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit((rs) => {
+      h("button", { class: "btn alt", text: t("filter.add"), on: { click: () => edit((rs) => {
         const r3 = { on: true, action: action.value };
         if (rarity.value) r3.rarity = [rarity.value];
         if (slot.value) r3.slots = [slot.value];
@@ -9681,7 +14029,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (group.value) r3.group = group.value;
         rs.push(r3);
       }) } }),
-      h("button", { class: "btn alt", text: "Reset", on: { click: () => edit((rs) => {
+      h("button", { class: "btn alt", text: t("filter.reset"), on: { click: () => edit((rs) => {
         rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER));
       }) } })
     ));
@@ -9689,17 +14037,51 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     box2.append(h(
       "div",
       { class: "row presets", style: "gap:4px;margin-top:4px" },
-      h("span", { class: "muted", style: "font-size:12px", text: "Presets:" }),
+      h("span", { class: "muted", style: "font-size:12px", text: t("filter.presets") }),
       ...FILTER_PRESETS.map((p) => h("button", {
         class: `chip${same(rules, p.rules) ? " on" : ""}`,
-        text: p.name,
-        title: p.blurb,
+        text: presetName(p.id),
+        title: presetBlurb(p.id),
         on: { click: () => edit((rs) => {
           rs.splice(0, rs.length, ...structuredClone(p.rules));
         }) }
       }))
     ));
     return box2;
+  }
+  function affixGroups() {
+    return [...new Set(Object.values(AFFIXES).map((a) => a.group))].map((group) => ({ group, label: groupName(group) })).sort((a, b) => a.label.localeCompare(b.label, lang()));
+  }
+  function ruleText(r3) {
+    const parts = [];
+    parts.push(r3.rarity?.length ? r3.rarity.map((x) => t(`rarity.${x}`)).join("/") : t("filter.anyRarity"));
+    if (r3.slots?.length) parts.push(r3.slots.map((x) => t(`slot.${x}`).toLowerCase()).join("/"));
+    if (r3.minIlvl) parts.push(t("rule.ilvl", { n: r3.minIlvl }));
+    if (r3.behind) parts.push(t("rule.behind", { n: r3.behind }));
+    if (r3.minAffixes) parts.push(t("rule.affixes", { n: r3.minAffixes }));
+    if (r3.group) parts.push(t("rule.with", { group: groupName(r3.group) }));
+    return t(r3.action === "keep" ? "rule.keep" : "rule.salvage", { what: parts.join(t("common.list")) });
+  }
+  function sourceNames(st) {
+    const map = /* @__PURE__ */ new Map();
+    const add = (en, local) => {
+      if (!map.has(en)) map.set(en, local);
+    };
+    for (const c0 of Object.values(CLASSES)) add(c0.name, className(c0.id));
+    add("Might", t("attr.str"));
+    add("Grace", t("attr.dex"));
+    add("Wit", t("attr.int"));
+    for (const s of Object.values(SKILLS)) add(s.name, skillName(s.id));
+    for (const s of Object.values(SUPPORTS)) add(s.name, supportName(s.id));
+    for (const n of Object.values(PASSIVES)) add(n.name, nodeName(n));
+    for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
+    for (const p of Object.values(COMPANIONS)) add(`Companion: ${p.name}`, `${t("pets.title")}: ${companionName(p.id)}`);
+    add("Map", t("atlas.maps"));
+    for (const s of SLOTS) {
+      const it = st.hero.equipment[s];
+      if (it) add(itemLabel(it), itemName(it));
+    }
+    return (src) => map.get(src) ?? src;
   }
   var CALLING_SCENE = { vanguard: "a1_lock", strider: "a1_cliffs", arcanist: "a1_chapel" };
   var SCENE_W = 120;
@@ -9715,19 +14097,19 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     g.beginPath();
     g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2);
     g.fill();
-    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, "LOADING", SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
+    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, t("create.loading"), SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
   }
   function creationView(onStart) {
-    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
+    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": t("create.nameAria"), spellcheck: "false", autocomplete: "off" } });
     let cls = Object.keys(CLASSES)[0];
-    const start = () => onStart(name.value.replace(/[^ -~]/g, "").trim().slice(0, 20) || "Ashling", cls);
+    const start = () => onStart(name.value.replace(/[^ -~\u0401\u0404\u0406\u0407\u0410-\u044f\u0451\u0454\u0456\u0457\u0490\u0491]/g, "").trim().slice(0, 20) || "Ashling", cls);
     name.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         start();
       }
     });
-    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": "Calling" } });
+    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": t("create.calling") } });
     let live = null;
     const draw2 = () => {
       clear(grid);
@@ -9738,7 +14120,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const pic = h("canvas", { class: "cscene", attrs: { width: String(SCENE_W), height: String(SCENE_H), "aria-hidden": "true" } });
         callingScene(k.id, bg, pic, 0);
         if (on) live = { cls: k.id, bg, c: pic };
-        const attrs = [["might", "Might", k.str], ["grace", "Grace", k.dex], ["wit", "Wit", k.int]].map(([gl, label, v]) => h("span", { class: `cattr ${gl}`, title: label }, glyph(gl, 14), h("b", { class: "num", text: String(v) }), h("small", { text: label })));
+        const attrs = [["might", t("attr.str"), k.str], ["grace", t("attr.dex"), k.dex], ["wit", t("attr.int"), k.int]].map(([gl, label, v]) => h("span", { class: `cattr ${gl}`, title: label }, glyph(gl, 14), h("b", { class: "num", text: String(v) }), h("small", { text: label })));
         grid.append(h(
           "button",
           {
@@ -9753,11 +14135,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
               }
             } }
           },
-          h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: "Chosen" }) : null),
-          h("span", { class: "cname", text: k.name }),
+          h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: t("create.chosen") }) : null),
+          h("span", { class: "cname", text: className(k.id) }),
           h("span", { class: "cattrs" }, ...attrs),
-          h("span", { class: "ds", text: k.blurb }),
-          h("span", { class: "ds muted", text: `Starts with ${SKILLS[k.startSkill].name} and a ${BASES[k.startWeapon].name}.` })
+          h("span", { class: "ds", text: classBlurb(k.id) }),
+          h("span", { class: "ds muted", text: t("create.starts", { skill: skillName(k.startSkill), weapon: baseName(k.startWeapon) }) })
         ));
       }
     };
@@ -9777,15 +14159,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const root = h(
       "div",
       { class: "create" },
-      h("div", { class: "card story", text: "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead." }),
-      h("div", { class: "sec", text: "Choose a calling" }),
+      h("div", { class: "card story", text: t("create.story") }),
+      h("div", { class: "sec", text: t("create.choose") }),
       grid,
       h(
         "div",
         { class: "card col" },
-        h("h3", { text: "Name your Kindled" }),
-        h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: "Wake up", on: { click: start } })),
-        h("div", { class: "muted", style: "font-size:12px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })
+        h("h3", { text: t("create.name") }),
+        h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: t("create.wake"), on: { click: start } })),
+        h("div", { class: "muted", style: "font-size:12px", text: t("create.nameNote") })
       )
     );
     return root;
@@ -9803,7 +14185,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var XP_WINDOW_MS = 10 * 6e4;
   var STAGE_FRAC = { l: 0.42, m: 0.28 };
   var STAGE_NEXT = { m: "l", l: "off", off: "m" };
-  var STAGE_TITLE = { m: "Battle view: normal (click for large)", l: "Battle view: large (click to hide)", off: "Battle view: hidden (click to show)" };
+  var STAGE_TITLE = (s) => t(`app.stage.${s}`);
   var STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
   var NAV_GLYPH = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu" };
   var GameWindow = class _GameWindow {
@@ -9851,7 +14233,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     stopKeys = null;
     frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35 };
     xpLog = [];
-    lastEvent = "";
+    /** The strip's last notable event: a string key and params (it follows a language switch), or a toast's text. */
+    lastEvent = null;
+    closeBtn;
+    /** The language the window's fixed labels were drawn in. */
+    lang = "";
     onUnload = () => {
       if (!this.state) return;
       this.kv.set(QUICK_KEY, wrap(this.state, Date.now()));
@@ -9911,6 +14297,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
     // ---- frame ----------------------------------------------------------------
     build() {
+      if (this.hooks.lang) setLang(this.hooks.lang());
+      this.lang = lang();
       const host = document.createElement("div");
       host.id = "hollowmarch-root";
       this.host = host;
@@ -9938,16 +14326,17 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         return b;
       };
       this.who = h("span", { class: "who" });
-      this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
-      this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini), "mn");
-      this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
-      this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
+      this.stageBtn = ctl("stage", STAGE_TITLE("m"), () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
+      this.miniBtn = ctl("min", t("app.mini"), () => this.setMini(!this.frame.mini), "mn");
+      this.maxBtn = ctl("max", t("app.max"), () => this.setMax(!this.frame.max), "mx");
+      this.soundBtn = ctl("mute", t("app.soundOff"), () => this.setSound(!this.frame.sfx), "snd");
+      this.closeBtn = ctl("close", t("app.close"), () => void this.close(), "x");
       const bar2 = h(
         "div",
         { class: "bar" },
         h("span", { class: "logo", text: "Hollowmarch" }),
         this.who,
-        h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x"))
+        h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, this.closeBtn)
       );
       bar2.addEventListener("dblclick", (e) => {
         if (!e.target.closest("button")) this.setMax(!this.frame.max);
@@ -9961,22 +14350,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.stage.addEventListener("dblclick", (e) => {
         if (this.frame.mini && !e.target.closest("button")) this.setMini(false);
       });
-      this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
-      this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
+      this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": t("app.hudLabel") } }, this.hud.canvas);
+      this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
       VIEWS.forEach((v, i) => {
-        this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${i + 1})` }, on: { click: () => {
+        this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${i + 1})` }, on: { click: () => {
           this.view = v.id;
           this.sig = "";
           if (this.ctx) this.ctx.sel = {};
           this.renderTab(true);
           this.body.scrollTop = 0;
-        } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: v.label }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
+        } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
       });
       this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
       const main = h("div", { class: "main" }, this.nav, this.body);
       this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
       const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, this.hudWrap, main, this.toasts, grip);
+      this.win = h("div", { class: `win lang-${lang()}`, attrs: { role: "dialog", "aria-label": "Hollowmarch", lang: lang() } }, bar2, this.top, this.hudWrap, main, this.toasts, grip);
       shell.append(this.win);
       this.root.append(shell);
       document.body.append(host);
@@ -9996,10 +14385,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
       this.win.tabIndex = -1;
       this.win.addEventListener("keydown", (e) => {
-        const t = e.target;
-        if (t.closest("input, textarea, select")) return;
-        if ((e.key === "Enter" || e.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") {
-          t.click();
+        const t2 = e.target;
+        if (t2.closest("input, textarea, select")) return;
+        if ((e.key === "Enter" || e.key === " ") && t2.getAttribute("role") === "button" && t2.tagName !== "BUTTON") {
+          t2.click();
           e.preventDefault();
           return;
         }
@@ -10124,17 +14513,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.win.classList.toggle("mini", f.mini);
       this.win.classList.toggle("max", f.max && !f.mini);
       this.top.classList.toggle("nostage", f.stage === "off");
-      this.stageBtn.dataset.tip = STAGE_TITLE[f.stage];
-      this.stageBtn.setAttribute("aria-label", STAGE_TITLE[f.stage]);
+      this.stageBtn.dataset.tip = STAGE_TITLE(f.stage);
+      this.stageBtn.setAttribute("aria-label", STAGE_TITLE(f.stage));
       const setGlyph = (b, g, title) => {
         b.replaceChildren(glyph(g, 12));
         b.removeAttribute("title");
         b.dataset.tip = title;
         b.setAttribute("aria-label", title);
       };
-      setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
-      setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-      setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+      setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? t("app.unmini") : t("app.mini"));
+      setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? t("app.restore") : t("app.max"));
+      setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? t("app.soundOn") : t("app.soundOff"));
+      setGlyph(this.closeBtn, "close", t("app.close"));
       this.soundBtn.classList.toggle("off", !f.sfx);
       this.refit();
     }
@@ -10209,8 +14599,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
     // ---- persistence --------------------------------------------------------
     /** Unwraps, migrates and validates; the state is only used when it can produce a stat sheet. */
-    static accept(raw) {
-      const env = unwrap(raw);
+    static accept(raw2) {
+      const env = unwrap(raw2);
       env.state = validateState(env.state);
       sheetOf(env.state);
       return env;
@@ -10225,9 +14615,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       }
       for (const key of ["main", "backup"]) {
         try {
-          const raw = await this.store.get(key);
-          if (!raw) continue;
-          const env = _GameWindow.accept(raw);
+          const raw2 = await this.store.get(key);
+          if (!raw2) continue;
+          const env = _GameWindow.accept(raw2);
           this.state = quick && quick.savedAt > env.savedAt ? quick.state : env.state;
           this.lastBackup = Date.now();
           return true;
@@ -10268,7 +14658,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const bar2 = h("i", { style: "width:0%" });
       const label = h("div", { class: "muted", text: "" });
       const shown = away > 2e3;
-      const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar2))) : () => {
+      const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: t("report.title") }), label, h("div", { class: "progress" }, bar2))) : () => {
       };
       const [miniLabel, miniBar] = [this.miniProg.firstElementChild, this.miniProg.querySelector("i")];
       this.miniProg.hidden = !shown;
@@ -10277,7 +14667,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       while (!advance(s, target, rep.events, 25e3)) {
         const f = (s.simTo - from) / Math.max(1, target - from);
         bar2.style.width = miniBar.style.width = (f * 100).toFixed(1) + "%";
-        label.textContent = miniLabel.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+        label.textContent = miniLabel.textContent = t("app.replaying", { time: fmtDuration2(target - from), pct: (f * 100).toFixed(0) });
         if (this.frame.mini) this.drawHud();
         await new Promise((r3) => setTimeout(r3, 0));
         if (!this.host) return;
@@ -10319,9 +14709,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           be.flask?.();
           sfx("flask");
         },
-        story: (text) => this.showStory(text),
+        story: (key) => this.showStory(key),
         zone: (_from, to, why) => {
-          if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`, "road");
+          if (why === "unlock") this.toast(t("toast.newRoad", { zone: ZONES[to] ? zoneName(to) : to }), "road");
         },
         kill: (_m, xp) => {
           if (xp > 0) this.xpLog.push([Date.now(), xp]);
@@ -10329,30 +14719,30 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         },
         level: (l) => {
           be.level?.(l);
-          this.toast(`Level ${l}`, "level");
-          this.lastEvent = `Reached level ${l}`;
+          this.toast(t("toast.level", { level: l }), "level");
+          this.lastEvent = ["event.level", { level: l }];
           sfx("level", true);
         },
         loot: (item, kept, equipped) => {
           if (!kept) return;
           if (item.rarity !== "plain") sfx(item.rarity === "enchanted" ? "loot1" : item.rarity === "rare" ? "loot2" : "loot3", item.rarity !== "enchanted");
-          const name = itemLabel(item);
+          const name = itemName(item);
           if (equipped) {
-            this.toast(`Equipped: ${name}`, item.rarity);
-            this.lastEvent = `Equipped ${name}`;
+            this.toast(t("toast.equipped", { item: name }), item.rarity);
+            this.lastEvent = ["event.equipped", { item: name }];
           } else if (item.rarity === "rare" || item.rarity === "relic") {
-            this.toast(`${item.rarity === "relic" ? "Relic" : "Rare"}: ${name}`, item.rarity);
-            this.lastEvent = `Found ${name}`;
+            this.toast(t(item.rarity === "relic" ? "toast.relic" : "toast.rare", { item: name }), item.rarity);
+            this.lastEvent = ["event.found", { item: name }];
           }
         },
         death: () => {
-          this.lastEvent = "Died. The ember relights.";
+          this.lastEvent = ["event.died", {}];
           sfx("death");
         },
         companion: (id, isNew) => {
-          const name = COMPANIONS[id]?.name ?? id;
-          this.toast(isNew ? `Companion: ${name} joins you` : `${name} grows closer`, "relic");
-          this.lastEvent = isNew ? `${name} joined` : `${name} grew closer`;
+          const pet = companionName(id);
+          this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
+          this.lastEvent = [isNew ? "event.petJoined" : "event.petCloser", { pet }];
           sfx("level", true);
         }
       };
@@ -10389,7 +14779,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         sheet: () => sheetOf(this.state),
         act: (fn, ok) => {
           const err = fn(this.state);
-          if (typeof err === "string") this.toast(err, "err");
+          if (typeof err === "string") this.toast(tErr(err), "err");
           else if (ok) this.toast(ok);
           this.sig = "";
           this.renderTab(true);
@@ -10435,12 +14825,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     renderTab(force) {
       if (!this.state || !this.ctx) return;
       if (!force) {
-        const t = performance.now();
-        if (t - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return;
-        this.lastSigCheck = t;
+        const now = performance.now();
+        if (now - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return;
+        this.lastSigCheck = now;
       }
+      this.syncLang();
       this.updateBadges();
-      const sig = this.view + ":" + viewSig(this.view, this.ctx);
+      const sig = this.view + ":" + lang() + ":" + viewSig(this.view, this.ctx);
       if (!force && sig === this.sig) return;
       this.sig = sig;
       for (const b of this.nav.querySelectorAll("button")) {
@@ -10458,6 +14849,29 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.body.scrollTop = top;
       if (focusAt >= 0) this.body.querySelectorAll(FOCUSABLE)[focusAt]?.focus({ preventScroll: true });
     }
+    /** Follows the hub's language while the window is open: a change redraws the frame's own labels (the tab follows by its signature). */
+    syncLang() {
+      if (this.hooks.lang) setLang(this.hooks.lang());
+      if (lang() === this.lang || !this.host) return;
+      this.lang = lang();
+      this.win.classList.remove("lang-en", "lang-ru", "lang-uk");
+      this.win.classList.add(`lang-${this.lang}`);
+      this.win.setAttribute("lang", this.lang);
+      this.nav.setAttribute("aria-label", t("app.sections"));
+      this.hudWrap.setAttribute("aria-label", t("app.hudLabel"));
+      VIEWS.forEach((v, i) => {
+        const b = this.nav.children[i];
+        if (!b) return;
+        b.title = `${t(`nav.${v.id}`)} (${i + 1})`;
+        delete b.dataset.tip;
+        b.removeAttribute("aria-description");
+        b.querySelector(".lbl")?.replaceWith(h("span", { class: "lbl", text: t(`nav.${v.id}`) }));
+      });
+      pixelize(this.nav);
+      this.who.dataset.k = "";
+      this.sig = "";
+      this.applyFrame();
+    }
     /** Small counters on the tabs: things waiting for a decision. */
     updateBadges() {
       const s = this.state;
@@ -10469,7 +14883,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (active.length < slots) {
           const cur = sheetOf(s).skill;
           for (const x of Object.values(SUPPORTS)) {
-            if (x.level > hero.level || active.includes(x.id) || x.requires.length && !x.requires.some((t) => cur.tags.includes(t))) continue;
+            if (x.level > hero.level || active.includes(x.id) || x.requires.length && !x.requires.some((t2) => cur.tags.includes(t2))) continue;
             if (deriveSheet({ ...hero, supports: [...active, x.id], rev: -1 }).skill.packDps > cur.packDps * 1.005) {
               gain = true;
               break;
@@ -10482,18 +14896,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const tree = Math.max(0, pointsLeft(hero)) + Math.max(0, ascPointsLeft(hero));
       const atlas = Math.max(0, atlasPointsLeft(s));
       const marks = {
-        skills: freeSupport ? ["!", "A free support slot would add damage"] : void 0,
-        tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : void 0,
-        atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : void 0,
-        gear: s.stashFull ? ["!", "Stash is full: drops are being salvaged"] : void 0,
-        world: claimable(s) ? [String(claimable(s)), `${claimable(s)} contract${claimable(s) > 1 ? "s" : ""} to claim`] : void 0
+        skills: freeSupport ? ["!", t("badge.support")] : void 0,
+        tree: tree ? [String(tree), tn("badge.tree", tree)] : void 0,
+        atlas: atlas ? [String(atlas), tn("badge.atlas", atlas)] : void 0,
+        gear: s.stashFull ? ["!", t("badge.stash")] : void 0,
+        world: claimable(s) ? [String(claimable(s)), tn("badge.contracts", claimable(s))] : void 0
       };
       for (const b of this.nav.children) {
         const id = b.getAttribute("data-v");
         const badge = b.querySelector(".badge");
         const m4 = marks[id];
         const text = m4?.[0] ?? "";
-        if (badge.textContent !== text) {
+        if (badge.textContent !== text || badge.dataset.tip !== (m4?.[1] ?? "")) {
           badge.textContent = text;
           badge.toggleAttribute("hidden", !m4);
           badge.dataset.tip = m4?.[1] ?? "";
@@ -10528,10 +14942,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         xpFrac: xpF,
         eta: eta.replace(/^~/, "~ "),
         ready: run?.phase === "fight" ? (now - this.lastUse) / (1e3 / speed) : 1,
-        skillName: sh.skill.name,
+        skillName: skillName(sh.skill.id),
         weaponKind: w2 ? baseOf(w2).kind : null,
         spell: sh.skill.kind !== "attack",
-        zone: z.name,
+        zone: placeName(s),
         zoneLevel: z.level,
         packDps: sh.skill.packDps,
         dead: run?.phase === "dead",
@@ -10543,19 +14957,35 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const [sky, ground] = z.palette;
         this.stage.style.background = `linear-gradient(to bottom, ${sky} 0 83.4%, #111 83.4% 85%, ${ground} 85% 100%)`;
       }
-      const cls = CLASSES[s.hero.cls]?.name ?? "";
-      const who = `${s.hero.name}|${s.hero.level}|${cls}`;
+      const cls = CLASSES[s.hero.cls] ? className(s.hero.cls) : "";
+      const who = `${s.hero.name}|${s.hero.level}|${cls}|${lang()}`;
       if (this.who.dataset.k !== who) {
         this.who.dataset.k = who;
-        this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: `Level ${s.hero.level} ${cls}` }));
+        this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: t("app.who", { level: s.hero.level, cls }) }));
       }
       if (now - this.ariaAt > 1e3) {
         this.ariaAt = now;
         const n = (x) => fmt(Math.floor(Math.max(0, x)));
-        const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
+        const label = (run?.phase === "dead" ? t("hud.ariaDead", { n: Math.ceil(run.timer) }) : "") + t("hud.aria", {
+          life: n(life),
+          lifeMax: n(sh.life),
+          es: sh.es ? t("hud.ariaEs", { es: n(es), esMax: n(sh.es) }) : "",
+          mana: n(mana),
+          manaMax: n(sh.mana),
+          flask: Math.floor(hh?.flask ?? 30),
+          level: s.hero.level,
+          xp: (xpF * 100).toFixed(1),
+          eta: eta ? ` (${eta})` : "",
+          zone: placeName(s),
+          area: z.level,
+          dps: fmt(sh.skill.packDps)
+        });
         this.hudWrap.setAttribute("aria-label", label);
         this.hudWrap.dataset.tip = label;
-        if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
+        this.syncLang();
+        const e = this.lastEvent;
+        const last = !e ? "" : typeof e === "string" ? e : t(e[0], e[1]);
+        if (this.miniLast.textContent !== last) this.miniLast.textContent = last;
       }
     }
     /** "~12m to go" from the kill XP of the last few minutes; blank until there is enough to go on. */
@@ -10566,7 +14996,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const span = Math.max(3e4, now - this.xpLog[0][0]);
       const rate = this.xpLog.reduce((a, [, x]) => a + x, 0) / span;
       if (rate <= 0) return "";
-      return `~${fmtDuration(left / rate)} to level`;
+      return t("hud.eta", { time: fmtDuration2(left / rate) });
     }
     pingTimer = 0;
     toast(msg, kind = "") {
@@ -10580,21 +15010,21 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         this.pingTimer = window.setTimeout(() => this.miniLast.classList.remove("ping"), 3200);
         return;
       }
-      const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
-      this.toasts.prepend(t);
+      const t2 = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
+      this.toasts.prepend(t2);
       while (this.toasts.childElementCount > 4) this.toasts.lastElementChild.remove();
       setTimeout(() => {
-        t.classList.add("out");
-        setTimeout(() => t.remove(), 220);
+        t2.classList.add("out");
+        setTimeout(() => t2.remove(), 220);
       }, kind === "err" ? 3200 : 2600);
     }
     /**
      * A dialog over the window. In mini mode it waits hidden (the strip gets a row that
      * brings the window back); a click on the backdrop closes it, except the replay one.
      */
-    modal(content) {
-      const m4 = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
-      const title = content.querySelector("h3")?.textContent?.trim();
+    modal(content2) {
+      const m4 = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content2);
+      const title = content2.querySelector("h3")?.textContent?.trim();
       if (title) m4.setAttribute("aria-label", title);
       const close = () => {
         if (!m4.isConnected) return;
@@ -10630,16 +15060,16 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const top = waiting[waiting.length - 1];
       this.miniNote.hidden = !top;
       if (!top) return;
-      const title = top.getAttribute("aria-label") || "A message";
-      this.miniNote.dataset.tip = `${title}: open the full window to read it`;
-      this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
+      const title = top.getAttribute("aria-label") || t("mini.message");
+      this.miniNote.dataset.tip = t("mini.tip", { title });
+      this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? tn("mini.waiting", waiting.length) : t("mini.open") }));
     }
     showCreation() {
       clear(this.body);
       this.win.classList.add("creating");
       if (this.frame.mini) this.setMini(false);
       this.who.dataset.k = "";
-      this.who.replaceChildren(h("b", { text: "A new Kindled" }));
+      this.who.replaceChildren(h("b", { text: t("app.newKindled") }));
       let started = false;
       this.body.append(creationView(async (name, cls) => {
         if (started) return;
@@ -10651,49 +15081,51 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       pixelize(this.body);
     }
     storyBox = null;
-    /** One story window at a time: later beats are added to the open one. */
-    showStory(text) {
+    /** One story window at a time: later beats are added to the open one. Beats come as string keys. */
+    showStory(key) {
+      const text = storyText(key);
       if (this.storyBox?.isConnected) {
         this.storyBox.append(h("div", { class: "story", style: "margin-top:6px", text }));
         return;
       }
       const box2 = h("div", { class: "col" }, h("div", { class: "story", text }));
-      const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), box2);
+      const card = h("div", { class: "card col" }, h("h3", { text: t("story.title") }), box2);
       const close = this.modal(card);
       this.storyBox = box2;
-      card.append(h("button", { class: "btn", text: "Onward", on: { click: () => {
+      card.append(h("button", { class: "btn", text: t("story.onward"), on: { click: () => {
         close();
         this.storyBox = null;
       } } }));
     }
     showReport(r3) {
       const rows = [
-        ["Time away", fmtDuration(r3.to - r3.from)],
-        ["Runs cleared", fmt(r3.runs)],
-        ["Monsters slain", fmt(r3.kills)],
-        ["Bosses", fmt(r3.bosses)],
-        ["Deaths", fmt(r3.deaths)],
-        ["Levels", r3.levelTo > r3.levelFrom ? `${r3.levelFrom} -> ${r3.levelTo}` : `${r3.levelTo} (no change)`],
-        ["Experience", fmt(r3.xp)],
-        ["Items kept", fmt(r3.kept)],
-        ["Salvaged", fmt(r3.salvaged)],
-        ["Ember dust", `+${fmt(r3.dust)}`],
-        ...r3.swapped ? [["Swapped out by upkeep", fmt(r3.swapped)]] : []
+        [t("report.away"), fmtDuration2(r3.to - r3.from)],
+        [t("report.runs"), fmt(r3.runs)],
+        [t("report.kills"), fmt(r3.kills)],
+        [t("report.bosses"), fmt(r3.bosses)],
+        [t("report.deaths"), fmt(r3.deaths)],
+        [t("report.levels"), r3.levelTo > r3.levelFrom ? t("report.levelUp", { from: r3.levelFrom, to: r3.levelTo }) : t("report.noChange", { level: r3.levelTo })],
+        [t("report.xp"), fmt(r3.xp)],
+        [t("report.kept"), fmt(r3.kept)],
+        [t("report.salvaged"), fmt(r3.salvaged)],
+        [t("report.dust"), `+${fmt(r3.dust)}`],
+        ...r3.swapped ? [[t("report.swapped"), fmt(r3.swapped)]] : []
       ];
       const kvEl = h("div", { class: "kv" });
       for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
-      const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
-      for (const t of r3.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
-      if (r3.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r3.zones.join(", ")}` }));
-      if (r3.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
-      if (r3.newCompanions.length) card.append(h("div", { class: "tag gold", text: `New companion${r3.newCompanions.length > 1 ? "s" : ""}: ${r3.newCompanions.join(", ")}` }));
-      if (r3.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: `New in the codex: ${r3.newRelics.join(", ")}` }));
+      const card = h("div", { class: "card col" }, h("h3", { text: t("report.title") }), kvEl);
+      const list7 = (xs) => xs.join(t("common.list"));
+      for (const key of r3.story.slice(-3)) card.append(h("div", { class: "story", text: storyText(key) }));
+      if (r3.zones.length) card.append(h("div", { class: "tag teal", text: t("report.roads", { list: list7(r3.zones.map((id) => zoneName(id))) }) }));
+      if (r3.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list7(r3.equipped.slice(-4).map((it) => itemName(it))) }) }));
+      if (r3.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r3.newCompanions.length, { list: list7(r3.newCompanions.map((id) => companionName(id))) }) }));
+      if (r3.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list7(r3.newRelics.map((id) => relicName(id))) }) }));
       if (r3.best.length) {
         const best = r3.best[r3.best.length - 1];
-        card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
+        card.append(h("div", { class: "muted", text: t("report.best") }), itemCard(best, null));
       }
       const close = this.modal(card);
-      card.append(h("button", { class: "btn", text: "Back to it", on: { click: () => close() } }));
+      card.append(h("button", { class: "btn", text: t("report.back"), on: { click: () => close() } }));
     }
   };
   function summaryOf(s) {
@@ -10704,7 +15136,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       name: s.hero.name,
       cls: s.hero.cls,
       level: s.hero.level,
-      zone: z?.name ?? s.activity.zone,
+      zone: z ? placeName(s) : s.activity.zone,
       savedAt: Date.now(),
       xpFrac: isFinite(need) ? s.hero.xp / need : 1,
       zoneId: z?.id ?? s.activity.zone,
@@ -10737,6 +15169,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 `;
   function mountCard(el, api, summary, status, act) {
     void loadPixelFont();
+    if (api.lang) setLang(api.lang());
     const holder = document.createElement("div");
     const root = holder.attachShadow({ mode: "open" });
     const style = document.createElement("style");
@@ -10750,7 +15183,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "bar" },
       h("span", { class: "logo", text: api.t("title") }),
-      stateText ? h("span", { class: "state live", text: stateText }) : h("span", { class: "state", text: "idle arpg" })
+      stateText ? h("span", { class: "state live", text: stateText }) : h("span", { class: "state", text: t("card.idle") })
     );
     const inner = h("div", { class: "in" });
     const card = h("div", { class: `hc${summary ? "" : " new"}` }, bar2, inner);
@@ -10769,16 +15202,16 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (holder.isConnected) paint2();
     });
     if (summary) {
-      const zone = ZONES[summary.zone]?.name ?? summary.zone;
+      const zone = summary.zoneId && ZONES[summary.zoneId] ? zoneName(summary.zoneId) : summary.zone;
       const xp = Math.max(0, Math.min(1, summary.xpFrac));
-      const seen = status === "closed" ? api.t("card.away", { time: fmtDuration(Math.max(0, Date.now() - summary.savedAt)) }) : status === "mini" ? api.t("card.inMini") : api.t("card.inWindow");
+      const seen = status === "closed" ? api.t("card.away", { time: fmtDuration2(Math.max(0, Date.now() - summary.savedAt)) }) : status === "mini" ? api.t("card.inMini") : api.t("card.inWindow");
       inner.append(h("div", { class: "chero" }, pic, h(
         "div",
         { class: "facts" },
         h("div", { class: "name", text: summary.name }),
-        h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls]?.name ?? summary.cls, zone }) }),
+        h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls] ? className(summary.cls) : summary.cls, zone }) }),
         h("div", { class: "xpbar", title: `${(xp * 100).toFixed(1)}%` }, h("i", { style: `width:${(xp * 100).toFixed(1)}%` })),
-        h("div", { class: "xpl", text: `${(xp * 100).toFixed(0)}% XP` }),
+        h("div", { class: "xpl", text: t("card.xp", { n: (xp * 100).toFixed(0) }) }),
         h("div", { class: "muted", text: seen })
       )));
     } else {
@@ -10868,19 +15301,19 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     };
     return {
       get(k) {
-        const raw = read(k);
-        if (raw === null) return null;
+        const raw2 = read(k);
+        if (raw2 === null) return null;
         try {
-          return JSON.parse(raw);
+          return JSON.parse(raw2);
         } catch {
           return null;
         }
       },
       set(k, v) {
-        const raw = JSON.stringify(v);
+        const raw2 = JSON.stringify(v);
         try {
-          if (ls) ls.setItem(prefix + k, raw);
-          else mem.set(k, raw);
+          if (ls) ls.setItem(prefix + k, raw2);
+          else mem.set(k, raw2);
         } catch {
         }
       },
@@ -10977,7 +15410,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           refreshCard?.();
           if (standalone) showOpener();
         },
-        onMini: () => refreshCard?.()
+        onMini: () => refreshCard?.(),
+        // In Discord the hub's language; standalone, ?lang= or the browser's.
+        lang: () => hub ? typeof hub.lang === "function" ? hub.lang() : "en" : standaloneLang()
       });
     }
     await game.open();
@@ -11037,9 +15472,17 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
     }
   };
+  function standaloneLang() {
+    try {
+      return new URLSearchParams(location.search).get("lang") || navigator.language || "en";
+    } catch {
+      return "en";
+    }
+  }
   function showOpener() {
     const b = document.createElement("button");
-    b.textContent = "Open Hollowmarch";
+    setLang(standaloneLang());
+    b.textContent = t("app.openBtn");
     b.setAttribute("style", "position:fixed;left:16px;bottom:16px;z-index:10049;font:900 14px Segoe UI,sans-serif;padding:10px 16px;background:#ffc233;border:3px solid #111;box-shadow:4px 4px 0 #111;cursor:pointer");
     b.addEventListener("click", () => {
       b.remove();

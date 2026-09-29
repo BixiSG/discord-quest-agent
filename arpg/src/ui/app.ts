@@ -9,9 +9,9 @@ import { newGame, sheetOf } from "../core/game";
 import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type SaveEnvelope } from "../core/save";
 import { validateState } from "../core/validate";
 import type { GameState } from "../core/state";
-import { ZONES, CLASSES, COMPANIONS, SUPPORTS, xpToNext } from "../core/data";
+import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
 import { deriveSheet, supportSlots } from "../core/character";
-import { baseOf, itemLabel } from "../core/items";
+import { baseOf } from "../core/items";
 import { pointsLeft, ascPointsLeft } from "../core/passives";
 import { atlasPointsLeft } from "../core/maps";
 import { claimable } from "../core/contracts";
@@ -30,6 +30,9 @@ import { installTips } from "./tips";
 import { loadPixelFont } from "./gfx/webfont";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { itemCard } from "./views";
+import { lang, setLang, t, tn } from "../i18n";
+import { className, companionName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { tErr } from "../i18n/errors";
 
 const GEO_KEY = "window";
 /** Frame state that is not geometry: stage size, mini, maximized. */
@@ -48,7 +51,7 @@ const XP_WINDOW_MS = 10 * 60e3;
 type StageSize = "l" | "m" | "off";
 const STAGE_FRAC: Record<Exclude<StageSize, "off">, number> = { l: 0.42, m: 0.28 };
 const STAGE_NEXT: Record<StageSize, StageSize> = { m: "l", l: "off", off: "m" };
-const STAGE_TITLE: Record<StageSize, string> = { m: "Battle view: normal (click for large)", l: "Battle view: large (click to hide)", off: "Battle view: hidden (click to show)" };
+const STAGE_TITLE = (s: StageSize) => t(`app.stage.${s}`);
 
 /** `sfx` replaced an older `sound` flag that defaulted to on: sound starts muted, even for old saves. */
 interface Frame { stage: StageSize; mini: boolean; max: boolean; sfx: boolean; volume: number }
@@ -62,6 +65,8 @@ export interface AppHooks {
     onClose?(): void;
     /** The window folded into the strip or back (the launcher card shows which). */
     onMini?(mini: boolean): void;
+    /** The language to show (the hub's, in Discord); asked when the window opens and while it runs. */
+    lang?(): string;
 }
 
 // Events typed or pasted in the game must not reach Discord's document handlers.
@@ -106,7 +111,11 @@ export class GameWindow {
     private stopKeys: ((e: Event) => void) | null = null;
     private frame: Frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35 };
     private xpLog: [number, number][] = [];
-    private lastEvent = "";
+    /** The strip's last notable event: a string key and params (it follows a language switch), or a toast's text. */
+    private lastEvent: [string, Record<string, string | number>] | string | null = null;
+    private closeBtn!: HTMLButtonElement;
+    /** The language the window's fixed labels were drawn in. */
+    private lang = "";
     private onUnload = () => {
         if (!this.state) return;
         this.kv.set(QUICK_KEY, wrap(this.state, Date.now()));
@@ -155,6 +164,8 @@ export class GameWindow {
     // ---- frame ----------------------------------------------------------------
 
     private build(): void {
+        if (this.hooks.lang) setLang(this.hooks.lang());
+        this.lang = lang();
         const host = document.createElement("div");
         host.id = "hollowmarch-root";
         this.host = host;
@@ -184,12 +195,13 @@ export class GameWindow {
             return b;
         };
         this.who = h("span", { class: "who" });
-        this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
-        this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini), "mn");
-        this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
-        this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
+        this.stageBtn = ctl("stage", STAGE_TITLE("m"), () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
+        this.miniBtn = ctl("min", t("app.mini"), () => this.setMini(!this.frame.mini), "mn");
+        this.maxBtn = ctl("max", t("app.max"), () => this.setMax(!this.frame.max), "mx");
+        this.soundBtn = ctl("mute", t("app.soundOff"), () => this.setSound(!this.frame.sfx), "snd");
+        this.closeBtn = ctl("close", t("app.close"), () => void this.close(), "x");
         const bar = h("div", { class: "bar" }, h("span", { class: "logo", text: "Hollowmarch" }), this.who,
-            h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x")));
+            h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, this.closeBtn));
         bar.addEventListener("dblclick", e => { if (!(e.target as HTMLElement).closest("button")) this.setMax(!this.frame.max); });
 
         // Dialogs never open inside the strip: they wait, hidden, and a row over the strip's battle brings the window back for them.
@@ -201,21 +213,21 @@ export class GameWindow {
         this.top = h("div", { class: "top" }, this.stage);
         // In the strip the battle is the handle: drag it to move, double-click for the full window.
         this.stage.addEventListener("dblclick", e => { if (this.frame.mini && !(e.target as HTMLElement).closest("button")) this.setMini(false); });
-        this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
+        this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": t("app.hudLabel") } }, this.hud.canvas);
 
-        this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
+        this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
         VIEWS.forEach((v, i) => {
-            this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${i + 1})` }, on: { click: () => {
+            this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${i + 1})` }, on: { click: () => {
                 this.view = v.id; this.sig = ""; if (this.ctx) this.ctx.sel = {};
                 this.renderTab(true); this.body.scrollTop = 0;
-            } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: v.label }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
+            } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
         });
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
         const main = h("div", { class: "main" }, this.nav, this.body);
 
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
         const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-        this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar, this.top, this.hudWrap, main, this.toasts, grip);
+        this.win = h("div", { class: `win lang-${lang()}`, attrs: { role: "dialog", "aria-label": "Hollowmarch", lang: lang() } }, bar, this.top, this.hudWrap, main, this.toasts, grip);
         shell.append(this.win);
         this.root.append(shell);
         document.body.append(host);
@@ -338,12 +350,13 @@ export class GameWindow {
         this.win.classList.toggle("max", f.max && !f.mini);
         this.top.classList.toggle("nostage", f.stage === "off");
         // Tooltip text goes to data-tip (the game's own tooltips), never a native title.
-        this.stageBtn.dataset.tip = STAGE_TITLE[f.stage];
-        this.stageBtn.setAttribute("aria-label", STAGE_TITLE[f.stage]);
+        this.stageBtn.dataset.tip = STAGE_TITLE(f.stage);
+        this.stageBtn.setAttribute("aria-label", STAGE_TITLE(f.stage));
         const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.removeAttribute("title"); b.dataset.tip = title; b.setAttribute("aria-label", title); };
-        setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
-        setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-        setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+        setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? t("app.unmini") : t("app.mini"));
+        setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? t("app.restore") : t("app.max"));
+        setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? t("app.soundOn") : t("app.soundOff"));
+        setGlyph(this.closeBtn, "close", t("app.close"));
         this.soundBtn.classList.toggle("off", !f.sfx);
         this.refit();
     }
@@ -437,7 +450,7 @@ export class GameWindow {
         const bar = h("i", { style: "width:0%" });
         const label = h("div", { class: "muted", text: "" });
         const shown = away > 2000;
-        const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar))) : () => {};
+        const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: t("report.title") }), label, h("div", { class: "progress" }, bar))) : () => {};
         // The strip shows the same progress in one line.
         const [miniLabel, miniBar] = [this.miniProg.firstElementChild as HTMLElement, this.miniProg.querySelector("i") as HTMLElement];
         this.miniProg.hidden = !shown;
@@ -446,7 +459,7 @@ export class GameWindow {
         while (!advance(s, target, rep.events, 25000)) {
             const f = (s.simTo - from) / Math.max(1, target - from);
             bar.style.width = miniBar.style.width = (f * 100).toFixed(1) + "%";
-            label.textContent = miniLabel.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+            label.textContent = miniLabel.textContent = t("app.replaying", { time: fmtDuration(target - from), pct: (f * 100).toFixed(0) });
             if (this.frame.mini) this.drawHud();
             await new Promise(r => setTimeout(r, 0));
             if (!this.host) return;
@@ -475,22 +488,22 @@ export class GameWindow {
             heroHit: (i, dmg, crit) => { be.heroHit?.(i, dmg, crit); sfx(crit ? "crit" : "hit"); },
             monsterHit: (i, dmg, avoided) => { be.monsterHit?.(i, dmg, avoided); if (!avoided) sfx("hurt"); },
             flask: () => { be.flask?.(); sfx("flask"); },
-            story: text => this.showStory(text),
-            zone: (_from, to, why) => { if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`, "road"); },
+            story: key => this.showStory(key),
+            zone: (_from, to, why) => { if (why === "unlock") this.toast(t("toast.newRoad", { zone: ZONES[to] ? zoneName(to) : to }), "road"); },
             kill: (_m, xp) => { if (xp > 0) this.xpLog.push([Date.now(), xp]); sfx("kill"); },
-            level: l => { be.level?.(l); this.toast(`Level ${l}`, "level"); this.lastEvent = `Reached level ${l}`; sfx("level", true); },
+            level: l => { be.level?.(l); this.toast(t("toast.level", { level: l }), "level"); this.lastEvent = ["event.level", { level: l }]; sfx("level", true); },
             loot: (item, kept, equipped) => {
                 if (!kept) return;
                 if (item.rarity !== "plain") sfx(item.rarity === "enchanted" ? "loot1" : item.rarity === "rare" ? "loot2" : "loot3", item.rarity !== "enchanted");
-                const name = itemLabel(item);
-                if (equipped) { this.toast(`Equipped: ${name}`, item.rarity); this.lastEvent = `Equipped ${name}`; }
-                else if (item.rarity === "rare" || item.rarity === "relic") { this.toast(`${item.rarity === "relic" ? "Relic" : "Rare"}: ${name}`, item.rarity); this.lastEvent = `Found ${name}`; }
+                const name = itemName(item);
+                if (equipped) { this.toast(t("toast.equipped", { item: name }), item.rarity); this.lastEvent = ["event.equipped", { item: name }]; }
+                else if (item.rarity === "rare" || item.rarity === "relic") { this.toast(t(item.rarity === "relic" ? "toast.relic" : "toast.rare", { item: name }), item.rarity); this.lastEvent = ["event.found", { item: name }]; }
             },
-            death: () => { this.lastEvent = "Died. The ember relights."; sfx("death"); },
+            death: () => { this.lastEvent = ["event.died", {}]; sfx("death"); },
             companion: (id, isNew) => {
-                const name = COMPANIONS[id]?.name ?? id;
-                this.toast(isNew ? `Companion: ${name} joins you` : `${name} grows closer`, "relic");
-                this.lastEvent = isNew ? `${name} joined` : `${name} grew closer`;
+                const pet = companionName(id);
+                this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
+                this.lastEvent = [isNew ? "event.petJoined" : "event.petCloser", { pet }];
                 sfx("level", true);
             },
         };
@@ -526,7 +539,7 @@ export class GameWindow {
             sheet: () => sheetOf(this.state!),
             act: (fn, ok) => {
                 const err = fn(this.state!);
-                if (typeof err === "string") this.toast(err, "err");
+                if (typeof err === "string") this.toast(tErr(err), "err");
                 else if (ok) this.toast(ok);
                 this.sig = "";
                 this.renderTab(true);
@@ -567,12 +580,13 @@ export class GameWindow {
         if (!this.state || !this.ctx) return;
         // Signatures are cheap but not free (some stringify state): check four times a second.
         if (!force) {
-            const t = performance.now();
-            if (t - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return; // not under a drag or a tooltip
-            this.lastSigCheck = t;
+            const now = performance.now();
+            if (now - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return; // not under a drag or a tooltip
+            this.lastSigCheck = now;
         }
+        this.syncLang();
         this.updateBadges();
-        const sig = this.view + ":" + viewSig(this.view, this.ctx);
+        const sig = this.view + ":" + lang() + ":" + viewSig(this.view, this.ctx);
         if (!force && sig === this.sig) return;
         this.sig = sig;
         for (const b of this.nav.querySelectorAll("button")) {
@@ -590,6 +604,30 @@ export class GameWindow {
         pixelize(this.body);
         this.body.scrollTop = top;
         if (focusAt >= 0) (this.body.querySelectorAll<HTMLElement>(FOCUSABLE)[focusAt])?.focus({ preventScroll: true });
+    }
+
+    /** Follows the hub's language while the window is open: a change redraws the frame's own labels (the tab follows by its signature). */
+    private syncLang(): void {
+        if (this.hooks.lang) setLang(this.hooks.lang());
+        if (lang() === this.lang || !this.host) return;
+        this.lang = lang();
+        this.win.classList.remove("lang-en", "lang-ru", "lang-uk");
+        this.win.classList.add(`lang-${this.lang}`);
+        this.win.setAttribute("lang", this.lang);
+        this.nav.setAttribute("aria-label", t("app.sections"));
+        this.hudWrap.setAttribute("aria-label", t("app.hudLabel"));
+        VIEWS.forEach((v, i) => {
+            const b = this.nav.children[i] as HTMLElement | undefined;
+            if (!b) return;
+            b.title = `${t(`nav.${v.id}`)} (${i + 1})`;
+            delete b.dataset.tip;
+            b.removeAttribute("aria-description");
+            b.querySelector(".lbl")?.replaceWith(h("span", { class: "lbl", text: t(`nav.${v.id}`) }));
+        });
+        pixelize(this.nav);
+        this.who.dataset.k = "";
+        this.sig = "";
+        this.applyFrame();
     }
 
     /** Small counters on the tabs: things waiting for a decision. */
@@ -615,18 +653,18 @@ export class GameWindow {
         const tree = Math.max(0, pointsLeft(hero)) + Math.max(0, ascPointsLeft(hero));
         const atlas = Math.max(0, atlasPointsLeft(s));
         const marks: Partial<Record<ViewId, [string, string]>> = {
-            skills: freeSupport ? ["!", "A free support slot would add damage"] : undefined,
-            tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : undefined,
-            atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : undefined,
-            gear: s.stashFull ? ["!", "Stash is full: drops are being salvaged"] : undefined,
-            world: claimable(s) ? [String(claimable(s)), `${claimable(s)} contract${claimable(s) > 1 ? "s" : ""} to claim`] : undefined,
+            skills: freeSupport ? ["!", t("badge.support")] : undefined,
+            tree: tree ? [String(tree), tn("badge.tree", tree)] : undefined,
+            atlas: atlas ? [String(atlas), tn("badge.atlas", atlas)] : undefined,
+            gear: s.stashFull ? ["!", t("badge.stash")] : undefined,
+            world: claimable(s) ? [String(claimable(s)), tn("badge.contracts", claimable(s))] : undefined,
         };
         for (const b of this.nav.children) {
             const id = b.getAttribute("data-v") as ViewId;
             const badge = b.querySelector(".badge") as HTMLElement;
             const m = marks[id];
             const text = m?.[0] ?? "";
-            if (badge.textContent !== text) { badge.textContent = text; badge.toggleAttribute("hidden", !m); badge.dataset.tip = m?.[1] ?? ""; }
+            if (badge.textContent !== text || badge.dataset.tip !== (m?.[1] ?? "")) { badge.textContent = text; badge.toggleAttribute("hidden", !m); badge.dataset.tip = m?.[1] ?? ""; }
         }
     }
 
@@ -649,8 +687,8 @@ export class GameWindow {
             life, lifeMax: sh.life, es, esMax: sh.es, mana, manaMax: sh.mana,
             flask: hh?.flask ?? 30, flaskMax: 30, level: s.hero.level, xpFrac: xpF, eta: eta.replace(/^~/, "~ "),
             ready: run?.phase === "fight" ? (now - this.lastUse) / (1000 / speed) : 1,
-            skillName: sh.skill.name, weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
-            zone: z.name, zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead", respawn: run?.phase === "dead" ? run.timer : 0,
+            skillName: skillName(sh.skill.id), weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
+            zone: placeName(s), zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead", respawn: run?.phase === "dead" ? run.timer : 0,
         }, now);
 
         const wk = `${z.id}|${z.palette.join()}`;
@@ -660,21 +698,25 @@ export class GameWindow {
             const [sky, ground] = z.palette;
             this.stage.style.background = `linear-gradient(to bottom, ${sky} 0 83.4%, #111 83.4% 85%, ${ground} 85% 100%)`;
         }
-        const cls = CLASSES[s.hero.cls]?.name ?? "";
-        const who = `${s.hero.name}|${s.hero.level}|${cls}`;
+        const cls = CLASSES[s.hero.cls] ? className(s.hero.cls) : "";
+        const who = `${s.hero.name}|${s.hero.level}|${cls}|${lang()}`;
         if (this.who.dataset.k !== who) {
             this.who.dataset.k = who;
-            this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: `Level ${s.hero.level} ${cls}` }));
+            this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: t("app.who", { level: s.hero.level, cls }) }));
         }
         // Screen readers and hover get the numbers the canvas shows, refreshed once a second.
         if (now - this.ariaAt > 1000) {
             this.ariaAt = now;
             const n = (x: number) => fmt(Math.floor(Math.max(0, x)));
-            const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. `
-                + `Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
+            const label = (run?.phase === "dead" ? t("hud.ariaDead", { n: Math.ceil(run.timer) }) : "") + t("hud.aria", {
+                life: n(life), lifeMax: n(sh.life), es: sh.es ? t("hud.ariaEs", { es: n(es), esMax: n(sh.es) }) : "", mana: n(mana), manaMax: n(sh.mana), flask: Math.floor(hh?.flask ?? 30),
+                level: s.hero.level, xp: (xpF * 100).toFixed(1), eta: eta ? ` (${eta})` : "", zone: placeName(s), area: z.level, dps: fmt(sh.skill.packDps) });
             this.hudWrap.setAttribute("aria-label", label);
             this.hudWrap.dataset.tip = label;
-            if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
+            this.syncLang();
+            const e = this.lastEvent;
+            const last = !e ? "" : typeof e === "string" ? e : t(e[0], e[1]);
+            if (this.miniLast.textContent !== last) this.miniLast.textContent = last;
         }
     }
 
@@ -686,7 +728,7 @@ export class GameWindow {
         const span = Math.max(30e3, now - this.xpLog[0]![0]);
         const rate = this.xpLog.reduce((a, [, x]) => a + x, 0) / span;
         if (rate <= 0) return "";
-        return `~${fmtDuration(left / rate)} to level`;
+        return t("hud.eta", { time: fmtDuration(left / rate) });
     }
 
     private pingTimer = 0;
@@ -748,9 +790,9 @@ export class GameWindow {
         const top = waiting[waiting.length - 1];
         this.miniNote.hidden = !top;
         if (!top) return;
-        const title = top.getAttribute("aria-label") || "A message";
-        this.miniNote.dataset.tip = `${title}: open the full window to read it`;
-        this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
+        const title = top.getAttribute("aria-label") || t("mini.message");
+        this.miniNote.dataset.tip = t("mini.tip", { title });
+        this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? tn("mini.waiting", waiting.length) : t("mini.open") }));
     }
 
     private showCreation(): void {
@@ -758,7 +800,7 @@ export class GameWindow {
         this.win.classList.add("creating");
         if (this.frame.mini) this.setMini(false);
         this.who.dataset.k = "";
-        this.who.replaceChildren(h("b", { text: "A new Kindled" }));
+        this.who.replaceChildren(h("b", { text: t("app.newKindled") }));
         let started = false;
         this.body.append(creationView(async (name, cls) => {
             if (started) return;
@@ -771,38 +813,40 @@ export class GameWindow {
     }
 
     private storyBox: HTMLElement | null = null;
-    /** One story window at a time: later beats are added to the open one. */
-    private showStory(text: string): void {
+    /** One story window at a time: later beats are added to the open one. Beats come as string keys. */
+    private showStory(key: string): void {
+        const text = storyText(key);
         if (this.storyBox?.isConnected) { this.storyBox.append(h("div", { class: "story", style: "margin-top:6px", text })); return; }
         const box = h("div", { class: "col" }, h("div", { class: "story", text }));
-        const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), box);
+        const card = h("div", { class: "card col" }, h("h3", { text: t("story.title") }), box);
         const close = this.modal(card);
         this.storyBox = box;
-        card.append(h("button", { class: "btn", text: "Onward", on: { click: () => { close(); this.storyBox = null; } } }));
+        card.append(h("button", { class: "btn", text: t("story.onward"), on: { click: () => { close(); this.storyBox = null; } } }));
     }
 
     private showReport(r: Report): void {
         const rows: [string, string][] = [
-            ["Time away", fmtDuration(r.to - r.from)],
-            ["Runs cleared", fmt(r.runs)], ["Monsters slain", fmt(r.kills)], ["Bosses", fmt(r.bosses)], ["Deaths", fmt(r.deaths)],
-            ["Levels", r.levelTo > r.levelFrom ? `${r.levelFrom} -> ${r.levelTo}` : `${r.levelTo} (no change)`],
-            ["Experience", fmt(r.xp)], ["Items kept", fmt(r.kept)], ["Salvaged", fmt(r.salvaged)], ["Ember dust", `+${fmt(r.dust)}`],
-            ...(r.swapped ? [["Swapped out by upkeep", fmt(r.swapped)] as [string, string]] : []),
+            [t("report.away"), fmtDuration(r.to - r.from)],
+            [t("report.runs"), fmt(r.runs)], [t("report.kills"), fmt(r.kills)], [t("report.bosses"), fmt(r.bosses)], [t("report.deaths"), fmt(r.deaths)],
+            [t("report.levels"), r.levelTo > r.levelFrom ? t("report.levelUp", { from: r.levelFrom, to: r.levelTo }) : t("report.noChange", { level: r.levelTo })],
+            [t("report.xp"), fmt(r.xp)], [t("report.kept"), fmt(r.kept)], [t("report.salvaged"), fmt(r.salvaged)], [t("report.dust"), `+${fmt(r.dust)}`],
+            ...(r.swapped ? [[t("report.swapped"), fmt(r.swapped)] as [string, string]] : []),
         ];
         const kvEl = h("div", { class: "kv" });
         for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
-        const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
-        for (const t of r.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
-        if (r.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r.zones.join(", ")}` }));
-        if (r.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
-        if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: `New companion${r.newCompanions.length > 1 ? "s" : ""}: ${r.newCompanions.join(", ")}` }));
-        if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: `New in the codex: ${r.newRelics.join(", ")}` }));
+        const card = h("div", { class: "card col" }, h("h3", { text: t("report.title") }), kvEl);
+        const list = (xs: string[]) => xs.join(t("common.list"));
+        for (const key of r.story.slice(-3)) card.append(h("div", { class: "story", text: storyText(key) }));
+        if (r.zones.length) card.append(h("div", { class: "tag teal", text: t("report.roads", { list: list(r.zones.map(id => zoneName(id))) }) }));
+        if (r.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list(r.equipped.slice(-4).map(it => itemName(it))) }) }));
+        if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r.newCompanions.length, { list: list(r.newCompanions.map(id => companionName(id))) }) }));
+        if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list(r.newRelics.map(id => relicName(id))) }) }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;
-            card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
+            card.append(h("div", { class: "muted", text: t("report.best") }), itemCard(best, null));
         }
         const close = this.modal(card);
-        card.append(h("button", { class: "btn", text: "Back to it", on: { click: () => close() } }));
+        card.append(h("button", { class: "btn", text: t("report.back"), on: { click: () => close() } }));
     }
 }
 
@@ -810,7 +854,7 @@ export function summaryOf(s: GameState): Summary {
     const need = xpToNext(s.hero.level);
     const run = s.activity.run;
     const z = run ? runZone(s, run) : ZONES[s.activity.zone];
-    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: z?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1,
+    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: z ? placeName(s) : s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1,
         zoneId: z?.id ?? s.activity.zone, sky: z?.palette[0] };
 }
 

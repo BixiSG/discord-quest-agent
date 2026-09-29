@@ -2,6 +2,8 @@
 // data), and listeners through addEventListener (Discord's CSP blocks inline
 // handlers).
 
+import { fmtDuration as fmtDurationIn } from "../i18n/names";
+
 type Child = Node | string | number | null | undefined | false;
 export interface Props {
     class?: string;
@@ -39,13 +41,7 @@ export function fmt(n: number): string {
     return n.toFixed(2).replace(/\.?0+$/, "") || "0";
 }
 
-export function fmtDuration(ms: number): string {
-    const s = Math.floor(ms / 1000);
-    const d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600), mm = Math.floor((s % 3600) / 60);
-    if (d) return `${d}d ${hh}h`;
-    if (hh) return `${hh}h ${mm}m`;
-    if (mm) return `${mm}m`;
-    return `${s}s`;
-}
+/** "2d 3h", "1h 5m", "12m", "40s", in the game's language. */
+export const fmtDuration = (ms: number): string => fmtDurationIn(ms);
 
 export const pct = (x: number, digits = 0) => (x * 100).toFixed(digits) + "%";

@@ -73,7 +73,11 @@ export interface RunState {
     elapsed: number;
 }
 
-export interface LogEntry { t: number; kind: "level" | "loot" | "death" | "zone" | "boss" | "info"; text: string }
+/**
+ * A chronicle line. `text` is English (old saves have only that); newer entries also carry a string
+ * key and params (content as references, i18n/refs.ts), so they read in the game's language.
+ */
+export interface LogEntry { t: number; kind: "level" | "loot" | "death" | "zone" | "boss" | "info"; text: string; key?: string; params?: Record<string, string | number> }
 
 export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number; /** Stash items upkeep gave up for better drops. */ swapped?: number }
 

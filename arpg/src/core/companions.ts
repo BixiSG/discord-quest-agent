@@ -4,6 +4,7 @@
 
 import { COMPANIONS, COMPANION_ORDER, DUPLICATE_BOND, bondFor, companionLevel, COMPANION_MAX_LEVEL } from "./data";
 import { pushLog } from "./game";
+import { ref } from "../i18n/refs";
 import type { Rng } from "./rng";
 import type { GameState } from "./state";
 
@@ -19,12 +20,12 @@ export function grantCompanion(state: GameState, id: string): boolean {
     const owned = state.companions[id] !== undefined;
     if (!owned) {
         state.companions[id] = 0;
-        pushLog(state, "loot", `A ${def.name} joins you.`);
+        pushLog(state, "loot", "log.petJoins", { pet: ref.companion(id) });
         if (!state.hero.pet) setCompanion(state, id);
         return true;
     }
     addBond(state, id, DUPLICATE_BOND);
-    pushLog(state, "loot", `Another ${def.name}: your ${def.name} grows closer.`);
+    pushLog(state, "loot", "log.petDuplicate", { pet: ref.companion(id) });
     return false;
 }
 
@@ -46,7 +47,7 @@ export function addBond(state: GameState, id: string, n: number): boolean {
     if (!pet || pet.id !== id || pet.level >= COMPANION_MAX_LEVEL || bond < bondFor(pet.level + 1)) return false;
     pet.level = companionLevel(bond);
     state.hero.rev++;
-    pushLog(state, "level", `${COMPANIONS[id]!.name} reached level ${pet.level}.`);
+    pushLog(state, "level", "log.petLevel", { pet: ref.companion(id), level: pet.level });
     return true;
 }
 
