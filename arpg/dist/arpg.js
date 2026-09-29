@@ -5354,6 +5354,24 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .smith { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .dust { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #1a1410; color: #ffc233; }
 .dust b { font-size: 18px; } .dust span { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #b5a48b; }
+
+/* atlas */
+.ladder { display: flex; gap: 2px; flex-wrap: wrap; }
+.rung { width: 26px; height: 26px; display: grid; place-items: center; background: #1a1410; color: #6b5d4b; font: 700 11px/1 var(--mono); border: 2px solid var(--line); }
+.rung.done { background: var(--teal); color: #1a1410; }
+.zone.map { gap: 10px; }
+.mthumb { flex: none; width: 84px; height: 44px; image-rendering: pixelated; border: 2px solid var(--line); }
+.zone.map b { font: 700 13px/1.1 var(--display); font-stretch: condensed; letter-spacing: .4px; text-transform: uppercase; }
+.pinnacle { align-items: stretch; }
+.pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
+.pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
+
+/* log: a journal with a pixel mark per kind */
+.log { background-image: repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in srgb, var(--line) 10%, transparent) 23px 24px); }
+.log .entry { border-bottom: 0; min-height: 24px; align-items: center; }
+.log .lg { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: #1a1410; border: 2px solid var(--line); }
+.log .entry.k-death .grow { color: var(--red); } .hm.dark .log .entry.k-death .grow { color: #ff8a8c; }
+.log .entry.k-level .grow, .log .entry.k-boss .grow { font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -6718,9 +6736,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       );
     }
     const root = h("div", { class: "col" });
-    const mode = h("input", { attrs: { type: "checkbox" } });
-    mode.checked = st.activity.mode === "map";
-    mode.addEventListener("change", () => c.act((s) => setMapMode(s, mode.checked)));
+    const onMaps = st.activity.mode === "map";
+    const mode = h(
+      "button",
+      { class: `toggle${onMaps ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(onMaps) }, on: { click: () => c.act((s) => setMapMode(s, !onMaps)) } },
+      h("i"),
+      h("span", null, h("b", { text: "Run maps" }), h("small", { text: "Instead of story zones. With no maps left: the Outskirts, which drop Tier 1 maps." }))
+    );
     const tiers = [.../* @__PURE__ */ new Set([...st.maps.map((m4) => m4.tier), ...st.activity.mapTier ? [st.activity.mapTier] : []])].sort((a, b) => a - b);
     const tierSel = h("select");
     tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
@@ -6732,7 +6754,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "card col" },
       h("h3", { text: "The map device" }),
-      h("label", { class: "chk" }, mode, "Run maps instead of story zones (no maps left: the Outskirts, which drop Tier 1 maps)"),
+      mode,
       h(
         "div",
         { class: "row" },
@@ -6750,18 +6772,21 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
     for (const m4 of maps.slice(0, 40)) {
       const on = c.sel.uid === m4.uid;
+      const area = MAP_AREAS[m4.area];
+      const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
+      if (thumb) thumb.className = "mthumb";
       list6.append(h(
         "div",
-        { class: `zone${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
+        { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
           c.sel = { uid: m4.uid };
           c.rerender();
         } } },
-        h("div", { class: "tag", style: `background:${RCOLOR[m4.rarity]}`, text: tierName(m4.tier) }),
+        thumb,
         h(
           "div",
           { class: "grow" },
-          h("div", { style: "font-weight:800", text: mapLabel(m4) }),
-          m4.mods.length ? h("div", { class: "muted", style: "font-size:11px", text: m4.mods.map((id) => MAP_MODS[id]?.text ?? id).join(" / ") }) : null
+          h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m4.rarity]};color:#1a1410`, text: tierName(m4.tier) }), h("b", { text: mapLabel(m4) })),
+          m4.mods.length ? h("div", { class: "muted", style: "font-size:11px;margin-top:2px", text: m4.mods.map((id) => MAP_MODS[id]?.text ?? id).join(" / ") }) : null
         )
       ));
     }
@@ -6819,9 +6844,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     for (const p of Object.values(PINNACLES)) {
       const have = st.sigils[p.sigil] ?? 0;
       const queued = st.activity.pinnacle === p.id;
+      const cast = MONSTER_CAST[p.boss];
+      const art = cast ? spriteCanvas(cast.sprite) : null;
+      if (art) art.className = "pin-art";
       pins.append(h(
         "div",
-        { class: "skill", style: "cursor:default" },
+        { class: "skill pinnacle", style: "cursor:default" },
+        art ? h("div", { class: "pin-frame", style: `background:${p.palette[0]}` }, art) : null,
         h(
           "div",
           { class: "grow" },
@@ -6842,8 +6871,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return root;
   }
   function tierChips(done) {
-    const row = h("div", { class: "row", style: "gap:3px" });
-    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: "tag", style: done.includes(t) ? "background:var(--teal)" : "opacity:.5", text: String(t) }));
+    const row = h("div", { class: "ladder", attrs: { "aria-label": `Tiers cleared: ${done.length} of ${MAX_TIER}` } });
+    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: `rung${done.includes(t) ? " done" : ""}`, title: `${tierName(t)}${done.includes(t) ? ": cleared" : ""}`, text: String(t) }));
     return row;
   }
 
@@ -7630,6 +7659,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
     return root;
   }
+  var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
   var LOG_KINDS = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
   var logFilter = "all";
   function logView(c) {
@@ -7650,8 +7680,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
       el.append(h(
         "div",
-        { class: "entry" },
-        h("span", { class: "tag", style: `background:${color};color:#1a1410`, text: label }),
+        { class: `entry k-${e.kind}` },
+        h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)),
         h("span", { class: "grow", text: e.text }),
         h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })
       ));
@@ -7676,11 +7706,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     keep.addEventListener("change", () => c.act((s) => {
       s.settings.keep = keep.value;
     }));
-    const auto = h("input", { attrs: { type: "checkbox" } });
-    auto.checked = st.settings.autoEquip;
-    auto.addEventListener("change", () => c.act((s) => {
-      s.settings.autoEquip = auto.checked;
-    }));
+    const auto = h(
+      "button",
+      { class: `toggle${st.settings.autoEquip ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoEquip) }, on: { click: () => c.act((s) => {
+        s.settings.autoEquip = !s.settings.autoEquip;
+      }) } },
+      h("i"),
+      h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score." }))
+    );
     const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
     const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
     const t = st.totals;
@@ -7691,7 +7724,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         "div",
         { class: "card col" },
         h("h3", { text: "Loot" }),
-        h("label", { class: "chk" }, auto, "Equip upgrades automatically"),
+        auto,
         filterEditor(c),
         h("div", { class: "row" }, "Otherwise", keep),
         h("div", { class: "muted", style: "font-size:11px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })

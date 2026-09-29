@@ -1,10 +1,13 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
-import { ATLAS, CURRENCIES, MAP_MODS, MAX_TIER, PINNACLES, tierName } from "../core/data";
+import { ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, tierName } from "../core/data";
 import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
 import { MAP_DEATH_XP } from "../core/sim/engine";
 import type { Ctx } from "./views";
+import { scenery } from "./gfx/portrait";
+import { spriteCanvas } from "./gfx/sprites";
+import { MONSTER_CAST } from "./gfx/cast";
 
 const MAP_CRAFTS = ["kindling", "reshaper", "graft", "crownseal", "forgeheart", "tempest", "starfall", "salt"];
 const RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare: "var(--r-rare)" };
@@ -25,9 +28,9 @@ export function atlasView(c: Ctx): HTMLElement {
     const root = h("div", { class: "col" });
 
     // Controls.
-    const mode = h("input", { attrs: { type: "checkbox" } });
-    mode.checked = st.activity.mode === "map";
-    mode.addEventListener("change", () => c.act(s => setMapMode(s, mode.checked)));
+    const onMaps = st.activity.mode === "map";
+    const mode = h("button", { class: `toggle${onMaps ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(onMaps) }, on: { click: () => c.act(s => setMapMode(s, !onMaps)) } },
+        h("i"), h("span", null, h("b", { text: "Run maps" }), h("small", { text: "Instead of story zones. With no maps left: the Outskirts, which drop Tier 1 maps." })));
     const tiers = [...new Set([...st.maps.map(m => m.tier), ...(st.activity.mapTier ? [st.activity.mapTier] : [])])].sort((a, b) => a - b);
     const tierSel = h("select");
     tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
@@ -37,7 +40,7 @@ export function atlasView(c: Ctx): HTMLElement {
     const deepest = Math.max(0, ...st.atlas.tiers);
     root.append(h("div", { class: "card col" },
         h("h3", { text: "The map device" }),
-        h("label", { class: "chk" }, mode, "Run maps instead of story zones (no maps left: the Outskirts, which drop Tier 1 maps)"),
+        mode,
         h("div", { class: "row" }, "Order", tierSel,
             h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
             h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
@@ -51,10 +54,13 @@ export function atlasView(c: Ctx): HTMLElement {
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
     for (const m of maps.slice(0, 40)) {
         const on = c.sel.uid === m.uid;
-        list.append(h("div", { class: `zone${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
-            h("div", { class: "tag", style: `background:${RCOLOR[m.rarity]}`, text: tierName(m.tier) }),
-            h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: mapLabel(m) }),
-                m.mods.length ? h("div", { class: "muted", style: "font-size:11px", text: m.mods.map(id => MAP_MODS[id]?.text ?? id).join(" / ") }) : null)));
+        const area = MAP_AREAS[m.area];
+        const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
+        if (thumb) thumb.className = "mthumb";
+        list.append(h("div", { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
+            thumb,
+            h("div", { class: "grow" }, h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m.rarity]};color:#1a1410`, text: tierName(m.tier) }), h("b", { text: mapLabel(m) })),
+                m.mods.length ? h("div", { class: "muted", style: "font-size:11px;margin-top:2px", text: m.mods.map(id => MAP_MODS[id]?.text ?? id).join(" / ") }) : null)));
     }
     if (!maps.length) list.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
     const sel = st.maps.find(m => m.uid === c.sel.uid);
@@ -89,7 +95,11 @@ export function atlasView(c: Ctx): HTMLElement {
     for (const p of Object.values(PINNACLES)) {
         const have = st.sigils[p.sigil] ?? 0;
         const queued = st.activity.pinnacle === p.id;
-        pins.append(h("div", { class: "skill", style: "cursor:default" },
+        const cast = MONSTER_CAST[p.boss];
+        const art = cast ? spriteCanvas(cast.sprite) : null;
+        if (art) art.className = "pin-art";
+        pins.append(h("div", { class: "skill pinnacle", style: "cursor:default" },
+            art ? h("div", { class: "pin-frame", style: `background:${p.palette[0]}` }, art) : null,
             h("div", { class: "grow" }, h("div", { class: "nm", text: p.name }), h("div", { class: "ds", text: p.text }),
                 h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
                 h("button", { class: "btn hot", style: "margin-top:6px", text: queued ? "Next run" : `Challenge (${have}/${p.cost})`, attrs: have >= p.cost && !queued ? {} : { disabled: "" },
@@ -99,8 +109,9 @@ export function atlasView(c: Ctx): HTMLElement {
     return root;
 }
 
+/** The tier ladder: one rung per tier, lit once cleared. */
 function tierChips(done: number[]): HTMLElement {
-    const row = h("div", { class: "row", style: "gap:3px" });
-    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: "tag", style: done.includes(t) ? "background:var(--teal)" : "opacity:.5", text: String(t) }));
+    const row = h("div", { class: "ladder", attrs: { "aria-label": `Tiers cleared: ${done.length} of ${MAX_TIER}` } });
+    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: `rung${done.includes(t) ? " done" : ""}`, title: `${tierName(t)}${done.includes(t) ? ": cleared" : ""}`, text: String(t) }));
     return row;
 }

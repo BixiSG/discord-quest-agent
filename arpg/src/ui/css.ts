@@ -412,5 +412,23 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .smith { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .dust { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #1a1410; color: #ffc233; }
 .dust b { font-size: 18px; } .dust span { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #b5a48b; }
+
+/* atlas */
+.ladder { display: flex; gap: 2px; flex-wrap: wrap; }
+.rung { width: 26px; height: 26px; display: grid; place-items: center; background: #1a1410; color: #6b5d4b; font: 700 11px/1 var(--mono); border: 2px solid var(--line); }
+.rung.done { background: var(--teal); color: #1a1410; }
+.zone.map { gap: 10px; }
+.mthumb { flex: none; width: 84px; height: 44px; image-rendering: pixelated; border: 2px solid var(--line); }
+.zone.map b { font: 700 13px/1.1 var(--display); font-stretch: condensed; letter-spacing: .4px; text-transform: uppercase; }
+.pinnacle { align-items: stretch; }
+.pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
+.pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
+
+/* log: a journal with a pixel mark per kind */
+.log { background-image: repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in srgb, var(--line) 10%, transparent) 23px 24px); }
+.log .entry { border-bottom: 0; min-height: 24px; align-items: center; }
+.log .lg { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: #1a1410; border: 2px solid var(--line); }
+.log .entry.k-death .grow { color: var(--red); } .hm.dark .log .entry.k-death .grow { color: #ff8a8c; }
+.log .entry.k-level .grow, .log .entry.k-boss .grow { font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;

@@ -55,8 +55,14 @@ Play-feel review (user's call):
       skills as flat lists with per-skill DPS and best-swap supports; log filter chips.
 - [x] Orbling QoL: hub `api.status()` tooltips on its buttons, next-need forecast, opt-in eating
       quest food on its own.
-- [ ] Hollowmarch: hero sheet grouping, world view (zone progress, farm vs push), forge/tree/atlas
-      polish, the panel card restyled to match the new window.
+- [x] Hollowmarch art pass (user picked CC0 packs + brutalist pixel): animated Gothicvania heroes and
+      monsters, parallax backdrops, pixel HUD (globes, skill cooldown, XP), synthesized sound with mute.
+- [x] Every tab reworked so it reads as a game, not a web page: pixel frames and pixel type, Dungeon
+      Crawl item icons, Gear paper doll with hover-compare and drag and drop, Hero character sheet,
+      Skills socket bar, World act roads with scenery, Forge smithy with currency orbs, Tree as an
+      ember constellation, Atlas ladder and map thumbnails, Log journal icons, Menu switches.
+- [ ] The Hollowmarch card in the quest panel restyled to match; creation screen with class portraits.
+- [ ] Shrink the atlas (palette quantisation) - the build is about 1.2 MB.
 - [ ] Live check of each iteration in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord).
 
 ## 4. Before shipping

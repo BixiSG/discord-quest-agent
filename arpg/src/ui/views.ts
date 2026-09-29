@@ -615,6 +615,7 @@ function worldView(c: Ctx): HTMLElement {
 
 // ---- Log -------------------------------------------------------------------
 
+const LOG_GLYPH: Record<string, Parameters<typeof glyph>[0]> = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
 const LOG_KINDS: Record<string, [string, string]> = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
 let logFilter = "all";
 
@@ -628,7 +629,7 @@ function logView(c: Ctx): HTMLElement {
     for (const e of [...log].reverse()) {
         if (logFilter !== "all" && e.kind !== logFilter) continue;
         const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
-        el.append(h("div", { class: "entry" }, h("span", { class: "tag", style: `background:${color};color:#1a1410`, text: label }), h("span", { class: "grow", text: e.text }),
+        el.append(h("div", { class: `entry k-${e.kind}` }, h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)), h("span", { class: "grow", text: e.text }),
             h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })));
     }
     return el;
@@ -653,16 +654,15 @@ function menuView(c: Ctx): HTMLElement {
         keep.append(o);
     }
     keep.addEventListener("change", () => c.act(s => { s.settings.keep = keep.value as typeof s.settings.keep; }));
-    const auto = h("input", { attrs: { type: "checkbox" } });
-    auto.checked = st.settings.autoEquip;
-    auto.addEventListener("change", () => c.act(s => { s.settings.autoEquip = auto.checked; }));
+    const auto = h("button", { class: `toggle${st.settings.autoEquip ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoEquip) }, on: { click: () => c.act(s => { s.settings.autoEquip = !s.settings.autoEquip; }) } },
+        h("i"), h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score." })));
 
     const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
     const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
     const t = st.totals;
     return h("div", { class: "grid2" },
         h("div", { class: "card col" }, h("h3", { text: "Loot" }),
-            h("label", { class: "chk" }, auto, "Equip upgrades automatically"),
+            auto,
             filterEditor(c),
             h("div", { class: "row" }, "Otherwise", keep),
             h("div", { class: "muted", style: "font-size:11px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
