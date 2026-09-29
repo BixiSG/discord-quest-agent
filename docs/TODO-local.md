@@ -120,12 +120,48 @@ Done (each step: tests where it is core, `npm run check`, a commit; 128 tests):
     so no reload. The user's real save (v4, level 29) was read over CDP and run through the v5
     migration offline: fine (4 relics to the case, upkeep swapping, 2 h sim in 235 ms).
 
-Open for the user:
-- [ ] Reload Discord (or restart it) to get round 3 live: new quest-agent.js (Orbling window),
-      pet.js and arpg.js load together on the next inject.
-- [ ] Late unwearable keepers: at level ~72 upkeep fills the stash with drops that need 74+
-      (they are worth the most). Harmless (wearable upgrades are equipped on drop) but a worth
-      penalty for items far above the hero's level is an option.
+Follow-up loop (2026-09-29 afternoon):
+- [x] Upkeep no longer hoards gear far above the hero's level (worth -3 per level beyond +2):
+      the 24 h bot run keeps 0-5 such items instead of 60.
+- [x] Worn items marked in every item list: gold frame + worn tag in the Gear group filters (worn
+      pieces listed first), the codex and the Forge rack (grouped Worn / Stash / Relic case); hover a
+      stash item and the doll slot it would replace glows, hover a slot and the fitting items light up.
+- [x] Windows come back after a Discord reload or restart: hub addon windows (`SETTINGS.winOpen`)
+      and the game (hub key `reopen`, back in the strip if it was folded). Closing by hand forgets it.
+- [x] Live: build copied, game closed cleanly (with the reopen flag), Discord reloaded at 12:32. The
+      branch agent was not running any more (its task ended at 7:16; whatever kept it alive until
+      11:01 was gone), so it was restarted with `Start-ScheduledTask 'QA dev branch run'`. After the
+      inject: agent v21, the game reopened in the strip, the save is v5 (level 34, stash 58/60, 4
+      relics in the case, 3 contracts running).
+
+## Next updates (roadmap, 2026-09-29)
+
+Ship readiness (next, needs the user's call on the release shape):
+- [ ] Release shape. Proposal: ship the hub, Orbling and Hollowmarch in 1.7.0 through the updater,
+      Hollowmarch off until switched on (it already is). Needs: CHANGELOG bullets for Hollowmarch (it
+      has none yet), `AGENT_VERSION` 21 -> 22 (the hub script changed: windowed addons, winOpen), a
+      PR from this branch. Alternative: keep Hollowmarch a separate install (`arpg\install`).
+- [ ] Sections 1-3 above: the live checklist for Orbling and Hollowmarch, the PS 5.1 installer test.
+- [ ] Refresh `arpg/docs/shots/` (they predate the art pass and round 3) for the README.
+
+Soon (Hollowmarch 1.x):
+- [ ] Localisation: only the card speaks ru/uk; the game UI is English. Extract a string table.
+- [ ] Late economy: dust still inflates (~650k at 24 h) and Kindling/Reshaper pile into the
+      thousands. Ideas: a currency exchange (10 common -> 1 rarer), an ember shrine (dust for a timed
+      XP/rarity blessing), dust costs on map crafting.
+- [ ] Pinnacles: the bot dies ~15 times per 4 h there. A readiness check (DPS/EHP vs the boss)
+      before auto-queueing, and a look at their numbers.
+- [ ] Loot filter editor: affix-group rules ("keep rings with fire resistance") and presets.
+- [ ] Build loadouts: save/restore skill, supports and gear sets; a passive respec cost for dust.
+- [ ] Contracts: zone contracts ("clear Act 2 places"), no-death streaks, one bigger weekly contract.
+- [ ] Feats: lifetime milestones with small permanent rewards (a title, stash room, a hat for Orbling).
+
+Later:
+- [ ] Content: more skills (15) and supports (14), minions or totems as a new archetype; unique map
+      bosses and areas (maps reuse act bosses); an Act 4 or a Depths league mechanic.
+- [ ] Seasonal events (October: a Hollow Night relic; Orbling already has the witch hat).
+- [ ] Orbling in Hollowmarch: the pet follows the hero in battle when both addons are on.
+- [ ] Hub windows: resizable, a 2x/3x scale for Orbling.
 
 ## 4. Before shipping
 - [ ] Fix whatever sections 1-3 turn up; for Hollowmarch run `cd arpg && npm install && npm run check`.
