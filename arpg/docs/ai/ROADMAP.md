@@ -48,12 +48,12 @@ before the next phase starts.
 - [x] Atlas tree
 - [x] Pinnacle bosses
 - [x] Infinite scaling (depth past tier 16)
-- [ ] Review P4
+- [x] Review P4
 
 ## P5 - ship
-- [ ] Balance pass with the headless simulator
+- [x] Balance pass with the headless simulator
 - [ ] Polish: tooltips, keyboard, perf audit, a11y basics
-- [ ] Launcher: user-installed addons from <Root>\addons\*.js
-- [ ] Install script for %LOCALAPPDATA%\DiscordQuestAgent\addons\arpg.js
+- [x] Launcher: user-installed addons from <Root>\addons\*.js
+- [x] Install script for %LOCALAPPDATA%\DiscordQuestAgent\addons\arpg.js
 - [ ] FINAL_REPORT.md + screenshots
 - [ ] Review P5

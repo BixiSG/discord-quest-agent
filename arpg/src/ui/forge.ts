@@ -2,7 +2,9 @@
 // with ember dust.
 
 import { CURRENCIES, CURRENCY_ORDER } from "../core/data";
-import { applyCurrency, buyCurrency, findItem } from "../core/crafting";
+import { applyCurrency, buyCurrency, findItem, forgeCost, forgeRare, maxIlvl } from "../core/crafting";
+
+const SLOT_NAMES: Record<string, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
 import { itemLabel, baseOf } from "../core/items";
 import { SLOTS, type Item } from "../core/types";
 import { fmt, h } from "./dom";
@@ -33,7 +35,15 @@ export function forgeView(c: Ctx): HTMLElement {
             h("button", { class: "btn", text: "Use", attrs: have > 0 && found ? {} : { disabled: "" }, on: { click: () => c.act(s => applyCurrency(s, id, c.sel.uid!), `${def.name} used`) } }),
             h("button", { class: "btn alt", text: `Buy ${def.cost}`, title: "Costs ember dust", attrs: st.dust >= def.cost ? {} : { disabled: "" }, on: { click: () => c.act(s => buyCurrency(s, id)) } })));
     }
+    const cost = forgeCost(st);
+    const smith = h("div", { class: "row", style: "gap:4px" });
+    for (const slot of SLOTS) {
+        smith.append(h("button", { class: "btn alt", text: SLOT_NAMES[slot], attrs: st.dust >= cost ? {} : { disabled: "" },
+            on: { click: () => c.act(s => { const r = forgeRare(s, slot); if (!r.err && r.item) c.sel = { uid: r.item.uid }; return r.err; }, "Forged a rare") } }));
+    }
     return h("div", { class: "col" },
+        h("div", { class: "card col" }, h("h3", { text: `Forge a rare (${fmt(cost)} dust, item level ${maxIlvl(st)})` }),
+            h("div", { class: "muted", style: "font-size:11px", text: "A random rare for the slot, at the highest item level you have reached. Upgrades are worn at once." }), smith),
         h("div", { class: "row" }, h("span", { class: "tag", style: "background:var(--gold)", text: `Ember dust ${fmt(st.dust)}` }),
             h("span", { class: "muted", style: "font-size:11px", text: "Currency drops from champions and bosses; the forge sells it for dust." })),
         h("div", { class: "row", style: "align-items:flex-start;gap:12px" },

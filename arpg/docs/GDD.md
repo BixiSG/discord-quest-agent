@@ -34,7 +34,9 @@ the Hollowmarch towards the place where the sun fell.
 A **run** is one clear of a zone: a number of monster packs and, in boss
 zones, the boss. Runs repeat until the player changes zone. With auto-push on,
 the hero moves to the next zone once it has cleared the current one three
-times in a row without dying.
+times in a row without dying and is at most two levels below it (so it keeps
+earning full experience); in maps it keeps to tiers whose monsters are at
+most four levels above the hero.
 
 ## The hero
 
@@ -97,9 +99,10 @@ currency at the forge.
 
 ## Deaths
 
-Dying ends the run and costs a short respawn wait. In maps it also costs 5%
-of the XP towards the next level. Auto-push drops back one zone after three
-deaths in a row.
+Dying ends the run and costs a short respawn wait. In maps it also costs the
+map and 3% of the XP towards the next level. Auto-push drops back one zone
+after three deaths in a row (in maps: caps the device a tier lower until five
+clean maps), and visits each open trial once the hero is two levels above it.
 
 ## Idle rules
 

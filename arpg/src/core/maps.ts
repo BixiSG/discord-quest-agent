@@ -45,6 +45,7 @@ export function setMapMode(state: GameState, on: boolean): string | null {
     const act = state.activity;
     if ((act.mode === "map") === on) return null;
     act.mode = on ? "map" : "zone";
+    act.streak = 0; act.deaths = 0;
     // A running map is not refunded: switching takes effect on the next run.
     if (!act.run?.map) { act.runIndex++; act.run = null; }
     return null;
@@ -53,6 +54,8 @@ export function setMapMode(state: GameState, on: boolean): string | null {
 export function setMapTier(state: GameState, tier: number): string | null {
     if (!Number.isInteger(tier) || tier < 0) return "bad tier";
     state.activity.mapTier = tier;
+    state.activity.autoCap = 0;
+    state.activity.streak = 0;
     return null;
 }
 
@@ -135,7 +138,11 @@ export function startMapRun(state: GameState): RunMap {
         }
     }
     if (state.maps.length) {
-        const want = act.mapTier;
+        // Auto-push also keeps to tiers the hero can learn from (monster level at most hero level + 4).
+        let xpCap = 0;
+        if (act.autoPush) { xpCap = 1; while (mapLevel(xpCap + 1) <= state.hero.level + 4) xpCap++; }
+        const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter(t => t > 0);
+        const want = caps.length ? Math.min(...caps) : 0;
         const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
         const pick = want > 0 ? (sorted.find(m => m.tier <= want) ?? sorted[sorted.length - 1]!) : sorted[0]!;
         state.maps.splice(state.maps.indexOf(pick), 1);

@@ -1,9 +1,10 @@
 // Crafting currency effects (GDD table). Every use draws from a fresh RNG
 // seeded by (save seed, craft counter), so crafting is deterministic too.
 
-import { CURRENCIES } from "./data";
+import { CURRENCIES, ZONES, mapLevel } from "./data";
+import { receiveItem } from "./game";
 import { Rng, hashSeed } from "./rng";
-import { MAX_AFFIXES, addRandomAffix, affixOf, countAffixes, eligibleAffixes, rareName, rollAffixes } from "./items";
+import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, countAffixes, eligibleAffixes, rareName, rollAffixes } from "./items";
 import type { GameState } from "./state";
 import type { Item, Slot } from "./types";
 import { SLOTS } from "./types";
@@ -81,6 +82,36 @@ export function applyCurrency(state: GameState, currency: string, uid: number): 
     state.currency[currency]!--;
     if (found.slot) state.hero.rev++;
     return null;
+}
+
+/** Highest item level the hero has reached: story zones and map tiers opened so far. */
+export function maxIlvl(state: GameState): number {
+    const zones = state.world.unlocked.map(z => ZONES[z]?.level ?? 1);
+    const maps = (state.atlas?.tiers ?? []).map(t => mapLevel(t + 1));
+    return Math.max(1, Math.min(state.hero.level + 2, Math.max(...zones, ...maps)));
+}
+
+/** Ember dust to forge a rare for a slot. */
+export const forgeCost = (state: GameState) => Math.round(40 + 6 * state.hero.level);
+
+/**
+ * The dust sink: forge a random rare for an equipment slot at the highest
+ * item level reached. It goes through the same auto-equip and filter path as
+ * a drop, so a better item is worn at once.
+ */
+export function forgeRare(state: GameState, slot: string): { err: string | null; item?: Item; equipped?: boolean } {
+    const cost = forgeCost(state);
+    if (state.dust < cost) return { err: `needs ${cost} ember dust` };
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
+    let item: Item;
+    try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots }); } catch { return { err: "nothing to forge for that slot" }; }
+    state.nextUid++;
+    state.craftSeq++;
+    state.dust -= cost;
+    item.crafted = true;
+    const r = receiveItem(state, item);
+    return { err: null, item, equipped: r.equipped };
 }
 
 export function buyCurrency(state: GameState, currency: string, n = 1): string | null {

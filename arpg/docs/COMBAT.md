@@ -55,7 +55,9 @@ Then per portion: `avg = (min+max)/2 * (1 + inc/100) * more`.
 
     hitChance(acc, eva) = clamp(1.5 * acc / (acc + eva), 0.05, 1)
 
-Spells always hit. The player's chance to evade a monster attack is
+The hero's base accuracy is `20 + 12 (L-1) * 1.03^(L-1)`, the same curve as
+monster evasion, plus 2 per Grace and flat accuracy from gear. Spells always
+hit. The player's chance to evade a monster attack is
 `1 - hitChance(monsterAcc, playerEva)`, capped at 75%.
 
 ## 6. Targets

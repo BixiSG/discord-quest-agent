@@ -90,6 +90,8 @@ export interface GameState {
         storySeen: string[];
         /** One-time rewards already granted ("act:1", "trial:a1_trial"). */
         rewards: string[];
+        /** Trial id -> hero level at which auto-push may try it again. */
+        trialTry?: Record<string, number>;
     };
     activity: {
         zone: string;
@@ -103,8 +105,10 @@ export interface GameState {
         acc: number;
         /** "zone" runs activity.zone; "map" runs maps from the map stash. */
         mode: "zone" | "map";
-        /** Map tier to run; 0 = the highest available. */
+        /** Map tier the player caps the device at; 0 = the highest available. */
         mapTier: number;
+        /** A lower cap set by auto-push after deaths; 0 = none. Cleared after clean maps. */
+        autoCap?: number;
         /** A pinnacle fight to run next. */
         pinnacle?: string;
     };

@@ -1,7 +1,9 @@
 // A simple player for the balance simulator: picks the best skill and
 // supports, and spends passive points greedily by build score.
 
-import { buildScore, setSkill, setSupports, sheetOf } from "../src/core/game";
+import { RARITY_RANK, buildScore, salvage, setSkill, setSupports, sheetOf } from "../src/core/game";
+import { forgeCost, forgeRare } from "../src/core/crafting";
+import { SLOTS } from "../src/core/types";
 import { deriveSheet, supportSlots } from "../src/core/character";
 import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS } from "../src/core/data";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
@@ -59,6 +61,14 @@ export function botTune(state: GameState): void {
         let pick = open[0]!, ps = -1;
         for (const n of open) { const v = score({ ...hero, ascNodes: [...hero.ascNodes, n.id] }); if (v > ps) { ps = v; pick = n; } }
         takeAscNode(state, pick.id);
+    }
+    // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
+    for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
+        const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))
+            .sort((a, b) => a.v - b.v)[0]!.s;
+        forgeRare(state, worst);
+        // Keep the stash from filling with forged misses.
+        salvage(state, state.stash.filter(x => x.crafted).map(x => x.uid));
     }
     // Endgame: run maps, spend atlas points in table order, fight pinnacles when sigils allow.
     if (endgameOpen(state)) {

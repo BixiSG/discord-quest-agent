@@ -4,6 +4,9 @@
 import type { DamageType, Mod } from "../types";
 
 export const MAX_TIER = 16;
+/** Act bosses reused as map bosses are tuned down: a map has one every few minutes. */
+export const MAP_BOSS_LIFE = 0.6;
+export const MAP_BOSS_DAMAGE = 0.8;
 
 /** Monster level of a map tier; past tier 16 each Depth adds a level, forever. */
 export function mapLevel(tier: number): number {

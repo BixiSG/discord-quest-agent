@@ -57,7 +57,7 @@ export const TREE_CLASSES: ClassSpec[] = [
 ];
 
 const RING_MODS: [string, Mod[]][] = [
-    ["Vigour", [m("life", "flat", 12)]], ["Prism", [m("res.fire", "flat", 5), m("res.cold", "flat", 5), m("res.lightning", "flat", 5)]],
+    ["Vigour", [m("life", "flat", 15), m("life", "inc", 3)]], ["Prism", [m("res.fire", "flat", 5), m("res.cold", "flat", 5), m("res.lightning", "flat", 5)]],
     ["Might", [m("str", "flat", 10)]], ["Grace", [m("dex", "flat", 10)]], ["Wit", [m("int", "flat", 10)]], ["Ferocity", [m("damage", "inc", 8)]],
 ];
 

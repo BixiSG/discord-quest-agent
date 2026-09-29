@@ -118,7 +118,8 @@
     return 40 + 6 * (level - 1);
   }
   function heroBaseAccuracy(level) {
-    return 20 + 10 * (level - 1);
+    const l = level - 1;
+    return 20 + 12 * l * Math.pow(1.03, l);
   }
 
   // src/core/data/classes.ts
@@ -1704,7 +1705,7 @@
     { cls: "arcanist", angle: 150, branches: [THEMES.aegis, THEMES.sorcery, THEMES.frost] }
   ];
   var RING_MODS = [
-    ["Vigour", [m2("life", "flat", 12)]],
+    ["Vigour", [m2("life", "flat", 15), m2("life", "inc", 3)]],
     ["Prism", [m2("res.fire", "flat", 5), m2("res.cold", "flat", 5), m2("res.lightning", "flat", 5)]],
     ["Might", [m2("str", "flat", 10)]],
     ["Grace", [m2("dex", "flat", 10)]],
@@ -2010,6 +2011,8 @@
 
   // src/core/data/maps.ts
   var MAX_TIER = 16;
+  var MAP_BOSS_LIFE = 0.6;
+  var MAP_BOSS_DAMAGE = 0.8;
   function mapLevel(tier) {
     return tier <= MAX_TIER ? 42 + tier * 2 : 74 + (tier - MAX_TIER);
   }
@@ -2934,12 +2937,15 @@
   function setZone(state, id) {
     if (!ZONES[id]) return "unknown zone";
     if (!state.world.unlocked.includes(id)) return "locked";
-    if (state.activity.zone === id) return null;
-    state.activity.zone = id;
-    state.activity.streak = 0;
-    state.activity.deaths = 0;
-    state.activity.runIndex++;
-    state.activity.run = null;
+    const act = state.activity;
+    if (act.zone === id && act.mode === "zone") return null;
+    act.zone = id;
+    act.mode = "zone";
+    act.streak = 0;
+    act.deaths = 0;
+    if (act.run?.map) return null;
+    act.runIndex++;
+    act.run = null;
     return null;
   }
 
@@ -2974,6 +2980,8 @@
     const act = state.activity;
     if (act.mode === "map" === on) return null;
     act.mode = on ? "map" : "zone";
+    act.streak = 0;
+    act.deaths = 0;
     if (!act.run?.map) {
       act.runIndex++;
       act.run = null;
@@ -2983,6 +2991,8 @@
   function setMapTier(state, tier) {
     if (!Number.isInteger(tier) || tier < 0) return "bad tier";
     state.activity.mapTier = tier;
+    state.activity.autoCap = 0;
+    state.activity.streak = 0;
     return null;
   }
   function queuePinnacle(state, id) {
@@ -3085,7 +3095,13 @@
       }
     }
     if (state.maps.length) {
-      const want = act.mapTier;
+      let xpCap = 0;
+      if (act.autoPush) {
+        xpCap = 1;
+        while (mapLevel(xpCap + 1) <= state.hero.level + 4) xpCap++;
+      }
+      const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter((t) => t > 0);
+      const want = caps.length ? Math.min(...caps) : 0;
       const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
       const pick = want > 0 ? sorted.find((m4) => m4.tier <= want) ?? sorted[sorted.length - 1] : sorted[0];
       state.maps.splice(state.maps.indexOf(pick), 1);
@@ -3170,6 +3186,8 @@
   var FLASK_MAX = 30;
   var FLASK_COST = 10;
   var FLASK_S = 2;
+  var PUSH_LEVEL_MARGIN = 2;
+  var MAP_DEATH_XP = 0.03;
   var flaskAmount = (level, sheet) => (40 + 14 * level) * sheet.flaskHeal;
   function newRun(state, sheet) {
     const act = state.activity;
@@ -3225,7 +3243,13 @@
   function spawnPack(run, z, rng, eff) {
     run.monsters = [];
     if (run.pack >= run.packs) {
-      if (z.boss) run.monsters.push(makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff));
+      if (z.boss) {
+        const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
+        if (run.map && !run.map.pinnacle) {
+          b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE);
+        }
+        run.monsters.push(b);
+      }
       return;
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
@@ -3371,7 +3395,8 @@
         ev.monsterHit?.(i, 0, "block");
         return;
       }
-      const base = monsterDamage(m4.level) * d.damage * (m4.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
+      const mapBoss = d.boss && run.map && !run.map.pinnacle ? MAP_BOSS_DAMAGE : 1;
+      const base = monsterDamage(m4.level) * d.damage * mapBoss * (m4.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
       let dmg = 0;
       for (const t of DAMAGE_TYPES) {
         let share = d.split[t] ?? 0;
@@ -3480,11 +3505,11 @@
     pushLog(state, "death", `Died in ${runZone(state, run).name}.`);
     ev.death?.(run.zone);
     if (run.map) {
-      state.hero.xp = Math.max(0, state.hero.xp - 0.05 * xpToNext(state.hero.level));
+      state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
       if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
-        act.mapTier = run.map.tier - 1;
+        act.autoCap = run.map.tier - 1;
         act.deaths = 0;
-        pushLog(state, "zone", `Too deep: running ${tierName(act.mapTier)} and below for now.`);
+        pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
       }
       return;
     }
@@ -3549,6 +3574,23 @@
       if (next && cleared(z) && !w2.unlocked.includes(next)) w2.unlocked.push(next);
     });
   }
+  function tryTrial(state, ev) {
+    const w2 = state.world, act = state.activity, L = state.hero.level;
+    w2.trialTry ??= {};
+    for (const a of ACTS) {
+      const t = a.trial;
+      if (!w2.unlocked.includes(t) || (w2.clears[t] ?? 0) > 0) continue;
+      if (L < zoneOf(t).level + 2 || L < (w2.trialTry[t] ?? 0)) continue;
+      w2.trialTry[t] = L + 3;
+      ev.zone?.(act.zone, t, "push");
+      pushLog(state, "zone", `Attempting ${zoneOf(t).name}.`);
+      act.zone = t;
+      act.streak = 0;
+      act.deaths = 0;
+      return true;
+    }
+    return false;
+  }
   function finishRun(state, ev) {
     const act = state.activity;
     const run = act.run;
@@ -3557,8 +3599,8 @@
       completeMap(state, run.map);
       act.deaths = 0;
       act.streak++;
-      if (act.autoPush && act.mapTier > 0 && act.streak >= 5) {
-        act.mapTier = 0;
+      if (act.autoCap && act.streak >= 5) {
+        act.autoCap = 0;
         act.streak = 0;
       }
       ev.runDone?.(run.zone);
@@ -3587,7 +3629,8 @@
         act.zone = road;
         act.streak = 0;
       }
-    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
+    } else if (act.autoPush && act.zone === run.zone && tryTrial(state, ev)) {
+    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone && zoneOf(next).level <= state.hero.level + PUSH_LEVEL_MARGIN) {
       ev.zone?.(act.zone, next, "push");
       pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
       act.zone = next;
@@ -3857,12 +3900,13 @@
     world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
     world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
     world.rewards = strs(world.rewards) ?? [];
+    world.trialTry = Object.fromEntries(Object.entries(world.trialTry && typeof world.trialTry === "object" ? world.trialTry : {}).filter(([k, v]) => ZONES[k]?.trial && typeof v === "number" && Number.isFinite(v)));
     const act = obj(s.activity, "activity");
     if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) {
       act.zone = world.unlocked[world.unlocked.length - 1];
       act.run = null;
     }
-    if (act.run && (!ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
+    if (act.run && (!act.run.map && !ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
     if (act.run && act.run.monsters.some((m4) => !m4 || !MONSTERS[m4.def])) act.run = null;
     num(act.runIndex, "run index", 0);
     act.streak = Number.isFinite(act.streak) ? act.streak : 0;
@@ -3872,7 +3916,9 @@
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r3) => !!r3) : structuredClone(DEFAULT_FILTER);
-    if (act.mode !== "map") act.mode = "zone";
+    if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
+    if (!endgameOpen(s)) delete act.pinnacle;
+    act.autoCap = Number.isInteger(act.autoCap) && act.autoCap > 0 ? act.autoCap : 0;
     act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
     if (act.pinnacle !== void 0 && !PINNACLES[act.pinnacle]) delete act.pinnacle;
     if (act.run?.map) {
@@ -4622,6 +4668,30 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     if (found.slot) state.hero.rev++;
     return null;
   }
+  function maxIlvl(state) {
+    const zones = state.world.unlocked.map((z) => ZONES[z]?.level ?? 1);
+    const maps = (state.atlas?.tiers ?? []).map((t) => mapLevel(t + 1));
+    return Math.max(1, Math.min(state.hero.level + 2, Math.max(...zones, ...maps)));
+  }
+  var forgeCost = (state) => Math.round(40 + 6 * state.hero.level);
+  function forgeRare(state, slot) {
+    const cost = forgeCost(state);
+    if (state.dust < cost) return { err: `needs ${cost} ember dust` };
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
+    let item;
+    try {
+      item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots });
+    } catch {
+      return { err: "nothing to forge for that slot" };
+    }
+    state.nextUid++;
+    state.craftSeq++;
+    state.dust -= cost;
+    item.crafted = true;
+    const r3 = receiveItem(state, item);
+    return { err: null, item, equipped: r3.equipped };
+  }
   function buyCurrency(state, currency, n = 1) {
     const def2 = CURRENCIES[currency];
     if (!def2) return "unknown currency";
@@ -4633,6 +4703,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   }
 
   // src/ui/forge.ts
+  var SLOT_NAMES = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
   function forgeView(c) {
     const st = c.state;
     const items = [...SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), ...st.stash];
@@ -4665,9 +4736,30 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         h("button", { class: "btn alt", text: `Buy ${def2.cost}`, title: "Costs ember dust", attrs: st.dust >= def2.cost ? {} : { disabled: "" }, on: { click: () => c.act((s) => buyCurrency(s, id)) } })
       ));
     }
+    const cost = forgeCost(st);
+    const smith = h("div", { class: "row", style: "gap:4px" });
+    for (const slot of SLOTS) {
+      smith.append(h("button", {
+        class: "btn alt",
+        text: SLOT_NAMES[slot],
+        attrs: st.dust >= cost ? {} : { disabled: "" },
+        on: { click: () => c.act((s) => {
+          const r3 = forgeRare(s, slot);
+          if (!r3.err && r3.item) c.sel = { uid: r3.item.uid };
+          return r3.err;
+        }, "Forged a rare") }
+      }));
+    }
     return h(
       "div",
       { class: "col" },
+      h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: `Forge a rare (${fmt(cost)} dust, item level ${maxIlvl(st)})` }),
+        h("div", { class: "muted", style: "font-size:11px", text: "A random rare for the slot, at the highest item level you have reached. Upgrades are worn at once." }),
+        smith
+      ),
       h(
         "div",
         { class: "row" },
@@ -4944,7 +5036,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   var RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare: "var(--r-rare)" };
   function atlasSig(c) {
     const s = c.state;
-    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
+    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
   }
   function atlasView(c) {
     const st = c.state;
@@ -4962,11 +5054,11 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const mode = h("input", { attrs: { type: "checkbox" } });
     mode.checked = st.activity.mode === "map";
     mode.addEventListener("change", () => c.act((s) => setMapMode(s, mode.checked)));
-    const tiers = [...new Set(st.maps.map((m4) => m4.tier))].sort((a, b) => a - b);
+    const tiers = [.../* @__PURE__ */ new Set([...st.maps.map((m4) => m4.tier), ...st.activity.mapTier ? [st.activity.mapTier] : []])].sort((a, b) => a - b);
     const tierSel = h("select");
     tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
-    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below`, attrs: { value: String(t) } }));
-    tierSel.value = String(tiers.includes(st.activity.mapTier) ? st.activity.mapTier : 0);
+    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below${st.maps.some((m4) => m4.tier === t) ? "" : " (none in stash)"}`, attrs: { value: String(t) } }));
+    tierSel.value = String(st.activity.mapTier);
     tierSel.addEventListener("change", () => c.act((s) => setMapTier(s, +tierSel.value)));
     const deepest = Math.max(0, ...st.atlas.tiers);
     root.append(h(
@@ -4980,7 +5072,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         "Order",
         tierSel,
         h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
-        h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` })
+        h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
+        st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
       ),
       tierChips(st.atlas.tiers),
       h("div", { class: "muted", style: "font-size:11px", text: "Dying in a map loses it and 5% of a level's experience. Mods make maps harder and richer." })

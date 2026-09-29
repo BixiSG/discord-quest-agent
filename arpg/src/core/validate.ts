@@ -8,6 +8,7 @@ import { SLOTS, type Item } from "./types";
 import { DEFAULT_FILTER, type FilterRule } from "./filter";
 import { newTotals } from "./state";
 import { reconcileRewards } from "./sim/engine";
+import { endgameOpen } from "./maps";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
@@ -109,9 +110,11 @@ export function validateState(raw: unknown): GameState {
     world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
     world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
     world.rewards = strs(world.rewards) ?? [];
+    world.trialTry = Object.fromEntries(Object.entries(world.trialTry && typeof world.trialTry === "object" ? world.trialTry : {})
+        .filter(([k, v]) => ZONES[k]?.trial && typeof v === "number" && Number.isFinite(v)));
     const act = obj(s.activity, "activity") as unknown as GameState["activity"];
     if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) { act.zone = world.unlocked[world.unlocked.length - 1]!; act.run = null; }
-    if (act.run && (!ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
+    if (act.run && ((!act.run.map && !ZONES[act.run.zone]) || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
     if (act.run && act.run.monsters.some(m => !m || !MONSTERS[m.def])) act.run = null;
     num(act.runIndex, "run index", 0);
     act.streak = Number.isFinite(act.streak) ? act.streak : 0;
@@ -122,7 +125,9 @@ export function validateState(raw: unknown): GameState {
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
     // ---- endgame (v4)
-    if (act.mode !== "map") act.mode = "zone";
+    if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
+    if (!endgameOpen(s)) delete act.pinnacle;
+    act.autoCap = Number.isInteger(act.autoCap) && act.autoCap! > 0 ? act.autoCap : 0;
     act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
     if (act.pinnacle !== undefined && !PINNACLES[act.pinnacle]) delete act.pinnacle;
     if (act.run?.map) {

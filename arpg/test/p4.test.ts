@@ -119,3 +119,54 @@ describe("rewards ledger", () => {
         expect(s.atlas.points).toBe(0);
     });
 });
+
+import { setZone } from "../src/core/game";
+import { forgeRare, forgeCost } from "../src/core/crafting";
+import { setMapTier } from "../src/core/maps";
+
+describe("P4 review fixes", () => {
+    it("a map run survives save and load", () => {
+        const g = endgame();
+        g.maps.push(map(900, 5));
+        setMapMode(g, true);
+        step(g);
+        const s = validateState(JSON.parse(JSON.stringify(g)));
+        expect(s.activity.run?.map?.tier).toBe(5);
+    });
+    it("picking a story zone in map mode leaves map mode without burning a map", () => {
+        const g = endgame();
+        g.maps.push(map(900, 5), map(901, 4));
+        setMapMode(g, true);
+        step(g);
+        expect(setZone(g, "a1_shore")).toBeNull();
+        expect(g.activity.mode).toBe("zone");
+        expect(g.activity.run?.map?.tier).toBe(5); // the running map finishes
+        finish(g);
+        expect(g.activity.run?.map).toBeUndefined();
+        expect(g.maps.length).toBe(1);
+    });
+    it("map mode before the endgame is repaired on load", () => {
+        const g = g0() as any;
+        g.activity.mode = "map"; g.activity.pinnacle = "drownedsun";
+        const s = validateState(g);
+        expect(s.activity.mode).toBe("zone");
+        expect(s.activity.pinnacle).toBeUndefined();
+    });
+    it("auto-push lowers its own cap, never the player's", () => {
+        const g = endgame();
+        setMapMode(g, true);
+        setMapTier(g, 5);
+        for (let i = 0; i < 3; i++) { g.maps.push(map(950 + i, 9)); step(g); const r = g.activity.run!; r.phase = "fight"; r.hero.life = -1; r.monsters.forEach(m => { m.atk = 99; }); step(g); g.activity.run!.timer = 0; step(g); }
+        expect(g.activity.mapTier).toBe(5);
+    });
+    it("forging a rare costs dust and yields a rare for the slot", () => {
+        const g = endgame();
+        g.dust = forgeCost(g) + 1;
+        const r = forgeRare(g, "helmet");
+        expect(r.err).toBeNull();
+        expect(r.item!.rarity).toBe("rare");
+        expect(r.item!.crafted).toBe(true);
+        expect(g.dust).toBe(1);
+        expect(forgeRare(g, "helmet").err).toMatch(/dust/);
+    });
+});

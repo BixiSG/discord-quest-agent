@@ -10,7 +10,7 @@ const RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare:
 
 export function atlasSig(c: Ctx): string {
     const s = c.state;
-    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
+    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
 }
 
 export function atlasView(c: Ctx): HTMLElement {
@@ -27,11 +27,11 @@ export function atlasView(c: Ctx): HTMLElement {
     const mode = h("input", { attrs: { type: "checkbox" } });
     mode.checked = st.activity.mode === "map";
     mode.addEventListener("change", () => c.act(s => setMapMode(s, mode.checked)));
-    const tiers = [...new Set(st.maps.map(m => m.tier))].sort((a, b) => a - b);
+    const tiers = [...new Set([...st.maps.map(m => m.tier), ...(st.activity.mapTier ? [st.activity.mapTier] : [])])].sort((a, b) => a - b);
     const tierSel = h("select");
     tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
-    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below`, attrs: { value: String(t) } }));
-    tierSel.value = String(tiers.includes(st.activity.mapTier) ? st.activity.mapTier : 0);
+    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below${st.maps.some(m => m.tier === t) ? "" : " (none in stash)"}`, attrs: { value: String(t) } }));
+    tierSel.value = String(st.activity.mapTier);
     tierSel.addEventListener("change", () => c.act(s => setMapTier(s, +tierSel.value)));
     const deepest = Math.max(0, ...st.atlas.tiers);
     root.append(h("div", { class: "card col" },
@@ -39,7 +39,8 @@ export function atlasView(c: Ctx): HTMLElement {
         h("label", { class: "chk" }, mode, "Run maps instead of story zones (no maps left: the Outskirts, which drop Tier 1 maps)"),
         h("div", { class: "row" }, "Order", tierSel,
             h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
-            h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` })),
+            h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
+            st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
         tierChips(st.atlas.tiers),
         h("div", { class: "muted", style: "font-size:11px", text: "Dying in a map loses it and 5% of a level's experience. Mods make maps harder and richer." })));
 

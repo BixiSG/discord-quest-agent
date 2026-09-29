@@ -10,7 +10,7 @@ import { DAMAGE_TYPES, type Item } from "../types";
 import { sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
-import { PINNACLES, tierName } from "../data";
+import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -18,6 +18,10 @@ export const MAX_OFFLINE_MS = 24 * 3600e3;
 const TRAVEL_S = 1.5;
 const RESPAWN_S = 6;
 const FLASK_MAX = 30, FLASK_COST = 10, FLASK_S = 2;
+/** Auto-push waits until the hero is at most this many levels below the next zone (full XP range). */
+export const PUSH_LEVEL_MARGIN = 2;
+/** Share of a level's experience lost on a death in a map. */
+export const MAP_DEATH_XP = 0.03;
 
 /** Hooks for the UI and the offline report. All optional. */
 export interface SimEvents {
@@ -93,7 +97,11 @@ function makeMonster(def: string, level: number, champion: boolean, rng: Rng, ef
 function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null): void {
     run.monsters = [];
     if (run.pack >= run.packs) {
-        if (z.boss) run.monsters.push(makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff));
+        if (z.boss) {
+            const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
+            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE); }
+            run.monsters.push(b);
+        }
         return;
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
@@ -233,7 +241,8 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
             if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
         }
         if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
-        const base = monsterDamage(m.level) * d.damage * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
+        const mapBoss = d.boss && run.map && !run.map.pinnacle ? MAP_BOSS_DAMAGE : 1;
+        const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
             let share = d.split[t] ?? 0;
@@ -349,12 +358,12 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     ev.death?.(run.zone);
     if (run.map) {
         // GDD: dying in a map costs the map and 5% of a level's experience.
-        state.hero.xp = Math.max(0, state.hero.xp - 0.05 * xpToNext(state.hero.level));
+        state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
         // Auto-push for maps: three deaths in a row and the device prefers a tier lower.
         if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
-            act.mapTier = run.map.tier - 1;
+            act.autoCap = run.map.tier - 1;
             act.deaths = 0;
-            pushLog(state, "zone", `Too deep: running ${tierName(act.mapTier)} and below for now.`);
+            pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
         }
         return;
     }
@@ -426,6 +435,26 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
     });
 }
 
+/**
+ * Auto-push visits an open trial it has not passed once the hero is two levels
+ * above it; after a failed attempt it waits three more levels.
+ */
+function tryTrial(state: GameState, ev: SimEvents): boolean {
+    const w = state.world, act = state.activity, L = state.hero.level;
+    w.trialTry ??= {};
+    for (const a of ACTS) {
+        const t = a.trial;
+        if (!w.unlocked.includes(t) || (w.clears[t] ?? 0) > 0) continue;
+        if (L < zoneOf(t).level + 2 || L < (w.trialTry[t] ?? 0)) continue;
+        w.trialTry[t] = L + 3;
+        ev.zone?.(act.zone, t, "push");
+        pushLog(state, "zone", `Attempting ${zoneOf(t).name}.`);
+        act.zone = t; act.streak = 0; act.deaths = 0;
+        return true;
+    }
+    return false;
+}
+
 function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
     const run = act.run!;
@@ -435,7 +464,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         act.deaths = 0;
         // Five clean maps in a row at a capped tier: try the highest again.
         act.streak++;
-        if (act.autoPush && act.mapTier > 0 && act.streak >= 5) { act.mapTier = 0; act.streak = 0; }
+        if (act.autoCap && act.streak >= 5) { act.autoCap = 0; act.streak = 0; }
         ev.runDone?.(run.zone);
         act.runIndex++;
         act.run = newRun(state, sheetOf(state));
@@ -459,7 +488,10 @@ function finishRun(state: GameState, ev: SimEvents): void {
         // A finished trial sends the hero back to the furthest open road.
         const road = [...ZONE_ORDER].reverse().find(id => state.world.unlocked.includes(id));
         if (road) { ev.zone?.(act.zone, road, "push"); act.zone = road; act.streak = 0; }
-    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
+    } else if (act.autoPush && act.zone === run.zone && tryTrial(state, ev)) {
+        // tryTrial moved the hero.
+    } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone
+        && zoneOf(next).level <= state.hero.level + PUSH_LEVEL_MARGIN) {
         ev.zone?.(act.zone, next, "push");
         pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
         act.zone = next;

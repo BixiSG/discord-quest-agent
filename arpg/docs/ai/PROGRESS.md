@@ -83,3 +83,31 @@ One entry per loop iteration, newest last.
   bot does not craft. P5 balance pass.
 - Tools: tools/run-ts.mjs (run any TS tool), tools/make-save.ts (bot-played
   HM1 export), tools/shots-endgame.mjs (imports it and screenshots late views).
+
+## 5 - Review P4, launcher + installer, balance pass
+- Review P4 (5 findings, all fixed): map runs were discarded on every load
+  (validate treated zone "map" as unknown) - the worst bug so far, now
+  covered by a test; choosing a story zone in map mode leaves map mode and
+  lets the running map finish; map mode before the endgame is repaired on
+  load; auto-push keeps its own `autoCap` instead of overwriting the player's
+  tier choice; the tier selector always shows the active cap.
+- Launcher: `Get-AddonFiles` + `Invoke-AddonInjection` load
+  `<Root>\addons\*.js` (user files win by name) and escape payloads to ASCII;
+  `dev/test-addons.ps1` tests them against a fake `Invoke-CdpEval` (run with
+  pwsh 7.4 here; the code sticks to 5.1 syntax). `arpg/install/` has
+  Install-Hollowmarch.ps1/.bat and Uninstall-Hollowmarch.bat.
+- Balance pass (bot, 3 seeds x 3 classes, 48 h):
+  - Death probe: 80% of deaths were map bosses -> map bosses x0.6 life,
+    x0.8 damage; map death XP 5% -> 3%.
+  - Attack hit chance fell to ~39% at L67 (linear accuracy vs exponential
+    evasion) -> base accuracy follows the evasion curve.
+  - Auto-push advanced on clean clears only, so tanky heroes outran their XP
+    (L22 in L37 zones at ~5% XP) -> push needs level >= next zone - 2; the
+    map device keeps to tiers within hero level + 4.
+  - Trials were never visited by auto-push (no ascendancy) -> auto-push tries
+    an open trial at trial level + 2, retrying 3 levels later.
+  - Dust piled up (1M) with no sink -> Forge a rare (40 + 6L dust, highest
+    item level reached, crafted so it salvages as plain).
+  - Tree: Vigour ring nodes +15 life and 3% increased life.
+  Result at 48 h: Vanguard L73-74 T12-16, Strider L75-78 T13-16, Arcanist
+  L79-80 Depth 2-5; deaths down from ~30/h to ~6-35/h depending on class.

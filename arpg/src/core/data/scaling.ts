@@ -41,6 +41,8 @@ export function heroBaseLife(level: number, classLife: number): number {
 export function heroBaseMana(level: number): number {
     return 40 + 6 * (level - 1);
 }
+/** Follows monster evasion's curve so attacks keep ~85% hit chance at even level before gear. */
 export function heroBaseAccuracy(level: number): number {
-    return 20 + 10 * (level - 1);
+    const l = level - 1;
+    return 20 + 12 * l * Math.pow(1.03, l);
 }

@@ -253,11 +253,15 @@ export function setSupports(state: GameState, ids: string[]): string | null {
 export function setZone(state: GameState, id: string): string | null {
     if (!ZONES[id]) return "unknown zone";
     if (!state.world.unlocked.includes(id)) return "locked";
-    if (state.activity.zone === id) return null;
-    state.activity.zone = id;
-    state.activity.streak = 0;
-    state.activity.deaths = 0;
-    state.activity.runIndex++;
-    state.activity.run = null;
+    const act = state.activity;
+    if (act.zone === id && act.mode === "zone") return null;
+    act.zone = id;
+    act.mode = "zone";
+    act.streak = 0;
+    act.deaths = 0;
+    // A map already under way is not thrown away: the road starts after it.
+    if (act.run?.map) return null;
+    act.runIndex++;
+    act.run = null;
     return null;
 }
