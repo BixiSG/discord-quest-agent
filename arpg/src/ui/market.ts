@@ -12,6 +12,7 @@ import { itemIcon } from "./gfx/itemart";
 import { glyph } from "./glyphs";
 import { itemCard, withTip, type Ctx } from "./views";
 import { stoneChip, stoneTip } from "./stones";
+import { hint } from "./hints";
 import { t } from "../i18n";
 import { itemName, monsterName, stoneFullName } from "../i18n/names";
 
@@ -38,6 +39,8 @@ export function marketView(c: Ctx): HTMLElement {
             h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
             h("button", { class: "btn alt small", text: t("market.refresh", { cost: fmt(cost) }), title: t("market.refreshTip", { cost: fmt(cost) }), attrs: st.dust >= cost ? {} : { disabled: "" },
                 on: { click: () => c.act(refreshMarket) } }))));
+    const tip = hint(c, "market");
+    if (tip) root.append(tip);
 
     // The Pedlar: gear, each with its price and Buy.
     const gear = h("div", { class: "offers" });

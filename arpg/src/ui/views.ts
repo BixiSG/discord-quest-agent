@@ -12,6 +12,7 @@ import { setCompanion } from "../core/companions";
 import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffed } from "../core/season";
 import { endgameOpen } from "../core/maps";
 import { drawPumpkin } from "./gfx/pumpkin";
+import { hint, hintsSeen } from "./hints";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
@@ -72,7 +73,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
-        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
+        case "menu": return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
         case "market": return marketSig(s);
     }
 }
@@ -992,8 +993,9 @@ function logView(c: Ctx): HTMLElement {
     const filter = chips<string>([["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS).filter(k => n(k)).map(k => [k, t(`logkind.${k}`), n(k)] as [string, string, number]),
         ["echoes", t("log.echoes"), c.state.echoes.length]],
         logFilter, v => { logFilter = v; c.rerender(); });
-    if (logFilter === "echoes") return h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter), echoesView(c));
-    const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter));
+    const tip = c.state.echoes.length ? hint(c, "echoes") : null;
+    if (logFilter === "echoes") return h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter), tip, echoesView(c));
+    const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter), tip);
     const now = Date.now();
     for (const e of [...log].reverse()) {
         if (logFilter !== "all" && e.kind !== logFilter) continue;
@@ -1060,7 +1062,9 @@ function menuView(c: Ctx): HTMLElement {
             h("div", { class: "row" }, h("button", { class: "btn", text: t("menu.export"), on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
                 h("button", { class: "btn alt", text: t("menu.copy"), on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast(t("menu.copied")), () => c.toast(t("menu.copyByHand"))); } } })),
             out, inp,
-            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }))),
+            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }),
+                h("button", { class: "btn alt", text: t("menu.hintsAgain"), attrs: hintsSeen(st).length ? {} : { disabled: "" },
+                    on: { click: () => c.act(s => { delete s.settings.hints; }, t("menu.hintsBack")) } }))),
         h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
             [t("menu.runs"), fmt(tot.runs)], [t("menu.kills"), fmt(tot.kills)], [t("menu.deaths"), fmt(tot.deaths)], [t("menu.items"), fmt(tot.items)], [t("menu.salvaged"), fmt(tot.salvaged)], [t("menu.swapped"), fmt(tot.swapped ?? 0)],
             [t("menu.time"), t("menu.hours", { n: (tot.simMs / 3600e3).toFixed(1) })]])),
@@ -1084,6 +1088,7 @@ function rekindleCard(c: Ctx): HTMLElement {
     card.append(h("div", { class: "shards" }, ...SUN_PINNACLES.map(p => h("span", { class: `shard${held.includes(p) ? " on" : ""}`, title: pinName(p) }, glyph("sun", 18))),
         h("b", { text: t("dawn.shards", { n: held.length, total: SUN_PINNACLES.length }) })));
     card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.note", { pins: SUN_PINNACLES.map(p => pinName(p)).join(t("common.list")) }) }));
+    if (held.length) { const tip = hint(c, "rekindle"); if (tip) card.append(tip); }
     if (dawn) {
         card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.world", { tough: DAWN_TOUGHER * dawn, rich: DAWN_RICHER * dawn }) }));
         const perks = st.hero.dawn?.perks ?? [];

@@ -591,6 +591,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .card.hollow { box-shadow: 0 0 0 2px #ff7a1a inset; }
 .card.hollow h3 .pxc, .card.hollow h3 svg { color: #ff7a1a; }
 .tag.lit { background: #ff7a1a; color: #1a1410; }
+/* first-time hints */
+.note.hint1 { border-left-color: var(--gold); margin-bottom: 8px; }
+.note.hint1 svg { color: var(--gold); }
+.note.hint1 .btn { flex: none; }
 .perks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
 .perk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
   border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }

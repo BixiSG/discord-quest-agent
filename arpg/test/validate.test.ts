@@ -84,3 +84,13 @@ describe("P2 review fixes", () => {
         expect(g.stash.map(x => x.uid).sort()).toEqual([102, worn.uid].sort());
     });
 });
+
+describe("first-time hints in the save", () => {
+    it("keeps dismissed hint ids once each, drops junk, and leaves none as no field", () => {
+        const g = g0();
+        (g.settings as { hints?: unknown }).hints = ["market", "market", "echoes", 7, "Not An Id", ""];
+        expect(validateState(JSON.parse(JSON.stringify(g))).settings.hints).toEqual(["market", "echoes"]);
+        (g.settings as { hints?: unknown }).hints = [];
+        expect("hints" in validateState(JSON.parse(JSON.stringify(g))).settings).toBe(false);
+    });
+});

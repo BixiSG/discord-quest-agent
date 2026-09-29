@@ -148,6 +148,8 @@ export interface GameState {
         upkeep: boolean;
         /** Fill empty sockets in worn gear with the best stone in the pouch (v7). */
         autoStones: boolean;
+        /** First-time hints the player dismissed (ui/hints.ts). */
+        hints?: string[];
     };
     /** Relic case: the best copy of each relic, outside the stash (v5). */
     relics: Item[];

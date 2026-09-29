@@ -928,6 +928,16 @@ const UI: Record<string, string> = {
     "hollow.litTip": "Lantern-lit: one monster in five carries a lantern; +40% item quantity.",
     "hollow.only": "Hollow Night only",
     "hollow.onlyTip": "Found only during Hollow Night, in October.",
+
+    // ---- first-time hints (ui/hints.ts)
+    "hint.market": "Stock turns over every two hours: the Pedlar sells gear for your weakest slots, the Jeweller sells ember stones. A refresh for dust brings new stock now.",
+    "hint.sockets": "Sockets hold ember stones: pick an item on the rack, then set a stone on the anvil. A stone works differently in a weapon, in armour and in jewellery; pry it out any time and it goes back to the pouch.",
+    "hint.pouch": "Stones you find wait here. Cut three of a kind into one of the next tier. With Set stones on their own (Menu), empty sockets in worn gear fill themselves.",
+    "hint.echoes": "Map bosses and pinnacles leave echoes of the day the sun fell. Read them under the Echoes chip; every third one is an atlas point.",
+    "hint.rekindle": "Each of the three pinnacles named above holds a piece of the sun. With all three you can relight it: a new dawn that keeps your collection.",
+    "hint.ok": "Got it",
+    "menu.hintsAgain": "Show hints again",
+    "menu.hintsBack": "Hints will show again",
 };
 
 export const EN: Readonly<Record<string, string>> = { ...content(), ...UI };

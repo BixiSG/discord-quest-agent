@@ -188,6 +188,8 @@ export function validateState(raw: unknown): GameState {
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
     set.upkeep = set.upkeep !== false;
     set.autoStones = set.autoStones !== false;
+    const hints = [...new Set(strs(set.hints, x => /^[a-z]{1,24}$/.test(x)) ?? [])].slice(0, 32);
+    if (hints.length) set.hints = hints; else delete set.hints;
     // ---- endgame (v4)
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;

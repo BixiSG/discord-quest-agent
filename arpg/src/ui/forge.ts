@@ -8,6 +8,7 @@ import { applyCurrency, benchCraft, benchDust, benchOptions, BENCH_GRAFTS, buyCu
 import { setLocked } from "../core/game";
 import { baseOf } from "../core/items";
 import { SLOTS, type Item } from "../core/types";
+import type { GameState } from "../core/state";
 import { fmt, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
@@ -17,6 +18,7 @@ import { cutCost, cutStones, drillCost, drillSocket, pouchList, setStone, socket
 import { placeOf } from "../core/items";
 import { STONE_TIERS, parseStone, stoneKey } from "../core/data";
 import { stoneChip, stoneLine, stoneTip } from "./stones";
+import { hint } from "./hints";
 import { stoneFullName } from "../i18n/names";
 import { lang, t } from "../i18n";
 import { affixTemplate, currencyBlurb, currencyName, itemName } from "../i18n/names";
@@ -153,6 +155,7 @@ export function forgeView(c: Ctx): HTMLElement {
     const dust = h("div", { class: "dust" }, glyph("forge", 20), h("b", { class: "num", text: fmt(st.dust) }), h("span", { text: t("forge.dust") }));
 
     return h("div", { class: "col", style: "gap:14px" },
+        hasSockets(st) ? hint(c, "sockets") : null,
         h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("forge.title") }), h("span", { class: "num", text: t("forge.costLine", { cost: fmt(cost), ilvl: maxIlvl(st) }) })),
             h("div", { class: "row", style: "align-items:center;gap:12px" }, dust,
                 h("div", { class: "muted grow", style: "font-size:12px", text: t("forge.note") }),
@@ -166,6 +169,9 @@ export function forgeView(c: Ctx): HTMLElement {
             h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)),
         pouchCard(c));
 }
+
+/** Sockets are worth a word once the hero has any (worn or in the stash) or a stone to set. */
+const hasSockets = (st: GameState) => Object.keys(st.stones ?? {}).length > 0 || [...Object.values(st.hero.equipment), ...st.stash].some(x => (x?.sockets ?? 0) > 0);
 
 /** The stone pouch: every stone held, what it does, and cutting three into one of the next tier. */
 function pouchCard(c: Ctx): HTMLElement {
@@ -185,5 +191,6 @@ function pouchCard(c: Ctx): HTMLElement {
         box.append(row);
     }
     return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("pouch.title") }), h("span", { class: "num", text: String(list.reduce((a, b) => a + b.n, 0)) })),
+        list.length ? hint(c, "pouch") : null,
         list.length ? box : h("div", { class: "muted", style: "font-size:12px", text: t("pouch.empty") }));
 }
