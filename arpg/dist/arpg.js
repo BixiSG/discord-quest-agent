@@ -4423,37 +4423,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
   background: linear-gradient(135deg, transparent 50%, var(--line) 50%, var(--line) 60%, transparent 60%, transparent 70%, var(--line) 70%, var(--line) 80%, transparent 80%); }
 .win.max .grip { display: none; }
 
-/* stage + vitals */
-.top { display: grid; grid-template-columns: minmax(0, 1fr) 216px; border-bottom: 3px solid var(--line); }
-.stage { position: relative; background: #111; border-right: 3px solid var(--line); overflow: hidden; min-height: 60px; }
+/* stage + HUD */
+.top { border-bottom: 3px solid var(--line); }
+.stage { position: relative; background: #111; overflow: hidden; min-height: 60px; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
-.top.nostage { grid-template-columns: 1fr; }
-.top.nostage .stage { display: none; }
-.top.nostage .vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
-.top.nostage .where { border-top: 0; padding-top: 0; }
-.vitals { display: flex; flex-direction: column; gap: 7px; padding: 8px 10px 9px; background: var(--paper2); min-width: 0; position: relative; }
-.vt { display: grid; grid-template-columns: 1fr auto; align-items: baseline; row-gap: 3px; min-width: 0; }
-.vt .k { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
-.vt .v { font: 700 11px/1 var(--mono); font-variant-numeric: tabular-nums; }
-.vt .track { grid-column: 1 / -1; position: relative; height: 10px; border: 2px solid var(--line); background: var(--card); overflow: hidden; }
-.vt .track i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .12s linear; }
-.vt.life .track { height: 14px; } .vt.life i { background: var(--red); }
-.vt.es i { background: #7fd1ff; } .vt.mana i { background: var(--blue); } .vt.flask i { background: var(--green); }
-.vt.mlife .track { height: 12px; } .vt.mlife i { background: var(--red); } .vt.mxp i { background: var(--gold); }
-.where { margin-top: auto; padding-top: 7px; border-top: 2px dashed var(--line); display: flex; flex-direction: column; gap: 1px; font-size: 12px; min-width: 0; }
-.where > b { font: 700 14px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.where .dps { margin-top: 3px; font-size: 11px; color: var(--muted); }
-.where .dps b { font-size: 13px; color: var(--text); margin-right: 2px; }
-
-/* experience strip */
-.xp { display: flex; align-items: stretch; height: 24px; border-bottom: 3px solid var(--line); background: var(--card); }
-.xp .lv { display: flex; align-items: center; padding: 0 11px; background: #1a1410; color: var(--gold); font: 700 14px/1 var(--display); font-stretch: condensed; letter-spacing: 1.5px; }
-.xp .track { flex: 1; position: relative; overflow: hidden; }
-.xp .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); box-shadow: 2px 0 0 var(--line); transition: width .2s linear; }
-.xp .track .v { position: relative; display: block; padding-left: 9px; font: 700 11px/21px var(--mono); white-space: nowrap; color: var(--text); }
-.hm.dark .xp .track .v { text-shadow: 0 0 3px #1a1410, 0 0 3px #1a1410; }
-.xp .eta { display: flex; align-items: center; padding: 0 10px; font: 700 11px/1 var(--mono); border-left: 3px solid var(--line); background: var(--paper2); white-space: nowrap; }
-.xp .eta:empty { display: none; }
+.top.nostage { display: none; }
+.hudw { background: #1a1410; border-bottom: 3px solid var(--line); line-height: 0; overflow: hidden; }
+.hudw canvas { display: block; image-rendering: pixelated; }
 
 /* nav rail + content */
 .main { display: grid; grid-template-columns: 124px minmax(0, 1fr); min-height: 0; }
@@ -4470,26 +4446,22 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
   border: 2px solid var(--line); font: 800 9px/11px var(--mono); text-align: center; }
 .body { overflow: auto; padding: 14px 16px 22px; min-width: 0; position: relative; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .body::-webkit-scrollbar { width: 12px; } .body::-webkit-scrollbar-thumb { background: var(--line); border: 3px solid var(--paper); }
-.win.creating .top, .win.creating .xp, .win.creating .nav { display: none; }
+.win.creating .top, .win.creating .hudw, .win.creating .nav { display: none; }
 .win.creating .main { grid-template-columns: 1fr; }
 
 /* mini mode: a strip that keeps playing */
 .minibox { display: none; }
 .win.mini { grid-template-rows: auto auto; min-width: 0; min-height: 0; box-shadow: 6px 6px 0 var(--line); }
-.win.mini .top, .win.mini .xp, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
+.win.mini .top, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
 .win.mini .logo { font-size: 13px; letter-spacing: 1.5px; padding: 0 8px; }
-.win.mini .minibox { display: grid; gap: 6px; padding: 8px 10px 9px; background: var(--paper2); }
-.minibox .mline { font: 700 12px/1.2 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win.mini .hudw { border-bottom: 0; }
+.win.mini .minibox:has(.mlast:empty) { display: none; }
+.win.mini .minibox { display: block; padding: 5px 9px 6px; background: var(--paper2); }
 .minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .minibox .mlast:empty { display: none; }
 
 /* one column when the window is narrow */
 @container win (max-width: 640px) {
-  .top { grid-template-columns: 1fr; }
-  .stage { border-right: 0; border-bottom: 3px solid var(--line); }
-  .vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
-  .where { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-  .where .dps { margin-top: 0; }
   .main { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .nav { flex-direction: row; border-right: 0; border-bottom: 3px solid var(--line); overflow-x: auto; }
   .nav button { flex: 1 0 auto; grid-template-columns: auto; justify-items: center; padding: 8px 10px; border-bottom: 0; border-right: 2px solid var(--line); }
@@ -4799,6 +4771,24 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       "###.###",
       "##...##"
     ],
+    sound: [
+      "..#..#.",
+      ".##...#",
+      "###.#.#",
+      "###.#.#",
+      "###.#.#",
+      ".##...#",
+      "..#..#."
+    ],
+    mute: [
+      "..#....",
+      ".##....",
+      "###.#.#",
+      "###..#.",
+      "###.#.#",
+      ".##....",
+      "..#...."
+    ],
     stage: [
       "#######",
       "#.....#",
@@ -4839,6 +4829,114 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     return svg;
   }
 
+  // src/ui/gfx/pixfont.ts
+  var G = {
+    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
+    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    "2": [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
+    "3": ["####.", "....#", "....#", ".###.", "....#", "....#", "####."],
+    "4": ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."],
+    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
+    "6": ["..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."],
+    "7": ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
+    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
+    "9": [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."],
+    A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    B: ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
+    C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
+    D: ["###..", "#..#.", "#...#", "#...#", "#...#", "#..#.", "###.."],
+    E: ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
+    F: ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
+    G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####"],
+    H: ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    I: [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    J: ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."],
+    K: ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
+    L: ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
+    M: ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
+    N: ["#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#"],
+    O: [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    P: ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
+    Q: [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"],
+    R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
+    S: [".####", "#....", "#....", ".###.", "....#", "....#", "####."],
+    T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
+    U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    V: ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
+    W: ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#."],
+    X: ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
+    Y: ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
+    Z: ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
+    ".": ["..", "..", "..", "..", "..", "##", "##"],
+    ",": ["..", "..", "..", "..", ".#", ".#", "#."],
+    ":": ["..", "##", "##", "..", "##", "##", ".."],
+    "/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
+    "%": ["##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##"],
+    "+": [".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."],
+    "-": ["....", "....", "....", "####", "....", "....", "...."],
+    "!": ["#", "#", "#", "#", "#", ".", "#"],
+    "?": [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."],
+    "'": ["#", "#", ".", ".", ".", ".", "."],
+    "(": [".#", "#.", "#.", "#.", "#.", "#.", ".#"],
+    ")": ["#.", ".#", ".#", ".#", ".#", ".#", "#."],
+    "~": [".....", ".....", ".#..#", "#.##.", ".....", ".....", "....."],
+    " ": ["...", "...", "...", "...", "...", "...", "..."]
+  };
+  var GLYPH_H = 7;
+  var glyphOf = (ch) => G[ch] ?? G[ch.toUpperCase()] ?? G["?"];
+  function textWidth(text) {
+    let w2 = 0;
+    for (const ch of text) w2 += glyphOf(ch)[0].length + 1;
+    return Math.max(0, w2 - 1);
+  }
+  var cache2 = /* @__PURE__ */ new Map();
+  function textSprite(text, color, outline = "#111111") {
+    const key = `${color}|${outline}|${text}`;
+    let c = cache2.get(key);
+    if (c) {
+      cache2.delete(key);
+      cache2.set(key, c);
+      return c;
+    }
+    const w2 = textWidth(text) + 2, h2 = GLYPH_H + 2;
+    c = document.createElement("canvas");
+    c.width = Math.max(1, w2);
+    c.height = h2;
+    const g = c.getContext("2d");
+    const ink = (col, ox, oy) => {
+      g.fillStyle = col;
+      let x = 1;
+      for (const ch of text) {
+        const rows = glyphOf(ch);
+        rows.forEach((row, y) => {
+          let i = 0;
+          while (i < row.length) {
+            if (row[i] !== "#") {
+              i++;
+              continue;
+            }
+            let e = i;
+            while (e < row.length && row[e] === "#") e++;
+            g.fillRect(x + i + ox, 1 + y + oy, e - i, 1);
+            i = e;
+          }
+        });
+        x += rows[0].length + 1;
+      }
+    };
+    if (outline) for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) ink(outline, ox, oy);
+    ink(color, 0, 0);
+    cache2.set(key, c);
+    if (cache2.size > 300) cache2.delete(cache2.keys().next().value);
+    return c;
+  }
+  function drawText(g, text, x, y, color, align = "left", outline = "#111111") {
+    const s = textSprite(text, color, outline);
+    const dx = align === "center" ? Math.round(x - s.width / 2) : align === "right" ? x - s.width : x;
+    g.drawImage(s, dx, Math.round(y));
+    return s.width;
+  }
+
   // src/ui/icons.ts
   var P = { k: "#111111", a: "#c9ced6", b: "#8a5a2b", c: "#ff5a36", w: "#ffffff", g: "#ffc233", t: "#19b3a3", v: "#8b5cf6" };
   var ICONS = {
@@ -4864,10 +4962,10 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     ring: ["............", "....kkkk....", "...kcwcck...", "....kkkk....", "...kgggk....", "..kg...gk...", "..kg...gk...", "..kg...gk...", "...kgggk....", "....kkk.....", "............", "............"]
   };
   var KIND_TINT = { plate: "#c9ced6", leather: "#b07b45", silk: "#b9a4ff", brigand: "#8fa3a0" };
-  var cache2 = /* @__PURE__ */ new Map();
+  var cache3 = /* @__PURE__ */ new Map();
   function iconFor(kind, slot) {
     const key = kind + ":" + slot;
-    let c = cache2.get(key);
+    let c = cache3.get(key);
     if (!c) {
       c = document.createElement("canvas");
       c.width = 12;
@@ -4880,7 +4978,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         g.fillStyle = ch === "a" && tint ? tint : P[ch] ?? "#f0f";
         g.fillRect(x, y, 1, 1);
       }));
-      cache2.set(key, c);
+      cache3.set(key, c);
     }
     const out = document.createElement("canvas");
     out.width = 12;
@@ -4888,6 +4986,302 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     out.getContext("2d").drawImage(c, 0, 0);
     return out;
   }
+
+  // src/ui/hud.ts
+  var HUD_H = 44;
+  var INK = "#1a1410";
+  var CREAM = "#f3e7d3";
+  var GOLD = "#ffc233";
+  var Hud = class {
+    canvas;
+    g;
+    w = 320;
+    constructor() {
+      this.canvas = document.createElement("canvas");
+      this.canvas.height = HUD_H;
+      this.g = this.canvas.getContext("2d");
+    }
+    /** Logical width in HUD pixels (the CSS width divided by the pixel scale). */
+    resize(w2) {
+      w2 = Math.max(200, Math.round(w2));
+      if (w2 === this.w && this.canvas.width === w2) return;
+      this.w = w2;
+      this.canvas.width = w2;
+    }
+    draw(d, now) {
+      const g = this.g, W2 = this.w;
+      g.imageSmoothingEnabled = false;
+      g.fillStyle = INK;
+      g.fillRect(0, 0, W2, HUD_H);
+      g.fillStyle = "#241c16";
+      g.fillRect(44, 10, W2 - 88, HUD_H - 12);
+      g.fillStyle = "#2f251d";
+      for (let x = 50; x < W2 - 50; x += 12) g.fillRect(x, HUD_H - 4, 2, 2);
+      const bx = 46, bw = W2 - 92, by = 2;
+      g.fillStyle = "#000";
+      g.fillRect(bx - 1, by - 1, bw + 2, 7);
+      g.fillStyle = "#3a2f25";
+      g.fillRect(bx, by, bw, 5);
+      g.fillStyle = GOLD;
+      g.fillRect(bx, by, Math.round(bw * clamp01(d.xpFrac)), 5);
+      g.fillStyle = "#fff0b8";
+      g.fillRect(bx, by, Math.round(bw * clamp01(d.xpFrac)), 1);
+      g.fillStyle = "#000";
+      for (let i = 1; i < 10; i++) g.fillRect(bx + Math.round(bw * i / 10), by, 1, 5);
+      this.globe(22, 24, 19, d.lifeMax ? d.life / d.lifeMax : 0, d.dead ? "#5a2a2a" : "#e5383b", "#9e1d1f", "#ff8a8c", now, 0);
+      if (d.esMax > 0) this.ring(22, 24, 21, d.es / d.esMax, "#7fd1ff");
+      this.globe(W2 - 22, 24, 19, d.manaMax ? d.mana / d.manaMax : 0, "#3a7bff", "#1f47a8", "#9dbbff", now, 1.7);
+      const lifeTxt = fmt(Math.floor(Math.max(0, d.life)));
+      drawText(g, lifeTxt, 22, 20, CREAM, "center");
+      drawText(g, fmt(Math.floor(Math.max(0, d.mana))), W2 - 22, 20, CREAM, "center");
+      if (d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
+      const cx = Math.round(W2 / 2), row = 12;
+      this.flask(cx - 36, row, d.flaskMax ? d.flask / d.flaskMax : 0);
+      this.skill(cx - 14, row, d);
+      this.level(cx + 18, row, d.level);
+      const leftRoom = cx - 40 - 48, rightRoom = W2 - 48 - (cx + 50);
+      if (leftRoom >= 60) {
+        const z = fit(d.zone.toUpperCase(), leftRoom - 4);
+        drawText(g, z, 48, 13, CREAM);
+        drawText(g, `AREA ${d.zoneLevel}`, 48, 24, "#b5a48b");
+        drawText(g, `${fmt(d.packDps)} DPS`, 48, 33, GOLD);
+      }
+      if (rightRoom >= 60) {
+        const rx = W2 - 48;
+        drawText(g, `${Math.floor(d.xpFrac * 100)}% XP`, rx, 13, GOLD, "right");
+        if (d.eta) drawText(g, fit(d.eta.toUpperCase(), rightRoom - 4), rx, 24, "#b5a48b", "right");
+      }
+    }
+    /** A glass globe: black rim, liquid to `f` with a moving surface, a highlight. */
+    globe(cx, cy, r3, f, col, deep, surf, now, phase) {
+      const g = this.g;
+      f = clamp01(f);
+      const top = cy - r3, level = cy + r3 - Math.round(2 * r3 * f);
+      for (let y = -r3 - 2; y <= r3 + 2; y++) {
+        const half = Math.floor(Math.sqrt(Math.max(0, (r3 + 2) * (r3 + 2) - y * y)));
+        g.fillStyle = "#000";
+        g.fillRect(cx - half, cy + y, half * 2 + 1, 1);
+      }
+      for (let y = -r3; y <= r3; y++) {
+        const half = Math.floor(Math.sqrt(Math.max(0, r3 * r3 - y * y)));
+        if (!half) continue;
+        const py = cy + y;
+        g.fillStyle = "#2a211b";
+        g.fillRect(cx - half, py, half * 2 + 1, 1);
+        for (let x = -half; x <= half; x++) {
+          const wave = f > 0 && f < 1 ? Math.round(Math.sin((x + now / 180 + phase * 10) * 0.35) * 1.2) : 0;
+          const surface = level + wave;
+          if (py < surface) continue;
+          g.fillStyle = py === surface ? surf : py > cy + r3 * 0.45 ? deep : col;
+          g.fillRect(cx + x, py, 1, 1);
+        }
+      }
+      g.fillStyle = "rgba(255,255,255,.55)";
+      g.fillRect(cx - r3 + 5, top + 6, 2, 5);
+      g.fillRect(cx - r3 + 7, top + 4, 3, 2);
+    }
+    /** Energy shield: a pale ring around the life globe, filled clockwise from the bottom. */
+    ring(cx, cy, r3, f, col) {
+      const g = this.g;
+      f = clamp01(f);
+      g.fillStyle = col;
+      for (let y = -r3 - 1; y <= r3 + 1; y++) for (let x = -r3 - 1; x <= r3 + 1; x++) {
+        const d = Math.sqrt(x * x + y * y);
+        if (d < r3 - 0.5 || d > r3 + 1.2) continue;
+        const a = (Math.atan2(x, y) + Math.PI) / (2 * Math.PI);
+        if (1 - a <= f) g.fillRect(cx + x, cy + y, 1, 1);
+      }
+    }
+    box(x, y, w2, h2, bg) {
+      const g = this.g;
+      g.fillStyle = "#000";
+      g.fillRect(x - 1, y - 1, w2 + 2, h2 + 2);
+      g.fillStyle = bg;
+      g.fillRect(x, y, w2, h2);
+      g.fillStyle = "rgba(255,255,255,.12)";
+      g.fillRect(x, y, w2, 1);
+    }
+    flask(x, y, f) {
+      const g = this.g;
+      this.box(x, y, 18, 28, "#2a211b");
+      g.fillStyle = "#000";
+      g.fillRect(x + 6, y + 3, 6, 5);
+      g.fillRect(x + 3, y + 8, 12, 17);
+      g.fillStyle = "#4a3a2e";
+      g.fillRect(x + 7, y + 4, 4, 3);
+      g.fillRect(x + 4, y + 9, 10, 15);
+      const h2 = Math.round(15 * clamp01(f));
+      g.fillStyle = "#3fbf5f";
+      g.fillRect(x + 4, y + 24 - h2, 10, h2);
+      if (h2) {
+        g.fillStyle = "#9df0b2";
+        g.fillRect(x + 4, y + 24 - h2, 10, 1);
+      }
+      g.fillStyle = "#8a5a2b";
+      g.fillRect(x + 7, y + 2, 4, 2);
+    }
+    skill(x, y, d) {
+      const g = this.g;
+      this.box(x, y, 28, 28, d.spell ? "#3b2a52" : "#4a2a1f");
+      const icon = iconFor(d.weaponKind ?? (d.spell ? "focus" : "sword"), "weapon");
+      g.drawImage(icon, x + 2, y + 2, 24, 24);
+      const left = 1 - clamp01(d.ready);
+      if (left > 0.02) {
+        g.fillStyle = "rgba(10,8,6,.62)";
+        for (let py = 0; py < 28; py++) for (let px = 0; px < 28; px++) {
+          const a = (Math.atan2(px - 13.5, -(py - 13.5)) + 2 * Math.PI) % (2 * Math.PI) / (2 * Math.PI);
+          if (a >= 1 - left) g.fillRect(x + px, y + py, 1, 1);
+        }
+      } else {
+        g.fillStyle = GOLD;
+        g.fillRect(x, y + 27, 28, 1);
+      }
+    }
+    level(x, y, lv) {
+      this.box(x, y, 28, 28, INK);
+      const g = this.g;
+      g.fillStyle = GOLD;
+      g.fillRect(x, y, 28, 2);
+      g.fillRect(x, y + 26, 28, 2);
+      drawText(g, "LV", x + 14, y + 4, "#b5a48b", "center");
+      drawText(g, String(lv), x + 14, y + 14, GOLD, "center");
+    }
+  };
+  var clamp01 = (v) => Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+  function fit(text, max) {
+    if (textWidth(text) + 2 <= max) return text;
+    let t = text;
+    while (t.length > 1 && textWidth(t + ".") + 2 > max) t = t.slice(0, -1);
+    return t.trimEnd() + ".";
+  }
+
+  // src/ui/sfx.ts
+  var GAP = { hit: 70, crit: 90, kill: 60, hurt: 110, flask: 300, click: 40 };
+  var Sound = class {
+    constructor(settings) {
+      this.settings = settings;
+    }
+    settings;
+    ctx = null;
+    master = null;
+    noise = null;
+    last = /* @__PURE__ */ new Map();
+    /** Needs a user gesture on some platforms: call from a click (opening the window). */
+    unlock() {
+      if (!this.settings.on) return;
+      try {
+        if (!this.ctx) {
+          const AC = window.AudioContext ?? window.webkitAudioContext;
+          if (!AC) return;
+          this.ctx = new AC();
+          this.master = this.ctx.createGain();
+          this.master.connect(this.ctx.destination);
+          const n = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
+          const d = n.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          this.noise = n;
+        }
+        if (this.ctx.state === "suspended") void this.ctx.resume();
+        this.master.gain.value = this.settings.volume * 0.5;
+      } catch {
+        this.ctx = null;
+      }
+    }
+    set(on, volume = this.settings.volume) {
+      this.settings = { on, volume: Math.max(0, Math.min(1, volume)) };
+      if (on) this.unlock();
+      if (this.master) this.master.gain.value = on ? this.settings.volume * 0.5 : 0;
+    }
+    close() {
+      void this.ctx?.close().catch(() => {
+      });
+      this.ctx = null;
+      this.master = null;
+    }
+    play(s) {
+      if (!this.settings.on || !this.ctx || !this.master || this.ctx.state !== "running") return;
+      const now = performance.now(), gap = GAP[s] ?? 0;
+      if (gap && now - (this.last.get(s) ?? -1e9) < gap) return;
+      this.last.set(s, now);
+      const t = this.ctx.currentTime + 5e-3;
+      switch (s) {
+        case "hit":
+          this.tone("square", 220, 90, t, 0.06, 0.18);
+          this.hiss(t, 0.04, 0.12, 2400);
+          break;
+        case "crit":
+          this.tone("square", 520, 140, t, 0.1, 0.22);
+          this.hiss(t, 0.08, 0.2, 5e3);
+          this.tone("triangle", 1040, 780, t, 0.08, 0.1);
+          break;
+        case "kill":
+          this.tone("triangle", 150, 50, t, 0.14, 0.3);
+          this.hiss(t, 0.1, 0.12, 900);
+          break;
+        case "hurt":
+          this.tone("sawtooth", 140, 70, t, 0.1, 0.16);
+          break;
+        case "flask":
+          [440, 560, 700].forEach((f, i) => this.tone("sine", f, f * 1.2, t + i * 0.05, 0.06, 0.14));
+          break;
+        case "loot1":
+          [660, 880].forEach((f, i) => this.tone("triangle", f, f, t + i * 0.07, 0.09, 0.18));
+          break;
+        case "loot2":
+          [784, 988, 1319].forEach((f, i) => this.tone("square", f, f, t + i * 0.07, 0.1, 0.12));
+          break;
+        case "loot3":
+          [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone("square", f, f, t + i * 0.07, 0.14, 0.13));
+          this.hiss(t + 0.3, 0.5, 0.06, 7e3);
+          break;
+        case "level":
+          [392, 523, 659, 784, 1047].forEach((f, i) => {
+            this.tone("square", f, f, t + i * 0.09, 0.16, 0.14);
+            this.tone("triangle", f / 2, f / 2, t + i * 0.09, 0.16, 0.12);
+          });
+          break;
+        case "death":
+          this.tone("sawtooth", 330, 55, t, 0.9, 0.2);
+          this.hiss(t, 0.5, 0.1, 600);
+          break;
+        case "boss":
+          this.tone("sawtooth", 55, 50, t, 1.1, 0.25);
+          this.tone("square", 82, 80, t + 0.05, 0.9, 0.12);
+          break;
+        case "click":
+          this.tone("square", 1200, 900, t, 0.025, 0.06);
+          break;
+      }
+    }
+    env(t, dur, peak) {
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.01, dur / 4));
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      g.connect(this.master);
+      return g;
+    }
+    tone(type, f0, f1, t, dur, peak) {
+      const o = this.ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+      o.connect(this.env(t, dur, peak));
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+    hiss(t, dur, peak, cutoff) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noise;
+      const f = this.ctx.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = cutoff;
+      src.connect(f);
+      f.connect(this.env(t, dur, peak));
+      src.start(t);
+      src.stop(t + dur + 0.02);
+    }
+  };
 
   // src/ui/text.ts
   var NAMES = {
@@ -6340,8 +6734,6 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
   var BACKUP_MS = 5 * 6e4;
   var AUTOSAVE_MS = 2e4;
   var REPORT_MIN_MS = 6e4;
-  var VITALS_W = 216;
-  var NARROW = 640;
   var MINI_W = 320;
   var XP_WINDOW_MS = 10 * 6e4;
   var STAGE_FRAC = { l: 0.42, m: 0.28 };
@@ -6365,10 +6757,12 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     top;
     stage;
     stageBtn;
-    vitals;
-    where;
-    xpLv;
-    xpEta;
+    soundBtn;
+    hudWrap;
+    hud = new Hud();
+    sound = new Sound({ on: true, volume: 0.35 });
+    /** When the hero last swung or cast (performance.now()), for the skill slot's cooldown sweep. */
+    lastUse = 0;
     nav;
     who;
     miniBtn;
@@ -6386,8 +6780,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     busy = false;
     ctx;
     stopKeys = null;
-    frame = { stage: "m", mini: false, max: false };
-    meters = {};
+    frame = { stage: "m", mini: false, max: false, sound: true, volume: 0.35 };
     xpLog = [];
     lastEvent = "";
     onUnload = () => {
@@ -6431,6 +6824,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
       this.host.remove();
       this.host = null;
+      this.sound.close();
       this.state = null;
       this.hooks.onClose?.();
     }
@@ -6458,7 +6852,10 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         if (f.stage === "l" || f.stage === "m" || f.stage === "off") this.frame.stage = f.stage;
         this.frame.mini = f.mini === true;
         this.frame.max = f.max === true;
+        this.frame.sound = f.sound !== false;
+        if (typeof f.volume === "number" && f.volume >= 0 && f.volume <= 1) this.frame.volume = f.volume;
       }
+      this.sound.set(this.frame.sound, this.frame.volume);
       const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
       const ctl = (g, title, fn, cls = "") => {
         const b = h("button", { class: `ctl ${cls}`, title, attrs: { "aria-label": title }, on: { click: fn } }, glyph(g, 12));
@@ -6468,26 +6865,20 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
       this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
       this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
+      this.soundBtn = ctl("sound", "Sound on (click to mute)", () => this.setSound(!this.frame.sound), "snd");
       const bar2 = h(
         "div",
         { class: "bar" },
         h("span", { class: "logo", text: "Hollowmarch" }),
         this.who,
-        h("span", { class: "ctls" }, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x"))
+        h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x"))
       );
       bar2.addEventListener("dblclick", (e) => {
         if (!e.target.closest("button")) this.setMax(!this.frame.max);
       });
       this.stage = h("div", { class: "stage" }, this.battle.canvas);
-      this.vitals = h("div", { class: "vitals" });
-      for (const [k, label] of [["life", "Life"], ["es", "Shield"], ["mana", "Mana"], ["flask", "Flask"]]) this.vitals.append(this.meter(k, label, "vt " + k));
-      this.where = h("div", { class: "where" });
-      this.vitals.append(this.where);
-      this.top = h("div", { class: "top" }, this.stage, this.vitals);
-      this.xpLv = h("span", { class: "lv" });
-      this.xpEta = h("span", { class: "eta" });
-      const xpM = this.meter("xp", "", "track");
-      const xp = h("div", { class: "xp" }, this.xpLv, xpM, this.xpEta);
+      this.top = h("div", { class: "top" }, this.stage);
+      this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
       this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
       VIEWS.forEach((v, i) => {
         this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${i + 1})` }, on: { click: () => {
@@ -6500,12 +6891,10 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       });
       this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
       const main = h("div", { class: "main" }, this.nav, this.body);
-      this.miniBox = h("div", { class: "minibox" });
-      for (const [k, label] of [["mlife", "Life"], ["mxp", "Level"]]) this.miniBox.append(this.meter(k, label, "vt " + k));
-      this.miniBox.append(h("div", { class: "mline" }), h("div", { class: "mlast" }));
+      this.miniBox = h("div", { class: "minibox" }, h("div", { class: "mlast" }));
       this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
       const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, xp, main, this.miniBox, this.toasts, grip);
+      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, this.hudWrap, main, this.miniBox, this.toasts, grip);
       shell.append(this.win);
       this.root.append(shell);
       document.body.append(host);
@@ -6547,14 +6936,6 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       });
       this.applyFrame();
     }
-    /** A labelled bar ("vt" rows in the vitals), or with cls "track" a bare bar carrying its own text. */
-    meter(key, label, cls) {
-      const fill = h("i"), val = h("span", { class: "v" });
-      const track = cls === "track" ? h("div", { class: "track" }, fill, val) : h("div", { class: "track" }, fill);
-      const root = cls === "track" ? track : h("div", { class: cls }, h("span", { class: "k", text: label }), val, track);
-      this.meters[key] = { root, fill, val, last: "", w: "" };
-      return root;
-    }
     geo = { x: 80, y: 60, w: 900, h: 660 };
     placeWindow() {
       const g = this.kv.get(GEO_KEY);
@@ -6565,29 +6946,35 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         this.geo.x = Math.max(8, Math.round((window.innerWidth - this.geo.w) / 2));
         this.geo.y = Math.max(40, Math.round((window.innerHeight - this.geo.h) / 2));
       }
-      const fit = () => {
+      const fit2 = () => {
         const vw = window.innerWidth, vh = window.innerHeight;
         const g2 = this.geo;
         g2.w = Math.max(380, Math.min(g2.w, vw - 8));
         g2.h = Math.max(340, Math.min(g2.h, vh - 8));
         g2.x = Math.max(0, Math.min(g2.x, vw - (this.frame.mini ? MINI_W : g2.w)));
         g2.y = Math.max(0, Math.min(g2.y, vh - (this.frame.mini ? 120 : g2.h)));
+        const hudAt = (cssW, scale) => {
+          this.hud.resize(cssW / scale);
+          this.hud.canvas.style.width = cssW + "px";
+          this.hud.canvas.style.height = HUD_H * scale + "px";
+        };
         if (this.frame.mini) {
           Object.assign(this.win.style, { left: g2.x + "px", top: g2.y + "px", width: MINI_W + "px", height: "" });
+          hudAt(MINI_W - 6, 1);
           return;
         }
         const box2 = this.frame.max ? { x: 8, y: 8, w: vw - 16, h: vh - 16 } : g2;
         Object.assign(this.win.style, { left: box2.x + "px", top: box2.y + "px", width: box2.w + "px", height: box2.h + "px" });
+        const inner = box2.w - 6;
+        hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
         if (this.frame.stage === "off") {
           this.stage.style.height = "";
           return;
         }
-        const inner = box2.w - 6;
-        const stageW = inner <= NARROW ? inner : inner - VITALS_W - 3;
-        this.stage.style.height = Math.round(Math.min(stageW * H / W, box2.h * STAGE_FRAC[this.frame.stage])) + "px";
+        this.stage.style.height = Math.round(Math.min(inner * H / W, box2.h * STAGE_FRAC[this.frame.stage])) + "px";
       };
-      fit();
-      this.refit = fit;
+      fit2();
+      this.refit = fit2;
     }
     refit = () => {
     };
@@ -6605,6 +6992,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       };
       setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
       setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
+      setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click to mute)" : "Sound off (click to unmute)");
       this.refit();
     }
     saveFrame() {
@@ -6629,6 +7017,13 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       this.frame.stage = s;
       this.saveFrame();
       this.applyFrame();
+    }
+    setSound(on) {
+      this.frame.sound = on;
+      this.saveFrame();
+      this.sound.set(on, this.frame.volume);
+      this.applyFrame();
+      if (on) this.sound.play("click");
     }
     /** A short pulse on the frame, so a click on the launcher visibly finds the window. */
     flash() {
@@ -6751,22 +7146,44 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       this.sig = "";
       this.renderTab(true);
       const be = this.battle.events(() => performance.now(), () => this.state);
+      const sfx = (x, loud = false) => {
+        if (!this.battle.quiet && (loud || !this.frame.mini)) this.sound.play(x);
+      };
       const ev = {
         ...be,
+        heroUse: (fx, targets) => {
+          this.lastUse = performance.now();
+          be.heroUse?.(fx, targets);
+        },
+        heroHit: (i, dmg, crit) => {
+          be.heroHit?.(i, dmg, crit);
+          sfx(crit ? "crit" : "hit");
+        },
+        monsterHit: (i, dmg, avoided) => {
+          be.monsterHit?.(i, dmg, avoided);
+          if (!avoided) sfx("hurt");
+        },
+        flask: () => {
+          be.flask?.();
+          sfx("flask");
+        },
         story: (text) => this.showStory(text),
         zone: (_from, to, why) => {
           if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`, "road");
         },
         kill: (_m, xp) => {
           if (xp > 0) this.xpLog.push([Date.now(), xp]);
+          sfx("kill");
         },
         level: (l) => {
           be.level?.(l);
           this.toast(`Level ${l}`, "level");
           this.lastEvent = `Reached level ${l}`;
+          sfx("level", true);
         },
         loot: (item, kept, equipped) => {
           if (!kept) return;
+          if (item.rarity !== "plain") sfx(item.rarity === "enchanted" ? "loot1" : item.rarity === "rare" ? "loot2" : "loot3", item.rarity !== "enchanted");
           const name = itemLabel(item);
           if (equipped) {
             this.toast(`Equipped: ${name}`, item.rarity);
@@ -6778,6 +7195,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         },
         death: () => {
           this.lastEvent = "Died. The ember relights.";
+          sfx("death");
         }
       };
       this.timer = window.setInterval(() => {
@@ -6916,52 +7334,45 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         }
       }
     }
-    setMeter(k, f, text) {
-      const m4 = this.meters[k];
-      if (!m4) return;
-      const w2 = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
-      if (m4.w !== w2) {
-        m4.fill.style.width = w2;
-        m4.w = w2;
-      }
-      if (m4.last !== text) {
-        m4.val.textContent = text;
-        m4.last = text;
-      }
-    }
     whereKey = "";
+    ariaAt = 0;
     drawHud() {
       const s = this.state;
       const sh = runSheet(s);
       const run = s.activity.run;
       const hh = run?.hero;
-      const n = (x) => fmt(Math.floor(Math.max(0, x)));
-      const life = hh?.life ?? sh.life;
-      this.setMeter("life", life / sh.life, `${n(life)} / ${n(sh.life)}`);
-      this.meters.es.root.hidden = !sh.es;
-      if (sh.es) this.setMeter("es", (hh?.es ?? sh.es) / sh.es, `${n(hh?.es ?? sh.es)} / ${n(sh.es)}`);
-      this.setMeter("mana", (hh?.mana ?? sh.mana) / sh.mana, `${n(hh?.mana ?? sh.mana)} / ${n(sh.mana)}`);
-      this.setMeter("flask", (hh?.flask ?? 30) / 30, `${Math.floor(hh?.flask ?? 30)} / 30`);
       const need = xpToNext(s.hero.level);
       const xpF = isFinite(need) ? s.hero.xp / need : 1;
-      this.setMeter("xp", xpF, isFinite(need) ? `${fmt(s.hero.xp)} / ${fmt(need)} xp  (${(xpF * 100).toFixed(1)}%)` : "max level");
-      const lv = `LV ${s.hero.level}`;
-      if (this.xpLv.textContent !== lv) this.xpLv.textContent = lv;
       const eta = this.eta(need - s.hero.xp);
-      if (this.xpEta.textContent !== eta) {
-        this.xpEta.textContent = eta;
-        this.xpEta.title = eta ? "At the pace of the last few minutes" : "";
-      }
       const z = run ? runZone(s, run) : ZONES[s.activity.zone];
-      const detail = run?.map ? `${s.maps.length} maps left` : `${s.world.clears[z.id] ?? 0} clears`;
-      const wk = `${z.id}|${z.name}|${z.level}|${detail}|${fmt(sh.skill.packDps)}`;
+      const speed = Math.max(0.05, Math.min(sh.skill.speed, sh.skill.sustain));
+      const w2 = s.hero.equipment.weapon;
+      const now = performance.now();
+      const life = hh?.life ?? sh.life, mana = hh?.mana ?? sh.mana, es = hh?.es ?? sh.es;
+      this.hud.draw({
+        life,
+        lifeMax: sh.life,
+        es,
+        esMax: sh.es,
+        mana,
+        manaMax: sh.mana,
+        flask: hh?.flask ?? 30,
+        flaskMax: 30,
+        level: s.hero.level,
+        xpFrac: xpF,
+        eta: eta.replace(/^~/, "~ "),
+        ready: run?.phase === "fight" ? (now - this.lastUse) / (1e3 / speed) : 1,
+        skillName: sh.skill.name,
+        weaponKind: w2 ? baseOf(w2).kind : null,
+        spell: sh.skill.kind !== "attack",
+        zone: z.name,
+        zoneLevel: z.level,
+        packDps: sh.skill.packDps,
+        dead: run?.phase === "dead"
+      }, now);
+      const wk = `${z.id}|${z.palette.join()}`;
       if (wk !== this.whereKey) {
         this.whereKey = wk;
-        this.where.replaceChildren(
-          h("b", { text: z.name }),
-          h("span", { class: "muted", text: `Area level ${z.level}  /  ${detail}` }),
-          h("span", { class: "dps" }, h("b", { class: "num", text: fmt(sh.skill.packDps) }), " pack DPS")
-        );
         const [sky, ground] = z.palette;
         this.stage.style.background = `linear-gradient(to bottom, ${sky} 0 83.4%, #111 83.4% 85%, ${ground} 85% 100%)`;
       }
@@ -6971,12 +7382,13 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         this.who.dataset.k = who;
         this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: `Level ${s.hero.level} ${cls}` }));
       }
-      if (this.frame.mini) {
-        this.setMeter("mlife", life / sh.life, `${n(life)} / ${n(sh.life)}`);
-        this.setMeter("mxp", xpF, `${s.hero.level}  ${(xpF * 100).toFixed(0)}%${eta ? "  " + eta : ""}`);
-        const line = this.miniBox.querySelector(".mline"), last = this.miniBox.querySelector(".mlast");
-        const lt = `${z.name}  /  ${fmt(sh.skill.packDps)} DPS`;
-        if (line.textContent !== lt) line.textContent = lt;
+      if (now - this.ariaAt > 1e3) {
+        this.ariaAt = now;
+        const n = (x) => fmt(Math.floor(Math.max(0, x)));
+        const label = `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
+        this.hudWrap.setAttribute("aria-label", label);
+        this.hudWrap.title = label;
+        const last = this.miniBox.firstElementChild;
         if (last.textContent !== this.lastEvent) last.textContent = this.lastEvent;
       }
     }

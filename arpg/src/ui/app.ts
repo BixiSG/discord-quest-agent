@@ -11,7 +11,7 @@ import { validateState } from "../core/validate";
 import type { GameState } from "../core/state";
 import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
 import { deriveSheet, supportSlots } from "../core/character";
-import { itemLabel } from "../core/items";
+import { baseOf, itemLabel } from "../core/items";
 import { pointsLeft, ascPointsLeft } from "../core/passives";
 import { atlasPointsLeft } from "../core/maps";
 import type { SaveStore } from "../platform/store";
@@ -20,6 +20,8 @@ import { Battle, W as BW, H as BH } from "./battle";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { glyph, type GlyphName } from "./glyphs";
+import { Hud, HUD_H } from "./hud";
+import { Sound, type Sfx } from "./sfx";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { itemCard } from "./views";
 
@@ -31,9 +33,6 @@ const QUICK_KEY = "quicksave";
 const BACKUP_MS = 5 * 60e3;
 const AUTOSAVE_MS = 20e3;
 const REPORT_MIN_MS = 60e3;
-/** Width of the vitals column next to the stage, and where the layout folds to one column. */
-const VITALS_W = 216;
-const NARROW = 640;
 const MINI_W = 320;
 /** XP rate window for the time-to-level estimate. */
 const XP_WINDOW_MS = 10 * 60e3;
@@ -43,7 +42,7 @@ const STAGE_FRAC: Record<Exclude<StageSize, "off">, number> = { l: 0.42, m: 0.28
 const STAGE_NEXT: Record<StageSize, StageSize> = { m: "l", l: "off", off: "m" };
 const STAGE_TITLE: Record<StageSize, string> = { m: "Battle view: normal (click for large)", l: "Battle view: large (click to hide)", off: "Battle view: hidden (click to show)" };
 
-interface Frame { stage: StageSize; mini: boolean; max: boolean }
+interface Frame { stage: StageSize; mini: boolean; max: boolean; sound: boolean; volume: number }
 
 export interface Summary { name: string; cls: string; level: number; zone: string; savedAt: number; xpFrac: number }
 
@@ -59,8 +58,6 @@ const STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "in
 
 const NAV_GLYPH: Record<ViewId, GlyphName> = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu" };
 
-interface Meter { root: HTMLElement; fill: HTMLElement; val: HTMLElement; last: string; w: string }
-
 export class GameWindow {
     private host: HTMLDivElement | null = null;
     private root!: ShadowRoot;
@@ -69,10 +66,12 @@ export class GameWindow {
     private top!: HTMLDivElement;
     private stage!: HTMLDivElement;
     private stageBtn!: HTMLButtonElement;
-    private vitals!: HTMLDivElement;
-    private where!: HTMLDivElement;
-    private xpLv!: HTMLElement;
-    private xpEta!: HTMLElement;
+    private soundBtn!: HTMLButtonElement;
+    private hudWrap!: HTMLDivElement;
+    private hud = new Hud();
+    private sound = new Sound({ on: true, volume: 0.35 });
+    /** When the hero last swung or cast (performance.now()), for the skill slot's cooldown sweep. */
+    private lastUse = 0;
     private nav!: HTMLDivElement;
     private who!: HTMLSpanElement;
     private miniBtn!: HTMLButtonElement;
@@ -90,8 +89,7 @@ export class GameWindow {
     private busy = false;
     private ctx!: Ctx;
     private stopKeys: ((e: Event) => void) | null = null;
-    private frame: Frame = { stage: "m", mini: false, max: false };
-    private meters: Record<string, Meter> = {};
+    private frame: Frame = { stage: "m", mini: false, max: false, sound: true, volume: 0.35 };
     private xpLog: [number, number][] = [];
     private lastEvent = "";
     private onUnload = () => {
@@ -127,6 +125,7 @@ export class GameWindow {
         if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
         this.host.remove();
         this.host = null;
+        this.sound.close();
         this.state = null;
         this.hooks.onClose?.();
     }
@@ -155,7 +154,10 @@ export class GameWindow {
             if (f.stage === "l" || f.stage === "m" || f.stage === "off") this.frame.stage = f.stage;
             this.frame.mini = f.mini === true;
             this.frame.max = f.max === true;
+            this.frame.sound = f.sound !== false;
+            if (typeof f.volume === "number" && f.volume >= 0 && f.volume <= 1) this.frame.volume = f.volume;
         }
+        this.sound.set(this.frame.sound, this.frame.volume); // open() is a click: audio may start
 
         const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
         const ctl = (g: GlyphName, title: string, fn: () => void, cls = "") => {
@@ -166,21 +168,14 @@ export class GameWindow {
         this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
         this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
         this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
+        this.soundBtn = ctl("sound", "Sound on (click to mute)", () => this.setSound(!this.frame.sound), "snd");
         const bar = h("div", { class: "bar" }, h("span", { class: "logo", text: "Hollowmarch" }), this.who,
-            h("span", { class: "ctls" }, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x")));
+            h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x")));
         bar.addEventListener("dblclick", e => { if (!(e.target as HTMLElement).closest("button")) this.setMax(!this.frame.max); });
 
         this.stage = h("div", { class: "stage" }, this.battle.canvas);
-        this.vitals = h("div", { class: "vitals" });
-        for (const [k, label] of [["life", "Life"], ["es", "Shield"], ["mana", "Mana"], ["flask", "Flask"]] as const) this.vitals.append(this.meter(k, label, "vt " + k));
-        this.where = h("div", { class: "where" });
-        this.vitals.append(this.where);
-        this.top = h("div", { class: "top" }, this.stage, this.vitals);
-
-        this.xpLv = h("span", { class: "lv" });
-        this.xpEta = h("span", { class: "eta" });
-        const xpM = this.meter("xp", "", "track");
-        const xp = h("div", { class: "xp" }, this.xpLv, xpM, this.xpEta);
+        this.top = h("div", { class: "top" }, this.stage);
+        this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
 
         this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
         VIEWS.forEach((v, i) => {
@@ -192,13 +187,11 @@ export class GameWindow {
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
         const main = h("div", { class: "main" }, this.nav, this.body);
 
-        this.miniBox = h("div", { class: "minibox" });
-        for (const [k, label] of [["mlife", "Life"], ["mxp", "Level"]] as const) this.miniBox.append(this.meter(k, label, "vt " + k));
-        this.miniBox.append(h("div", { class: "mline" }), h("div", { class: "mlast" }));
+        this.miniBox = h("div", { class: "minibox" }, h("div", { class: "mlast" }));
 
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
         const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-        this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar, this.top, xp, main, this.miniBox, this.toasts, grip);
+        this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar, this.top, this.hudWrap, main, this.miniBox, this.toasts, grip);
         shell.append(this.win);
         this.root.append(shell);
         document.body.append(host);
@@ -234,15 +227,6 @@ export class GameWindow {
         this.applyFrame();
     }
 
-    /** A labelled bar ("vt" rows in the vitals), or with cls "track" a bare bar carrying its own text. */
-    private meter(key: string, label: string, cls: string): HTMLElement {
-        const fill = h("i"), val = h("span", { class: "v" });
-        const track = cls === "track" ? h("div", { class: "track" }, fill, val) : h("div", { class: "track" }, fill);
-        const root = cls === "track" ? track : h("div", { class: cls }, h("span", { class: "k", text: label }), val, track);
-        this.meters[key] = { root, fill, val, last: "", w: "" };
-        return root;
-    }
-
     private geo = { x: 80, y: 60, w: 900, h: 660 };
     private placeWindow(): void {
         const g = this.kv.get(GEO_KEY) as typeof this.geo | null;
@@ -259,16 +243,23 @@ export class GameWindow {
             const g = this.geo;
             g.w = Math.max(380, Math.min(g.w, vw - 8)); g.h = Math.max(340, Math.min(g.h, vh - 8));
             g.x = Math.max(0, Math.min(g.x, vw - (this.frame.mini ? MINI_W : g.w))); g.y = Math.max(0, Math.min(g.y, vh - (this.frame.mini ? 120 : g.h)));
+            // The HUD is pixel art too: whole-number scale, its logical width follows the window.
+            const hudAt = (cssW: number, scale: number) => {
+                this.hud.resize(cssW / scale);
+                this.hud.canvas.style.width = cssW + "px";
+                this.hud.canvas.style.height = HUD_H * scale + "px";
+            };
             if (this.frame.mini) {
                 Object.assign(this.win.style, { left: g.x + "px", top: g.y + "px", width: MINI_W + "px", height: "" });
+                hudAt(MINI_W - 6, 1);
                 return;
             }
             const box = this.frame.max ? { x: 8, y: 8, w: vw - 16, h: vh - 16 } : g;
             Object.assign(this.win.style, { left: box.x + "px", top: box.y + "px", width: box.w + "px", height: box.h + "px" });
-            if (this.frame.stage === "off") { this.stage.style.height = ""; return; }
             const inner = box.w - 6;
-            const stageW = inner <= NARROW ? inner : inner - VITALS_W - 3;
-            this.stage.style.height = Math.round(Math.min(stageW * BH / BW, box.h * STAGE_FRAC[this.frame.stage])) + "px";
+            hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
+            if (this.frame.stage === "off") { this.stage.style.height = ""; return; }
+            this.stage.style.height = Math.round(Math.min(inner * BH / BW, box.h * STAGE_FRAC[this.frame.stage])) + "px";
         };
         fit();
         this.refit = fit;
@@ -285,12 +276,14 @@ export class GameWindow {
         const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.title = title; b.setAttribute("aria-label", title); };
         setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
         setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
+        setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click to mute)" : "Sound off (click to unmute)");
         this.refit();
     }
     private saveFrame(): void { this.kv.set(UI_KEY, { ...this.frame }); }
     setMini(on: boolean): void { this.frame.mini = on; this.saveFrame(); this.applyFrame(); if (!on) { this.sig = ""; this.renderTab(true); } }
     private setMax(on: boolean): void { if (this.frame.mini) return; this.frame.max = on; this.saveFrame(); this.applyFrame(); }
     private setStage(s: StageSize): void { this.frame.stage = s; this.saveFrame(); this.applyFrame(); }
+    private setSound(on: boolean): void { this.frame.sound = on; this.saveFrame(); this.sound.set(on, this.frame.volume); this.applyFrame(); if (on) this.sound.play("click"); }
     /** A short pulse on the frame, so a click on the launcher visibly finds the window. */
     private flash(): void { this.win.classList.remove("flash"); void this.win.offsetWidth; this.win.classList.add("flash"); }
 
@@ -395,19 +388,25 @@ export class GameWindow {
         this.sig = "";
         this.renderTab(true);
         const be = this.battle.events(() => performance.now(), () => this.state!);
+        const sfx = (x: Sfx, loud = false) => { if (!this.battle.quiet && (loud || !this.frame.mini)) this.sound.play(x); };
         const ev: SimEvents = {
             ...be,
+            heroUse: (fx, targets) => { this.lastUse = performance.now(); be.heroUse?.(fx, targets); },
+            heroHit: (i, dmg, crit) => { be.heroHit?.(i, dmg, crit); sfx(crit ? "crit" : "hit"); },
+            monsterHit: (i, dmg, avoided) => { be.monsterHit?.(i, dmg, avoided); if (!avoided) sfx("hurt"); },
+            flask: () => { be.flask?.(); sfx("flask"); },
             story: text => this.showStory(text),
             zone: (_from, to, why) => { if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`, "road"); },
-            kill: (_m, xp) => { if (xp > 0) this.xpLog.push([Date.now(), xp]); },
-            level: l => { be.level?.(l); this.toast(`Level ${l}`, "level"); this.lastEvent = `Reached level ${l}`; },
+            kill: (_m, xp) => { if (xp > 0) this.xpLog.push([Date.now(), xp]); sfx("kill"); },
+            level: l => { be.level?.(l); this.toast(`Level ${l}`, "level"); this.lastEvent = `Reached level ${l}`; sfx("level", true); },
             loot: (item, kept, equipped) => {
                 if (!kept) return;
+                if (item.rarity !== "plain") sfx(item.rarity === "enchanted" ? "loot1" : item.rarity === "rare" ? "loot2" : "loot3", item.rarity !== "enchanted");
                 const name = itemLabel(item);
                 if (equipped) { this.toast(`Equipped: ${name}`, item.rarity); this.lastEvent = `Equipped ${name}`; }
                 else if (item.rarity === "rare" || item.rarity === "relic") { this.toast(`${item.rarity === "relic" ? "Relic" : "Rare"}: ${name}`, item.rarity); this.lastEvent = `Found ${name}`; }
             },
-            death: () => { this.lastEvent = "Died. The ember relights."; },
+            death: () => { this.lastEvent = "Died. The ember relights."; sfx("death"); },
         };
         this.timer = window.setInterval(() => {
             if (!this.state || this.busy) return;
@@ -532,43 +531,32 @@ export class GameWindow {
         }
     }
 
-    private setMeter(k: string, f: number, text: string): void {
-        const m = this.meters[k];
-        if (!m) return;
-        const w = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
-        if (m.w !== w) { m.fill.style.width = w; m.w = w; }
-        if (m.last !== text) { m.val.textContent = text; m.last = text; }
-    }
-
     private whereKey = "";
+    private ariaAt = 0;
     private drawHud(): void {
         const s = this.state!;
         const sh = runSheet(s);
         const run = s.activity.run;
         const hh = run?.hero;
-        const n = (x: number) => fmt(Math.floor(Math.max(0, x)));
-        const life = hh?.life ?? sh.life;
-        this.setMeter("life", life / sh.life, `${n(life)} / ${n(sh.life)}`);
-        this.meters.es!.root.hidden = !sh.es;
-        if (sh.es) this.setMeter("es", (hh?.es ?? sh.es) / sh.es, `${n(hh?.es ?? sh.es)} / ${n(sh.es)}`);
-        this.setMeter("mana", (hh?.mana ?? sh.mana) / sh.mana, `${n(hh?.mana ?? sh.mana)} / ${n(sh.mana)}`);
-        this.setMeter("flask", (hh?.flask ?? 30) / 30, `${Math.floor(hh?.flask ?? 30)} / 30`);
-
         const need = xpToNext(s.hero.level);
         const xpF = isFinite(need) ? s.hero.xp / need : 1;
-        this.setMeter("xp", xpF, isFinite(need) ? `${fmt(s.hero.xp)} / ${fmt(need)} xp  (${(xpF * 100).toFixed(1)}%)` : "max level");
-        const lv = `LV ${s.hero.level}`;
-        if (this.xpLv.textContent !== lv) this.xpLv.textContent = lv;
         const eta = this.eta(need - s.hero.xp);
-        if (this.xpEta.textContent !== eta) { this.xpEta.textContent = eta; this.xpEta.title = eta ? "At the pace of the last few minutes" : ""; }
-
         const z = run ? runZone(s, run) : ZONES[s.activity.zone]!;
-        const detail = run?.map ? `${s.maps.length} maps left` : `${s.world.clears[z.id] ?? 0} clears`;
-        const wk = `${z.id}|${z.name}|${z.level}|${detail}|${fmt(sh.skill.packDps)}`;
+        const speed = Math.max(0.05, Math.min(sh.skill.speed, sh.skill.sustain));
+        const w = s.hero.equipment.weapon;
+        const now = performance.now();
+        const life = hh?.life ?? sh.life, mana = hh?.mana ?? sh.mana, es = hh?.es ?? sh.es;
+        this.hud.draw({
+            life, lifeMax: sh.life, es, esMax: sh.es, mana, manaMax: sh.mana,
+            flask: hh?.flask ?? 30, flaskMax: 30, level: s.hero.level, xpFrac: xpF, eta: eta.replace(/^~/, "~ "),
+            ready: run?.phase === "fight" ? (now - this.lastUse) / (1000 / speed) : 1,
+            skillName: sh.skill.name, weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
+            zone: z.name, zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead",
+        }, now);
+
+        const wk = `${z.id}|${z.palette.join()}`;
         if (wk !== this.whereKey) {
             this.whereKey = wk;
-            this.where.replaceChildren(h("b", { text: z.name }), h("span", { class: "muted", text: `Area level ${z.level}  /  ${detail}` }),
-                h("span", { class: "dps" }, h("b", { class: "num", text: fmt(sh.skill.packDps) }), " pack DPS"));
             // Letterbox the canvas in its own sky and ground colours, so any window shape looks deliberate.
             const [sky, ground] = z.palette;
             this.stage.style.background = `linear-gradient(to bottom, ${sky} 0 83.4%, #111 83.4% 85%, ${ground} 85% 100%)`;
@@ -579,12 +567,15 @@ export class GameWindow {
             this.who.dataset.k = who;
             this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: `Level ${s.hero.level} ${cls}` }));
         }
-        if (this.frame.mini) {
-            this.setMeter("mlife", life / sh.life, `${n(life)} / ${n(sh.life)}`);
-            this.setMeter("mxp", xpF, `${s.hero.level}  ${(xpF * 100).toFixed(0)}%${eta ? "  " + eta : ""}`);
-            const line = this.miniBox.querySelector(".mline")!, last = this.miniBox.querySelector(".mlast")!;
-            const lt = `${z.name}  /  ${fmt(sh.skill.packDps)} DPS`;
-            if (line.textContent !== lt) line.textContent = lt;
+        // Screen readers and hover get the numbers the canvas shows, refreshed once a second.
+        if (now - this.ariaAt > 1000) {
+            this.ariaAt = now;
+            const n = (x: number) => fmt(Math.floor(Math.max(0, x)));
+            const label = `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. `
+                + `Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
+            this.hudWrap.setAttribute("aria-label", label);
+            this.hudWrap.title = label;
+            const last = this.miniBox.firstElementChild!;
             if (last.textContent !== this.lastEvent) last.textContent = this.lastEvent;
         }
     }
