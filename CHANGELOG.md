@@ -12,6 +12,9 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 - Needs drain slowly by the clock and it sleeps at night; it never dies. Play with a ball or the 20-second Orb catch game, open a daily gift for a streak, collect hats, and send grown Orblings on an adventure into an album.
 - A pink dot on the title-bar button when it needs something, and an optional reminder at most every 8 hours, never at night.
 - Hovering Orbling's button says how it is doing (hungry, asleep, a gift is waiting), a line under its needs says which one runs low next, and an option lets it eat quest food on its own when hungry.
+- The second addon is Hollowmarch, an idle action RPG in its own game window: build a hero (gear, a passive tree, skills, companions) and it fights on its own. Closing the window pauses nothing; the time away is replayed when you open it again.
+- Hollowmarch has three acts, an endless map endgame with pinnacle bosses, 26 relics, nine companions, a contract board and an ember shrine. The stash looks after itself, and a mini strip keeps the fight on screen in a corner.
+- Hollowmarch has nothing to do with quests and never touches them. Like every addon it is off until you switch it on in Settings > Addons.
 
 ## 1.6.1 - 2026-09-28
 

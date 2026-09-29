@@ -24,11 +24,11 @@ link to quests. All phases P0-P5 of the roadmap are done.
 
 ## Screenshots
 
-In `arpg/docs/shots/`: character creation (01), battle (02), the "while you
-were away" report (03), gear with compare (04), hero sheet (05), skills (06),
-world (07), menu (08), passive tree (09), forge (10), atlas at Depth 3 (11),
-late tree/hero/gear (12-14), the hub card and the game over mock Discord
-(hub-card, hub-open).
+In `arpg/docs/shots/` (retaken after the art pass and rounds 3-4, a level-75
+bot hero): character creation (01), battle (02), the "while you were away"
+report (03), gear (04), hero sheet with its companion (05), skills (06), world
+with contracts and the shrine (07), menu (08), passive tree (09), forge (10),
+atlas (11).
 
 ## Quality
 

@@ -189,6 +189,22 @@ It's pixel art drawn in code, and it costs nothing while its window is closed: n
 worked out from timestamps when you look, and the room is only painted while it's on screen.
 Its state lives inside Discord next to the settings.
 
+### Addons: Hollowmarch, an idle action RPG
+
+<p align="center">
+  <img src="arpg/docs/shots/05-hero.png" width="640" alt="Hollowmarch: the battle strip over the character sheet">
+</p>
+
+**Hollowmarch** is a small action RPG that plays itself in a window of its own. You build
+the hero - gear with random affixes, a passive tree, skills and supports, an ascendancy, a
+companion at its side - and it clears the road through three acts into an endless map
+endgame. Nothing runs while the window is closed: the time away is replayed through the same
+simulation when you open it, with a "while you were away" report. Fold it into a mini strip
+to keep the fight in a corner, or give it its own button in Discord's title bar.
+
+It has nothing to do with quests and never reads quest data or orbs. Details, controls and
+the design notes are in [`arpg/README.md`](arpg/README.md).
+
 ### Languages
 
 The HUD follows Discord's own language when it has a translation for it, and you can pin

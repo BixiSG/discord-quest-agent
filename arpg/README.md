@@ -32,18 +32,16 @@ It has nothing to do with quests: it never reads quest data or orbs.
 
 ## Install (Windows, with Discord Quest Agent)
 
-1. Install Discord Quest Agent first (`Install.bat` in the repository root).
-2. Run `arpg\install\Install-Hollowmarch.bat`. It copies `arpg.js` to
-   `%LOCALAPPDATA%\DiscordQuestAgent\addons\`, where the launcher loads
-   user-installed addons (they survive agent updates).
-3. Restart the agent (or Discord). In the Quest Agent panel open Settings >
-   Addons and switch on Hollowmarch. Its card opens the game window.
+Since Discord Quest Agent 1.7.0, Hollowmarch ships with the agent
+(`src\addons\arpg.js`, built from this folder) and updates with it. In the Quest
+Agent panel open Settings > Addons and switch on Hollowmarch; its card opens the
+game window.
 
-Uninstall with `arpg\install\Uninstall-Hollowmarch.bat`. The hero stays in
-Discord's storage (IndexedDB); Menu > Export gives you a portable copy.
-
-The launcher change that loads `<install>\addons\*.js` lives on this branch;
-an agent that has not been updated yet ignores the folder.
+`arpg\install\Install-Hollowmarch.bat` is only for trying a newer build than the
+one the agent shipped: it copies `arpg.js` to `%LOCALAPPDATA%\DiscordQuestAgent\addons\`,
+where a user-installed file wins over the shipped one of the same name (remove it
+with `Uninstall-Hollowmarch.bat`). The hero stays in Discord's storage (IndexedDB)
+either way; Menu > Export gives you a portable copy.
 
 ## Playing
 

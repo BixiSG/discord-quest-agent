@@ -33,7 +33,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 21;
+    const AGENT_VERSION = 22;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
