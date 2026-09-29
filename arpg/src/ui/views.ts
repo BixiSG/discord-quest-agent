@@ -8,7 +8,10 @@ import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, 
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
 import { clear, fmt, h, pct } from "./dom";
-import { iconFor } from "./icons";
+import { itemIcon } from "./gfx/itemart";
+import { spriteCanvas } from "./gfx/sprites";
+import { HERO_CAST } from "./gfx/cast";
+import { glyph } from "./glyphs";
 import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
@@ -22,6 +25,8 @@ export interface Ctx {
     toast(msg: string): void;
     modal(content: HTMLElement): () => void;
     sel: { uid?: number; slot?: Slot };
+    /** Set while the player drags an item or reads a tooltip: the view isn't rebuilt under the mouse. */
+    hold: boolean;
     rerender(): void;
     exportSave(): string;
     importSave(text: string): Promise<string | null>;
@@ -164,11 +169,40 @@ function ehpBars(s: Sheet): HTMLElement {
 const SLOT_LABEL: Record<Slot, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
 
 function itemCell(item: Item | undefined, slot: Slot | null, selected: boolean, onClick: () => void): HTMLElement {
-    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`, title: item ? itemLabel(item) : slot ? SLOT_LABEL[slot] : "", on: { click: onClick } });
-    if (item) cell.append(iconFor(baseOf(item).kind, baseOf(item).slot));
-    if (slot) cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] }));
+    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`, attrs: { "aria-label": item ? itemLabel(item) : slot ? SLOT_LABEL[slot] : "empty" }, on: { click: onClick } });
+    if (item) cell.append(itemIcon(item));
+    if (slot) { cell.dataset.slot = slot; cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] })); }
     return cell;
 }
+
+// ---- Tooltips and drag and drop (gear) -------------------------------------
+
+let tipEl: HTMLElement | null = null;
+function hideTip(): void { tipEl?.remove(); tipEl = null; }
+/** A floating card next to `anchor`, inside the scrolling view; flips left when there's no room. */
+function showTip(anchor: HTMLElement, content: HTMLElement): void {
+    hideTip();
+    const body = anchor.closest(".body") as HTMLElement | null;
+    if (!body || !anchor.isConnected) return;
+    tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content);
+    body.append(tipEl);
+    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    const w = tipEl.offsetWidth, ht = tipEl.offsetHeight;
+    let x = ar.right - br.left + body.scrollLeft + 10;
+    if (x + w > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w - 10;
+    x = Math.max(body.scrollLeft + 4, x);
+    let y = ar.top - br.top + body.scrollTop - 6;
+    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
+    tipEl.style.left = x + "px"; tipEl.style.top = y + "px";
+}
+function withTip(cell: HTMLElement, c: Ctx, make: () => HTMLElement): void {
+    let t: number | null = null;
+    cell.addEventListener("mouseenter", () => { c.hold = true; t = window.setTimeout(() => { if (!drag) showTip(cell, make()); }, 130); });
+    cell.addEventListener("mouseleave", () => { if (t !== null) clearTimeout(t); hideTip(); if (!drag) c.hold = false; });
+}
+
+/** What is being dragged right now: a stash item (uid) or an equipped slot. */
+let drag: { uid?: number; slot?: Slot } | null = null;
 
 export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot | null } = {}): HTMLElement {
     const b = baseOf(item);
@@ -266,8 +300,41 @@ function chips<T extends string>(opts: [T, string, number?][], cur: T, pick: (v:
 function gearView(c: Ctx): HTMLElement {
     const st = c.state;
     const eq = st.hero.equipment;
-    const slots = h("div", { class: "slots" });
-    for (const s of SLOTS) slots.append(itemCell(eq[s], s, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); }));
+    hideTip(); drag = null; c.hold = false;
+    const root = h("div", { class: "gear" });
+    const endDrag = () => { drag = null; c.hold = false; root.classList.remove("dragging"); root.querySelectorAll(".drop-ok, .over").forEach(e => e.classList.remove("drop-ok", "over")); };
+
+    // Paper doll: the hero in the middle, the ten slots around them.
+    const doll = h("div", { class: "doll" });
+    const hc = HERO_CAST[st.hero.cls];
+    const fig = h("div", { class: "fig" });
+    const art = hc ? spriteCanvas(hc.idle) : null;
+    if (art) { art.className = "figart"; art.style.width = art.width * 3 + "px"; art.style.height = art.height * 3 + "px"; fig.append(art); }
+    doll.append(fig);
+    for (const s of SLOTS) {
+        const it = eq[s];
+        const cell = itemCell(it, s, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); });
+        if (it) {
+            withTip(cell, c, () => itemCard(it, c));
+            cell.draggable = true;
+            cell.addEventListener("dragstart", e => { drag = { slot: s }; c.hold = true; hideTip(); root.classList.add("dragging"); e.dataTransfer?.setData("text/plain", "slot:" + s); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
+            cell.addEventListener("dragend", endDrag);
+        }
+        // Drop a stash item on a slot it fits.
+        cell.addEventListener("dragover", e => {
+            const it2 = drag?.uid !== undefined ? st.stash.find(x => x.uid === drag!.uid) : undefined;
+            if (it2 && slotsFor(baseOf(it2)).includes(s) && !canEquip(st, it2, s)) { e.preventDefault(); cell.classList.add("over"); }
+        });
+        cell.addEventListener("dragleave", () => cell.classList.remove("over"));
+        cell.addEventListener("drop", e => {
+            e.preventDefault();
+            const uid = drag?.uid;
+            endDrag();
+            if (uid !== undefined) c.act(x => { const err = equip(x, uid, s); if (!err) c.sel = { slot: s }; return err; });
+        });
+        doll.append(cell);
+    }
+    const slots = doll;
 
     // Stash: filter chips with counts, a sort, and markers for upgrades and level-locked items.
     const ups = new Set(st.stash.filter(it => upgradeOf(st, it)).map(it => it.uid));
@@ -281,10 +348,29 @@ function gearView(c: Ctx): HTMLElement {
     const stash = h("div", { class: "stash" });
     for (const it of shown) {
         const cell = itemCell(it, null, c.sel.uid === it.uid, () => { c.sel = { uid: it.uid }; c.rerender(); });
-        if (ups.has(it.uid)) { cell.classList.add("upg"); cell.title += "  (upgrade)"; }
-        else if (levelReq(it) > st.hero.level) { cell.classList.add("req"); cell.title += `  (needs level ${levelReq(it)})`; }
+        if (ups.has(it.uid)) cell.classList.add("upg");
+        else if (levelReq(it) > st.hero.level) cell.classList.add("req");
+        // Hover: the item with what it would change, next to what it would replace.
+        withTip(cell, c, () => {
+            const targets = slotsFor(baseOf(it));
+            const cmp = upgradeOf(st, it) ?? targets.find(t => !eq[t]) ?? targets[0]!;
+            const worn = eq[cmp];
+            return h("div", { class: "tipcols" }, itemCard(it, c, { compareSlot: cmp }),
+                worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: "Equipped" }), itemCard(worn, null)) : null);
+        });
+        cell.draggable = true;
+        cell.addEventListener("dragstart", e => {
+            drag = { uid: it.uid }; c.hold = true; hideTip(); root.classList.add("dragging");
+            for (const t of slotsFor(baseOf(it))) if (!canEquip(st, it, t)) root.querySelector(`.doll [data-slot="${t}"]`)?.classList.add("drop-ok");
+            e.dataTransfer?.setData("text/plain", "stash:" + it.uid); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        });
+        cell.addEventListener("dragend", endDrag);
         stash.append(cell);
     }
+    // Drop an equipped item anywhere on the stash to take it off.
+    stash.addEventListener("dragover", e => { if (drag?.slot) { e.preventDefault(); stash.classList.add("over"); } });
+    stash.addEventListener("dragleave", () => stash.classList.remove("over"));
+    stash.addEventListener("drop", e => { e.preventDefault(); const s = drag?.slot; endDrag(); if (s) c.act(x => unequip(x, s)); });
     if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
     else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
 
@@ -306,7 +392,12 @@ function gearView(c: Ctx): HTMLElement {
 
     const plainCount = st.stash.filter(x => x.rarity === "plain").length;
     const enchCount = st.stash.filter(x => x.rarity === "enchanted").length;
+    const anvil = h("div", { class: "anvil", title: "Drop a stash item here to salvage it", attrs: { "aria-label": "Salvage: drop a stash item here" } }, glyph("forge", 18), h("span", { text: "Salvage" }));
+    anvil.addEventListener("dragover", e => { if (drag?.uid !== undefined) { e.preventDefault(); anvil.classList.add("over"); } });
+    anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
+    anvil.addEventListener("drop", e => { e.preventDefault(); const uid = drag?.uid; endDrag(); if (uid !== undefined) c.act(x => { salvage(x, [uid]); c.sel = {}; }); });
     const tools = h("div", { class: "row" },
+        anvil,
         h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
         h("button", { class: "btn alt", text: `Salvage plain (${plainCount})`, attrs: plainCount ? {} : { disabled: "" },
             on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "plain").map(x => x.uid)); c.sel = {}; }) } }),
@@ -339,13 +430,12 @@ function gearView(c: Ctx): HTMLElement {
         detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
     } else {
         detail.append(h("div", { class: "card hint" }, h("h3", { text: "Pick an item" }),
-            h("div", { class: "muted", text: "Stash items show what equipping them would change. A green corner marks an upgrade; faded ones need a higher level." }),
-            h("div", { class: "muted", style: "margin-top:6px", text: "Keys: E equips the picked item, S salvages it." })));
+            h("div", { class: "muted", text: "Hover an item to compare it with what you wear. Drag it onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off." }),
+            h("div", { class: "muted", style: "margin-top:6px", text: "A green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it." })));
     }
 
-    return h("div", { class: "gear" },
-        h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools),
-        detail);
+    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: `${st.hero.name} - equipped` }), slots), stashCard, tools), detail);
+    return root;
 }
 
 // ---- Skills ----------------------------------------------------------------

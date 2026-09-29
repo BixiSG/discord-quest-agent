@@ -40,7 +40,15 @@ function sheet(p) {
     const full = resolve(p);
     if (!sheets.has(full)) {
         if (!existsSync(full)) throw new Error(`missing ${full} - run node tools/fetch-assets.mjs`);
-        sheets.set(full, PNG.sync.read(readFileSync(full)));
+        // Old PNGs (the Dungeon Crawl set) repeat IEND at the end, which pngjs rejects:
+        // walk the chunks and cut the file after the first IEND.
+        let buf = readFileSync(full);
+        for (let p = 8; p + 8 <= buf.length;) {
+            const len = buf.readUInt32BE(p), type = buf.toString("latin1", p + 4, p + 8);
+            p += 12 + len;
+            if (type === "IEND") { buf = buf.subarray(0, p); break; }
+        }
+        sheets.set(full, PNG.sync.read(buf));
     }
     return sheets.get(full);
 }

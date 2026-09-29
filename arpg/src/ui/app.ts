@@ -20,6 +20,9 @@ import { Battle } from "./battle";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { glyph, type GlyphName } from "./glyphs";
+import { frameVars } from "./gfx/frames";
+import { pixelize } from "./gfx/pix";
+import { loadSprites } from "./gfx/sprites";
 import { Hud, HUD_H } from "./hud";
 import { Sound, type Sfx } from "./sfx";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
@@ -159,7 +162,9 @@ export class GameWindow {
         }
         this.sound.set(this.frame.sound, this.frame.volume); // open() is a click: audio may start
 
-        const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
+        const dark = this.hooks.theme?.() === "dark";
+        const shell = h("div", { class: `hm${dark ? " dark" : ""}` });
+        for (const [k, v] of Object.entries(frameVars(dark))) shell.style.setProperty(k, v);
         const ctl = (g: GlyphName, title: string, fn: () => void, cls = "") => {
             const b = h("button", { class: `ctl ${cls}`, title, attrs: { "aria-label": title }, on: { click: fn } }, glyph(g, 12));
             return b;
@@ -226,6 +231,9 @@ export class GameWindow {
             if (hot) { hot.click(); e.preventDefault(); }
         });
         this.applyFrame();
+        pixelize(this.nav);
+        // Item icons and portraits come from the atlas: redraw the tab once it has loaded.
+        void loadSprites().then(() => { if (this.state && this.ctx) { this.sig = ""; this.renderTab(true); } });
     }
 
     private geo = { x: 80, y: 60, w: 900, h: 660 };
@@ -457,6 +465,7 @@ export class GameWindow {
             toast: m => this.toast(m),
             modal: el => this.modal(el),
             sel: {},
+            hold: false,
             rerender: () => { this.sig = ""; this.renderTab(true); },
             exportSave: () => exportText(wrap(this.state!, Date.now())),
             importSave: async text => {
@@ -486,7 +495,11 @@ export class GameWindow {
     private renderTab(force: boolean): void {
         if (!this.state || !this.ctx) return;
         // Signatures are cheap but not free (some stringify state): check four times a second.
-        if (!force) { const t = performance.now(); if (t - this.lastSigCheck < 250) return; this.lastSigCheck = t; }
+        if (!force) {
+            const t = performance.now();
+            if (t - this.lastSigCheck < 250 || this.ctx.hold) return; // not under a drag or a tooltip
+            this.lastSigCheck = t;
+        }
         this.updateBadges();
         const sig = this.view + ":" + viewSig(this.view, this.ctx);
         if (!force && sig === this.sig) return;
@@ -499,6 +512,7 @@ export class GameWindow {
         const top = this.body.scrollTop;
         clear(this.body);
         this.body.append(renderView(this.view, this.ctx));
+        pixelize(this.body);
         this.body.scrollTop = top;
     }
 
@@ -609,6 +623,7 @@ export class GameWindow {
     modal(content: HTMLElement): () => void {
         const m = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
         this.win.append(m);
+        queueMicrotask(() => pixelize(m)); // callers add their buttons right after this returns
         return () => m.remove();
     }
 
@@ -626,6 +641,7 @@ export class GameWindow {
             await this.save();
             this.startLoop();
         }));
+        pixelize(this.body);
     }
 
     private storyBox: HTMLElement | null = null;
