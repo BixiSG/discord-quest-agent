@@ -13,6 +13,7 @@ import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffe
 import { endgameOpen } from "../core/maps";
 import { drawPumpkin } from "./gfx/pumpkin";
 import { hint, hintsSeen } from "./hints";
+import type { Sfx } from "./sfx";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
@@ -42,7 +43,8 @@ import { tErr } from "../i18n/errors";
 export interface Ctx {
     state: GameState;
     sheet(): Sheet;
-    act(fn: (s: GameState) => string | null | void, ok?: string): void;
+    /** Runs a player action; `ok` is toasted and `sound` played when it succeeds. */
+    act(fn: (s: GameState) => string | null | void, ok?: string, sound?: Sfx): void;
     toast(msg: string): void;
     modal(content: HTMLElement): () => void;
     sel: { uid?: number; slot?: Slot };
@@ -1119,7 +1121,7 @@ function relightDialog(c: Ctx): void {
         h("div", { class: "row" },
             h("button", { class: "btn hot", text: t("dawn.go"), on: { click: () => {
                 close();
-                c.act(s => relightSun(s, { heirloom: heir.value ? Number(heir.value) : undefined, cls: cls.value }));
+                c.act(s => relightSun(s, { heirloom: heir.value ? Number(heir.value) : undefined, cls: cls.value }), undefined, "relight");
                 const done = c.modal(h("div", { class: "card col", style: "max-width:560px" }, h("h3", { text: dawnTitle(dawnOf(c.state)) }),
                     ...storyText("dawn.story").split("\n\n").map(p => h("div", { class: "story", text: p })),
                     h("button", { class: "btn", text: t("dawn.pickNow"), on: { click: () => { done(); perkDialog(c); } } })));

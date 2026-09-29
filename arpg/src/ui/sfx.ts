@@ -4,12 +4,13 @@
 // on (title-bar speaker or M), quiet when on, throttled
 // so a fast attack speed doesn't turn into a buzz.
 
-export type Sfx = "hit" | "crit" | "kill" | "hurt" | "loot1" | "loot2" | "loot3" | "level" | "death" | "flask" | "boss" | "click";
+export type Sfx = "hit" | "crit" | "kill" | "hurt" | "loot1" | "loot2" | "loot3" | "level" | "death" | "flask" | "boss" | "click"
+    | "stone" | "echo" | "buy" | "relight" | "snuff";
 
 export interface SfxSettings { on: boolean; volume: number }
 
 /** Minimum gap per sound, in ms. */
-const GAP: Partial<Record<Sfx, number>> = { hit: 70, crit: 90, kill: 60, hurt: 110, flask: 300, click: 40 };
+const GAP: Partial<Record<Sfx, number>> = { hit: 70, crit: 90, kill: 60, hurt: 110, flask: 300, click: 40, stone: 400, snuff: 120 };
 
 export class Sound {
     private ctx: AudioContext | null = null;
@@ -71,6 +72,20 @@ export class Sound {
             case "death": this.tone("sawtooth", 330, 55, t, 0.9, 0.2); this.hiss(t, 0.5, 0.1, 600); break;
             case "boss": this.tone("sawtooth", 55, 50, t, 1.1, 0.25); this.tone("square", 82, 80, t + 0.05, 0.9, 0.12); break;
             case "click": this.tone("square", 1200, 900, t, 0.025, 0.06); break;
+            // A good stone: two glassy pings a fifth apart, with a sparkle.
+            case "stone": [1568, 2349].forEach((f, i) => { this.tone("sine", f, f, t + i * 0.06, 0.22, 0.16); this.tone("triangle", f * 2, f * 2, t + i * 0.06, 0.05, 0.05); }); this.hiss(t + 0.08, 0.2, 0.04, 9000); break;
+            // An echo: a falling phrase that repeats, quieter each time.
+            case "echo": [0, 0.22, 0.44].forEach((d, k) => [659, 523, 392].forEach((f, i) => this.tone("triangle", f, f, t + d + i * 0.07, 0.16, 0.12 / (k + 1)))); break;
+            // Coins on the counter.
+            case "buy": this.tone("square", 1976, 1976, t, 0.05, 0.08); this.tone("square", 2637, 2637, t + 0.06, 0.08, 0.07); this.hiss(t, 0.05, 0.06, 6000); break;
+            // Relighting the sun: a low swell under a rising major arpeggio, then a long shimmer.
+            case "relight":
+                this.tone("sawtooth", 65, 131, t, 1.4, 0.14);
+                [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone("square", f, f, t + 0.2 + i * 0.1, 0.3, 0.1));
+                this.hiss(t + 0.9, 1.2, 0.05, 8000);
+                break;
+            // Hollow Night: a lantern snuffed.
+            case "snuff": this.hiss(t, 0.12, 0.14, 1400); this.tone("sine", 880, 330, t, 0.12, 0.08); break;
         }
     }
 

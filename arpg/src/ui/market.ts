@@ -55,7 +55,7 @@ export function marketView(c: Ctx): HTMLElement {
                 up ? h("span", { class: "tag up", text: t("market.upgrade") }) : null),
             o.sold ? h("span", { class: "muted", text: t("market.sold") })
                 : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: st.dust >= o.price ? {} : { disabled: "" },
-                    on: { click: () => c.act(s => buyGear(s, i), t("market.bought", { name: itemName(it) })) } })));
+                    on: { click: () => c.act(s => buyGear(s, i), t("market.bought", { name: itemName(it) }), "buy") } })));
     });
     root.append(h("div", { class: "card" }, h("h3", { text: t("market.pedlar") }),
         h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.pedlarNote") }), gear));
@@ -69,7 +69,7 @@ export function marketView(c: Ctx): HTMLElement {
             h("b", { class: "grow", text: stoneFullName(o.key) }),
             o.sold ? h("span", { class: "muted", text: t("market.sold") })
                 : h("button", { class: "btn small", text: t("market.buy", { cost: fmt(o.price) }), attrs: st.dust >= o.price ? {} : { disabled: "" },
-                    on: { click: () => c.act(s => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) })) } })));
+                    on: { click: () => c.act(s => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) }), "buy") } })));
     });
     root.append(h("div", { class: "card" }, h("h3", { text: t("market.jeweller") }),
         h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.jewellerNote") }), stones));

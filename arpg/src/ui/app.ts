@@ -501,7 +501,7 @@ export class GameWindow {
             flask: () => { be.flask?.(); sfx("flask"); },
             story: key => this.showStory(key),
             zone: (_from, to, why) => { if (why === "unlock") this.toast(t("toast.newRoad", { zone: ZONES[to] ? zoneName(to) : to }), "road"); },
-            kill: (_m, xp) => { if (xp > 0) this.xpLog.push([Date.now(), xp]); sfx("kill"); },
+            kill: (m, xp) => { if (xp > 0) this.xpLog.push([Date.now(), xp]); sfx(m.lantern ? "snuff" : "kill"); },
             level: l => { be.level?.(l); this.toast(t("toast.level", { level: l }), "level"); this.lastEvent = ["event.level", { level: l }]; sfx("level", true); },
             loot: (item, kept, equipped) => {
                 if (!kept) return;
@@ -513,12 +513,13 @@ export class GameWindow {
             death: () => { this.lastEvent = ["event.died", {}]; sfx("death"); },
             stone: key => {
                 // Only the good ones make noise; the rest go to the pouch quietly.
-                if ((parseStone(key)?.tier ?? 0) >= 3) { const name = stoneFullName(key); this.toast(t("toast.stone", { name }), "rare"); this.lastEvent = ["toast.stone", { name }]; }
+                if ((parseStone(key)?.tier ?? 0) >= 3) { const name = stoneFullName(key); this.toast(t("toast.stone", { name }), "rare"); this.lastEvent = ["toast.stone", { name }]; sfx("stone", true); }
             },
             echo: id => {
                 const who = echoWho(id);
                 this.toast(t("toast.echo", { who }), "relic");
                 this.lastEvent = ["toast.echo", { who }];
+                sfx("echo", true);
             },
             companion: (id, isNew) => {
                 const pet = companionName(id);
@@ -558,10 +559,10 @@ export class GameWindow {
         this.ctx = {
             get state() { return self.state!; },
             sheet: () => sheetOf(this.state!),
-            act: (fn, ok) => {
+            act: (fn, ok, sound) => {
                 const err = fn(this.state!);
                 if (typeof err === "string") this.toast(tErr(err), "err");
-                else if (ok) this.toast(ok);
+                else { if (ok) this.toast(ok); if (sound) this.sound.play(sound); }
                 this.sig = "";
                 this.renderTab(true);
                 void this.save();

@@ -9445,7 +9445,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   }
 
   // src/ui/sfx.ts
-  var GAP = { hit: 70, crit: 90, kill: 60, hurt: 110, flask: 300, click: 40 };
+  var GAP = { hit: 70, crit: 90, kill: 60, hurt: 110, flask: 300, click: 40, stone: 400, snuff: 120 };
   var Sound = class {
     constructor(settings) {
       this.settings = settings;
@@ -9547,6 +9547,35 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           break;
         case "click":
           this.tone("square", 1200, 900, t2, 0.025, 0.06);
+          break;
+        // A good stone: two glassy pings a fifth apart, with a sparkle.
+        case "stone":
+          [1568, 2349].forEach((f, i) => {
+            this.tone("sine", f, f, t2 + i * 0.06, 0.22, 0.16);
+            this.tone("triangle", f * 2, f * 2, t2 + i * 0.06, 0.05, 0.05);
+          });
+          this.hiss(t2 + 0.08, 0.2, 0.04, 9e3);
+          break;
+        // An echo: a falling phrase that repeats, quieter each time.
+        case "echo":
+          [0, 0.22, 0.44].forEach((d, k) => [659, 523, 392].forEach((f, i) => this.tone("triangle", f, f, t2 + d + i * 0.07, 0.16, 0.12 / (k + 1))));
+          break;
+        // Coins on the counter.
+        case "buy":
+          this.tone("square", 1976, 1976, t2, 0.05, 0.08);
+          this.tone("square", 2637, 2637, t2 + 0.06, 0.08, 0.07);
+          this.hiss(t2, 0.05, 0.06, 6e3);
+          break;
+        // Relighting the sun: a low swell under a rising major arpeggio, then a long shimmer.
+        case "relight":
+          this.tone("sawtooth", 65, 131, t2, 1.4, 0.14);
+          [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => this.tone("square", f, f, t2 + 0.2 + i * 0.1, 0.3, 0.1));
+          this.hiss(t2 + 0.9, 1.2, 0.05, 8e3);
+          break;
+        // Hollow Night: a lantern snuffed.
+        case "snuff":
+          this.hiss(t2, 0.12, 0.14, 1400);
+          this.tone("sine", 880, 330, t2, 0.12, 0.08);
           break;
       }
     }
@@ -9772,7 +9801,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           class: "btn small",
           text: t("market.buy", { cost: fmt(o.price) }),
           attrs: st.dust >= o.price ? {} : { disabled: "" },
-          on: { click: () => c.act((s) => buyGear(s, i), t("market.bought", { name: itemName(it) })) }
+          on: { click: () => c.act((s) => buyGear(s, i), t("market.bought", { name: itemName(it) }), "buy") }
         })
       ));
     });
@@ -9796,7 +9825,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           class: "btn small",
           text: t("market.buy", { cost: fmt(o.price) }),
           attrs: st.dust >= o.price ? {} : { disabled: "" },
-          on: { click: () => c.act((s) => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) })) }
+          on: { click: () => c.act((s) => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) }), "buy") }
         })
       ));
     });
@@ -12203,7 +12232,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         { class: "row" },
         h("button", { class: "btn hot", text: t("dawn.go"), on: { click: () => {
           close();
-          c.act((s) => relightSun(s, { heirloom: heir.value ? Number(heir.value) : void 0, cls: cls.value }));
+          c.act((s) => relightSun(s, { heirloom: heir.value ? Number(heir.value) : void 0, cls: cls.value }), void 0, "relight");
           const done = c.modal(h(
             "div",
             { class: "card col", style: "max-width:560px" },
@@ -12987,9 +13016,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         zone: (_from, to, why) => {
           if (why === "unlock") this.toast(t("toast.newRoad", { zone: ZONES[to] ? zoneName(to) : to }), "road");
         },
-        kill: (_m, xp) => {
+        kill: (m4, xp) => {
           if (xp > 0) this.xpLog.push([Date.now(), xp]);
-          sfx("kill");
+          sfx(m4.lantern ? "snuff" : "kill");
         },
         level: (l) => {
           be.level?.(l);
@@ -13018,12 +13047,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
             const name = stoneFullName(key);
             this.toast(t("toast.stone", { name }), "rare");
             this.lastEvent = ["toast.stone", { name }];
+            sfx("stone", true);
           }
         },
         echo: (id) => {
           const who = echoWho(id);
           this.toast(t("toast.echo", { who }), "relic");
           this.lastEvent = ["toast.echo", { who }];
+          sfx("echo", true);
         },
         companion: (id, isNew) => {
           const pet = companionName(id);
@@ -13064,10 +13095,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           return self.state;
         },
         sheet: () => sheetOf(this.state),
-        act: (fn, ok) => {
+        act: (fn, ok, sound) => {
           const err = fn(this.state);
           if (typeof err === "string") this.toast(tErr(err), "err");
-          else if (ok) this.toast(ok);
+          else {
+            if (ok) this.toast(ok);
+            if (sound) this.sound.play(sound);
+          }
           this.sig = "";
           this.renderTab(true);
           void this.save();
