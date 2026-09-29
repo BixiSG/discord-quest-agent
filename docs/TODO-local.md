@@ -21,30 +21,34 @@ Working rules (from memory, repeated so nothing is lost):
 - Orbling and Hollowmarch are separate projects: no crossovers.
 
 ### A. Ship readiness (first; the push itself needs the user's yes)
-1. [ ] Addon size: the build is not minified and ships at 1.39 MB (Cyrillic escaped), injected into
-       every Discord start even with Hollowmarch off. Minify the shipped `src/addons/arpg.js` (keep
-       `dist/` readable), measure inject time; consider loading the translation tables only for the
-       active language.
-2. [ ] Why the installed agent (v1.4.3, `%LOCALAPPDATA%`, attach-only) never updates ("Up to date"
-       while main is 1.6.1): read the update path in `src/QuestAgent.ps1` for `-AttachOnly`. Decide
-       with the user how this PC runs after 1.7.0 (installed agent updated vs the branch agent).
-3. [ ] Release pass: harness run (hub + Orbling window + Hollowmarch card), `dev/test-addons.ps1`
-       on PS 5.1, CHANGELOG 1.7.0 date, README shots for round 5 (Market, sockets, echoes,
-       Rekindling; a ru shot for README.ru). Then ask: open the PR `feat/pet-addon-jjbs70` -> `main`.
+1. [x] Addon size: shipped `src/addons/arpg.js` is minified with ru/uk packed (deflate + base64,
+       sync inflater `i18n/inflate.ts`, decoded on first use): 1390 -> ~740 KiB; CDP payload
+       1.57 MB -> ~775 KB, PS 5.1 prep ~70 ms. `dist/` stays readable; `?shipped=1` on
+       dev/play.html and the harness runs the shipped file.
+2. [x] Not stuck: a real-session probe (scheduled task) shows the install at **v1.6.1**, self-updated
+       2026-09-29 06:49, resident since 12:49 (PID in QuestAgent.ps1 -AttachOnly). "v1.4.3" was the
+       tool shell's stale virtual copy of `%LOCALAPPDATA%\DiscordQuestAgent` (see memory
+       tool-shell-job-kills-children). Real gap fixed: the resident agent now re-checks for updates
+       every 6 h (it only checked at start). After 1.7.0 merges, this PC updates by itself at the
+       agent's next check/start; the page picks it up on the next Discord reload. The branch task
+       "QA dev branch run" can be deleted then.
+3. [x] Release pass: harness (hub v22, Orbling window + Esc, Hollowmarch card -> game, en/ru, no
+       errors), `dev/test-addons.ps1` on PS 5.1 7/7, CHANGELOG 1.7.0 dated 2026-09-29, README shots
+       12-15 + 05-hero-ru. **Open: the user's go for push + PR `feat/pet-addon-jjbs70` -> `main`.**
 
 ### B. Timely content: October
-4. [ ] "Hollow Night" (October 1-31, local date): a themed map mod, a seasonal relic, jack-o'-lantern
-       tint on some monsters, a contract kind, a limited companion (Pumpkin Wisp?). Date-gated in
-       core (sim time -> local date), all strings en/ru/uk. Small, visible, fun - and it's tomorrow.
+4. [x] Hollow Night (`core/season.ts`, GDD section): lantern-touched monsters (5%, pumpkin over the
+       head), lantern-lit maps, The Hollow Grin (relic), Pumpkin Wisp (companion), lantern contract,
+       World card, quest-panel ribbon, story beat; `state.tz` from the UI; `?hollow=1` forces it.
 
 ### C. Polish what round 5 added
-5. [ ] First-time hints (one line, dismissible, once each): Market, sockets, stone pouch, echoes,
+5. [x] First-time hints (one line, dismissible, once each): Market, sockets, stone pouch, echoes,
        the Rekindling; Menu > "Show hints again".
-6. [ ] Sounds for stone found (good tiers), echo heard, market buy, relight (synth in `ui/sfx.ts`).
-7. [ ] Gear tab: socket pips on item cells (filled/empty), a "has empty sockets" filter, and a text
+6. [x] Sounds for stone found (good tiers), echo heard, market buy, relight (synth in `ui/sfx.ts`).
+7. [x] Gear tab: socket pips on item cells (filled/empty), a "has empty sockets" filter, and a text
        search over names and affix lines (works in all three languages).
-8. [ ] Keyboard: Market buy/refresh and Forge socket controls reachable and labelled; focus kept.
-9. [ ] Split `ui/views.ts` (1,260 lines) into per-tab modules (hero, gear, skills, world, log, menu,
+8. [x] Keyboard: Market buy/refresh and Forge socket controls reachable and labelled; focus kept.
+9. [x] Split `ui/views.ts` (1,260 lines) into per-tab modules (hero, gear, skills, world, log, menu,
        creation) - a pure move, checked with the shots scenario.
 
 ### D. Balance (measure with the tools first)
