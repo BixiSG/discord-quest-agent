@@ -83,6 +83,48 @@ Play-feel review (user's call):
       clean maps goes straight back to the top tier and dies 3 more times (each death costs the map
       and 3% of a level). Stepping the cap up one tier at a time would stop that loop. Not changed.
 
+## Round 3: QoL, inventory, content (2026-09-29, local commits only, nothing pushed)
+
+Ask: "another round of QoL, what content we can add, go over all the mechanics (especially inventory
+management); Orbling in its own window, not inside the quest panel".
+
+Findings from a bot run (`tools/_probe.ts`, Vanguard, 48 h, bot spends passives and forges):
+- The stash is 60/60 after 1 h and never moves again: by 2 h all 60 are rares 10+ levels behind the
+  hero (old gear that auto-equip pushed into the stash). Every new keeper is salvaged instead of the junk.
+- Auto-equip only looks at new drops: a stash item whose level requirement is met later is never worn.
+- Dust and currency pile up with nothing to spend them on: 337k dust and 1.8k Kindling at 24 h.
+- Map deaths run away late: 462 at 24 h, 1531 at 48 h, level stalls at ~70. Auto-push drops the
+  cap after 3 deaths, then after 5 clean maps jumps straight back to the top tier (the loop noted above).
+- 10 relics for 100 levels; nothing to collect or aim for between pinnacles.
+
+Plan, in order (each step: tests where it is core, `npm run check`, a commit):
+1. [ ] Orbling window (hub + pet.js). Hub: an addon with `window: { w, h }` opens in a floating
+   window of its own (`.qb-aw`): title bar with icon, name and status, drag, close, Esc, position kept,
+   clamped under Discord's title bar, light/dark, remounted on language/theme change. Its panel header
+   button, title-bar button and switch-on all open that window instead of a panel view; `visible()`
+   means the window is open. pet.js: `window`, CSS scoped to the window. CHANGELOG 1.7.0 wording.
+2. [ ] Stash upkeep (core, save v5). Items can be locked (never auto-salvaged, skipped by bulk
+   salvage). With upkeep on (default), a keeper that meets a full stash replaces the least-worth
+   unlocked, non-relic, non-upgrade stash item if that one is worth less (item level + rarity weight),
+   else it is salvaged as now. Gear that auto-equip takes off goes through the filter + upkeep instead
+   of being forced into the stash. Level-ups re-check the stash for upgrades that were level-locked.
+3. [ ] Stash room for dust: +10 slots per purchase, 60 -> 150, escalating price (dust sink).
+4. [ ] Bulk tools: Salvage outdated (base 10+ levels behind, not locked/relic/upgrade), Equip all
+   upgrades, a mark mode (shift-click marks cells, Salvage marked), lock toggle (L key).
+5. [ ] Forge sinks: Hone (quality 0-20 on an item: +1% local damage/defence per point, dust),
+   Bench (add a chosen affix to an item with room: Graft + dust; one benched affix per item, a new one
+   replaces it), Forge until upgrade (up to 10 tries, misses salvaged).
+6. [ ] Map auto-push steps the cap up one tier per 5 clean maps instead of jumping to the top.
+   Re-run the probe: deaths per hour late should drop well below today's.
+7. [ ] Content: ~14 more relics (every slot, levels 30-80, build-enabling mods from existing stats),
+   and a Relic codex (every relic seen, how many, best roll) with a small bonus per relic found
+   (+1% item rarity each). Codex shown in the Gear tab.
+8. [ ] UI for 2-7: Gear (lock badge, marks, bulk buttons, buy room, codex), Forge (hone/bench panels,
+   forge x10), Menu (upkeep switch, filter "behind" choice). Harness shots as one small JPEG sheet.
+9. [ ] If there is room: Contracts board (3 rotating goals, currency/dust rewards).
+10. [ ] Docs (GDD, arpg README, CHANGELOG), build copied to `addons\`, live reload only if the game
+    window is closed in Discord.
+
 ## 4. Before shipping
 - [ ] Fix whatever sections 1-3 turn up; for Hollowmarch run `cd arpg && npm install && npm run check`.
 - [ ] Decide release shape: merge branch -> `main` with VERSION/CHANGELOG bump (the updater ships it to every user), or keep Hollowmarch as a separate install.
