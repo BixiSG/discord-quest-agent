@@ -80,4 +80,7 @@ Requirements: Node 20+.
 - Docs: `docs/GDD.md` (design), `docs/COMBAT.md` (every formula),
   `docs/ARCHITECTURE.md`, and the build log in `docs/ai/`.
 
-All names, lore and art are original.
+Names, lore, code, UI and sound are original. Character, monster, effect and
+background art comes from CC0 / public-domain packs, credited in
+`assets/CREDITS.md` (`node tools/fetch-assets.mjs` then `npm run assets`
+rebuilds the sprite atlas).

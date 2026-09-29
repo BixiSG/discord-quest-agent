@@ -259,10 +259,10 @@ export class GameWindow {
             const inner = box.w - 6;
             hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
             if (this.frame.stage === "off") { this.stage.style.height = ""; return; }
-            // The scene keeps about 110 logical pixels of height and gets as wide as the window:
+            // The scene keeps about 160 logical pixels of height and gets as wide as the window:
             // whole-number scaling, nothing stretched or letterboxed.
             const stageH = Math.round(Math.min(inner * 0.5, box.h * STAGE_FRAC[this.frame.stage]));
-            const sc = Math.max(1, Math.round(stageH / 110));
+            const sc = Math.max(1, Math.round(stageH / 160));
             this.stage.style.height = stageH + "px";
             this.battle.resize(Math.ceil(inner / sc), Math.ceil(stageH / sc));
             Object.assign(this.battle.canvas.style, { width: this.battle.canvas.width * sc + "px", height: this.battle.canvas.height * sc + "px" });
