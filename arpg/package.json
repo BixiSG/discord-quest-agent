@@ -1,0 +1,26 @@
+{
+  "name": "hollowmarch",
+  "version": "0.1.0",
+  "description": "Hollowmarch: idle ARPG addon for Discord Quest Agent",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc -p .",
+    "test": "vitest run",
+    "check": "tsc -p . && vitest run && node build.mjs",
+    "balance": "node tools/run-balance.mjs",
+    "smoke": "node tools/shots.mjs /tmp/hm-shots",
+    "assets": "node tools/pack-assets.mjs",
+    "font": "node tools/run-ts.mjs tools/make-font.ts"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "esbuild": "^0.28.2",
+    "pngjs": "^7.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "private": true,
+  "type": "module"
+}

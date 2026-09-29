@@ -1,0 +1,134 @@
+// A simple player for the balance simulator: picks the best skill and
+// supports, spends passive points greedily by build score, and invests dust
+// the way an engaged player would (market upgrades, hone, drill, stones, forge).
+
+import { RARITY_RANK, buildScore, salvage, setSkill, setSupports, sheetOf } from "../src/core/game";
+import { forgeCost, forgeRare, hone, honeCost, temperCost, temperRelic } from "../src/core/crafting";
+import { SLOTS } from "../src/core/types";
+import { deriveSheet, supportSlots } from "../src/core/character";
+import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
+import { setCompanion } from "../src/core/companions";
+import { BLESSINGS, setKeep } from "../src/core/shrine";
+import { scoutPinnacle } from "../src/core/scout";
+import { buyGear, tickMarket } from "../src/core/market";
+import { chooseDawnPerk, perksToPick, relightSun } from "../src/core/dawn";
+import { allShards } from "../src/core/echoes";
+import { autoSetStones, cutStones, drillCost, drillSocket } from "../src/core/sockets";
+import { baseOf } from "../src/core/items";
+import { upgradeSlot } from "../src/core/game";
+import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
+import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
+import type { GameState, Hero } from "../src/core/state";
+
+const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
+
+export function botTune(state: GameState): void {
+    const hero = state.hero;
+    // Skill + supports: greedy supports for each usable skill, keep the best.
+    let best = { skill: hero.skill, supports: hero.supports, score: -1 };
+    for (const sk of Object.values(SKILLS)) {
+        if (sk.level > hero.level) continue;
+        const sup: string[] = [];
+        for (let slot = 0; slot < supportSlots(hero.level); slot++) {
+            let pick: string | null = null, ps = score({ ...hero, skill: sk.id, supports: sup });
+            for (const s of Object.values(SUPPORTS)) {
+                if (s.level > hero.level || sup.includes(s.id)) continue;
+                const v = score({ ...hero, skill: sk.id, supports: [...sup, s.id] });
+                if (v > ps * 1.001) { ps = v; pick = s.id; }
+            }
+            if (!pick) break;
+            sup.push(pick);
+        }
+        const v = score({ ...hero, skill: sk.id, supports: sup });
+        if (v > best.score) best = { skill: sk.id, supports: sup, score: v };
+    }
+    setSkill(state, best.skill);
+    setSupports(state, best.supports);
+    // Passives: take the open node with the best score gain, notables first on ties.
+    while (pointsLeft(hero) > 0) {
+        const open = Object.values(PASSIVES).filter(n => !canAllocate(hero, n.id));
+        if (!open.length) break;
+        let pick = open[0]!, ps = -1;
+        for (const n of open) {
+            const v = score({ ...hero, passives: [...hero.passives, n.id] }) * (n.kind === "notable" ? 1.002 : 1);
+            if (v > ps) { ps = v; pick = n; }
+        }
+        hero.passives.push(pick.id);
+        hero.rev++;
+    }
+    // Ascendancy: pick the one whose full node set scores best, then take nodes greedily.
+    if (!hero.asc && hero.ascPoints > 0) {
+        let pick = "", ps = -1;
+        for (const a of Object.values(ASCENDANCIES).filter(x => x.cls === hero.cls)) {
+            const v = score({ ...hero, asc: a.id, ascNodes: a.nodes.map(n => n.id) });
+            if (v > ps) { ps = v; pick = a.id; }
+        }
+        chooseAscendancy(state, pick);
+    }
+    while (hero.asc && ascPointsLeft(hero) > 0) {
+        const open = ASCENDANCIES[hero.asc]!.nodes.filter(n => !hero.ascNodes.includes(n.id));
+        if (!open.length) break;
+        let pick = open[0]!, ps = -1;
+        for (const n of open) { const v = score({ ...hero, ascNodes: [...hero.ascNodes, n.id] }); if (v > ps) { ps = v; pick = n; } }
+        takeAscNode(state, pick.id);
+    }
+    // Companion: the one whose bonus scores best.
+    let petPick: string | null = hero.pet?.id ?? null, petScore = score(hero);
+    for (const id of Object.keys(state.companions ?? {})) {
+        const v = score({ ...hero, pet: { id, level: companionLevel(state.companions[id]!) } });
+        if (v > petScore * 1.001) { petScore = v; petPick = id; }
+    }
+    if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
+    // Shrine: from level 20, keep every blessing up (spare orbs pay first).
+    if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
+    // Dawns: relight as soon as all three shards are held; perks in a fixed order.
+    if (allShards(state)) relightSun(state);
+    for (const id of ["firstlight", "brightember", "steadyflame", "keeneye", "oldroads", "warmhands", "longmemory", "deeppockets", "stonefinder", "tradersmark"]) if (perksToPick(state)) chooseDawnPerk(state, id);
+    // Market: buy what would be worn at once (keeping a reserve for the shrine); cut stones up.
+    tickMarket(state);
+    state.market.pedlar.forEach((o, i) => { if (!o.sold && state.dust >= o.price * 2 && upgradeSlot(state, o.item)) buyGear(state, i); });
+    for (const k of Object.keys(state.stones)) while ((state.stones[k] ?? 0) >= 3 && !cutStones(state, k)) { /* cut */ }
+    // Hone and drill worn gear that isn't about to be replaced (base within 12 levels of the hero),
+    // the cheapest step first, keeping a reserve for the forge.
+    for (let n = 0; n < 60; n++) {
+        let pick: { cost: number; act: () => void } | null = null;
+        for (const s of SLOTS) {
+            const it = hero.equipment[s];
+            if (!it) continue;
+            const tc = temperCost(it);
+            if (tc !== null && (!pick || tc < pick.cost)) pick = { cost: tc, act: () => temperRelic(state, it.uid) };
+            if (baseOf(it).level < hero.level - 12) continue;
+            const hc = honeCost(it), dc = drillCost(it);
+            if (hc !== null && (!pick || hc < pick.cost)) pick = { cost: hc, act: () => hone(state, it.uid) };
+            if (dc !== null && (!pick || dc < pick.cost)) pick = { cost: dc, act: () => drillSocket(state, it.uid) };
+        }
+        if (!pick || state.dust - pick.cost < forgeCost(state) * 3) break;
+        pick.act();
+    }
+    autoSetStones(state);
+    // Honing locks a piece; once it is off and 10+ levels behind, let it go like any old gear.
+    const stale = state.stash.filter(x => x.locked && x.quality && baseOf(x).level <= hero.level - 10 && !upgradeSlot(state, x));
+    for (const x of stale) delete x.locked;
+    salvage(state, stale.map(x => x.uid));
+    // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
+    for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
+        const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))
+            .sort((a, b) => a.v - b.v)[0]!.s;
+        forgeRare(state, worst);
+        // Keep the stash from filling with forged misses.
+        salvage(state, state.stash.filter(x => x.crafted).map(x => x.uid));
+    }
+    // Endgame: run maps, spend atlas points in table order, fight pinnacles when sigils allow.
+    if (endgameOpen(state)) {
+        setMapMode(state, true);
+        for (const id of Object.keys(ATLAS)) if (!canTakeAtlas(state, id)) takeAtlas(state, id);
+        // Pinnacles only when a scout says the hero wins most fights (like a careful player),
+        // a sun shard still missing first, then the hardest the hero can take.
+        const order = Object.values(PINNACLES).sort((a, b) => Number((state.pinnacleKills[a.id] ?? 0) > 0) - Number((state.pinnacleKills[b.id] ?? 0) > 0) || b.level - a.level);
+        for (const p of order) {
+            if (state.activity.pinnacle || (state.sigils[p.sigil] ?? 0) < p.cost) continue;
+            if (scoutPinnacle(state, p.id, 3).wins >= 2) queuePinnacle(state, p.id);
+        }
+    }
+    void sheetOf(state);
+}

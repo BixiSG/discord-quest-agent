@@ -8,3 +8,12 @@ desktop.ini
 .DS_Store
 .vscode/
 .idea/
+
+# harness screenshots (dev/serve.py)
+dev/out/
+
+# user-installed addons when running from a checkout (the launcher loads <Root>\addons\*.js)
+/addons/
+
+# local working notes (session to-do, PC-specific)
+docs/TODO-local.md

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hollowmarch (standalone)</title>
+<!-- Same script-src shape as Discord: a nonce, so inline handlers are blocked. -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'nonce-play'; frame-src 'none'; connect-src 'self'">
+<!--
+  Standalone page: no Discord, no hub. dist/arpg.js boots straight into the
+  game window. Serve the repo root (python dev/serve.py) and open
+  http://127.0.0.1:8765/arpg/dev/play.html. Build first: cd arpg && npm run build.
+  Query: ?reset=1 deletes the save first; ?away=<minutes> pretends you were gone;
+  ?lang=ru|uk|en picks the language (default: the browser's); ?shipped=1 loads the
+  minified file that ships with the agent (src/addons/arpg.js) instead.
+  ?hollow=1 forces Hollow Night (the October event) on, ?hollow=0 off.
+-->
+<style>
+  body { margin: 0; height: 100vh; background: #313338; color: #dbdee1; font: 14px "Segoe UI", sans-serif; }
+  .note { padding: 24px; color: #949ba4; max-width: 520px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="note">Mock page behind the Hollowmarch window. <code>__hollowmarch</code> is live in the console.</div>
+<script nonce="play">
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const boot = () => {
+    const s = document.createElement("script");
+    s.src = qs.get("shipped") ? "../../src/addons/arpg.js" : "../dist/arpg.js";
+    if (qs.has("hollow")) s.onload = () => window.__hollowmarch.hollowNight(qs.get("hollow") === "1");
+    document.body.appendChild(s);
+  };
+  if (qs.get("reset")) { const r = indexedDB.deleteDatabase("hollowmarch"); r.onsuccess = r.onerror = r.onblocked = boot; return; }
+  const away = Number(qs.get("away"));
+  if (away > 0) {
+    // Rewind the saved timestamp so the next open replays `away` minutes.
+    const open = indexedDB.open("hollowmarch", 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("saves");
+    open.onsuccess = () => {
+      const st = open.result.transaction("saves", "readwrite").objectStore("saves");
+      const g = st.get("main");
+      g.onsuccess = () => {
+        if (g.result) { g.result.state.simTo -= away * 60e3; st.put(g.result, "main"); }
+        st.transaction.oncomplete = () => { open.result.close(); boot(); };
+      };
+    };
+    open.onerror = boot;
+    return;
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

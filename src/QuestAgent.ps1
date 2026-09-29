@@ -338,6 +338,38 @@ function Get-AgentPayload {
     return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`nwindow.__questAgentChangelog = $changelogJson;`n$js"
 }
 
+# Addons are evaluated one by one after the agent, so a broken addon can't take
+# the agent down with it. Each registers itself with the agent's addon hub, or
+# queues itself while the agent is still hooking Discord.
+#   src\addons\*.js     ship with the tool and are replaced by updates;
+#   <Root>\addons\*.js  are installed separately (e.g. Hollowmarch). They survive
+#                        updates and win over a shipped file with the same name.
+function Get-AddonFiles {
+    param([string]$ShippedDir = (Join-Path $PSScriptRoot "addons"), [string]$UserDir = (Join-Path $Root "addons"))
+    $byName = @{}
+    foreach ($dir in @($ShippedDir, $UserDir)) {
+        if (-not $dir -or -not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+        foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.js -File -ErrorAction SilentlyContinue)) {
+            $byName[$f.Name.ToLowerInvariant()] = $f
+        }
+    }
+    return @($byName.Values | Sort-Object Name)
+}
+
+function Invoke-AddonInjection {
+    param([string]$WsUrl)
+    foreach ($f in @(Get-AddonFiles)) {
+        try {
+            $js = Get-Content -Raw -Path $f.FullName -Encoding UTF8
+            # The payload must reach Discord as pure ASCII; \uXXXX means the same
+            # character in JS strings, identifiers and comments alike.
+            $js = [regex]::Replace($js, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })
+            $resp = Invoke-CdpEval -WsUrl $WsUrl -Expression $js
+            if ($resp -match '"exceptionDetails"') { Write-Log "Addon $($f.Name) failed to load in Discord." "Yellow" }
+        } catch { Write-Log "Addon $($f.Name) could not be injected: $($_.Exception.Message)" "Yellow" }
+    }
+}
+
 # Returns: notarget | present | injected | error
 function Invoke-Injection {
     $t = Find-DiscordTarget
@@ -351,6 +383,7 @@ function Invoke-Injection {
             Write-Log $resp "DarkGray"
             return "error"
         }
+        Invoke-AddonInjection -WsUrl $t.webSocketDebuggerUrl
         return "injected"
     } catch { return "notarget" }
 }
@@ -503,21 +536,24 @@ if (-not $instanceMutex.WaitOne(0)) {
 
 Repair-StartupShortcut
 
-if (Invoke-SelfUpdate) {
-    # Relaunch the freshly downloaded copy and hand over. Through launch.vbs,
-    # not powershell.exe: a hidden powershell.exe started directly may not run
-    # at login (see launch.vbs), and a self-update at login is the common case.
-    $args = @("`"$(Join-Path $Root 'src\launch.vbs')`"", "-NoUpdate")
-    if ($AttachOnly) { $args += "-AttachOnly" }
-    if ($NoWatch) { $args += "-NoWatch" }
-    if ($PSBoundParameters.ContainsKey("Branch")) { $args += @("-Branch", $Branch) }
-    if ($PSBoundParameters.ContainsKey("Port")) { $args += @("-Port", $Port) }
+# After a self-update: relaunch the freshly downloaded copy and hand over.
+# Through launch.vbs, not powershell.exe: a hidden powershell.exe started
+# directly may not run at login (see launch.vbs), and a self-update at login is
+# the common case. Same switches, minus a second update check.
+$relaunchArgs = @("`"$(Join-Path $Root 'src\launch.vbs')`"", "-NoUpdate")
+if ($AttachOnly) { $relaunchArgs += "-AttachOnly" }
+if ($NoWatch) { $relaunchArgs += "-NoWatch" }
+if ($PSBoundParameters.ContainsKey("Branch")) { $relaunchArgs += @("-Branch", $Branch) }
+if ($PSBoundParameters.ContainsKey("Port")) { $relaunchArgs += @("-Port", $Port) }
+function Start-UpdatedCopy {
     # Let go of the single-instance mutex first, or the new copy sees us as
     # "already running" and quits.
     $instanceMutex.ReleaseMutex(); $instanceMutex.Dispose()
-    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $args
+    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $relaunchArgs
     exit 0
 }
+
+if (Invoke-SelfUpdate) { Start-UpdatedCopy }
 
 $branchInfo = Resolve-Branch
 Write-Log "Discord branch: $($branchInfo.Name)"
@@ -621,12 +657,24 @@ $discordUp = $true          # was Discord running at the previous check?
 $noPortSince = $null        # when we first saw Discord running without the port
 $noPortReason = $null       # "started" (fresh launch) or "lost" (port vanished mid-session)
 $waitNoted = $false
+# The agent stays resident across days on a PC that isn't restarted, so the
+# update check at start alone could leave it a release or two behind.
+$nextUpdateCheck = (Get-Date).AddHours(6)
 while ($true) {
     # Poll fast while Discord is closed or freshly started without the port, so
     # a manual start is caught on the splash screen rather than mid-chat.
     Start-Sleep -Seconds $(if (-not $discordUp -or $noPortReason -eq "started") { 5 } else { 20 })
     # The uninstaller deletes the install folder; don't outlive it.
     if (-not (Test-Path $AgentJs)) { Write-Log "Install folder is gone (uninstalled) - exiting." "DarkGray"; break }
+    if ((Get-Date) -ge $nextUpdateCheck) {
+        $nextUpdateCheck = (Get-Date).AddHours(6)
+        if (Invoke-SelfUpdate) {
+            # The agent already in Discord keeps running; the new one takes over
+            # at Discord's next reload or restart.
+            Write-Log "The new version takes over in Discord at its next reload or restart." "Green"
+            Start-UpdatedCopy
+        }
+    }
     if (Test-CdpUp) {
         $discordUp = $true; $noPortSince = $null; $noPortReason = $null; $waitNoted = $false
         try {

@@ -157,6 +157,62 @@ clock. "Orbs won" on the main view comes from the same record, so it never drops
 quests expire. Discord doesn't hand the client a live orb balance, so none of this is your
 wallet.
 
+### Addons: Orbling, a pixel pet
+
+<p align="center">
+  <img src="docs/orbling-day.png" width="384" alt="Orbling by day: a grown-up Orbling with a crown chasing a ball in its room">
+  <img src="docs/orbling-night.png" width="384" alt="Orbling at night: a teen Orbling asleep on its bed under the lamp light">
+</p>
+
+Settings > **Addons** holds optional extras; each is off until you switch it on. The first
+one is **Orbling**, a tamagotchi-style pet that lives in a small window of its own (the paw
+button in the panel header opens it once it's on; drag it by its title bar, Esc closes it,
+and it reopens where you left it). It's fed by the agent's work: every orb quest the agent
+finishes drops a *star snack* (under 500 orbs) or an *orb feast* (500+) into its bag, and
+claiming rewards makes it celebrate.
+
+- Tap the egg to hatch it, then name it. It grows from baby to kid, teen and adult; how you
+  raise it decides the adult form (Gourmet, Sprinter, Dapper, Classic, or the rare Astral).
+- Four needs (food, fun, energy, clean) drain slowly by the clock, gently at night, when it
+  sleeps. It never dies and nothing is lost while you're away; a neglected Orbling just gets
+  sad and stops growing. Berries are free, quest food is the good stuff.
+- Play with a ball or a 20-second **Orb catch** game (best score kept), clean up after it,
+  put it down for a nap, and open the **daily gift** to build a streak.
+- Hats to collect (hatching, growing up, 3- and 7-day streaks, a high Orb catch score, a
+  seasonal one) and an **album**: after three days as an adult an Orbling can leave on an
+  adventure, and a new egg arrives in a colour you haven't collected yet.
+- A present appears in its room while quest rewards wait to be claimed (click it for the
+  Quests page). A pink dot on the title-bar button means it wants something; an optional
+  reminder (at most every 8 hours, never at night) says what.
+
+It's pixel art drawn in code, and it costs nothing while its window is closed: needs are
+worked out from timestamps when you look, and the room is only painted while it's on screen.
+Its state lives inside Discord next to the settings.
+
+### Addons: Hollowmarch, an idle action RPG
+
+<p align="center">
+  <img src="arpg/docs/shots/05-hero.png" width="640" alt="Hollowmarch: the battle strip over the character sheet">
+  <br>
+  <img src="arpg/docs/shots/12-market.png" width="316" alt="Hollowmarch's Wandering Market: a Pedlar and a Jeweller with rotating stock">
+  <img src="arpg/docs/shots/15-rekindling.png" width="316" alt="Hollowmarch's ending: three sun shards and the Rekindling">
+</p>
+
+**Hollowmarch** is a small action RPG that plays itself in a window of its own. You build
+the hero - gear with random affixes, a passive tree, skills and supports, an ascendancy, a
+companion at its side - and it clears the road through four acts into an endless map
+endgame. Nothing runs while the window is closed: the time away is replayed through the same
+simulation when you open it, with a "while you were away" report. Fold it into a mini strip
+to keep the fight in a corner, or give it its own button in Discord's title bar.
+
+Traders with rotating stock, gear sockets and ember stones, companions, and a story that
+ends with relighting the sun (a new dawn that keeps what you collected). Every October
+brings Hollow Night: monsters carrying lanterns, lantern-lit maps and two finds that exist
+only then. It follows the agent's language: English, Russian or Ukrainian.
+
+It has nothing to do with quests and never reads quest data or orbs. Details, controls and
+the design notes are in [`arpg/README.md`](arpg/README.md).
+
 ### Languages
 
 The HUD follows Discord's own language when it has a translation for it, and you can pin

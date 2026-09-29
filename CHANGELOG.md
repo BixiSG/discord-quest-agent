@@ -4,6 +4,22 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.7.0 - 2026-09-29
+
+- Addons: Settings > Addons lists optional extras, each off until you switch it on.
+- A switched-on addon can have its own button in Discord's title bar, next to the quest agent's: one click opens it (Settings > Addons, the row under the addon).
+- The first addon is Orbling, a pixel pet in its own window: drag it by its title bar, it stays where you put it, it comes back after Discord restarts if it was open, and Esc closes it. Every orb quest the agent finishes drops food for it, and claiming rewards makes it celebrate. Hatch it, name it, raise it through four stages to one of five adult forms.
+- Needs drain slowly by the clock and it sleeps at night; it never dies. Play with a ball or the 20-second Orb catch game, open a daily gift for a streak, collect hats, and send grown Orblings on an adventure into an album.
+- A pink dot on the title-bar button when it needs something, and an optional reminder at most every 8 hours, never at night.
+- Hovering Orbling's button says how it is doing (hungry, asleep, a gift is waiting), a line under its needs says which one runs low next, and an option lets it eat quest food on its own when hungry.
+- The second addon is Hollowmarch, an idle action RPG in its own game window: build a hero (gear, a passive tree, skills, companions) and it fights on its own. Closing the window pauses nothing; the time away is replayed when you open it again.
+- Hollowmarch has four acts, an endless map endgame with pinnacle bosses, 26 relics, nine companions, sockets and ember stones, a wandering market, a contract board and an ember shrine. The stash looks after itself, and a mini strip keeps the fight on screen in a corner.
+- Late Hollowmarch: temper relics with ember dust (a roll moves toward its best, never worse), search the stash, filter gear with empty sockets, and one-line hints the first time you meet a feature. Pinnacles enrage after 90 seconds, and the Hollow Crown opens from the second dawn with one more perk as its reward.
+- Every October Hollowmarch has Hollow Night: some monsters carry lanterns (tougher, double experience, better loot), maps can drop lantern-lit, a lantern contract appears on the board, and a relic and a companion can only be found then.
+- Its story has an ending: gather the three pieces of the sun from the pinnacles and relight it to start a new dawn, keeping what you collected. Hollowmarch speaks English, Russian and Ukrainian, following the agent's language.
+- Hollowmarch has nothing to do with quests and never touches them. Like every addon it is off until you switch it on in Settings > Addons.
+- The agent looks for updates every 6 hours while it runs, not only when it starts, so a PC that stays on for days no longer misses releases. A new version takes over in Discord at its next reload or restart.
+
 ## 1.6.1 - 2026-09-28
 
 - Quest rows whose game art fails to load show the task icon again. The fallback never worked inside Discord, whose security policy blocks the inline handler it used.
