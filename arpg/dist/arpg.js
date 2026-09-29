@@ -1908,6 +1908,151 @@
       weight: 70,
       flavour: "It watched the gate for three hundred years and never blinked.",
       mods: [r2("castSpeed", "inc", [12, 18], "{0}% increased cast speed"), r2("damage", "inc", [30, 40], "{0}% increased cold damage", ["cold"]), r2("pen.cold", "flat", [10, 15], "Hits ignore {0}% cold resistance")]
+    },
+    // ---- round 3: every slot family, levels 25-76 ----
+    {
+      id: "pilgrimsknot",
+      name: "Pilgrim's Knot",
+      base: "belt_chain",
+      level: 25,
+      weight: 80,
+      flavour: "Tied once for every shrine that never answered.",
+      mods: [r2("life", "flat", [50, 70], "+{0} to maximum life"), r2("flaskHeal", "inc", [30, 50], "{0}% increased flask healing"), r2("flaskCharges", "inc", [20, 30], "{0}% increased flask charges gained")]
+    },
+    {
+      id: "brineclutch",
+      name: "Brineclutch",
+      base: "leather_gloves4",
+      level: 26,
+      weight: 70,
+      flavour: "Wet to the wrist. Always.",
+      mods: [r2("attackSpeed", "inc", [10, 15], "{0}% increased attack speed"), r2("lifeOnKill", "flat", [8, 15], "{0} life gained on kill"), r2("res.cold", "flat", [20, 30], "+{0}% cold resistance")]
+    },
+    {
+      id: "tidecaller",
+      name: "Tidecaller's Loop",
+      base: "ring_tide",
+      level: 30,
+      weight: 70,
+      flavour: "Turn it once and the floor is wet.",
+      mods: [r2("addMin.cold", "flat", [4, 7], "Adds {0} min cold damage to attacks", ["attack"]), r2("addMax.cold", "flat", [12, 18], "Adds {0} max cold damage to attacks", ["attack"]), r2("res.cold", "flat", [20, 30], "+{0}% cold resistance"), r2("mana", "flat", [30, 40], "+{0} to maximum mana")]
+    },
+    {
+      id: "bellwright",
+      name: "The Bellwright's Toll",
+      base: "mace5",
+      level: 38,
+      weight: 60,
+      flavour: "Every blow rings. Something always answers.",
+      mods: [r2("local.physInc", "inc", [140, 180], "{0}% increased physical damage"), r2("area", "inc", [20, 30], "{0}% increased area of effect"), r2("str", "flat", [20, 30], "+{0} to Might")]
+    },
+    {
+      id: "glassveil",
+      name: "Glassveil",
+      base: "silk_helmet5",
+      level: 38,
+      weight: 60,
+      flavour: "You see the barrens as the barrens see you: in pieces.",
+      mods: [r2("local.defInc", "inc", [100, 140], "{0}% increased energy shield"), r2("castSpeed", "inc", [8, 12], "{0}% increased cast speed"), r2("mana", "flat", [40, 60], "+{0} to maximum mana"), r2("res.lightning", "flat", [20, 30], "+{0}% lightning resistance")]
+    },
+    {
+      id: "hollowcrown",
+      name: "The Hollow Crown",
+      base: "amulet_ember",
+      level: 40,
+      weight: 45,
+      flavour: "Every king of the March wore it. None of them for long.",
+      mods: [r2("str", "flat", [12, 18], "+{0} to Might"), r2("dex", "flat", [12, 18], "+{0} to Grace"), r2("int", "flat", [12, 18], "+{0} to Wit"), r2("res.chaos", "flat", [15, 20], "+{0}% chaos resistance"), r2("itemRarity", "inc", [15, 25], "{0}% increased rarity of items found")]
+    },
+    {
+      id: "lanternheart",
+      name: "Lanternheart",
+      base: "ring_glass",
+      level: 45,
+      weight: 50,
+      flavour: "It burns from the inside, and so will you.",
+      mods: [r2("lifeRegenPct", "flat", [1, 2], "Regenerate {0}% of life per second"), r2("life", "inc", [6, 10], "{0}% increased maximum life"), r2("res.fire", "flat", [-15, -10], "{0}% fire resistance")]
+    },
+    {
+      id: "dunestrider",
+      name: "Dunestrider Wraps",
+      base: "leather_boots6",
+      level: 50,
+      weight: 55,
+      flavour: "The sand forgets your steps before you finish them.",
+      mods: [r2("moveSpeed", "inc", [25, 35], "{0}% increased movement speed"), r2("local.evasion", "flat", [150, 220], "+{0} to evasion"), r2("res.fire", "flat", [25, 35], "+{0}% fire resistance"), r2("dex", "flat", [20, 30], "+{0} to Grace")]
+    },
+    {
+      id: "laststand",
+      name: "Warden's Last Stand",
+      base: "shield_offhand6",
+      level: 50,
+      weight: 50,
+      flavour: "The gate fell. The shield did not.",
+      mods: [r2("local.defInc", "inc", [120, 160], "{0}% increased armour"), r2("block", "flat", [5, 8], "+{0}% chance to block"), r2("life", "flat", [60, 90], "+{0} to maximum life"), r2("res.chaos", "flat", [20, 30], "+{0}% chaos resistance")]
+    },
+    {
+      id: "sunshard",
+      name: "Sunshard Quiver",
+      base: "quiver6",
+      level: 50,
+      weight: 55,
+      flavour: "Each arrow a splinter of the fallen sun.",
+      mods: [r2("addMin.fire", "flat", [8, 12], "Adds {0} min fire damage to attacks", ["attack"]), r2("addMax.fire", "flat", [20, 30], "Adds {0} max fire damage to attacks", ["attack"]), r2("pierce", "flat", [1, 1], "Projectiles pierce {0} more enemy"), r2("critChance", "inc", [20, 30], "{0}% increased critical chance")]
+    },
+    {
+      id: "saltwedding",
+      name: "Salt Wedding Band",
+      base: "ring_void",
+      level: 55,
+      weight: 40,
+      flavour: "Promised to the sea. The sea keeps its promises.",
+      mods: [r2("itemQuantity", "inc", [8, 12], "{0}% increased quantity of items found"), r2("itemRarity", "inc", [20, 30], "{0}% increased rarity of items found"), r2("xpGain", "inc", [5, 8], "{0}% increased experience gained")]
+    },
+    {
+      id: "voidsinger",
+      name: "Voidsinger",
+      base: "wand7",
+      level: 62,
+      weight: 35,
+      flavour: "It hums the note the world stopped on.",
+      mods: [r2("damage", "inc", [70, 100], "{0}% increased spell damage", ["spell"]), r2("critChance", "inc", [30, 50], "{0}% increased spell critical chance", ["spell"]), r2("manaCost", "inc", [20, 30], "{0}% increased mana cost")]
+    },
+    {
+      id: "cinderoath",
+      name: "The Cinder Oath",
+      base: "staff7",
+      level: 62,
+      weight: 35,
+      flavour: "Sworn in ash. Kept in fire.",
+      mods: [r2("addMin.fire", "flat", [20, 30], "Adds {0} min fire damage to spells", ["spell"]), r2("addMax.fire", "flat", [45, 65], "Adds {0} max fire damage to spells", ["spell"]), r2("damage", "inc", [40, 60], "{0}% increased fire damage", ["fire"]), r2("pen.fire", "flat", [10, 15], "Hits ignore {0}% fire resistance"), r2("res.cold", "flat", [-20, -10], "{0}% cold resistance")]
+    },
+    {
+      id: "drownedheart",
+      name: "Heart of the Drowned",
+      base: "plate_body7",
+      level: 62,
+      weight: 35,
+      flavour: "It stopped beating long ago. It stopped sinking just now.",
+      mods: [r2("local.defInc", "inc", [160, 220], "{0}% increased armour"), r2("life", "inc", [8, 12], "{0}% increased maximum life"), r2("maxRes.cold", "flat", [3, 4], "+{0}% maximum cold resistance"), r2("lifeRegen", "flat", [20, 35], "{0} life regenerated per second")]
+    },
+    {
+      id: "worldbreaker",
+      name: "Worldbreaker",
+      base: "greataxe8",
+      level: 74,
+      weight: 25,
+      flavour: "The March cracked once. This is what cracked it.",
+      mods: [r2("local.physInc", "inc", [200, 260], "{0}% increased physical damage"), r2("critMulti", "flat", [40, 60], "+{0}% critical multiplier"), r2("area", "inc", [25, 35], "{0}% increased area of effect"), r2("leech", "flat", [1, 2], "{0}% of damage leeched as life")]
+    },
+    {
+      id: "lastember",
+      name: "The Last Ember",
+      base: "amulet_ember",
+      level: 76,
+      weight: 20,
+      flavour: "When it goes out, so does the March.",
+      mods: [r2("damage", "inc", [25, 35], "{0}% increased damage"), r2("attackSpeed", "inc", [8, 10], "{0}% increased attack speed"), r2("castSpeed", "inc", [8, 10], "{0}% increased cast speed"), r2("life", "inc", [8, 10], "{0}% increased maximum life")]
     }
   ];
   var RELICS = Object.fromEntries(list3.map((x) => [x.id, x]));
