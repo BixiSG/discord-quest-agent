@@ -9,12 +9,14 @@
     "test": "vitest run",
     "check": "tsc -p . && vitest run && node build.mjs",
     "balance": "node tools/run-balance.mjs",
-    "smoke": "node tools/shots.mjs /tmp/hm-shots"
+    "smoke": "node tools/shots.mjs /tmp/hm-shots",
+    "assets": "node tools/pack-assets.mjs"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^26.6.3",
     "esbuild": "^0.28.2",
+    "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   },
