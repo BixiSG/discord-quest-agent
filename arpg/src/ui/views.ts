@@ -467,6 +467,8 @@ const fmtPct = (d: number) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(
 function skillsView(c: Ctx): HTMLElement {
     const hero = c.state.hero;
     const cur = c.sheet();
+    const colourOf = (tags: string[]) => tags.includes("spell") ? "#3a7bff" : tags.some(t => t === "projectile" || t === "bow") ? "#3fbf5f" : tags.some(t => t === "attack" || t === "melee") ? "#e5383b" : "#e6d9b8";
+    const gem = (colour: string, big = false, size = big ? 36 : 26) => h("span", { class: `gem${big ? " big" : ""}`, style: `color:${colour}` }, glyph("gem", size), h("span", { class: "shine" }, glyph("gemshine", size)));
     // Main skill: every unlocked one shows the pack DPS it would have with the current gear and supports.
     const skills = h("div", { class: "list" });
     for (const s of Object.values(SKILLS)) {
@@ -484,7 +486,7 @@ function skillsView(c: Ctx): HTMLElement {
         skills.append(h("div", { class: `li${on ? " on" : ""}${locked ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
             title: locked ? `Unlocks at level ${s.level}` : on ? "Your main skill" : "Pack DPS with your current gear and supports",
             on: { click: () => { if (!locked && !on) c.act(st => setSkill(st, s.id), `${s.name} selected`); } } },
-            h("div", { class: "nm", text: s.name }),
+            h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: s.name })),
             h("div", { class: "meta" }, meta),
             h("div", { class: "ds", text: s.blurb }),
             h("div", { class: "tags" }, ...s.tags.map(t => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))));
@@ -533,14 +535,35 @@ function skillsView(c: Ctx): HTMLElement {
             else if (!full) c.act(st => setSupports(st, [...active, s.id]), `${s.name} added`);
             else if (swap) c.act(st => setSupports(st, active.map(x => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
         } } },
-            h("div", { class: "nm", text: s.name }), h("div", { class: "meta" }, meta),
+            h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: s.name })), h("div", { class: "meta" }, meta),
             h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })));
     }
     const next = [1, 1, 8, 18, 32].find(l => l > hero.level);
-    return h("div", { class: "grid2" },
+
+    // Skill links: the main gem chained to its support sockets, like a socketed item.
+    const main = SKILLS[hero.skill];
+    const links = h("div", { class: "links" },
+        h("div", { class: "sock main", title: main?.blurb ?? "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main?.name ?? hero.skill })));
+    [1, 1, 8, 18, 32].forEach((lvl, i) => {
+        links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
+        const id = active[i];
+        const sup = id ? SUPPORTS[id] : undefined;
+        if (sup) {
+            const row = rows.find(r => r.s.id === id);
+            links.append(h("button", { class: "sock", title: `${sup.name}: ${sup.blurb} Click to take it out.${row?.d != null ? ` Worth ${fmtPct(-(row.d))} pack DPS.` : ""}`,
+                on: { click: () => c.act(st => setSupports(st, active.filter(x => x !== id)), `${sup.name} removed`) } },
+                gem(colourOf(sup.requires)), h("b", { text: sup.name })));
+        } else if (i < slots) {
+            links.append(h("div", { class: "sock empty", title: "An empty socket: pick a support below" }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: "Empty" })));
+        } else {
+            links.append(h("div", { class: "sock locked", title: `Opens at level ${lvl}` }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: `Level ${lvl}` })));
+        }
+    });
+    const bar = h("div", { class: "card socketbar" }, h("h3", { text: "Skill links" }), links);
+    return h("div", { class: "col", style: "gap:14px" }, bar, h("div", { class: "grid2" },
         h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
         h("div", null, h("div", { class: "sec" }, "Supports ", h("span", { class: "num", text: `${active.length}/${slots}` }),
-            next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null), sups));
+            next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null), sups)));
 }
 
 // ---- World -----------------------------------------------------------------

@@ -5300,6 +5300,26 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
 .lock { position: absolute; inset: 0; display: grid; place-items: center; color: #f3e7d3; }
 .trialrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed color-mix(in srgb, var(--line) 40%, transparent); }
 .stop.trial:not(.here) { border-image-source: var(--fr-sunk); }
+
+/* skills: the socket bar */
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
+.link { width: 22px; height: 6px; background: #1a1410; border-top: 2px solid #6b5d4b; }
+.hm.dark .link { background: #000; border-top-color: #4a3d31; }
+.link.off { opacity: .3; }
+.sock { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px 4px; font: inherit; color: var(--text);
+  border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
+button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
+.sock.main { width: 120px; border-image-source: var(--fr-gold); color: #1a1410; }
+.sock b { font: 700 11px/1.1 var(--display); font-stretch: condensed; letter-spacing: .6px; text-transform: uppercase; text-align: center;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sock.main b { font-size: 13px; }
+.sock.empty b, .sock.locked b { color: var(--muted); }
+.sock.locked { opacity: .55; }
+.gem { position: relative; display: inline-block; line-height: 0; filter: drop-shadow(1px 1px 0 #1a1410) drop-shadow(-1px -1px 0 #1a1410); }
+.gem .shine { position: absolute; inset: 0; color: #ffffff; opacity: .75; }
+.hole { color: var(--muted); line-height: 0; }
+.li .nm { display: flex; align-items: center; gap: 6px; }
+.li.locked .gem { filter: grayscale(1); }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -5454,6 +5474,9 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
     might: [".##.##...", "#########", "#########", "#########", "#########", ".#######.", "..#####..", "..#####..", "..#####.."],
     grace: ["......##.", ".....###.", "....####.", "...####..", "..####...", ".####....", ".##......", "#........", "#........"],
     wit: [".........", "..#####..", ".#.....#.", "#..###..#", "#..#.#..#", "#..###..#", ".#.....#.", "..#####..", "........."],
+    gem: ["....#....", "...###...", "..#####..", ".#######.", "#########", ".#######.", "..#####..", "...###...", "....#...."],
+    gemshine: [".........", "...#.....", "..#......", ".#.......", ".........", ".........", ".........", ".........", "........."],
+    socket: ["..#####..", ".#.....#.", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", ".#.....#.", "..#####.."],
     min: [
       ".......",
       ".......",
@@ -7323,6 +7346,8 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
   function skillsView(c) {
     const hero = c.state.hero;
     const cur = c.sheet();
+    const colourOf = (tags) => tags.includes("spell") ? "#3a7bff" : tags.some((t) => t === "projectile" || t === "bow") ? "#3fbf5f" : tags.some((t) => t === "attack" || t === "melee") ? "#e5383b" : "#e6d9b8";
+    const gem = (colour, big = false, size = big ? 36 : 26) => h("span", { class: `gem${big ? " big" : ""}`, style: `color:${colour}` }, glyph("gem", size), h("span", { class: "shine" }, glyph("gemshine", size)));
     const skills = h("div", { class: "list" });
     for (const s of Object.values(SKILLS)) {
       const locked = s.level > hero.level;
@@ -7350,7 +7375,7 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
             if (!locked && !on) c.act((st) => setSkill(st, s.id), `${s.name} selected`);
           } }
         },
-        h("div", { class: "nm", text: s.name }),
+        h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: s.name })),
         h("div", { class: "meta" }, meta),
         h("div", { class: "ds", text: s.blurb }),
         h("div", { class: "tags" }, ...s.tags.map((t) => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))
@@ -7411,13 +7436,42 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
           else if (!full) c.act((st) => setSupports(st, [...active, s.id]), `${s.name} added`);
           else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
         } } },
-        h("div", { class: "nm", text: s.name }),
+        h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: s.name })),
         h("div", { class: "meta" }, meta),
         h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })
       ));
     }
     const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
-    return h(
+    const main = SKILLS[hero.skill];
+    const links = h(
+      "div",
+      { class: "links" },
+      h("div", { class: "sock main", title: main?.blurb ?? "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main?.name ?? hero.skill }))
+    );
+    [1, 1, 8, 18, 32].forEach((lvl, i) => {
+      links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
+      const id = active[i];
+      const sup = id ? SUPPORTS[id] : void 0;
+      if (sup) {
+        const row = rows.find((r3) => r3.s.id === id);
+        links.append(h(
+          "button",
+          {
+            class: "sock",
+            title: `${sup.name}: ${sup.blurb} Click to take it out.${row?.d != null ? ` Worth ${fmtPct(-row.d)} pack DPS.` : ""}`,
+            on: { click: () => c.act((st) => setSupports(st, active.filter((x) => x !== id)), `${sup.name} removed`) }
+          },
+          gem(colourOf(sup.requires)),
+          h("b", { text: sup.name })
+        ));
+      } else if (i < slots) {
+        links.append(h("div", { class: "sock empty", title: "An empty socket: pick a support below" }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: "Empty" })));
+      } else {
+        links.append(h("div", { class: "sock locked", title: `Opens at level ${lvl}` }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: `Level ${lvl}` })));
+      }
+    });
+    const bar2 = h("div", { class: "card socketbar" }, h("h3", { text: "Skill links" }), links);
+    return h("div", { class: "col", style: "gap:14px" }, bar2, h(
       "div",
       { class: "grid2" },
       h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
@@ -7428,7 +7482,7 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
         h("span", { class: "num", text: `${active.length}/${slots}` }),
         next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null
       ), sups)
-    );
+    ));
   }
   function worldView(c) {
     const st = c.state;
