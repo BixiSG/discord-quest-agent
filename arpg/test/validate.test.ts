@@ -28,13 +28,17 @@ describe("validateState", () => {
 });
 
 describe("stash limits", () => {
-    it("auto-equip with a full stash salvages the cheapest item, never the upgrade", () => {
+    it("auto-equip with a full stash still equips; what comes off meets the loot filter", () => {
         const g = g0();
         g.stashCap = 0;
+        const worn = g.hero.equipment.weapon!;
         const big = { uid: 77, base: "sword1", ilvl: 1, rarity: "rare" as const, name: "Big", affixes: [{ id: "phys_local", tier: 0, rolls: [500] }] };
+        const dust = g.dust;
         receiveItem(g, big);
         expect(g.hero.equipment.weapon?.uid).toBe(77);
-        expect(g.log.some(l => l.text.includes("to make room"))).toBe(true);
+        // The plain starter sword is below "keep rares": salvaged, not forced into the stash.
+        expect(g.stash).not.toContain(worn);
+        expect(g.dust).toBeGreaterThan(dust);
         g.stashCap = 60;
         receiveItem(g, { ...big, uid: 78, affixes: [{ id: "phys_local", tier: 0, rolls: [900] }] });
         expect(g.hero.equipment.weapon?.uid).toBe(78);
@@ -69,13 +73,14 @@ describe("P2 review fixes", () => {
         expect(applyCurrency(g, "kindling", 9)).toBeNull();
         expect(salvageValue(g.stash[0]!)).toBe(plain);
     });
-    it("a full stash still takes upgrades, giving up its weakest item", () => {
+    it("a full stash still takes upgrades; locked gear coming off pushes out the weakest item", () => {
         const g = g0();
         g.stashCap = 2;
-        const worn = g.hero.equipment.weapon!.uid;
+        const worn = g.hero.equipment.weapon!;
+        worn.locked = true;
         g.stash.push({ uid: 101, base: "sword1", ilvl: 1, rarity: "plain", affixes: [] }, { uid: 102, base: "ring_iron", ilvl: 5, rarity: "rare", affixes: [], name: "X" });
         const r = receiveItem(g, { uid: 103, base: "sword1", ilvl: 1, rarity: "rare", name: "Big", affixes: [{ id: "phys_local", tier: 0, rolls: [500] }] });
         expect(r.equipped).toBe(true);
-        expect(g.stash.map(x => x.uid).sort()).toEqual([102, worn].sort());
+        expect(g.stash.map(x => x.uid).sort()).toEqual([102, worn.uid].sort());
     });
 });

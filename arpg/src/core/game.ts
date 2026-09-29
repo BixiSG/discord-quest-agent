@@ -2,12 +2,12 @@
 // hero.rev when the stat sheet changes.
 
 import { deriveSheet, type Sheet } from "./character";
-import { BASES, CLASSES, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
+import { BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
 import { baseOf, itemLabel, levelReq, salvageValue } from "./items";
 import { hashSeed } from "./rng";
 import { DEFAULT_FILTER, keepItem } from "./filter";
 import { newTotals, type GameState, type LogEntry } from "./state";
-import type { Item, Rarity, Slot } from "./types";
+import { SLOTS, type Item, type Rarity, type Slot } from "./types";
 
 export const RARITY_RANK: Record<Rarity, number> = { plain: 0, enchanted: 1, rare: 2, relic: 3 };
 const LOG_MAX = 60;
@@ -23,8 +23,8 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
-        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
-        totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
+        relics: [], codex: {}, totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", `${opts.name} wakes on the shore.`);
@@ -91,34 +91,124 @@ function displacedItems(state: GameState, item: Item, slot: Slot): Item[] {
     return out;
 }
 
-const itemValue = (x: Item) => RARITY_RANK[x.rarity] * 1000 + x.ilvl;
+// ---- stash upkeep ------------------------------------------------------------
 
 /**
- * Equips an upgrade even when the stash is full. The cheapest of the stash
- * items and the items coming off is salvaged to make room; relics and crafted
- * items are never picked. Returns false (nothing changes) when it can't fit.
+ * How much a stash item is worth keeping (upkeep gives up the lowest): item
+ * level (affix tiers) and base level (damage, defences) equally, then rarity,
+ * affix count and honed quality.
+ */
+export function stashWorth(item: Item): number {
+    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0);
+}
+
+/** Never given up by upkeep, auto-equip or bulk salvage. */
+const guarded = (x: Item) => !!x.locked;
+
+/** Is this item an upgrade right now? Remembered per stat-sheet revision (upkeep asks often). */
+const upgradeMemo = new WeakMap<object, { rev: number; level: number; map: Map<number, boolean> }>();
+function isUpgrade(state: GameState, item: Item): boolean {
+    let m = upgradeMemo.get(state.hero);
+    if (!m || m.rev !== state.hero.rev || m.level !== state.hero.level) { m = { rev: state.hero.rev, level: state.hero.level, map: new Map() }; upgradeMemo.set(state.hero, m); }
+    let v = m.map.get(item.uid);
+    if (v === undefined) { v = upgradeSlot(state, item) !== null; m.map.set(item.uid, v); }
+    return v;
+}
+
+/**
+ * `n` stash items upkeep may give up, cheapest first, each worth less than
+ * `below`: never locked items or upgrades. Empty when there are fewer.
+ */
+function upkeepVictims(state: GameState, n: number, below = Infinity): Item[] {
+    const pool = state.stash.filter(x => !guarded(x) && stashWorth(x) < below).sort((a, b) => stashWorth(a) - stashWorth(b) || a.uid - b.uid);
+    const out: Item[] = [];
+    for (const x of pool) {
+        if (out.length >= n) break;
+        if (!isUpgrade(state, x)) out.push(x);
+    }
+    return out.length >= n ? out : [];
+}
+
+/** Takes an item out of the stash or the relic case (wherever it is). */
+function takeOut(state: GameState, x: Item): void {
+    let i = state.stash.indexOf(x);
+    if (i >= 0) { state.stash.splice(i, 1); return; }
+    i = state.relics.indexOf(x);
+    if (i >= 0) state.relics.splice(i, 1);
+}
+
+function giveUp(state: GameState, x: Item): void {
+    takeOut(state, x);
+    salvageItem(state, x);
+    state.totals.swapped = (state.totals.swapped ?? 0) + 1;
+}
+
+// ---- relic case ------------------------------------------------------------------
+
+/** How well a relic rolled, 0 (worst) to 1 (best), averaged over its ranged mods. */
+export function relicRollScore(item: Item): number {
+    const def = item.relic ? RELICS[item.relic] : undefined;
+    if (!def) return 0;
+    let sum = 0, n = 0;
+    def.mods.forEach((m, i) => {
+        const [lo, hi] = m.range;
+        if (hi === lo) return;
+        sum += ((item.relicRolls?.[i] ?? lo) - lo) / (hi - lo);
+        n++;
+    });
+    return n ? sum / n : 1;
+}
+
+/** The relic that would lose if `item` were offered to the case (the new one or the old copy); null when the case has none. */
+function caseLoser(state: GameState, item: Item): Item | null {
+    const old = state.relics.find(x => x.relic === item.relic);
+    if (!old) return null;
+    return relicRollScore(item) > relicRollScore(old) ? old : item;
+}
+
+/** Puts a relic in the case, keeping the better copy of each; returns the one left over (or null). */
+function toCase(state: GameState, item: Item): Item | null {
+    const loser = caseLoser(state, item);
+    if (loser === item) return item;
+    if (loser) state.relics.splice(state.relics.indexOf(loser), 1);
+    state.relics.push(item);
+    return loser;
+}
+
+/** A relic left over by the case: kept in the stash when locked (and there is room), else salvaged. */
+function leftOver(state: GameState, x: Item): void {
+    if (x.locked && state.stash.length < state.stashCap) state.stash.push(x);
+    else salvageItem(state, x);
+}
+
+/**
+ * Equips an upgrade (a drop, or an item already taken out of the stash or the
+ * case). Relics coming off go to the case; other gear goes through the loot
+ * filter like a drop, except locked items, which are always kept: when the
+ * stash has no room for those, upkeep makes room, and if it can't, nothing
+ * changes and this returns false.
  */
 function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
     const off = displacedItems(state, item, slot);
-    const need = off.length - (state.stashCap - state.stash.length);
-    const victims: Item[] = [];
-    if (need > 0) {
-        const pool = [...state.stash, ...off].filter(x => x.rarity !== "relic" && !x.crafted).sort((a, b) => itemValue(a) - itemValue(b));
-        if (pool.length < need) return false;
-        victims.push(...pool.slice(0, need));
-    }
+    const keep = off.flatMap(o => {
+        if (!o.relic) return o.locked ? [o] : [];
+        const l = caseLoser(state, o);
+        return l?.locked ? [l] : [];
+    });
+    const need = keep.length - (state.stashCap - state.stash.length);
+    const victims = need > 0 ? upkeepVictims(state, need) : [];
+    if (need > 0 && victims.length < need) return false;
     putOn(state, item, slot);
-    for (const v of victims) {
-        const i = state.stash.indexOf(v);
-        if (i >= 0) state.stash.splice(i, 1);
-        salvageItem(state, v);
+    for (const v of victims) giveUp(state, v);
+    for (const o of off) {
+        if (o.relic) { const l = toCase(state, o); if (l) leftOver(state, l); }
+        else if (o.locked) state.stash.push(o);
+        else stashOrSalvage(state, o);
     }
-    for (const o of off) if (!victims.includes(o)) state.stash.push(o);
-    if (victims.length) pushLog(state, "loot", `Stash full: salvaged ${victims.map(itemLabel).join(", ")} to make room.`);
     return true;
 }
 
-/** Puts an item on; whatever it displaces goes to the stash. The item must not be in the stash. */
+/** Puts an item on; returns what it displaced. The item must be out of the stash and the case. */
 function putOn(state: GameState, item: Item, slot: Slot): Item[] {
     const eq = state.hero.equipment;
     const off: Item[] = [];
@@ -135,26 +225,44 @@ function putOn(state: GameState, item: Item, slot: Slot): Item[] {
     return off;
 }
 
-/** Equip from the stash. Returns an error message or null. */
+/** A stash or relic-case item by uid. */
+export function ownedItem(state: GameState, uid: number): Item | undefined {
+    return state.stash.find(x => x.uid === uid) ?? state.relics.find(x => x.uid === uid);
+}
+
+/**
+ * Equip from the stash or the relic case. Nothing the player does by hand is
+ * salvaged: what comes off goes to the stash (relics to the case, the worse
+ * copy to the stash). Returns an error message or null.
+ */
 export function equip(state: GameState, uid: number, slot?: Slot): string | null {
-    const i = state.stash.findIndex(x => x.uid === uid);
-    if (i < 0) return "not in stash";
-    const item = state.stash[i]!;
+    const item = ownedItem(state, uid);
+    if (!item) return "not in stash";
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
-    if (state.stash.length - 1 + displacedCount(state, item, target) > state.stashCap) return "stash full";
-    state.stash.splice(i, 1);
-    state.stash.push(...putOn(state, item, target));
+    const fromStash = state.stash.includes(item);
+    takeOut(state, item);
+    const off = displacedItems(state, item, target);
+    const toStash = off.filter(o => !o.relic || caseLoser(state, o)).length;
+    if (state.stash.length + toStash > state.stashCap) {
+        (fromStash ? state.stash : state.relics).push(item);
+        return "stash full";
+    }
+    for (const o of putOn(state, item, target)) {
+        const l = o.relic ? toCase(state, o) : o;
+        if (l) state.stash.push(l);
+    }
     return null;
 }
 
 export function unequip(state: GameState, slot: Slot): string | null {
     const it = state.hero.equipment[slot];
     if (!it) return null;
-    if (state.stash.length >= state.stashCap) return "stash full";
+    if ((!it.relic || caseLoser(state, it)) && state.stash.length >= state.stashCap) return "stash full";
     delete state.hero.equipment[slot];
-    state.stash.push(it);
+    const l = it.relic ? toCase(state, it) : it;
+    if (l) state.stash.push(l);
     state.hero.rev++;
     return null;
 }
@@ -186,9 +294,10 @@ export function upgradeSlot(state: GameState, item: Item): Slot | null {
     return best;
 }
 
-/** A new drop: auto-equip, keep or salvage. */
+/** A new drop: auto-equip, keep or salvage. Relics are entered in the codex whatever happens next. */
 export function receiveItem(state: GameState, item: Item): { kept: boolean; equipped: boolean } {
     state.totals.items++;
+    if (item.relic) state.codex[item.relic] = (state.codex[item.relic] ?? 0) + 1;
     if (state.settings.autoEquip) {
         const slot = upgradeSlot(state, item);
         if (slot && equipWithRoom(state, item, slot)) {
@@ -199,10 +308,26 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
     return { kept: stashOrSalvage(state, item), equipped: false };
 }
 
+/**
+ * The loot filter, then storage. Relics go to the case (the better copy of
+ * each stays). Other keepers go to the stash; when it is full, upkeep gives up
+ * the least-worth item for a better one.
+ */
 function stashOrSalvage(state: GameState, item: Item): boolean {
     if (keepItem(state, item)) {
-        if (state.stash.length < state.stashCap) { state.stash.push(item); return true; }
-        if (!state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
+        if (item.relic) {
+            const loser = caseLoser(state, item);
+            if (loser !== item && !(loser?.locked && state.stash.length >= state.stashCap)) {
+                toCase(state, item);
+                if (loser) leftOver(state, loser);
+                return true;
+            }
+        } else {
+            if (state.stash.length < state.stashCap) { state.stash.push(item); return true; }
+            const v = state.settings.upkeep ? upkeepVictims(state, 1, stashWorth(item))[0] : undefined;
+            if (v) { giveUp(state, v); state.stash.push(item); return true; }
+            if (!state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
+        }
     }
     salvageItem(state, item);
     return false;
@@ -215,17 +340,83 @@ function salvageItem(state: GameState, item: Item): void {
     state.totals.dust += v;
 }
 
+/** Salvages stash or relic-case items by uid; locked ones are skipped. Returns how many went. */
 export function salvage(state: GameState, uids: number[]): number {
     let n = 0;
     for (const uid of uids) {
-        const i = state.stash.findIndex(x => x.uid === uid);
-        if (i < 0) continue;
-        salvageItem(state, state.stash.splice(i, 1)[0]!);
+        const it = ownedItem(state, uid);
+        if (!it || it.locked) continue;
+        takeOut(state, it);
+        salvageItem(state, it);
         n++;
     }
     if (n) state.stashFull = false;
     return n;
 }
+
+/** Lock or unlock a stash, relic-case or worn item. */
+export function setLocked(state: GameState, uid: number, on: boolean): string | null {
+    const it = ownedItem(state, uid) ?? SLOTS.map(s => state.hero.equipment[s]).find(x => x?.uid === uid);
+    if (!it) return "item not found";
+    if (on) it.locked = true; else delete it.locked;
+    return null;
+}
+
+/** Stash items to salvage in one go: a base 10+ levels behind the hero, not locked and not an upgrade. */
+export function outdatedItems(state: GameState): Item[] {
+    return state.stash.filter(x => !guarded(x) && baseOf(x).level <= state.hero.level - 10 && !isUpgrade(state, x));
+}
+
+/**
+ * Wears the stash and relic-case items that raise the build score, the best
+ * gain first, one at a time (each changes the sheet). `only` limits the
+ * candidates (a level-up checks just the items that became wearable).
+ * Returns how many went on.
+ */
+export function equipUpgrades(state: GameState, only?: (x: Item) => boolean): number {
+    let n = 0;
+    for (let round = 0; round < SLOTS.length; round++) {
+        const now = buildScore(sheetOf(state));
+        let best: { item: Item; slot: Slot; score: number } | null = null;
+        for (const item of [...state.stash, ...state.relics]) {
+            if (only && !only(item)) continue;
+            for (const slot of slotsFor(baseOf(item))) {
+                const sheet = trialSheet(state, item, slot);
+                if (!sheet) continue;
+                const score = buildScore(sheet);
+                if (score > now * 1.02 && (!best || score > best.score)) best = { item, slot, score };
+            }
+        }
+        if (!best) break;
+        const home = state.stash.includes(best.item) ? state.stash : state.relics;
+        takeOut(state, best.item);
+        if (!equipWithRoom(state, best.item, best.slot)) { home.push(best.item); break; }
+        pushLog(state, "loot", `Equipped ${itemLabel(best.item)} from the ${home === state.stash ? "stash" : "relic case"}.`);
+        n++;
+    }
+    return n;
+}
+
+export const STASH_BASE = 60, STASH_STEP = 10, STASH_MAX = 150;
+/** Ember dust for the next ten stash slots; null at the maximum. */
+export function stashRoomCost(state: GameState): number | null {
+    if (state.stashCap >= STASH_MAX) return null;
+    const bought = Math.max(0, Math.round((state.stashCap - STASH_BASE) / STASH_STEP));
+    return Math.round((250 * Math.pow(2.2, bought)) / 10) * 10;
+}
+
+export function buyStashRoom(state: GameState): string | null {
+    const cost = stashRoomCost(state);
+    if (cost === null) return "the stash is as big as it gets";
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    state.stashCap = Math.min(STASH_MAX, state.stashCap + STASH_STEP);
+    state.stashFull = false;
+    return null;
+}
+
+/** Relic codex bonus: +1% item rarity for every different relic found. */
+export const codexRarity = (state: GameState) => Object.keys(state.codex ?? {}).length;
 
 // ---- skills and zones --------------------------------------------------------
 

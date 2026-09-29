@@ -54,10 +54,16 @@ export interface Item {
     relicRolls?: number[];
     /** Touched by crafting currency (salvages as plain). */
     crafted?: boolean;
+    /** Kept by the player: never salvaged by upkeep, auto-equip or bulk salvage. */
+    locked?: boolean;
+    /** Honed quality, 0-20: percent increased local damage (weapons) or defences (armour). */
+    quality?: number;
 }
 
 export interface AffixRoll {
     id: string;
     tier: number;
     rolls: number[];
+    /** Added at the bench (one per item; a new bench craft replaces it). */
+    bench?: boolean;
 }

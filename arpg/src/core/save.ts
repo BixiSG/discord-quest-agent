@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -48,6 +48,21 @@ export const MIGRATIONS: Record<number, Migration> = {
         const actsDone = acts.filter(([z]) => clears[z!] > 0).map(([, k]) => k);
         const trialsDone = trials.filter(z => clears[z] > 0).map(z => "trial:" + z);
         s.world.rewards ??= [...actsDone.slice(0, Math.floor((s.hero.bonusPoints ?? 0) / 2)), ...trialsDone.slice(0, Math.floor((s.hero.ascPoints ?? 0) / 2))];
+        return s;
+    },
+    // v5 (round 3): stash upkeep, item locks, the relic codex (seeded with the relics owned) and
+    // the relic case: stash relics move there; validateState keeps the best copy of each and
+    // puts the rest back in the stash.
+    4: (s: any) => {
+        s.settings.upkeep ??= true;
+        s.codex ??= {};
+        const owned = [...(s.stash ?? []), ...Object.values(s.hero?.equipment ?? {})] as any[];
+        for (const it of owned) if (it?.relic && !s.codex[it.relic]) s.codex[it.relic] = 1;
+        s.relics ??= [];
+        if (Array.isArray(s.stash)) {
+            s.relics.push(...s.stash.filter((it: any) => it?.rarity === "relic"));
+            s.stash = s.stash.filter((it: any) => it?.rarity !== "relic");
+        }
         return s;
     },
 };

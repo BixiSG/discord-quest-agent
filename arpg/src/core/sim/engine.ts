@@ -7,7 +7,7 @@ import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
 import { DAMAGE_TYPES, type Item } from "../types";
-import { sheetOf, receiveItem, pushLog } from "../game";
+import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
 import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
@@ -18,6 +18,8 @@ export const MAX_OFFLINE_MS = 24 * 3600e3;
 const TRAVEL_S = 1.5;
 const RESPAWN_S = 6;
 const FLASK_MAX = 30, FLASK_COST = 10, FLASK_S = 2;
+/** Map auto-push: failed maps that lower the cap, clean maps in a row that raise it again. */
+const MAP_FAILS = 2, MAP_CLEAN = 8;
 /** Auto-push waits until the hero is at most this many levels below the next zone (full XP range). */
 export const PUSH_LEVEL_MARGIN = 2;
 /** Share of a level's experience lost on a death in a map. */
@@ -281,7 +283,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-        const bonus = sheet.rarity + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
+        const bonus = sheet.rarity + codexRarity(state) + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
         const pin = run.map?.pinnacle && d.boss;
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
@@ -343,6 +345,8 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
+    // A level-up is when stash items become wearable (or better, as the build grew): wear the upgrades.
+    if (up && state.settings.autoEquip) equipUpgrades(state);
     return up;
 }
 
@@ -359,8 +363,9 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     if (run.map) {
         // GDD: dying in a map costs the map and 5% of a level's experience.
         state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
-        // Auto-push for maps: three deaths in a row and the device prefers a tier lower.
-        if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
+        // Auto-push for maps: two failed maps without eight clean ones between them and the
+        // device keeps to a tier lower (a tier that fails even one map in five stalls the hero).
+        if (act.autoPush && act.deaths >= MAP_FAILS && run.map.tier > 1 && !run.map.pinnacle) {
             act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
             act.deaths = 0;
             pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
@@ -461,10 +466,16 @@ function finishRun(state: GameState, ev: SimEvents): void {
     state.totals.runs++;
     if (run.map) {
         completeMap(state, run.map);
-        act.deaths = 0;
-        // Five clean maps in a row at a capped tier: try the highest again.
+        // Eight clean maps in a row: earlier failures are forgiven, and a capped device allows one
+        // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;
-        if (act.autoCap && act.streak >= 5) { act.autoCap = 0; act.streak = 0; }
+        if (act.streak >= MAP_CLEAN) act.deaths = 0;
+        if (act.autoCap && act.streak >= MAP_CLEAN) {
+            act.autoCap++;
+            act.streak = 0;
+            if (act.autoCap > Math.max(0, ...state.maps.map(m => m.tier))) act.autoCap = 0;
+            else pushLog(state, "zone", `Pushing deeper: ${tierName(act.autoCap)} and below.`);
+        }
         ev.runDone?.(run.zone);
         act.runIndex++;
         act.run = newRun(state, sheetOf(state));

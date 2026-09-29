@@ -2735,7 +2735,9 @@
       atlas: { points: 0, nodes: [], tiers: [] },
       sigils: {},
       pinnacleKills: {},
-      settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
+      settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
+      relics: [],
+      codex: {},
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -2780,9 +2782,6 @@
     const b = baseOf(item), ob = baseOf(off);
     return b.weapon?.hands === 2 && !(b.kind === "bow" && ob.kind === "quiver") || ob.kind === "quiver" && b.kind !== "bow";
   }
-  function displacedCount(state, item, slot) {
-    return (state.hero.equipment[slot] ? 1 : 0) + (dropsOffhand(state, item, slot) ? 1 : 0);
-  }
   function displacedItems(state, item, slot) {
     const eq = state.hero.equipment;
     const out = [];
@@ -2790,24 +2789,94 @@
     if (dropsOffhand(state, item, slot)) out.push(eq.offhand);
     return out;
   }
-  var itemValue = (x) => RARITY_RANK[x.rarity] * 1e3 + x.ilvl;
+  function stashWorth(item) {
+    return (item.ilvl + baseOf(item).level) / 2 + 12 * RARITY_RANK[item.rarity] + 2 * item.affixes.length + (item.quality ?? 0);
+  }
+  var guarded = (x) => !!x.locked;
+  var upgradeMemo = /* @__PURE__ */ new WeakMap();
+  function isUpgrade(state, item) {
+    let m4 = upgradeMemo.get(state.hero);
+    if (!m4 || m4.rev !== state.hero.rev || m4.level !== state.hero.level) {
+      m4 = { rev: state.hero.rev, level: state.hero.level, map: /* @__PURE__ */ new Map() };
+      upgradeMemo.set(state.hero, m4);
+    }
+    let v = m4.map.get(item.uid);
+    if (v === void 0) {
+      v = upgradeSlot(state, item) !== null;
+      m4.map.set(item.uid, v);
+    }
+    return v;
+  }
+  function upkeepVictims(state, n, below = Infinity) {
+    const pool = state.stash.filter((x) => !guarded(x) && stashWorth(x) < below).sort((a, b) => stashWorth(a) - stashWorth(b) || a.uid - b.uid);
+    const out = [];
+    for (const x of pool) {
+      if (out.length >= n) break;
+      if (!isUpgrade(state, x)) out.push(x);
+    }
+    return out.length >= n ? out : [];
+  }
+  function takeOut(state, x) {
+    let i = state.stash.indexOf(x);
+    if (i >= 0) {
+      state.stash.splice(i, 1);
+      return;
+    }
+    i = state.relics.indexOf(x);
+    if (i >= 0) state.relics.splice(i, 1);
+  }
+  function giveUp(state, x) {
+    takeOut(state, x);
+    salvageItem(state, x);
+    state.totals.swapped = (state.totals.swapped ?? 0) + 1;
+  }
+  function relicRollScore(item) {
+    const def2 = item.relic ? RELICS[item.relic] : void 0;
+    if (!def2) return 0;
+    let sum = 0, n = 0;
+    def2.mods.forEach((m4, i) => {
+      const [lo, hi] = m4.range;
+      if (hi === lo) return;
+      sum += ((item.relicRolls?.[i] ?? lo) - lo) / (hi - lo);
+      n++;
+    });
+    return n ? sum / n : 1;
+  }
+  function caseLoser(state, item) {
+    const old = state.relics.find((x) => x.relic === item.relic);
+    if (!old) return null;
+    return relicRollScore(item) > relicRollScore(old) ? old : item;
+  }
+  function toCase(state, item) {
+    const loser = caseLoser(state, item);
+    if (loser === item) return item;
+    if (loser) state.relics.splice(state.relics.indexOf(loser), 1);
+    state.relics.push(item);
+    return loser;
+  }
+  function leftOver(state, x) {
+    if (x.locked && state.stash.length < state.stashCap) state.stash.push(x);
+    else salvageItem(state, x);
+  }
   function equipWithRoom(state, item, slot) {
     const off = displacedItems(state, item, slot);
-    const need = off.length - (state.stashCap - state.stash.length);
-    const victims = [];
-    if (need > 0) {
-      const pool = [...state.stash, ...off].filter((x) => x.rarity !== "relic" && !x.crafted).sort((a, b) => itemValue(a) - itemValue(b));
-      if (pool.length < need) return false;
-      victims.push(...pool.slice(0, need));
-    }
+    const keep = off.flatMap((o) => {
+      if (!o.relic) return o.locked ? [o] : [];
+      const l = caseLoser(state, o);
+      return l?.locked ? [l] : [];
+    });
+    const need = keep.length - (state.stashCap - state.stash.length);
+    const victims = need > 0 ? upkeepVictims(state, need) : [];
+    if (need > 0 && victims.length < need) return false;
     putOn(state, item, slot);
-    for (const v of victims) {
-      const i = state.stash.indexOf(v);
-      if (i >= 0) state.stash.splice(i, 1);
-      salvageItem(state, v);
+    for (const v of victims) giveUp(state, v);
+    for (const o of off) {
+      if (o.relic) {
+        const l = toCase(state, o);
+        if (l) leftOver(state, l);
+      } else if (o.locked) state.stash.push(o);
+      else stashOrSalvage(state, o);
     }
-    for (const o of off) if (!victims.includes(o)) state.stash.push(o);
-    if (victims.length) pushLog(state, "loot", `Stash full: salvaged ${victims.map(itemLabel).join(", ")} to make room.`);
     return true;
   }
   function putOn(state, item, slot) {
@@ -2830,24 +2899,36 @@
     state.hero.rev++;
     return off;
   }
+  function ownedItem(state, uid) {
+    return state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
+  }
   function equip(state, uid, slot) {
-    const i = state.stash.findIndex((x) => x.uid === uid);
-    if (i < 0) return "not in stash";
-    const item = state.stash[i];
+    const item = ownedItem(state, uid);
+    if (!item) return "not in stash";
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
-    if (state.stash.length - 1 + displacedCount(state, item, target) > state.stashCap) return "stash full";
-    state.stash.splice(i, 1);
-    state.stash.push(...putOn(state, item, target));
+    const fromStash = state.stash.includes(item);
+    takeOut(state, item);
+    const off = displacedItems(state, item, target);
+    const toStash = off.filter((o) => !o.relic || caseLoser(state, o)).length;
+    if (state.stash.length + toStash > state.stashCap) {
+      (fromStash ? state.stash : state.relics).push(item);
+      return "stash full";
+    }
+    for (const o of putOn(state, item, target)) {
+      const l = o.relic ? toCase(state, o) : o;
+      if (l) state.stash.push(l);
+    }
     return null;
   }
   function unequip(state, slot) {
     const it = state.hero.equipment[slot];
     if (!it) return null;
-    if (state.stash.length >= state.stashCap) return "stash full";
+    if ((!it.relic || caseLoser(state, it)) && state.stash.length >= state.stashCap) return "stash full";
     delete state.hero.equipment[slot];
-    state.stash.push(it);
+    const l = it.relic ? toCase(state, it) : it;
+    if (l) state.stash.push(l);
     state.hero.rev++;
     return null;
   }
@@ -2878,6 +2959,7 @@
   }
   function receiveItem(state, item) {
     state.totals.items++;
+    if (item.relic) state.codex[item.relic] = (state.codex[item.relic] ?? 0) + 1;
     if (state.settings.autoEquip) {
       const slot = upgradeSlot(state, item);
       if (slot && equipWithRoom(state, item, slot)) {
@@ -2889,13 +2971,28 @@
   }
   function stashOrSalvage(state, item) {
     if (keepItem(state, item)) {
-      if (state.stash.length < state.stashCap) {
-        state.stash.push(item);
-        return true;
-      }
-      if (!state.stashFull) {
-        state.stashFull = true;
-        pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged.");
+      if (item.relic) {
+        const loser = caseLoser(state, item);
+        if (loser !== item && !(loser?.locked && state.stash.length >= state.stashCap)) {
+          toCase(state, item);
+          if (loser) leftOver(state, loser);
+          return true;
+        }
+      } else {
+        if (state.stash.length < state.stashCap) {
+          state.stash.push(item);
+          return true;
+        }
+        const v = state.settings.upkeep ? upkeepVictims(state, 1, stashWorth(item))[0] : void 0;
+        if (v) {
+          giveUp(state, v);
+          state.stash.push(item);
+          return true;
+        }
+        if (!state.stashFull) {
+          state.stashFull = true;
+          pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged.");
+        }
       }
     }
     salvageItem(state, item);
@@ -2910,14 +3007,42 @@
   function salvage(state, uids) {
     let n = 0;
     for (const uid of uids) {
-      const i = state.stash.findIndex((x) => x.uid === uid);
-      if (i < 0) continue;
-      salvageItem(state, state.stash.splice(i, 1)[0]);
+      const it = ownedItem(state, uid);
+      if (!it || it.locked) continue;
+      takeOut(state, it);
+      salvageItem(state, it);
       n++;
     }
     if (n) state.stashFull = false;
     return n;
   }
+  function equipUpgrades(state, only) {
+    let n = 0;
+    for (let round = 0; round < SLOTS.length; round++) {
+      const now = buildScore(sheetOf(state));
+      let best = null;
+      for (const item of [...state.stash, ...state.relics]) {
+        if (only && !only(item)) continue;
+        for (const slot of slotsFor(baseOf(item))) {
+          const sheet = trialSheet(state, item, slot);
+          if (!sheet) continue;
+          const score = buildScore(sheet);
+          if (score > now * 1.02 && (!best || score > best.score)) best = { item, slot, score };
+        }
+      }
+      if (!best) break;
+      const home = state.stash.includes(best.item) ? state.stash : state.relics;
+      takeOut(state, best.item);
+      if (!equipWithRoom(state, best.item, best.slot)) {
+        home.push(best.item);
+        break;
+      }
+      pushLog(state, "loot", `Equipped ${itemLabel(best.item)} from the ${home === state.stash ? "stash" : "relic case"}.`);
+      n++;
+    }
+    return n;
+  }
+  var codexRarity = (state) => Object.keys(state.codex ?? {}).length;
   function setSkill(state, id) {
     const s = SKILLS[id];
     if (!s) return "unknown skill";
@@ -3111,7 +3236,8 @@
       const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
       const pick = want > 0 ? sorted.find((m4) => m4.tier <= want) ?? sorted[sorted.length - 1] : sorted[0];
       state.maps.splice(state.maps.indexOf(pick), 1);
-      return { tier: pick.tier, area: pick.area, mods: [...pick.mods], level: mapLevel(pick.tier) };
+      const tier = want > 0 ? Math.min(pick.tier, want) : pick.tier;
+      return { tier, area: pick.area, mods: [...pick.mods], level: mapLevel(tier) };
     }
     return { tier: 0, area: "cinderfield", mods: [], level: mapLevel(0) };
   }
@@ -3192,6 +3318,8 @@
   var FLASK_MAX = 30;
   var FLASK_COST = 10;
   var FLASK_S = 2;
+  var MAP_FAILS = 2;
+  var MAP_CLEAN = 8;
   var PUSH_LEVEL_MARGIN = 2;
   var MAP_DEATH_XP = 0.03;
   var flaskAmount = (level, sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -3441,7 +3569,7 @@
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m4.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-      const bonus = sheet.rarity + (eff?.rarity ?? 0) + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const bonus = sheet.rarity + codexRarity(state) + (eff?.rarity ?? 0) + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
       const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
       const pin = run.map?.pinnacle && d.boss;
       const relicChance = pin && k === 0 ? 1 : (d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m4.champion ? 0.01 : 3e-3) * (1 + bonus / 200);
@@ -3498,6 +3626,7 @@
       ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
+    if (up && state.settings.autoEquip) equipUpgrades(state);
     return up;
   }
   function heroDied(state, run, ev) {
@@ -3512,7 +3641,7 @@
     ev.death?.(run.zone);
     if (run.map) {
       state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
-      if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
+      if (act.autoPush && act.deaths >= MAP_FAILS && run.map.tier > 1 && !run.map.pinnacle) {
         act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
         act.deaths = 0;
         pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
@@ -3603,11 +3732,13 @@
     state.totals.runs++;
     if (run.map) {
       completeMap(state, run.map);
-      act.deaths = 0;
       act.streak++;
-      if (act.autoCap && act.streak >= 5) {
-        act.autoCap = 0;
+      if (act.streak >= MAP_CLEAN) act.deaths = 0;
+      if (act.autoCap && act.streak >= MAP_CLEAN) {
+        act.autoCap++;
         act.streak = 0;
+        if (act.autoCap > Math.max(0, ...state.maps.map((m4) => m4.tier))) act.autoCap = 0;
+        else pushLog(state, "zone", `Pushing deeper: ${tierName(act.autoCap)} and below.`);
       }
       ev.runDone?.(run.zone);
       act.runIndex++;
@@ -3707,7 +3838,7 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 4;
+  var SAVE_VERSION = 5;
   var MIGRATIONS = {
     // v2 (P2): passive bonus points, loot filter rules, crafting counter.
     1: (s) => {
@@ -3742,6 +3873,21 @@
       const actsDone = acts.filter(([z]) => clears[z] > 0).map(([, k]) => k);
       const trialsDone = trials.filter((z) => clears[z] > 0).map((z) => "trial:" + z);
       s.world.rewards ??= [...actsDone.slice(0, Math.floor((s.hero.bonusPoints ?? 0) / 2)), ...trialsDone.slice(0, Math.floor((s.hero.ascPoints ?? 0) / 2))];
+      return s;
+    },
+    // v5 (round 3): stash upkeep, item locks, the relic codex (seeded with the relics owned) and
+    // the relic case: stash relics move there; validateState keeps the best copy of each and
+    // puts the rest back in the stash.
+    4: (s) => {
+      s.settings.upkeep ??= true;
+      s.codex ??= {};
+      const owned = [...s.stash ?? [], ...Object.values(s.hero?.equipment ?? {})];
+      for (const it of owned) if (it?.relic && !s.codex[it.relic]) s.codex[it.relic] = 1;
+      s.relics ??= [];
+      if (Array.isArray(s.stash)) {
+        s.relics.push(...s.stash.filter((it) => it?.rarity === "relic"));
+        s.stash = s.stash.filter((it) => it?.rarity !== "relic");
+      }
       return s;
     }
   };
@@ -3825,6 +3971,21 @@
       });
       if (i.affixes.length) throw new SaveError("relic with affixes");
     } else if (i.relic !== void 0 || i.relicRolls !== void 0) throw new SaveError("relic data on a non-relic item");
+    if (i.locked !== true) delete i.locked;
+    if (i.quality !== void 0) {
+      const q = Number.isFinite(i.quality) ? Math.max(0, Math.min(20, Math.round(i.quality))) : 0;
+      if (q) i.quality = q;
+      else delete i.quality;
+    }
+    let benched = false;
+    for (const a of i.affixes) {
+      if (a.bench !== true) {
+        delete a.bench;
+        continue;
+      }
+      if (benched) delete a.bench;
+      benched = true;
+    }
     return i;
   }
   var RARITIES = ["plain", "enchanted", "rare", "relic"];
@@ -3896,6 +4057,21 @@
     }
     if (!Array.isArray(s.stash)) throw new SaveError("bad stash");
     s.stash.forEach(checkItem);
+    const inCase = Array.isArray(s.relics) ? s.relics : [];
+    inCase.forEach(checkItem);
+    s.relics = [];
+    for (const it of inCase) {
+      if (it.rarity !== "relic") {
+        s.stash.push(it);
+        continue;
+      }
+      const old = s.relics.find((x) => x.relic === it.relic);
+      if (!old) s.relics.push(it);
+      else if (relicRollScore(it) > relicRollScore(old)) {
+        s.relics[s.relics.indexOf(old)] = it;
+        s.stash.push(old);
+      } else s.stash.push(it);
+    }
     num(s.stashCap, "stash size", 1, 1e4);
     num(s.dust, "dust", 0);
     s.currency = s.currency && typeof s.currency === "object" ? s.currency : {};
@@ -3922,6 +4098,7 @@
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r3) => !!r3) : structuredClone(DEFAULT_FILTER);
+    set.upkeep = set.upkeep !== false;
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
     act.autoCap = Number.isInteger(act.autoCap) && act.autoCap > 0 ? act.autoCap : 0;
@@ -3945,6 +4122,7 @@
     const counts = (o) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0));
     s.sigils = counts(s.sigils);
     s.pinnacleKills = counts(s.pinnacleKills);
+    s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
@@ -6459,7 +6637,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
   };
   function findItem(state, uid) {
-    const s = state.stash.find((x) => x.uid === uid);
+    const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
     if (s) return { item: s };
     for (const slot of SLOTS) {
       const it = state.hero.equipment[slot];

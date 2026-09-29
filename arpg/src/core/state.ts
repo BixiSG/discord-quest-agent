@@ -72,7 +72,7 @@ export interface RunState {
 
 export interface LogEntry { t: number; kind: "level" | "loot" | "death" | "zone" | "boss" | "info"; text: string }
 
-export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number }
+export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number; /** Stash items upkeep gave up for better drops. */ swapped?: number }
 
 export interface GameState {
     seed: number;
@@ -127,7 +127,13 @@ export interface GameState {
         keep: "plain" | "enchanted" | "rare";
         autoEquip: boolean;
         filter: FilterRule[];
+        /** A full stash swaps its least-worth unlocked item for a better keeper (v5). */
+        upkeep: boolean;
     };
+    /** Relic case: the best copy of each relic, outside the stash (v5). */
+    relics: Item[];
+    /** Relic codex: relic id -> how many have dropped (v5). */
+    codex: Record<string, number>;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */

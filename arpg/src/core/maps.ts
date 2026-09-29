@@ -155,7 +155,10 @@ export function startMapRun(state: GameState): RunMap {
         const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
         const pick = want > 0 ? (sorted.find(m => m.tier <= want) ?? sorted[sorted.length - 1]!) : sorted[0]!;
         state.maps.splice(state.maps.indexOf(pick), 1);
-        return { tier: pick.tier, area: pick.area, mods: [...pick.mods], level: mapLevel(pick.tier) };
+        // With only deeper maps held, the device dampens one to the cap rather than ignore it
+        // (every map dropped deep again, and the hero died there on a loop).
+        const tier = want > 0 ? Math.min(pick.tier, want) : pick.tier;
+        return { tier, area: pick.area, mods: [...pick.mods], level: mapLevel(tier) };
     }
     return { tier: 0, area: "cinderfield", mods: [], level: mapLevel(0) };
 }

@@ -56,9 +56,9 @@ export const EFFECTS: Record<string, Effect> = {
     },
 };
 
-/** Finds an item by uid in the stash or on the hero. */
+/** Finds an item by uid in the stash, the relic case or on the hero. */
 export function findItem(state: GameState, uid: number): { item: Item; slot?: Slot } | null {
-    const s = state.stash.find(x => x.uid === uid);
+    const s = state.stash.find(x => x.uid === uid) ?? state.relics.find(x => x.uid === uid);
     if (s) return { item: s };
     for (const slot of SLOTS) { const it = state.hero.equipment[slot]; if (it?.uid === uid) return { item: it, slot }; }
     return null;

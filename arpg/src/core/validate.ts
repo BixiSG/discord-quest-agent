@@ -8,6 +8,7 @@ import { SLOTS, type Item } from "./types";
 import { DEFAULT_FILTER, type FilterRule } from "./filter";
 import { newTotals } from "./state";
 import { reconcileRewards } from "./sim/engine";
+import { relicRollScore } from "./game";
 import { endgameOpen } from "./maps";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
@@ -41,6 +42,18 @@ function checkItem(it: unknown): Item {
         i.relicRolls = i.relicRolls.map((r, k) => { num(r, "relic roll"); const [lo, hi] = def.mods[k]!.range; return Math.min(hi, Math.max(lo, Math.round(r))); });
         if (i.affixes.length) throw new SaveError("relic with affixes");
     } else if (i.relic !== undefined || i.relicRolls !== undefined) throw new SaveError("relic data on a non-relic item");
+    if (i.locked !== true) delete i.locked;
+    if (i.quality !== undefined) {
+        const q = Number.isFinite(i.quality) ? Math.max(0, Math.min(20, Math.round(i.quality))) : 0;
+        if (q) i.quality = q; else delete i.quality;
+    }
+    // One benched affix at most: extra marks are dropped (the affix stays as a normal one).
+    let benched = false;
+    for (const a of i.affixes) {
+        if (a.bench !== true) { delete a.bench; continue; }
+        if (benched) delete a.bench;
+        benched = true;
+    }
     return i;
 }
 
@@ -100,6 +113,17 @@ export function validateState(raw: unknown): GameState {
     }
     if (!Array.isArray(s.stash)) throw new SaveError("bad stash");
     s.stash.forEach(checkItem);
+    // The relic case holds relics only, the better-rolled copy of each; the rest go to the stash.
+    const inCase = Array.isArray(s.relics) ? s.relics : [];
+    inCase.forEach(checkItem);
+    s.relics = [];
+    for (const it of inCase) {
+        if (it.rarity !== "relic") { s.stash.push(it); continue; }
+        const old = s.relics.find(x => x.relic === it.relic);
+        if (!old) s.relics.push(it);
+        else if (relicRollScore(it) > relicRollScore(old)) { s.relics[s.relics.indexOf(old)] = it; s.stash.push(old); }
+        else s.stash.push(it);
+    }
     num(s.stashCap, "stash size", 1, 10000);
     num(s.dust, "dust", 0);
     s.currency = s.currency && typeof s.currency === "object" ? s.currency : {};
@@ -124,6 +148,7 @@ export function validateState(raw: unknown): GameState {
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
+    set.upkeep = set.upkeep !== false;
     // ---- endgame (v4)
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
@@ -150,6 +175,7 @@ export function validateState(raw: unknown): GameState {
     const counts = (o: unknown) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0)) as Record<string, number>;
     s.sigils = counts(s.sigils);
     s.pinnacleKills = counts(s.pinnacleKills);
+    s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
