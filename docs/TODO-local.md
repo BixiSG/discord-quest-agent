@@ -22,7 +22,7 @@ Open, needing the user:
 - [ ] After the merge: restart the installed agent here (or reboot) so it updates; then delete the
       tasks "QA dev branch run" and "QA dev branch hidden" and the repo-root `addons\` copy.
 
-Round 7 candidates besides E:
+Round 8 candidates besides E:
 - [ ] Attack builds vs pinnacles: two-handed Vanguards/Striders die before the enrage window
       (survival, chaos res 0); the Hollow Crown is only beaten by invested casters. The Strider is
       weakest overall (one seed never relights in 160 h). Measure with `tools/dawns.ts` (3 callings
