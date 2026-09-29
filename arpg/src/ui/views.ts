@@ -1,10 +1,10 @@
 // Tab views. Each returns a fresh element; the app swaps it in when the view's
 // signature changes, so scroll position and selection survive sim ticks.
 
-import { ACTS, ASCENDANCIES, BASES, CLASSES, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
+import { ACTS, ASCENDANCIES, BASES, CLASSES, RELICS, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
-import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore } from "../core/game";
+import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
 import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
@@ -49,14 +49,14 @@ export function viewSig(id: ViewId, c: Ctx): string {
     const s = c.state;
     switch (id) {
         case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}`;
-        case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
-        case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
+        case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
+        case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
         case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
-        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
+        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${JSON.stringify(s.settings.filter)}`;
     }
 }
 
@@ -170,7 +170,7 @@ function heroView(c: Ctx): HTMLElement {
             tile("armour", "Armour", fmt(s.armour), "armour"), tile("evasion", "Evasion", fmt(s.evasion), "evasion"), tile("block", "Block", `${s.block.toFixed(0)}%`, "block")),
         h("div", { class: "sub" }, `Effective HP against each type (pool ${fmt(pool)})`),
         ehpBars(s),
-        kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]]));
+        kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", codexRarity(st) ? `+${s.rarity + codexRarity(st)}% (codex +${codexRarity(st)}%)` : `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]]));
 
     return h("div", { class: "sheet" }, who, h("div", { class: "col", style: "gap:14px" }, off, res), def);
 }
@@ -232,6 +232,9 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
     const lines: string[] = [];
     if (item.rarity === "rare" || item.rarity === "relic") lines.push(b.name);
     card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : b.kind].filter(Boolean).join(" - ")}  ilvl ${item.ilvl}, needs level ${levelReq(item)}` }));
+    if (item.quality || item.locked) card.append(h("div", { class: "row", style: "gap:4px;margin-top:3px" },
+        item.quality ? h("span", { class: "tag q", text: `Quality +${item.quality}%` }) : null,
+        item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " Locked") : null));
     if (st.weapon) {
         const w = st.weapon;
         const rows: [string, string][] = [["Physical", `${w.phys[0]}-${w.phys[1]}`]];
@@ -255,7 +258,7 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
     if (item.affixes.length) {
         card.append(h("hr"));
         const sorted = [...item.affixes].sort((a, z) => (affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1));
-        for (const a of sorted) card.append(h("div", { class: "aff" }, affixText(a), h("b", { text: `${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+        for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? "Added at the bench" : "" }, affixText(a), h("b", { text: `${a.bench ? "Bench " : ""}${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
     }
     const relic = relicOf(item);
     if (relic) {
@@ -293,12 +296,21 @@ function compareRows(now: Sheet, next: Sheet): HTMLElement {
     return el;
 }
 
-type GearFilter = "all" | "upgrades" | "weapons" | "armour" | "jewellery";
+type GearFilter = "all" | "upgrades" | "weapons" | "armour" | "jewellery" | "relics";
 type GearSort = "rarity" | "level" | "slot";
-/** Stash view options: kept for the session, not saved. */
-const gearOpts: { filter: GearFilter; sort: GearSort } = { filter: "all", sort: "rarity" };
+/** Stash view options and marked items: kept for the session, not saved. */
+const gearOpts: { filter: GearFilter; sort: GearSort; marks: Set<number> } = { filter: "all", sort: "rarity", marks: new Set() };
 const SLOT_GROUP: Record<string, GearFilter> = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
 const SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+
+/** What the gear view depends on beyond the hero: locks and marks change no counts. */
+export function gearSig(s: GameState): string {
+    let locks = 0;
+    for (const x of s.stash) if (x.locked) locks++;
+    for (const x of s.relics) if (x.locked) locks++;
+    for (const k of SLOTS) if (s.hero.equipment[k]?.locked) locks++;
+    return `${s.stashCap}:${s.relics.length}:${s.relics[s.relics.length - 1]?.uid ?? 0}:${locks}:${gearOpts.marks.size}:${Object.keys(s.codex).length}:${s.settings.upkeep}:${s.stashFull ?? false}`;
+}
 
 /** Upgrade checks cost a stat sheet each: remembered until the hero's sheet changes. */
 let upgradeCache = { rev: -1, level: -1, map: new Map<number, Slot | null>() };
@@ -318,12 +330,17 @@ function chips<T extends string>(opts: [T, string, number?][], cur: T, pick: (v:
     return el;
 }
 
+/** A small lock in the cell's corner. */
+const lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
+
 function gearView(c: Ctx): HTMLElement {
     const st = c.state;
     const eq = st.hero.equipment;
     hideTip(); drag = null; c.hold = false;
     const root = h("div", { class: "gear" });
     const endDrag = () => { drag = null; c.hold = false; root.classList.remove("dragging"); root.querySelectorAll(".drop-ok, .over").forEach(e => e.classList.remove("drop-ok", "over")); };
+    // Marks only mean something for items still in the stash.
+    for (const uid of [...gearOpts.marks]) if (!st.stash.some(x => x.uid === uid)) gearOpts.marks.delete(uid);
 
     // Paper doll: the hero in the middle, the ten slots around them.
     const doll = h("div", { class: "doll" });
@@ -346,14 +363,15 @@ function gearView(c: Ctx): HTMLElement {
             if (!bow) cell.tabIndex = -1; // nothing can go there: not a stop for the keyboard
         }
         if (it) {
+            if (it.locked) cell.append(lockBadge());
             withTip(cell, c, () => itemCard(it, c));
             cell.draggable = true;
             cell.addEventListener("dragstart", e => { drag = { slot: s }; c.hold = true; hideTip(); root.classList.add("dragging"); e.dataTransfer?.setData("text/plain", "slot:" + s); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; });
             cell.addEventListener("dragend", endDrag);
         }
-        // Drop a stash item on a slot it fits.
+        // Drop a stash or relic-case item on a slot it fits.
         cell.addEventListener("dragover", e => {
-            const it2 = drag?.uid !== undefined ? st.stash.find(x => x.uid === drag!.uid) : undefined;
+            const it2 = drag?.uid !== undefined ? ownedItem(st, drag.uid) : undefined;
             if (it2 && slotsFor(baseOf(it2)).includes(s) && !canEquip(st, it2, s)) { e.preventDefault(); cell.classList.add("over"); }
         });
         cell.addEventListener("dragleave", () => cell.classList.remove("over"));
@@ -365,21 +383,22 @@ function gearView(c: Ctx): HTMLElement {
         });
         doll.append(cell);
     }
-    const slots = doll;
 
-    // Stash: filter chips with counts, a sort, and markers for upgrades and level-locked items.
-    const ups = new Set(st.stash.filter(it => upgradeOf(st, it)).map(it => it.uid));
-    const groupOf = (it: Item) => SLOT_GROUP[baseOf(it).slot] ?? "all";
-    const count = (f: GearFilter) => f === "all" ? st.stash.length : f === "upgrades" ? ups.size : st.stash.filter(it => groupOf(it) === f).length;
-    const shown = st.stash.filter(it => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
-    const byRarity = (a: Item, b: Item) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
-    shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b)
-        : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b)
-        : byRarity);
-    const stash = h("div", { class: "stash" });
-    for (const it of shown) {
+    /** A stash or relic-case cell: select, shift-click to mark (stash), hover to compare, drag to a slot or the anvil. */
+    const ownedCell = (it: Item, markable: boolean): HTMLElement => {
         const cell = itemCell(it, null, c.sel.uid === it.uid, () => { c.sel = { uid: it.uid }; c.rerender(); });
-        if (ups.has(it.uid)) cell.classList.add("upg");
+        if (markable) {
+            cell.addEventListener("click", e => {
+                if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return;
+                e.stopImmediatePropagation();
+                if (it.locked) { c.toast("Locked items can't be marked for salvage"); return; }
+                if (gearOpts.marks.has(it.uid)) gearOpts.marks.delete(it.uid); else gearOpts.marks.add(it.uid);
+                c.rerender();
+            }, { capture: true });
+            if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
+        }
+        if (it.locked) cell.append(lockBadge());
+        if (upgradeOf(st, it)) cell.classList.add("upg");
         else if (levelReq(it) > st.hero.level) cell.classList.add("req");
         // Hover: the item with what it would change, next to what it would replace.
         withTip(cell, c, () => {
@@ -396,15 +415,55 @@ function gearView(c: Ctx): HTMLElement {
             e.dataTransfer?.setData("text/plain", "stash:" + it.uid); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
         });
         cell.addEventListener("dragend", endDrag);
-        stash.append(cell);
+        return cell;
+    };
+
+    // Stash: filter chips with counts, a sort, and markers for upgrades and level-locked items.
+    const ups = new Set(st.stash.filter(it => upgradeOf(st, it)).map(it => it.uid));
+    const caseUps = st.relics.filter(it => upgradeOf(st, it)).length;
+    const groupOf = (it: Item) => SLOT_GROUP[baseOf(it).slot] ?? "all";
+    const count = (f: GearFilter) => f === "all" ? st.stash.length : f === "upgrades" ? ups.size : f === "relics" ? st.relics.length : st.stash.filter(it => groupOf(it) === f).length;
+    const relicsTab = gearOpts.filter === "relics";
+    const grid = h("div", { class: `stash${relicsTab ? " codex" : ""}` });
+    if (relicsTab) {
+        // The codex: every relic in level order - the case's copy, one that is worn, one only seen, or not found yet.
+        const worn = new Map(SLOTS.map(s => eq[s]).filter((x): x is Item => !!x?.relic).map(x => [x.relic!, x]));
+        for (const def of Object.values(RELICS).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))) {
+            const own = st.relics.find(x => x.relic === def.id);
+            const seen = st.codex[def.id] ?? 0;
+            if (own) { grid.append(ownedCell(own, false)); continue; }
+            const w = worn.get(def.id);
+            if (w) {
+                const cell = itemCell(w, null, false, () => { c.sel = { slot: SLOTS.find(s => eq[s] === w)! }; c.rerender(); });
+                cell.append(h("span", { class: "worn", text: "worn" }));
+                withTip(cell, c, () => itemCard(w, null));
+                grid.append(cell);
+                continue;
+            }
+            const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? `${def.name}: found ${seen}, none kept` : "A relic not found yet" } });
+            if (seen) ghost.append(itemIcon({ uid: -1, base: def.base, ilvl: def.level, rarity: "relic", affixes: [], relic: def.id }), h("span", { class: "cnt num", text: `x${seen}` }));
+            else ghost.append(h("span", { class: "q", text: "?" }));
+            withTip(ghost, c, () => h("div", { class: "card item" },
+                h("div", { class: "name relic", text: seen ? def.name : "Unknown relic" }),
+                h("div", { class: "muted", text: seen ? `Found ${seen} time${seen === 1 ? "" : "s"}; none kept. Relics that roll better replace the case's copy.` : `Drops from monsters of level ${def.level} and up.` }),
+                seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: def.flavour }) : null));
+            grid.append(ghost);
+        }
+    } else {
+        const shown = st.stash.filter(it => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
+        const byRarity = (a: Item, b: Item) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
+        shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b)
+            : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b)
+            : byRarity);
+        for (const it of shown) grid.append(ownedCell(it, true));
+        if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
+        if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
+        else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
     }
     // Drop an equipped item anywhere on the stash to take it off.
-    stash.addEventListener("dragover", e => { if (drag?.slot) { e.preventDefault(); stash.classList.add("over"); } });
-    stash.addEventListener("dragleave", () => stash.classList.remove("over"));
-    stash.addEventListener("drop", e => { e.preventDefault(); const s = drag?.slot; endDrag(); if (s) c.act(x => unequip(x, s)); });
-    if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
-    if (!st.stash.length) stash.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
-    else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
+    grid.addEventListener("dragover", e => { if (drag?.slot) { e.preventDefault(); grid.classList.add("over"); } });
+    grid.addEventListener("dragleave", () => grid.classList.remove("over"));
+    grid.addEventListener("drop", e => { e.preventDefault(); const s = drag?.slot; endDrag(); if (s) c.act(x => unequip(x, s)); });
 
     const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
     for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]] as const) {
@@ -414,36 +473,59 @@ function gearView(c: Ctx): HTMLElement {
     }
     sort.addEventListener("change", () => { gearOpts.sort = sort.value as GearSort; c.rerender(); });
     const full = st.stash.length >= st.stashCap;
-    const stashCard = h("div", { class: "card" },
-        h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
-        full ? h("div", { class: "warnbar", attrs: { role: "status" } }, glyph("forge", 14),
-            h("span", { text: "Stash full: new drops are salvaged into dust. Salvage or equip something to make room." })) : null,
+    const room = stashRoomCost(st);
+    const roomBtn = room === null ? null : h("button", { class: "btn alt small", text: `+${STASH_STEP} slots`, attrs: st.dust >= room ? {} : { disabled: "" },
+        title: `Ten more stash slots for ${fmt(room)} ember dust (up to ${STASH_MAX})`, on: { click: () => c.act(buyStashRoom, `Stash: ${st.stashCap + STASH_STEP} slots`) } });
+    const found = Object.keys(st.codex).length, total = Object.keys(RELICS).length;
+    const head = relicsTab
+        ? h("h3", { class: "split" }, h("span", { text: "Relic codex" }), h("span", { class: "num", title: "Every different relic found adds 1% item rarity", text: `${found} / ${total} found, +${codexRarity(st)}% rarity` }))
+        : h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
+    const note = relicsTab
+        ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "The relic case keeps the best-rolled copy of every relic, outside the stash. Drag one onto a slot to wear it." })
+        : st.stashFull ? h("div", { class: "warnbar", attrs: { role: "status" } }, glyph("forge", 14),
+            h("span", { text: st.settings.upkeep ? "Stash full of locked items and upgrades: new keepers are salvaged. Unlock, salvage or buy room." : "Stash full: new drops are salvaged into dust. Salvage, buy room, or switch on upkeep (Menu)." }))
+        : full && st.settings.upkeep ? h("div", { class: "note", style: "margin-bottom:8px" }, glyph("forge", 14),
+            h("span", { text: "Stash full: upkeep swaps the least-worth unlocked item for each better keeper. Lock what you want to keep." })) : null;
+    const stashCard = h("div", { class: "card" }, head, note,
         h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
-            chips<GearFilter>([["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")]],
-                gearOpts.filter, v => { gearOpts.filter = v; c.rerender(); }),
-            sort),
-        stash);
+            chips<GearFilter>([["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")], ["relics", "Relics", count("relics")]],
+                gearOpts.filter, v => { gearOpts.filter = v; c.sel = {}; c.rerender(); }),
+            relicsTab ? null : sort),
+        grid);
 
-    const plainCount = st.stash.filter(x => x.rarity === "plain").length;
-    const enchCount = st.stash.filter(x => x.rarity === "enchanted").length;
+    // Bulk tools: salvage by kind, by age or by mark; wear every upgrade.
+    const free = (xs: Item[]) => xs.filter(x => !x.locked);
+    const plain = free(st.stash.filter(x => x.rarity === "plain")), ench = free(st.stash.filter(x => x.rarity === "enchanted"));
+    const old = outdatedItems(st);
+    const marked = st.stash.filter(x => gearOpts.marks.has(x.uid));
+    const bulk = (label: string, xs: Item[], title: string, key?: string) => h("button", { class: "btn alt small", text: `${label} (${xs.length})`, title,
+        attrs: { ...(xs.length ? {} : { disabled: "" }), ...(key ? { "data-key": key } : {}) },
+        on: { click: () => c.act(s => { const n = salvage(s, xs.map(x => x.uid)); for (const x of xs) gearOpts.marks.delete(x.uid); c.sel = {}; c.toast(`Salvaged ${n} for dust`); }) } });
     const anvil = h("div", { class: "anvil", title: "Drop a stash item here to salvage it", attrs: { "aria-label": "Salvage: drop a stash item here" } }, glyph("forge", 18), h("span", { text: "Salvage" }));
     anvil.addEventListener("dragover", e => { if (drag?.uid !== undefined) { e.preventDefault(); anvil.classList.add("over"); } });
     anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
-    anvil.addEventListener("drop", e => { e.preventDefault(); const uid = drag?.uid; endDrag(); if (uid !== undefined) c.act(x => { salvage(x, [uid]); c.sel = {}; }); });
-    const tools = h("div", { class: "row" },
+    anvil.addEventListener("drop", e => { e.preventDefault(); const uid = drag?.uid; endDrag(); if (uid !== undefined) c.act(x => { if (!salvage(x, [uid])) return "locked items can't be salvaged"; c.sel = {}; }); });
+    const upCount = ups.size + caseUps;
+    const tools = h("div", { class: "row tools" },
         anvil,
         h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
-        h("button", { class: "btn alt", text: `Salvage plain (${plainCount})`, attrs: plainCount ? {} : { disabled: "" },
-            on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "plain").map(x => x.uid)); c.sel = {}; }) } }),
-        h("button", { class: "btn alt", text: `Salvage enchanted (${enchCount})`, attrs: enchCount ? {} : { disabled: "" },
-            on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "enchanted").map(x => x.uid)); c.sel = {}; }) } }),
+        h("button", { class: "btn small", text: `Equip upgrades (${upCount})`, title: "Wear every stash item that raises the build score, the best first", attrs: upCount ? {} : { disabled: "" },
+            on: { click: () => c.act(s => { const n = equipUpgrades(s); c.toast(n ? `Equipped ${n} upgrade${n === 1 ? "" : "s"}` : "Nothing to equip"); }) } }),
+        bulk("Salvage outdated", old, "Unlocked items on a base 10+ levels behind the hero that are not upgrades"),
+        bulk("Salvage plain", plain, "Every unlocked plain item in the stash"),
+        bulk("Salvage enchanted", ench, "Every unlocked enchanted item in the stash"),
+        marked.length ? bulk("Salvage marked", marked, "The items you shift-clicked") : null,
+        marked.length ? h("button", { class: "btn alt small", text: "Clear marks", on: { click: () => { gearOpts.marks.clear(); c.rerender(); } } }) : null,
     );
 
     // The picked item: its card pinned beside its slot, with what it would change and its actions.
-    const selItem = c.sel.uid !== undefined ? st.stash.find(x => x.uid === c.sel.uid) : undefined;
+    const selItem = c.sel.uid !== undefined ? ownedItem(st, c.sel.uid) : undefined;
     const selSlot = c.sel.slot;
     let pop: HTMLElement | null = null;
     const close = h("button", { class: "x popx", text: "x", title: "Put it back (Esc)", attrs: { "aria-label": "Close", "data-esc": "" }, on: { click: () => { c.sel = {}; c.rerender(); } } });
+    const lockBtn = (it: Item) => h("button", { class: "btn alt", text: it.locked ? "Unlock" : "Lock", attrs: { "data-key": "l" },
+        title: it.locked ? "Let upkeep and bulk salvage take it again (L)" : "Keep it: upkeep, auto-equip and bulk salvage leave it alone (L)",
+        on: { click: () => c.act(s => setLocked(s, it.uid, !it.locked)) } });
     if (selItem) {
         const targets = slotsFor(baseOf(selItem));
         const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? (targets.find(t => !eq[t]) ?? targets[0]!) : targets[0]!);
@@ -455,19 +537,22 @@ function gearView(c: Ctx): HTMLElement {
                 attrs: { ...(err ? { disabled: "" } : {}), ...(i === 0 ? { "data-key": "e" } : {}) }, title: err ?? (i === 0 ? "Equip (E)" : ""),
                 on: { click: () => c.act(s => { const e = equip(s, selItem.uid, t); if (!e) c.sel = { slot: t }; return e; }) } }));
         });
-        row.append(h("button", { class: "btn alt", text: `Salvage +${salvageValue(selItem)}`, title: "Salvage into ember dust (S)", attrs: { "data-key": "s" },
+        row.append(lockBtn(selItem));
+        row.append(h("button", { class: "btn alt", text: `Salvage +${salvageValue(selItem)}`, title: selItem.locked ? "Unlock it first" : "Salvage into ember dust (S)",
+            attrs: { "data-key": "s", ...(selItem.locked ? { disabled: "" } : {}) },
             on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
         card.append(row);
         pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(selItem) } }, card, close);
     } else if (selSlot && eq[selSlot]) {
-        const card = itemCard(eq[selSlot]!, c);
-        card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: "Back to the stash", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
-        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(eq[selSlot]!) } }, card, close);
+        const it = eq[selSlot]!;
+        const card = itemCard(it, c);
+        card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: it.relic ? "Back to the relic case" : "Back to the stash", on: { click: () => c.act(s => unequip(s, selSlot)) } }), lockBtn(it)));
+        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(it) } }, card, close);
     }
 
     const help = h("button", { class: "info", text: "i", attrs: { "aria-label": "How gear works" },
-        title: "Hover an item to compare it with what you wear; click it to pin its card with Equip and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nA green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it, Esc puts it back." });
-    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), slots);
+        title: "Hover an item to compare it with what you wear; click it to pin its card with Equip, Lock and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nShift-click stash items to mark them, then Salvage marked.\nA green corner marks an upgrade; faded items need a higher level; a lock keeps an item safe from upkeep and bulk salvage.\nKeys: E equips the picked item, L locks it, S salvages it, Esc puts it back." });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), doll);
     root.append(equipped, h("div", { class: "col" }, stashCard, tools));
     // A click on empty space puts the picked item back.
     root.addEventListener("click", e => {
@@ -720,14 +805,16 @@ function menuView(c: Ctx): HTMLElement {
     }
     keep.addEventListener("change", () => c.act(s => { s.settings.keep = keep.value as typeof s.settings.keep; }));
     const auto = h("button", { class: `toggle${st.settings.autoEquip ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoEquip) }, on: { click: () => c.act(s => { s.settings.autoEquip = !s.settings.autoEquip; }) } },
-        h("i"), h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score." })));
+        h("i"), h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score; on level-ups, the stash's too." })));
+    const upkeep = h("button", { class: `toggle${st.settings.upkeep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.upkeep) }, on: { click: () => c.act(s => { s.settings.upkeep = !s.settings.upkeep; }) } },
+        h("i"), h("span", null, h("b", { text: "Stash upkeep" }), h("small", { text: "When the stash is full, a better keeper replaces its least-worth unlocked item instead of being salvaged." })));
 
     const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
     const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
     const t = st.totals;
     return h("div", { class: "grid2" },
         h("div", { class: "card col" }, h("h3", { text: "Loot" }),
-            auto,
+            auto, upkeep,
             filterEditor(c),
             h("div", { class: "row" }, "Otherwise", keep),
             h("div", { class: "muted", style: "font-size:12px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
@@ -738,7 +825,7 @@ function menuView(c: Ctx): HTMLElement {
             out, inp,
             h("div", { class: "row" }, h("button", { class: "btn alt", text: "Import", on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ?? "Save loaded")); } } }))),
         h("div", { class: "card" }, h("h3", { text: "Totals" }), kv([
-            ["Runs", fmt(t.runs)], ["Kills", fmt(t.kills)], ["Deaths", fmt(t.deaths)], ["Items found", fmt(t.items)], ["Salvaged", fmt(t.salvaged)],
+            ["Runs", fmt(t.runs)], ["Kills", fmt(t.kills)], ["Deaths", fmt(t.deaths)], ["Items found", fmt(t.items)], ["Salvaged", fmt(t.salvaged)], ["Swapped out by upkeep", fmt(t.swapped ?? 0)],
             ["Time simulated", `${(t.simMs / 3600e3).toFixed(1)} h`]])),
         h("div", { class: "card col" }, h("h3", { text: "Danger" }),
             h("button", { class: "btn hot", text: "Start a new hero", on: { click: () => {
@@ -771,12 +858,15 @@ function filterEditor(c: Ctx): HTMLElement {
     for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v || "any slot", attrs: { value: v } }));
     const minAff = h("select");
     for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
-    box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff,
+    const behind = h("select", { attrs: { "aria-label": "Base level behind the hero" } });
+    for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? "any base" : `base ${v}+ behind`, attrs: { value: v } }));
+    box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff, behind,
         h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit(rs => {
             const r: FilterRule = { on: true, action: action.value as FilterRule["action"] };
             if (rarity.value) r.rarity = [rarity.value as Item["rarity"]];
             if (slot.value) r.slots = [slot.value];
             if (+minAff.value) r.minAffixes = +minAff.value;
+            if (+behind.value) r.behind = +behind.value;
             rs.push(r);
         }) } }),
         h("button", { class: "btn alt", text: "Reset", on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER)); }) } })));

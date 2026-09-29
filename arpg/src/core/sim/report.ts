@@ -18,6 +18,10 @@ export interface Report {
     deaths: number;
     kept: number;
     salvaged: number;
+    /** Stash items upkeep gave up for better drops. */
+    swapped: number;
+    /** Relics found for the first time. */
+    newRelics: string[];
     dust: number;
     equipped: string[];
     best: Item[];
@@ -28,13 +32,15 @@ export interface Report {
 export function startReport(state: GameState): { report: Report; events: SimEvents; finish(state: GameState): Report } {
     const report: Report = {
         from: state.simTo, to: state.simTo, levelFrom: state.hero.level, levelTo: state.hero.level, xp: 0,
-        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, dust: state.dust, equipped: [], best: [], zones: [], story: [],
+        runs: 0, kills: 0, bosses: 0, deaths: 0, kept: 0, salvaged: 0, swapped: state.totals.swapped ?? 0, newRelics: [], dust: state.dust, equipped: [], best: [], zones: [], story: [],
     };
+    const seen = new Set(Object.keys(state.codex ?? {}));
     const events: SimEvents = {
         kill: (m, xp) => { report.kills++; report.xp += xp; if (MONSTERS[m.def]?.boss) report.bosses++; },
         death: () => { report.deaths++; },
         runDone: () => { report.runs++; },
         loot: (item, kept, equipped) => {
+            if (item.relic && !seen.has(item.relic)) { seen.add(item.relic); report.newRelics.push(itemLabel(item)); }
             if (equipped) report.equipped.push(itemLabel(item));
             else if (kept) report.kept++;
             else report.salvaged++;
@@ -48,6 +54,6 @@ export function startReport(state: GameState): { report: Report; events: SimEven
     };
     return {
         report, events,
-        finish(s: GameState) { report.to = s.simTo; report.levelTo = s.hero.level; report.dust = s.dust - report.dust; return report; },
+        finish(s: GameState) { report.to = s.simTo; report.levelTo = s.hero.level; report.dust = s.dust - report.dust; report.swapped = (s.totals.swapped ?? 0) - report.swapped; return report; },
     };
 }

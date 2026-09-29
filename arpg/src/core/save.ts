@@ -55,6 +55,7 @@ export const MIGRATIONS: Record<number, Migration> = {
     // puts the rest back in the stash.
     4: (s: any) => {
         s.settings.upkeep ??= true;
+        s.stashFull = false; // upkeep decides what "full" means now
         s.codex ??= {};
         const owned = [...(s.stash ?? []), ...Object.values(s.hero?.equipment ?? {})] as any[];
         for (const it of owned) if (it?.relic && !s.codex[it.relic]) s.codex[it.relic] = 1;

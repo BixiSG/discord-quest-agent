@@ -324,9 +324,11 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
             }
         } else {
             if (state.stash.length < state.stashCap) { state.stash.push(item); return true; }
-            const v = state.settings.upkeep ? upkeepVictims(state, 1, stashWorth(item))[0] : undefined;
-            if (v) { giveUp(state, v); state.stash.push(item); return true; }
-            if (!state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
+            // Upkeep: the cheapest item it may give up goes if the drop is worth more. A drop worth
+            // less than everything is simply salvaged; only a stash upkeep can't touch at all is "full".
+            const v = state.settings.upkeep ? upkeepVictims(state, 1)[0] : undefined;
+            if (v && stashWorth(v) < stashWorth(item)) { giveUp(state, v); state.stash.push(item); state.stashFull = false; return true; }
+            if (!v && !state.stashFull) { state.stashFull = true; pushLog(state, "loot", "Stash full: items the filter keeps are being salvaged."); }
         }
     }
     salvageItem(state, item);

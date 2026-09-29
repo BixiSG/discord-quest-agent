@@ -517,5 +517,24 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   .sock { min-width: 84px; }
 }
 .portrait-frame { text-align: center; }
+/* round 3: locks, marks, the relic codex, the forge's hone and bench */
+.cell .lockb { position: absolute; left: -4px; top: -4px; width: 15px; height: 15px; display: grid; place-items: center; background: #1a1410; color: #ffc233; border: 1px solid #ffc233; z-index: 1; }
+.cell.mark { outline: 3px dashed var(--ember); outline-offset: 1px; }
+.cell.mark canvas { opacity: .55; }
+.stash.codex .cell { cursor: default; }
+.stash.codex .cell.relic { cursor: pointer; }
+.cell.ghost, .cell.unknown { border-image-source: var(--fr-empty); }
+.cell.ghost canvas { filter: grayscale(1) brightness(.75); opacity: .6; }
+.cell.ghost .cnt { position: absolute; right: -2px; bottom: -3px; padding: 0 3px; background: #1a1410; color: #e6d9b8; font: 700 8px/12px var(--mono); }
+.cell.unknown .q { font: 700 20px/1 var(--display); color: var(--muted); opacity: .6; }
+.tools { gap: 6px; flex-wrap: wrap; }
+.tag.q { background: var(--teal); color: #1a1410; } .tag.lk { background: #1a1410; color: #ffc233; border-color: #1a1410; display: inline-flex; align-items: center; gap: 3px; }
+.aff.bench { color: var(--teal); } .hm.dark .aff.bench { color: #6fe0cf; }
+.work { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed color-mix(in srgb, var(--line) 50%, transparent); }
+.work .wrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.work .wrow > b { min-width: 48px; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
+.work select { flex: 1 1 140px; min-width: 0; }
+.qbar { flex: 1 1 80px; height: 8px; border: 2px solid var(--line); background: var(--paper2); position: relative; }
+.qbar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;

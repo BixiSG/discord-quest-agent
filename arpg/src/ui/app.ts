@@ -779,6 +779,7 @@ export class GameWindow {
             ["Runs cleared", fmt(r.runs)], ["Monsters slain", fmt(r.kills)], ["Bosses", fmt(r.bosses)], ["Deaths", fmt(r.deaths)],
             ["Levels", r.levelTo > r.levelFrom ? `${r.levelFrom} -> ${r.levelTo}` : `${r.levelTo} (no change)`],
             ["Experience", fmt(r.xp)], ["Items kept", fmt(r.kept)], ["Salvaged", fmt(r.salvaged)], ["Ember dust", `+${fmt(r.dust)}`],
+            ...(r.swapped ? [["Swapped out by upkeep", fmt(r.swapped)] as [string, string]] : []),
         ];
         const kvEl = h("div", { class: "kv" });
         for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
@@ -786,6 +787,7 @@ export class GameWindow {
         for (const t of r.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
         if (r.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r.zones.join(", ")}` }));
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
+        if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: `New in the codex: ${r.newRelics.join(", ")}` }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;
             card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
