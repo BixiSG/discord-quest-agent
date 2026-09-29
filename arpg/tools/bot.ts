@@ -122,8 +122,10 @@ export function botTune(state: GameState): void {
     if (endgameOpen(state)) {
         setMapMode(state, true);
         for (const id of Object.keys(ATLAS)) if (!canTakeAtlas(state, id)) takeAtlas(state, id);
-        // Pinnacles only when a scout says the hero wins most fights (like a careful player).
-        for (const p of Object.values(PINNACLES)) {
+        // Pinnacles only when a scout says the hero wins most fights (like a careful player),
+        // a sun shard still missing first, then the hardest the hero can take.
+        const order = Object.values(PINNACLES).sort((a, b) => Number((state.pinnacleKills[a.id] ?? 0) > 0) - Number((state.pinnacleKills[b.id] ?? 0) > 0) || b.level - a.level);
+        for (const p of order) {
             if (state.activity.pinnacle || (state.sigils[p.sigil] ?? 0) < p.cost) continue;
             if (scoutPinnacle(state, p.id, 3).wins >= 2) queuePinnacle(state, p.id);
         }

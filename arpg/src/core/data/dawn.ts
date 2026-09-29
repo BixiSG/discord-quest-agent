@@ -27,7 +27,7 @@ export const DAWN_PERKS: DawnPerk[] = [
 export const DAWN_PERK: Record<string, DawnPerk> = Object.fromEntries(DAWN_PERKS.map(p => [p.id, p]));
 
 /** Per dawn: experience and dust, and the world's toughness and riches (percent). */
-export const DAWN_XP = 10, DAWN_DUST = 10, DAWN_TOUGHER = 15, DAWN_RICHER = 20;
+export const DAWN_XP = 10, DAWN_DUST = 10, DAWN_TOUGHER = 10, DAWN_RICHER = 20;
 
 export const DAWN_TEXT = "The pieces catch, the ember in your chest goes into the fire with them, and for a moment nothing happens. Then the sky over the crater turns grey, then pink, then gold. The sun rises over the March for the first time in three hundred years.\n\nYou wake in the surf with an ember where your heart was. The shore is warm this time.";
 

@@ -189,7 +189,7 @@ sun**. The March starts again one dawn later: a new hero (any calling) on a
 warm shore. Kept: the relic case and codex, companions and their bond, echoes,
 the stone pouch (with the stones of gear left behind), bought stash room,
 settings, totals and one heirloom. Each dawn: 10% more experience and dust, a
-passive point, a world 15% tougher and 20% richer, and one of ten perks (kept
+passive point, a world 10% tougher and 20% richer, and one of ten perks (kept
 for every dawn after). The Hollow Crown, which ate the light, is the optional
 fight beyond.
 
@@ -214,6 +214,19 @@ event draws RNG only while it is on (every other day plays as before).
   else double dust. Unfinished lantern contracts leave the board in November.
 - The World tab shows a Hollow Night card (nights left, lanterns snuffed, the
   two finds); the quest-panel card carries a ribbon; a story beat opens it.
+
+## Pinnacles: enrage and the dawn loop (round 6)
+
+Pinnacles enrage: after 90 seconds their hits grow 2% a second, so a build
+has to kill them, not outlast them. Before, a tanky caster (block, armour,
+regeneration) beat all three sun pinnacles at level 65-75 in fights of five
+to nine minutes and relit the sun every 15-20 hours, while two-handed attack
+builds never beat the Ashen King at level 88. The King is now a DPS check
+attack builds can pass (fire resistance 45, less chaos, damage 0.85, life
+32), the Glass Choir evades less (1.5), and a dawn makes the world 10% tougher
+instead of 15%. `tools/dawns.ts` (160 h, 3 callings x 2 seeds): first relight
+at 18-36 h for every calling but one weak Strider seed; the loop then slows
+at dawn II-IV (a world 20-40% tougher), where the Hollow Crown waits.
 
 ## Pinnacles: scouting (round 4)
 

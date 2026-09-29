@@ -34,6 +34,13 @@ const MAP_FAILS = 2, MAP_CLEAN = 8;
 export const PUSH_LEVEL_MARGIN = 2;
 /** Share of a level's experience lost on a death in a map. */
 export const MAP_DEATH_XP = 0.03;
+/**
+ * Pinnacles enrage: after ENRAGE_S seconds their hits grow ENRAGE_PER (a share)
+ * each second, so a build has to kill them, not just outlast them.
+ */
+export const ENRAGE_S = 90, ENRAGE_PER = 0.02;
+/** How much harder a pinnacle hits `elapsed` seconds into its fight. */
+export const enrage = (elapsed: number) => 1 + ENRAGE_PER * Math.max(0, elapsed - ENRAGE_S);
 
 /** Hooks for the UI and the offline report. All optional. */
 export interface SimEvents {
@@ -268,7 +275,7 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
             if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
         }
         if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
-        const mapBoss = d.boss && run.map && !run.map.pinnacle ? MAP_BOSS_DAMAGE : 1;
+        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE) : 1;
         const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
