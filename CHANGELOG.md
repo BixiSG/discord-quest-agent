@@ -4,7 +4,7 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
-## 1.7.0 - 2026-09-28
+## 1.7.0 - 2026-09-29
 
 - Addons: Settings > Addons lists optional extras, each off until you switch it on.
 - A switched-on addon can have its own button in Discord's title bar, next to the quest agent's: one click opens it (Settings > Addons, the row under the addon).
@@ -16,6 +16,7 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 - Hollowmarch has three acts, an endless map endgame with pinnacle bosses, 26 relics, nine companions, sockets and ember stones, a wandering market, a contract board and an ember shrine. The stash looks after itself, and a mini strip keeps the fight on screen in a corner.
 - Its story has an ending: gather the three pieces of the sun from the pinnacles and relight it to start a new dawn, keeping what you collected. Hollowmarch speaks English, Russian and Ukrainian, following the agent's language.
 - Hollowmarch has nothing to do with quests and never touches them. Like every addon it is off until you switch it on in Settings > Addons.
+- The agent looks for updates every 6 hours while it runs, not only when it starts, so a PC that stays on for days no longer misses releases. A new version takes over in Discord at its next reload or restart.
 
 ## 1.6.1 - 2026-09-28
 

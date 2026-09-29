@@ -536,21 +536,24 @@ if (-not $instanceMutex.WaitOne(0)) {
 
 Repair-StartupShortcut
 
-if (Invoke-SelfUpdate) {
-    # Relaunch the freshly downloaded copy and hand over. Through launch.vbs,
-    # not powershell.exe: a hidden powershell.exe started directly may not run
-    # at login (see launch.vbs), and a self-update at login is the common case.
-    $args = @("`"$(Join-Path $Root 'src\launch.vbs')`"", "-NoUpdate")
-    if ($AttachOnly) { $args += "-AttachOnly" }
-    if ($NoWatch) { $args += "-NoWatch" }
-    if ($PSBoundParameters.ContainsKey("Branch")) { $args += @("-Branch", $Branch) }
-    if ($PSBoundParameters.ContainsKey("Port")) { $args += @("-Port", $Port) }
+# After a self-update: relaunch the freshly downloaded copy and hand over.
+# Through launch.vbs, not powershell.exe: a hidden powershell.exe started
+# directly may not run at login (see launch.vbs), and a self-update at login is
+# the common case. Same switches, minus a second update check.
+$relaunchArgs = @("`"$(Join-Path $Root 'src\launch.vbs')`"", "-NoUpdate")
+if ($AttachOnly) { $relaunchArgs += "-AttachOnly" }
+if ($NoWatch) { $relaunchArgs += "-NoWatch" }
+if ($PSBoundParameters.ContainsKey("Branch")) { $relaunchArgs += @("-Branch", $Branch) }
+if ($PSBoundParameters.ContainsKey("Port")) { $relaunchArgs += @("-Port", $Port) }
+function Start-UpdatedCopy {
     # Let go of the single-instance mutex first, or the new copy sees us as
     # "already running" and quits.
     $instanceMutex.ReleaseMutex(); $instanceMutex.Dispose()
-    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $args
+    Start-Process -FilePath (Join-Path $env:SystemRoot "System32\wscript.exe") -ArgumentList $relaunchArgs
     exit 0
 }
+
+if (Invoke-SelfUpdate) { Start-UpdatedCopy }
 
 $branchInfo = Resolve-Branch
 Write-Log "Discord branch: $($branchInfo.Name)"
@@ -654,12 +657,24 @@ $discordUp = $true          # was Discord running at the previous check?
 $noPortSince = $null        # when we first saw Discord running without the port
 $noPortReason = $null       # "started" (fresh launch) or "lost" (port vanished mid-session)
 $waitNoted = $false
+# The agent stays resident across days on a PC that isn't restarted, so the
+# update check at start alone could leave it a release or two behind.
+$nextUpdateCheck = (Get-Date).AddHours(6)
 while ($true) {
     # Poll fast while Discord is closed or freshly started without the port, so
     # a manual start is caught on the splash screen rather than mid-chat.
     Start-Sleep -Seconds $(if (-not $discordUp -or $noPortReason -eq "started") { 5 } else { 20 })
     # The uninstaller deletes the install folder; don't outlive it.
     if (-not (Test-Path $AgentJs)) { Write-Log "Install folder is gone (uninstalled) - exiting." "DarkGray"; break }
+    if ((Get-Date) -ge $nextUpdateCheck) {
+        $nextUpdateCheck = (Get-Date).AddHours(6)
+        if (Invoke-SelfUpdate) {
+            # The agent already in Discord keeps running; the new one takes over
+            # at Discord's next reload or restart.
+            Write-Log "The new version takes over in Discord at its next reload or restart." "Green"
+            Start-UpdatedCopy
+        }
+    }
     if (Test-CdpUp) {
         $discordUp = $true; $noPortSince = $null; $noPortReason = $null; $waitNoted = $false
         try {
