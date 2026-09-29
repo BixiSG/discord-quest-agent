@@ -10,7 +10,7 @@ import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
 import { clear, fmt, h, pct } from "./dom";
 import { itemIcon } from "./gfx/itemart";
-import { spriteCanvas } from "./gfx/sprites";
+import { drawSprite, loadSprites, spriteCanvas } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
 import { glyph } from "./glyphs";
 import { portrait, scenery } from "./gfx/portrait";
@@ -718,20 +718,67 @@ function filterEditor(c: Ctx): HTMLElement {
     return box;
 }
 
-/** Character creation. */
+/** Where each calling is shown on the creation screen. */
+const CALLING_SCENE: Record<string, string> = { vanguard: "a1_lock", strider: "a1_cliffs", arcanist: "a1_chapel" };
+const SCENE_W = 120, SCENE_H = 84;
+
+/** A calling's hero standing in its scenery; `frame` picks the idle frame. */
+function callingScene(cls: string, bg: HTMLCanvasElement, into: HTMLCanvasElement, frame: number): void {
+    const g = into.getContext("2d")!;
+    g.imageSmoothingEnabled = false;
+    g.drawImage(bg, 0, 0);
+    const hc = HERO_CAST[cls];
+    if (!hc) return;
+    const ground = SCENE_H - Math.max(6, Math.round(SCENE_H * 0.12));
+    g.fillStyle = "rgba(0,0,0,.35)";
+    g.beginPath(); g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2); g.fill();
+    drawSprite(g, hc.idle, frame, SCENE_W / 2, ground);
+}
+
+/** Character creation: the three callings side by side, each in its own scenery; the picked one breathes. */
 export function creationView(onStart: (name: string, cls: string) => void): HTMLElement {
-    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
+    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
     let cls = Object.keys(CLASSES)[0]!;
-    const list = h("div", { class: "col" });
+    const start = () => onStart(name.value.replace(/[^ -~]/g, "").trim().slice(0, 20) || "Ashling", cls);
+    name.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); start(); } });
+    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": "Calling" } });
+    let live: { cls: string; bg: HTMLCanvasElement; c: HTMLCanvasElement } | null = null;
     const draw = () => {
-        clear(list);
-        for (const k of Object.values(CLASSES)) list.append(h("div", { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => { cls = k.id; draw(); } } },
-            h("div", { class: "grow" }, h("div", { class: "nm", text: k.name }), h("div", { class: "ds", text: k.blurb }),
-                h("div", { class: "ds muted", text: `Might ${k.str} / Grace ${k.dex} / Wit ${k.int}. Starts with ${SKILLS[k.startSkill]!.name} and a ${BASES[k.startWeapon]!.name}.` }))));
+        clear(grid);
+        live = null;
+        for (const k of Object.values(CLASSES)) {
+            const on = k.id === cls;
+            const bg = scenery(ZONES[CALLING_SCENE[k.id] ?? "a1_shore"]!, SCENE_W, SCENE_H);
+            const pic = h("canvas", { class: "cscene", attrs: { width: String(SCENE_W), height: String(SCENE_H), "aria-hidden": "true" } });
+            callingScene(k.id, bg, pic, 0);
+            if (on) live = { cls: k.id, bg, c: pic };
+            const attrs = ([["might", "Might", k.str], ["grace", "Grace", k.dex], ["wit", "Wit", k.int]] as const)
+                .map(([gl, label, v]) => h("span", { class: `cattr ${gl}`, title: label }, glyph(gl, 14), h("b", { class: "num", text: String(v) }), h("small", { text: label })));
+            grid.append(h("button", { class: `calling${on ? " on" : ""}`, style: `--cc:${k.color}`, attrs: { role: "radio", "aria-checked": String(on) },
+                on: { click: () => { if (cls !== k.id) { cls = k.id; draw(); (grid.querySelector(".calling.on") as HTMLElement | null)?.focus(); } } } },
+                h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: "Chosen" }) : null),
+                h("span", { class: "cname", text: k.name }),
+                h("span", { class: "cattrs" }, ...attrs),
+                h("span", { class: "ds", text: k.blurb }),
+                h("span", { class: "ds muted", text: `Starts with ${SKILLS[k.startSkill]!.name} and a ${BASES[k.startWeapon]!.name}.` })));
+        }
     };
     draw();
-    return h("div", { class: "col", style: "max-width:520px;margin:0 auto" },
+    // The art may still be loading on a first open: draw again once it is in.
+    void loadSprites().then(() => { if (grid.isConnected) draw(); });
+    // The picked hero idles; the timer ends itself when the screen is gone.
+    let f = 0;
+    const timer = window.setInterval(() => {
+        if (!root.isConnected && f > 20) { clearInterval(timer); return; }
+        f++;
+        if (live) callingScene(live.cls, live.bg, live.c, f);
+    }, 150);
+    const root = h("div", { class: "create" },
         h("div", { class: "card story", text: "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead." }),
-        h("div", { class: "card col" }, h("h3", { text: "Name your Kindled" }), name, h("h3", { text: "Choose a calling" }), list,
-            h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })));
+        h("div", { class: "sec", text: "Choose a calling" }),
+        grid,
+        h("div", { class: "card col" }, h("h3", { text: "Name your Kindled" }),
+            h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: "Wake up", on: { click: start } })),
+            h("div", { class: "muted", style: "font-size:11px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })));
+    return root;
 }

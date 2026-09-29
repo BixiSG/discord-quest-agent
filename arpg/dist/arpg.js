@@ -5000,7 +5000,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .hudw canvas { display: block; image-rendering: pixelated; }
 
 /* nav rail + content */
-.main { display: grid; grid-template-columns: 124px minmax(0, 1fr); min-height: 0; }
+.main { display: grid; grid-template-columns: 142px minmax(0, 1fr); min-height: 0; }
 .nav { display: flex; flex-direction: column; background: var(--nav); border-right: 3px solid var(--line); overflow: auto; scrollbar-width: none; }
 .nav button { position: relative; display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px 8px 12px;
   background: transparent; color: var(--text); border: 0; border-bottom: 2px solid var(--line); cursor: pointer; text-align: left;
@@ -5014,7 +5014,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
   border: 2px solid var(--line); font: 800 9px/11px var(--mono); text-align: center; }
 .body { overflow: auto; padding: 14px 16px 22px; min-width: 0; position: relative; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .body::-webkit-scrollbar { width: 12px; } .body::-webkit-scrollbar-thumb { background: var(--line); border: 3px solid var(--paper); }
-.win.creating .top, .win.creating .hudw, .win.creating .nav { display: none; }
+.win.creating .top, .win.creating .hudw, .win.creating .nav, .win.creating .ctl.sz, .win.creating .ctl.mn { display: none; }
 .win.creating .main { grid-template-columns: 1fr; }
 
 /* mini mode: a strip that keeps playing */
@@ -5023,10 +5023,23 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .win.mini .top, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
 .win.mini .logo { font-size: 13px; letter-spacing: 1.5px; padding: 0 8px; }
 .win.mini .hudw { border-bottom: 0; }
-.win.mini .minibox:has(.mlast:empty) { display: none; }
-.win.mini .minibox { display: block; padding: 5px 9px 6px; background: var(--paper2); }
-.minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win.mini .minibox { display: flex; flex-direction: column; gap: 5px; padding: 5px 7px 6px; background: var(--paper2); }
+.win.mini .minibox:has(.mlast:empty):has(.mnote[hidden]):has(.mprog[hidden]) { display: none; }
+.minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
 .minibox .mlast:empty { display: none; }
+.minibox .mlast.ping { color: var(--text); animation: ping 1.8s steps(1) both; }
+@keyframes ping { 0%, 22%, 44% { background: var(--gold); color: #1a1410; } 11%, 33%, 55%, 100% { background: transparent; } }
+.minibox .mlast.ping.t-err { color: var(--red); }
+/* dialogs wait hidden while the window is a strip; this row brings the window back for them */
+.win.mini > .modal { display: none; }
+.mnote { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 30px; padding: 0 4px; cursor: pointer; text-align: left; color: #1a1410;
+  border: 6px solid transparent; border-image: var(--fr-gold) 8 fill / 6px; background: none; filter: drop-shadow(2px 2px 0 var(--line)); font: inherit; }
+.mnote:hover { filter: drop-shadow(2px 2px 0 var(--line)) brightness(1.08); }
+.mnote b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
+.mnote span { flex: none; font: 700 10px/1 var(--mono); text-transform: uppercase; }
+.mprog { display: grid; gap: 3px; }
+.mprog span { font: 700 10px/1.1 var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mprog .progress { height: 9px; border-width: 2px; }
 
 /* one column when the window is narrow */
 @container win (max-width: 640px) {
@@ -5039,7 +5052,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 }
 
 /* toasts */
-.toasts { position: absolute; left: 136px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 6; pointer-events: none; max-width: calc(100% - 160px); }
+.toasts { position: absolute; left: 154px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 6; pointer-events: none; max-width: calc(100% - 178px); }
 .win.mini .toasts, .win.creating .toasts { left: 10px; max-width: calc(100% - 20px); }
 @container win (max-width: 640px) { .toasts { left: 12px; max-width: calc(100% - 24px); } }
 .toast { background: var(--card); color: var(--text); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--line); padding: 6px 11px;
@@ -5153,7 +5166,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .cell.req { filter: saturate(.4); }
 .hint h3 { margin-bottom: 7px; }
 .modal { position: absolute; inset: 0; background: rgba(26, 20, 16, .55); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
-.modal .card { max-width: 460px; width: 100%; max-height: 100%; overflow: auto; animation: pop .2s cubic-bezier(.2,.8,.3,1); }
+.modal > .card { max-width: 460px; width: 100%; max-height: 100%; overflow: auto; animation: pop .2s cubic-bezier(.2,.8,.3,1); }
 @keyframes pop { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 input[type=text], textarea, select { font: inherit; padding: 5px 7px; border: 3px solid var(--line); background: var(--card); color: var(--text); }
 textarea { width: 100%; min-height: 70px; font-family: var(--mono); font-size: 11px; }
@@ -5365,6 +5378,27 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pinnacle { align-items: stretch; }
 .pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
 .pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
+
+/* creation: three callings in their scenery */
+.create { max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.create .sec { margin: 4px 0 0; }
+.callings { display: grid; grid-template-columns: repeat(auto-fit, minmax(236px, 1fr)); gap: 12px; }
+.calling { display: flex; flex-direction: column; gap: 6px; padding: 3px 3px 6px; text-align: left; font: inherit; color: var(--text); cursor: pointer; min-width: 0;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; filter: drop-shadow(3px 3px 0 var(--line)); }
+.hm.dark .calling { filter: drop-shadow(3px 3px 0 #000); }
+.calling:hover:not(.on) { filter: drop-shadow(3px 3px 0 var(--line)) brightness(1.08); }
+.calling.on { border-image-source: var(--fr-gold); color: #1a1410; }
+.calling.on .muted { color: #4d4030; }
+.cpic { position: relative; display: block; line-height: 0; border: 2px solid var(--line); background: #1a1410; overflow: hidden; }
+.cscene { width: 100%; aspect-ratio: 120 / 84; image-rendering: pixelated; }
+.calling:not(.on) .cscene { filter: saturate(.5) brightness(.7); }
+.cpick { position: absolute; left: 0; top: 0; padding: 3px 6px; background: #1a1410; color: #ffc233; line-height: 1; font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
+.cname { display: block; padding: 2px 2px 0; font: 700 18px/1 var(--display); font-stretch: condensed; letter-spacing: 1.5px; text-transform: uppercase; border-left: 6px solid var(--cc); padding-left: 7px; }
+.cattrs { display: flex; gap: 10px; padding: 0 2px; }
+.cattr { display: inline-flex; align-items: center; gap: 4px; } .cattr b { font-size: 14px; } .cattr small { font: 700 9px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; opacity: .75; }
+.cattr.might svg { color: #e5383b; } .cattr.grace svg { color: #2f9e4f; } .cattr.wit svg { color: #3a7bff; }
+.calling .ds { padding: 0 2px; font-size: 12px; }
+.namebar { flex-wrap: nowrap; } .namebar input { flex: 1; min-width: 0; font-size: 15px; } .namebar .btn { flex: none; }
 
 /* log: a journal with a pixel mark per kind */
 .log { background-image: repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in srgb, var(--line) 10%, transparent) 23px 24px); }
@@ -7837,42 +7871,94 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     ));
     return box2;
   }
+  var CALLING_SCENE = { vanguard: "a1_lock", strider: "a1_cliffs", arcanist: "a1_chapel" };
+  var SCENE_W = 120;
+  var SCENE_H = 84;
+  function callingScene(cls, bg, into, frame) {
+    const g = into.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(bg, 0, 0);
+    const hc = HERO_CAST[cls];
+    if (!hc) return;
+    const ground = SCENE_H - Math.max(6, Math.round(SCENE_H * 0.12));
+    g.fillStyle = "rgba(0,0,0,.35)";
+    g.beginPath();
+    g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2);
+    g.fill();
+    drawSprite(g, hc.idle, frame, SCENE_W / 2, ground);
+  }
   function creationView(onStart) {
-    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
+    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
     let cls = Object.keys(CLASSES)[0];
-    const list6 = h("div", { class: "col" });
+    const start = () => onStart(name.value.replace(/[^ -~]/g, "").trim().slice(0, 20) || "Ashling", cls);
+    name.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        start();
+      }
+    });
+    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": "Calling" } });
+    let live = null;
     const draw2 = () => {
-      clear(list6);
-      for (const k of Object.values(CLASSES)) list6.append(h(
-        "div",
-        { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => {
-          cls = k.id;
-          draw2();
-        } } },
-        h(
-          "div",
-          { class: "grow" },
-          h("div", { class: "nm", text: k.name }),
-          h("div", { class: "ds", text: k.blurb }),
-          h("div", { class: "ds muted", text: `Might ${k.str} / Grace ${k.dex} / Wit ${k.int}. Starts with ${SKILLS[k.startSkill].name} and a ${BASES[k.startWeapon].name}.` })
-        )
-      ));
+      clear(grid);
+      live = null;
+      for (const k of Object.values(CLASSES)) {
+        const on = k.id === cls;
+        const bg = scenery(ZONES[CALLING_SCENE[k.id] ?? "a1_shore"], SCENE_W, SCENE_H);
+        const pic = h("canvas", { class: "cscene", attrs: { width: String(SCENE_W), height: String(SCENE_H), "aria-hidden": "true" } });
+        callingScene(k.id, bg, pic, 0);
+        if (on) live = { cls: k.id, bg, c: pic };
+        const attrs = [["might", "Might", k.str], ["grace", "Grace", k.dex], ["wit", "Wit", k.int]].map(([gl, label, v]) => h("span", { class: `cattr ${gl}`, title: label }, glyph(gl, 14), h("b", { class: "num", text: String(v) }), h("small", { text: label })));
+        grid.append(h(
+          "button",
+          {
+            class: `calling${on ? " on" : ""}`,
+            style: `--cc:${k.color}`,
+            attrs: { role: "radio", "aria-checked": String(on) },
+            on: { click: () => {
+              if (cls !== k.id) {
+                cls = k.id;
+                draw2();
+                grid.querySelector(".calling.on")?.focus();
+              }
+            } }
+          },
+          h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: "Chosen" }) : null),
+          h("span", { class: "cname", text: k.name }),
+          h("span", { class: "cattrs" }, ...attrs),
+          h("span", { class: "ds", text: k.blurb }),
+          h("span", { class: "ds muted", text: `Starts with ${SKILLS[k.startSkill].name} and a ${BASES[k.startWeapon].name}.` })
+        ));
+      }
     };
     draw2();
-    return h(
+    void loadSprites().then(() => {
+      if (grid.isConnected) draw2();
+    });
+    let f = 0;
+    const timer = window.setInterval(() => {
+      if (!root.isConnected && f > 20) {
+        clearInterval(timer);
+        return;
+      }
+      f++;
+      if (live) callingScene(live.cls, live.bg, live.c, f);
+    }, 150);
+    const root = h(
       "div",
-      { class: "col", style: "max-width:520px;margin:0 auto" },
+      { class: "create" },
       h("div", { class: "card story", text: "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead." }),
+      h("div", { class: "sec", text: "Choose a calling" }),
+      grid,
       h(
         "div",
         { class: "card col" },
         h("h3", { text: "Name your Kindled" }),
-        name,
-        h("h3", { text: "Choose a calling" }),
-        list6,
-        h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })
+        h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: "Wake up", on: { click: start } })),
+        h("div", { class: "muted", style: "font-size:11px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })
       )
     );
+    return root;
   }
 
   // src/ui/app.ts
@@ -7916,6 +8002,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     miniBtn;
     maxBtn;
     miniBox;
+    /** Mini strip rows: the last notable event, a dialog waiting for the full window, the replay progress. */
+    miniLast;
+    miniNote;
+    miniProg;
     toasts;
     battle = new Battle();
     state = null;
@@ -7982,6 +8072,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         await this.open();
         return;
       }
+      if (!this.state) {
+        this.flash();
+        return;
+      }
       this.setMini(!this.frame.mini);
     }
     // ---- frame ----------------------------------------------------------------
@@ -8013,7 +8107,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       };
       this.who = h("span", { class: "who" });
       this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
-      this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
+      this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini), "mn");
       this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
       this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
       const bar2 = h(
@@ -8041,7 +8135,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
       this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
       const main = h("div", { class: "main" }, this.nav, this.body);
-      this.miniBox = h("div", { class: "minibox" }, h("div", { class: "mlast" }));
+      this.miniLast = h("div", { class: "mlast" });
+      this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
+      this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
+      this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
       this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
       const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
       this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, this.hudWrap, main, this.miniBox, this.toasts, grip);
@@ -8062,6 +8159,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const t = e.target;
         if (t.closest("input, textarea, select")) return;
         if (e.key === "Escape") {
+          if (this.frame.mini) return;
           const modals = this.win.querySelectorAll(".modal");
           const top = modals[modals.length - 1];
           if (top && !top.querySelector(".progress")) {
@@ -8166,13 +8264,17 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.kv.set(UI_KEY, { ...this.frame });
     }
     setMini(on) {
+      if (on && !this.state) return;
       this.frame.mini = on;
       this.saveFrame();
       this.applyFrame();
       if (!on) {
         this.sig = "";
         this.renderTab(true);
+        this.focusModal();
       }
+      this.syncMini();
+      this.hooks.onMini?.(on);
     }
     setMax(on) {
       if (this.frame.mini) return;
@@ -8287,19 +8389,24 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const rep = startReport(s);
       const bar2 = h("i", { style: "width:0%" });
       const label = h("div", { class: "muted", text: "" });
-      const closeModal = away > 2e3 ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar2))) : () => {
+      const shown = away > 2e3;
+      const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar2))) : () => {
       };
+      const [miniLabel, miniBar] = [this.miniProg.firstElementChild, this.miniProg.querySelector("i")];
+      this.miniProg.hidden = !shown;
       const from = s.simTo, target = Date.now();
       this.battle.quiet = true;
       while (!advance(s, target, rep.events, 25e3)) {
         const f = (s.simTo - from) / Math.max(1, target - from);
-        bar2.style.width = (f * 100).toFixed(1) + "%";
-        label.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+        bar2.style.width = miniBar.style.width = (f * 100).toFixed(1) + "%";
+        label.textContent = miniLabel.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+        if (this.frame.mini) this.drawHud();
         await new Promise((r3) => setTimeout(r3, 0));
         if (!this.host) return;
       }
       this.battle.quiet = false;
       this.xpLog = [];
+      this.miniProg.hidden = true;
       closeModal();
       this.busy = false;
       const report = rep.finish(s);
@@ -8557,8 +8664,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const label = `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
         this.hudWrap.setAttribute("aria-label", label);
         this.hudWrap.title = label;
-        const last = this.miniBox.firstElementChild;
-        if (last.textContent !== this.lastEvent) last.textContent = this.lastEvent;
+        if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
       }
     }
     /** "~12m to go" from the kill XP of the last few minutes; blank until there is enough to go on. */
@@ -8572,6 +8678,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       return `~${fmtDuration(left / rate)} to level`;
     }
     toast(msg, kind = "") {
+      if (this.frame.mini) {
+        this.lastEvent = msg;
+        this.miniLast.textContent = msg;
+        this.miniLast.className = "mlast";
+        void this.miniLast.offsetWidth;
+        this.miniLast.className = `mlast ping${kind ? " t-" + kind : ""}`;
+        return;
+      }
       const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
       this.toasts.prepend(t);
       while (this.toasts.childElementCount > 4) this.toasts.lastElementChild.remove();
@@ -8580,11 +8694,51 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         setTimeout(() => t.remove(), 220);
       }, kind === "err" ? 3200 : 2600);
     }
+    /**
+     * A dialog over the window. In mini mode it waits hidden (the strip gets a row that
+     * brings the window back); a click on the backdrop closes it, except the replay one.
+     */
     modal(content) {
       const m4 = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
+      const title = content.querySelector("h3")?.textContent?.trim();
+      if (title) m4.setAttribute("aria-label", title);
+      const close = () => {
+        if (!m4.isConnected) return;
+        const hadFocus = m4.contains(this.root.activeElement);
+        m4.remove();
+        if (hadFocus && !this.focusModal()) this.win.focus();
+        this.syncMini();
+      };
+      m4.addEventListener("click", (e) => {
+        if (e.target === m4 && !m4.querySelector(".progress")) close();
+      });
       this.win.append(m4);
-      queueMicrotask(() => pixelize(m4));
-      return () => m4.remove();
+      this.syncMini();
+      if (this.frame.mini && !m4.querySelector(".progress")) this.flash();
+      queueMicrotask(() => {
+        pixelize(m4);
+        this.focusModal();
+      });
+      return close;
+    }
+    /** Moves focus to the top dialog's first button, only if the player is in the game (never out of Discord's chat box). */
+    focusModal() {
+      if (!this.host || this.frame.mini || document.activeElement !== this.host) return false;
+      const modals = this.win.querySelectorAll(":scope > .modal");
+      const b = modals[modals.length - 1]?.querySelector("button, [tabindex]");
+      b?.focus();
+      return !!b;
+    }
+    /** The strip's row for dialogs that wait for the full window. */
+    syncMini() {
+      if (!this.miniNote) return;
+      const waiting = [...this.win.querySelectorAll(":scope > .modal")].filter((m4) => !m4.querySelector(".progress"));
+      const top = waiting[waiting.length - 1];
+      this.miniNote.hidden = !top;
+      if (!top) return;
+      const title = top.getAttribute("aria-label") || "A message";
+      this.miniNote.title = `${title}: open the full window to read it`;
+      this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
     }
     showCreation() {
       clear(this.body);
@@ -8648,48 +8802,102 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   function summaryOf(s) {
     const need = xpToNext(s.hero.level);
     const run = s.activity.run;
-    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: run ? runZone(s, run).name : ZONES[s.activity.zone]?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
+    const z = run ? runZone(s, run) : ZONES[s.activity.zone];
+    return {
+      name: s.hero.name,
+      cls: s.hero.cls,
+      level: s.hero.level,
+      zone: z?.name ?? s.activity.zone,
+      savedAt: Date.now(),
+      xpFrac: isFinite(need) ? s.hero.xp / need : 1,
+      zoneId: z?.id ?? s.activity.zone,
+      sky: z?.palette[0]
+    };
   }
 
   // src/ui/card.ts
   var CARD_CSS = `
-:host { all: initial; display: block; }
-.c { font: 13px/1.35 "Segoe UI", system-ui, sans-serif; color: #111; background: #fff4dc; border: 3px solid #111; box-shadow: 5px 5px 0 #111; margin: 8px 10px 14px 4px; }
-.top { background: #ff5a36; border-bottom: 3px solid #111; padding: 6px 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; display: flex; justify-content: space-between; }
-.in { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.hero { font-weight: 900; font-size: 16px; }
-.muted { color: #5b5446; font-size: 12px; }
-.xp { height: 10px; border: 2px solid #111; background: #fff; } .xp i { display: block; height: 100%; background: #ffc233; }
-button { cursor: pointer; font: inherit; font-weight: 900; padding: 8px 12px; background: #ffc233; color: #111; border: 3px solid #111; box-shadow: 3px 3px 0 #111; text-transform: uppercase; }
-button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #111; }
-button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
-.dark .c { background: #2a2533; color: #f7f1e6; } .dark .muted { color: #bdb3a3; }
+:host { display: block; }
+.hc { margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
+.hc .bar { height: 30px; cursor: default; padding-right: 8px; }
+.hc .logo { font-size: 14px; }
+.hc .state { margin-left: auto; font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
+.hc .state.live { padding: 3px 6px; background: #1a1410; color: #19b3a3; }
+.hc .in { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+.hc .chero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; overflow: visible; white-space: normal; }
+.hc .pic { line-height: 0; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
+.hc .pic canvas { image-rendering: pixelated; width: 176px; height: 132px; display: block; }
+.hc .facts { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.hc .name { font: 700 18px/1.05 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; overflow-wrap: anywhere; }
+.hc .facts .muted { font-size: 12px; }
+.hc .xpbar { margin: 2px 0 0; }
+.hc .xpl { font: 700 10px/1 var(--mono); color: var(--muted); }
+.hc .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.hc .acts .btn { flex: 1 1 auto; }
+.hc .hint { font-size: 11px; color: var(--muted); }
+.hc.new .chero { grid-template-columns: 1fr; }
+.hc.new .pic canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; }
 `;
-  function mountCard(el, api, summary, isOpen, onOpen) {
+  function mountCard(el, api, summary, status, act) {
     const holder = document.createElement("div");
     const root = holder.attachShadow({ mode: "open" });
     const style = document.createElement("style");
-    style.textContent = CARD_CSS;
+    style.textContent = CSS + CARD_CSS;
     root.append(style);
-    const wrap2 = h("div", { class: api.theme() === "dark" ? "dark" : "" });
+    const dark = api.theme() === "dark";
+    const wrap2 = h("div", { class: `hm${dark ? " dark" : ""}` });
+    for (const [k, v] of Object.entries(frameVars(dark))) wrap2.style.setProperty(k, v);
+    const stateText = status === "open" ? api.t("card.stateOpen") : status === "mini" ? api.t("card.stateMini") : "";
+    const bar2 = h(
+      "div",
+      { class: "bar" },
+      h("span", { class: "logo", text: api.t("title") }),
+      stateText ? h("span", { class: "state live", text: stateText }) : h("span", { class: "state", text: "idle arpg" })
+    );
     const inner = h("div", { class: "in" });
-    const c = h("div", { class: "c" }, h("div", { class: "top" }, h("span", { text: api.t("title") }), h("span", { text: "idle arpg" })), inner);
+    const card = h("div", { class: `hc${summary ? "" : " new"}` }, bar2, inner);
+    const pic = h("div", { class: "pic" });
+    const paint2 = () => {
+      let c;
+      if (summary) {
+        const z = summary.zoneId && ZONES[summary.zoneId] || { id: summary.zoneId ?? "", name: summary.zone, palette: [summary.sky ?? "#1a1410", "#111", "#111"] };
+        c = portrait(z, summary.cls, 88, 66);
+      } else c = scenery(ZONES.a1_shore, 120, 90);
+      c.setAttribute("aria-hidden", "true");
+      pic.replaceChildren(c);
+    };
+    paint2();
+    void loadSprites().then(() => {
+      if (holder.isConnected) paint2();
+    });
     if (summary) {
       const zone = ZONES[summary.zone]?.name ?? summary.zone;
-      inner.append(
-        h("div", { class: "hero", text: `${summary.name}` }),
+      const xp = Math.max(0, Math.min(1, summary.xpFrac));
+      const seen = status === "closed" ? api.t("card.away", { time: fmtDuration(Math.max(0, Date.now() - summary.savedAt)) }) : status === "mini" ? api.t("card.inMini") : api.t("card.inWindow");
+      inner.append(h("div", { class: "chero" }, pic, h(
+        "div",
+        { class: "facts" },
+        h("div", { class: "name", text: summary.name }),
         h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls]?.name ?? summary.cls, zone }) }),
-        h("div", { class: "xp" }, h("i", { style: `width:${Math.round(summary.xpFrac * 100)}%` })),
-        h("div", { class: "muted", text: api.t("card.away", { time: fmtDuration(Math.max(0, Date.now() - summary.savedAt)) }) })
-      );
+        h("div", { class: "xpbar", title: `${(xp * 100).toFixed(1)}%` }, h("i", { style: `width:${(xp * 100).toFixed(1)}%` })),
+        h("div", { class: "xpl", text: `${(xp * 100).toFixed(0)}% XP` }),
+        h("div", { class: "muted", text: seen })
+      )));
     } else {
-      inner.append(h("div", { text: api.t("card.new") }));
+      inner.append(h("div", { class: "chero" }, pic, h("div", { class: "story", text: api.t("card.new") })));
     }
-    inner.append(h("button", { text: isOpen ? api.t("card.focus") : summary ? api.t("card.play") : api.t("card.start"), on: { click: onOpen } }));
-    inner.append(h("div", { class: "muted", text: api.t("card.hint") }));
-    wrap2.append(c);
+    const acts = h("div", { class: "acts" });
+    if (status === "closed") acts.append(h("button", { class: "btn hot", text: summary ? api.t("card.play") : api.t("card.start"), on: { click: () => act.open() } }));
+    else if (status === "open") acts.append(
+      h("button", { class: "btn", text: api.t("card.show"), on: { click: () => act.open() } }),
+      h("button", { class: "btn alt", text: api.t("card.fold"), on: { click: () => act.mini(true) } })
+    );
+    else acts.append(h("button", { class: "btn", text: api.t("card.unfold"), on: { click: () => act.mini(false) } }));
+    inner.append(acts, h("div", { class: "hint", text: status === "closed" ? api.t("card.hint") : api.t("card.hintOpen") }));
+    wrap2.append(card);
     root.append(wrap2);
     el.append(holder);
+    pixelize(card);
     return { unmount() {
       holder.remove();
     } };
@@ -8824,8 +9032,15 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     "arpg.card.new": "The sun went out. You woke up anyway.",
     "arpg.card.play": "Open the game",
     "arpg.card.start": "Start a hero",
-    "arpg.card.focus": "Game is open",
-    "arpg.card.hint": "Opens in its own window. Nothing runs while it is closed; progress is replayed on open."
+    "arpg.card.show": "Show the window",
+    "arpg.card.fold": "Fold to strip",
+    "arpg.card.unfold": "Full window",
+    "arpg.card.stateOpen": "Playing",
+    "arpg.card.stateMini": "In the strip",
+    "arpg.card.inWindow": "Playing now in its own window.",
+    "arpg.card.inMini": "Playing now, folded into the mini strip.",
+    "arpg.card.hint": "Opens in its own window. Nothing runs while it is closed; progress is replayed on open.",
+    "arpg.card.hintOpen": "Closing the window pauses nothing: the time away is replayed on the next open."
   };
   var storePromise = null;
   var game = null;
@@ -8859,7 +9074,8 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
         onClose: () => {
           refreshCard?.();
           if (standalone) showOpener();
-        }
+        },
+        onMini: () => refreshCard?.()
       });
     }
     await game.open();
@@ -8887,7 +9103,13 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
         view?.unmount();
         const o = api.load();
         const saved = o?.summary ?? (o && typeof o.level === "number" ? o : null);
-        view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, !!game?.isOpen, () => void openGame());
+        const status = game?.isOpen ? game.isMini ? "mini" : "open" : "closed";
+        view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, status, {
+          open: () => void openGame(),
+          mini: (on) => {
+            if (game?.isOpen) game.setMini(on);
+          }
+        });
       };
       draw2();
       refreshCard = draw2;

@@ -3,7 +3,7 @@
 // boots straight into the game window.
 
 import { GameWindow, type Summary } from "./ui/app";
-import { mountCard } from "./ui/card";
+import { mountCard, type CardStatus } from "./ui/card";
 import { openStore, type SaveStore } from "./platform/store";
 import { hubKV, localKV } from "./platform/kv";
 
@@ -18,8 +18,15 @@ const STRINGS: Record<string, string> = {
     "arpg.card.new": "The sun went out. You woke up anyway.",
     "arpg.card.play": "Open the game",
     "arpg.card.start": "Start a hero",
-    "arpg.card.focus": "Game is open",
+    "arpg.card.show": "Show the window",
+    "arpg.card.fold": "Fold to strip",
+    "arpg.card.unfold": "Full window",
+    "arpg.card.stateOpen": "Playing",
+    "arpg.card.stateMini": "In the strip",
+    "arpg.card.inWindow": "Playing now in its own window.",
+    "arpg.card.inMini": "Playing now, folded into the mini strip.",
     "arpg.card.hint": "Opens in its own window. Nothing runs while it is closed; progress is replayed on open.",
+    "arpg.card.hintOpen": "Closing the window pauses nothing: the time away is replayed on the next open.",
 };
 
 interface HubApi {
@@ -58,6 +65,7 @@ async function doOpen(): Promise<void> {
             summary: (s: Summary) => { if (hub) { const o = (hub.load() as Record<string, unknown> | null) ?? {}; hub.save({ ...o, summary: s }); } refreshCard?.(); },
             theme: () => (hub?.theme() === "light" ? "light" : hub ? "dark" : "light"),
             onClose: () => { refreshCard?.(); if (standalone) showOpener(); },
+            onMini: () => refreshCard?.(),
         });
     }
     await game.open();
@@ -79,7 +87,11 @@ const def = {
             view?.unmount();
             const o = api.load() as { summary?: Summary; level?: number } | null;
             const saved = o?.summary ?? (o && typeof o.level === "number" ? (o as Summary) : null);
-            view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, !!game?.isOpen, () => void openGame());
+            const status: CardStatus = game?.isOpen ? (game.isMini ? "mini" : "open") : "closed";
+            view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, status, {
+                open: () => void openGame(),
+                mini: on => { if (game?.isOpen) game.setMini(on); },
+            });
         };
         draw();
         refreshCard = draw;

@@ -48,13 +48,15 @@ const STAGE_TITLE: Record<StageSize, string> = { m: "Battle view: normal (click 
 /** `sfx` replaced an older `sound` flag that defaulted to on: sound starts muted, even for old saves. */
 interface Frame { stage: StageSize; mini: boolean; max: boolean; sfx: boolean; volume: number }
 
-export interface Summary { name: string; cls: string; level: number; zone: string; savedAt: number; xpFrac: number }
+export interface Summary { name: string; cls: string; level: number; zone: string; savedAt: number; xpFrac: number; zoneId?: string; sky?: string }
 
 export interface AppHooks {
     /** Small summary for the launcher card (hub storage). */
     summary?(s: Summary): void;
     theme?(): "dark" | "light";
     onClose?(): void;
+    /** The window folded into the strip or back (the launcher card shows which). */
+    onMini?(mini: boolean): void;
 }
 
 // Events typed or pasted in the game must not reach Discord's document handlers.
@@ -81,6 +83,10 @@ export class GameWindow {
     private miniBtn!: HTMLButtonElement;
     private maxBtn!: HTMLButtonElement;
     private miniBox!: HTMLDivElement;
+    /** Mini strip rows: the last notable event, a dialog waiting for the full window, the replay progress. */
+    private miniLast!: HTMLDivElement;
+    private miniNote!: HTMLButtonElement;
+    private miniProg!: HTMLDivElement;
     private toasts!: HTMLDivElement;
     private battle = new Battle();
     private state: GameState | null = null;
@@ -137,6 +143,7 @@ export class GameWindow {
     /** Like a taskbar button: opens the game, or folds it to mini mode and back. */
     async toggle(): Promise<void> {
         if (!this.host) { await this.open(); return; }
+        if (!this.state) { this.flash(); return; } // creating a hero: the window stays full
         this.setMini(!this.frame.mini);
     }
 
@@ -172,7 +179,7 @@ export class GameWindow {
         };
         this.who = h("span", { class: "who" });
         this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
-        this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
+        this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini), "mn");
         this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
         this.soundBtn = ctl("mute", "Sound off (click or M to unmute)", () => this.setSound(!this.frame.sfx), "snd");
         const bar = h("div", { class: "bar" }, h("span", { class: "logo", text: "Hollowmarch" }), this.who,
@@ -193,7 +200,11 @@ export class GameWindow {
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
         const main = h("div", { class: "main" }, this.nav, this.body);
 
-        this.miniBox = h("div", { class: "minibox" }, h("div", { class: "mlast" }));
+        // Dialogs never open inside the strip: they wait, hidden, and a row here brings the window back for them.
+        this.miniLast = h("div", { class: "mlast" });
+        this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
+        this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
+        this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
 
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
         const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
@@ -212,6 +223,7 @@ export class GameWindow {
             const t = e.target as HTMLElement;
             if (t.closest("input, textarea, select")) return;
             if (e.key === "Escape") {
+                if (this.frame.mini) return; // dialogs are hidden in the strip
                 const modals = this.win.querySelectorAll(".modal");
                 const top = modals[modals.length - 1] as HTMLElement | undefined;
                 // Closing never confirms anything: the window is just dismissed (the catch-up one stays).
@@ -297,7 +309,13 @@ export class GameWindow {
         this.refit();
     }
     private saveFrame(): void { this.kv.set(UI_KEY, { ...this.frame }); }
-    setMini(on: boolean): void { this.frame.mini = on; this.saveFrame(); this.applyFrame(); if (!on) { this.sig = ""; this.renderTab(true); } }
+    setMini(on: boolean): void {
+        if (on && !this.state) return; // no hero yet: nothing to show in a strip
+        this.frame.mini = on; this.saveFrame(); this.applyFrame();
+        if (!on) { this.sig = ""; this.renderTab(true); this.focusModal(); }
+        this.syncMini();
+        this.hooks.onMini?.(on);
+    }
     private setMax(on: boolean): void { if (this.frame.mini) return; this.frame.max = on; this.saveFrame(); this.applyFrame(); }
     private setStage(s: StageSize): void { this.frame.stage = s; this.saveFrame(); this.applyFrame(); }
     private setSound(on: boolean): void { this.frame.sfx = on; this.saveFrame(); this.sound.set(on, this.frame.volume); this.applyFrame(); if (on) this.sound.play("click"); }
@@ -379,18 +397,24 @@ export class GameWindow {
         const rep = startReport(s);
         const bar = h("i", { style: "width:0%" });
         const label = h("div", { class: "muted", text: "" });
-        const closeModal = away > 2000 ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar))) : () => {};
+        const shown = away > 2000;
+        const closeModal = shown ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar))) : () => {};
+        // The strip shows the same progress in one line.
+        const [miniLabel, miniBar] = [this.miniProg.firstElementChild as HTMLElement, this.miniProg.querySelector("i") as HTMLElement];
+        this.miniProg.hidden = !shown;
         const from = s.simTo, target = Date.now();
         this.battle.quiet = true;
         while (!advance(s, target, rep.events, 25000)) {
             const f = (s.simTo - from) / Math.max(1, target - from);
-            bar.style.width = (f * 100).toFixed(1) + "%";
-            label.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+            bar.style.width = miniBar.style.width = (f * 100).toFixed(1) + "%";
+            label.textContent = miniLabel.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+            if (this.frame.mini) this.drawHud();
             await new Promise(r => setTimeout(r, 0));
             if (!this.host) return;
         }
         this.battle.quiet = false;
         this.xpLog = []; // replayed time is not a live rate
+        this.miniProg.hidden = true;
         closeModal();
         this.busy = false;
         const report = rep.finish(s);
@@ -598,8 +622,7 @@ export class GameWindow {
                 + `Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
             this.hudWrap.setAttribute("aria-label", label);
             this.hudWrap.title = label;
-            const last = this.miniBox.firstElementChild!;
-            if (last.textContent !== this.lastEvent) last.textContent = this.lastEvent;
+            if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
         }
     }
 
@@ -615,17 +638,64 @@ export class GameWindow {
     }
 
     toast(msg: string, kind = ""): void {
+        // The strip is too small for toasts: the news goes to its event line, which flashes.
+        if (this.frame.mini) {
+            this.lastEvent = msg;
+            this.miniLast.textContent = msg;
+            this.miniLast.className = "mlast";
+            void this.miniLast.offsetWidth;
+            this.miniLast.className = `mlast ping${kind ? " t-" + kind : ""}`;
+            return;
+        }
         const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
         this.toasts.prepend(t);
         while (this.toasts.childElementCount > 4) this.toasts.lastElementChild!.remove();
         setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 220); }, kind === "err" ? 3200 : 2600);
     }
 
+    /**
+     * A dialog over the window. In mini mode it waits hidden (the strip gets a row that
+     * brings the window back); a click on the backdrop closes it, except the replay one.
+     */
     modal(content: HTMLElement): () => void {
         const m = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
+        const title = content.querySelector("h3")?.textContent?.trim();
+        if (title) m.setAttribute("aria-label", title);
+        const close = () => {
+            if (!m.isConnected) return;
+            const hadFocus = m.contains(this.root.activeElement);
+            m.remove();
+            if (hadFocus && !this.focusModal()) this.win.focus();
+            this.syncMini();
+        };
+        m.addEventListener("click", e => { if (e.target === m && !m.querySelector(".progress")) close(); });
         this.win.append(m);
-        queueMicrotask(() => pixelize(m)); // callers add their buttons right after this returns
-        return () => m.remove();
+        this.syncMini();
+        if (this.frame.mini && !m.querySelector(".progress")) this.flash();
+        // Callers add their buttons right after this returns.
+        queueMicrotask(() => { pixelize(m); this.focusModal(); });
+        return close;
+    }
+
+    /** Moves focus to the top dialog's first button, only if the player is in the game (never out of Discord's chat box). */
+    private focusModal(): boolean {
+        if (!this.host || this.frame.mini || document.activeElement !== this.host) return false;
+        const modals = this.win.querySelectorAll(":scope > .modal");
+        const b = modals[modals.length - 1]?.querySelector<HTMLElement>("button, [tabindex]");
+        b?.focus();
+        return !!b;
+    }
+
+    /** The strip's row for dialogs that wait for the full window. */
+    private syncMini(): void {
+        if (!this.miniNote) return;
+        const waiting = [...this.win.querySelectorAll<HTMLElement>(":scope > .modal")].filter(m => !m.querySelector(".progress"));
+        const top = waiting[waiting.length - 1];
+        this.miniNote.hidden = !top;
+        if (!top) return;
+        const title = top.getAttribute("aria-label") || "A message";
+        this.miniNote.title = `${title}: open the full window to read it`;
+        this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
     }
 
     private showCreation(): void {
@@ -681,7 +751,9 @@ export class GameWindow {
 export function summaryOf(s: GameState): Summary {
     const need = xpToNext(s.hero.level);
     const run = s.activity.run;
-    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: run ? runZone(s, run).name : ZONES[s.activity.zone]?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
+    const z = run ? runZone(s, run) : ZONES[s.activity.zone];
+    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: z?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1,
+        zoneId: z?.id ?? s.activity.zone, sky: z?.palette[0] };
 }
 
 export { SAVE_VERSION };
