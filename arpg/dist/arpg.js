@@ -1172,7 +1172,7 @@
       speed: 0.8,
       split: { lightning: 0.6, phys: 0.4 },
       armour: 1,
-      evasion: 2,
+      evasion: 1.5,
       accuracy: 1.5,
       res: { fire: 40, cold: 40, lightning: 55, chaos: 40 },
       xp: 70,
@@ -1182,14 +1182,14 @@
       id: "p_ashenking",
       name: "The Ashen King",
       boss: true,
-      life: 40,
-      damage: 1,
+      life: 32,
+      damage: 0.85,
       speed: 0.75,
-      split: { fire: 0.5, phys: 0.3, chaos: 0.2 },
-      armour: 2.4,
+      split: { fire: 0.5, phys: 0.4, chaos: 0.1 },
+      armour: 2,
       evasion: 0.8,
       accuracy: 1.5,
-      res: { fire: 55, cold: 40, lightning: 40, chaos: 45 },
+      res: { fire: 45, cold: 40, lightning: 40, chaos: 45 },
       xp: 85,
       look: { shape: "giant", body: "#4a2a20", eye: "#ff3b1f", size: 2.2 }
     },
@@ -2449,7 +2449,7 @@
   var DAWN_PERK = Object.fromEntries(DAWN_PERKS.map((p3) => [p3.id, p3]));
   var DAWN_XP = 10;
   var DAWN_DUST = 10;
-  var DAWN_TOUGHER = 15;
+  var DAWN_TOUGHER = 10;
   var DAWN_RICHER = 20;
   var DAWN_TEXT = "The pieces catch, the ember in your chest goes into the fire with them, and for a moment nothing happens. Then the sky over the crater turns grey, then pink, then gold. The sun rises over the March for the first time in three hundred years.\n\nYou wake in the surf with an ember where your heart was. The shore is warm this time.";
   var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
@@ -6573,6 +6573,9 @@
   var MAP_CLEAN = 8;
   var PUSH_LEVEL_MARGIN = 2;
   var MAP_DEATH_XP = 0.03;
+  var ENRAGE_S = 90;
+  var ENRAGE_PER = 0.02;
+  var enrage = (elapsed) => 1 + ENRAGE_PER * Math.max(0, elapsed - ENRAGE_S);
   var flaskAmount = (level, sheet) => (40 + 14 * level) * sheet.flaskHeal;
   function newRun(state, sheet) {
     const act = state.activity;
@@ -6786,7 +6789,7 @@
         ev.monsterHit?.(i, 0, "block");
         return;
       }
-      const mapBoss = d.boss && run.map && !run.map.pinnacle ? MAP_BOSS_DAMAGE : 1;
+      const mapBoss = d.boss && run.map ? run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE : 1;
       const base = monsterDamage(m4.level) * d.damage * mapBoss * (m4.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
       let dmg = 0;
       for (const t2 of DAMAGE_TYPES) {

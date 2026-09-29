@@ -1,7 +1,8 @@
 // Round 5: the Rekindling.
 
 import { describe, expect, it } from "vitest";
-import { PINNACLES } from "../src/core/data";
+import { DAWN_TOUGHER, PINNACLES } from "../src/core/data";
+import { enrage } from "../src/core/sim/engine";
 import { chooseDawnPerk, dawnEffects, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../src/core/dawn";
 import { buyStashRoom, newGame, receiveItem, salvage, sheetOf, stashRoomCost } from "../src/core/game";
 import { validateState } from "../src/core/validate";
@@ -68,7 +69,7 @@ describe("relighting the sun", () => {
         expect(chooseDawnPerk(g, "keeneye")).toMatch(/no pick/);
         expect(sheetOf(g).bag.mods("xpGain").some(m => m.src === "Dawn I")).toBe(true);
         const eff = dawnEffects(g, {}, null)!;
-        expect(eff.life).toBeCloseTo(1.15);
+        expect(eff.life).toBeCloseTo(1 + DAWN_TOUGHER / 100);
         expect(eff.rarity).toBe(20);
         const plain: Item = { uid: 950, base: "ring_iron", ilvl: 50, rarity: "rare", name: "R", affixes: [] };
         g.stash.push(plain);
@@ -101,5 +102,14 @@ describe("the calendar across a dawn", () => {
         expect(g.events).toEqual({ hollownight2026: 42 });
         expect(g.world.rewards).toContain("season:hollownight2026");
         expect(g.world.rewards.some(r => r.startsWith("act:"))).toBe(false);
+    });
+});
+
+describe("pinnacles enrage", () => {
+    it("hit as usual for 90 seconds, then 2% harder every second", () => {
+        expect(enrage(0)).toBe(1);
+        expect(enrage(90)).toBe(1);
+        expect(enrage(140)).toBeCloseTo(2);
+        expect(enrage(240)).toBeCloseTo(4);
     });
 });
