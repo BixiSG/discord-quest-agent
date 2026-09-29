@@ -51,9 +51,12 @@ Play-feel review (user's call):
 - [x] Hollowmarch frame: pixel-glyph nav rail with hotkeys and counters, vitals column next to the
       battle, XP strip with time-to-level, stage size toggle (normal/large/hidden), mini strip that
       keeps playing, maximize (double-click title), stacked toasts for rares, relics, levels, roads.
-- [ ] Hollowmarch views: gear/stash side by side with filters, skills/supports without nested cards,
-      clearer support deltas, hero sheet grouping.
-- [ ] Orbling QoL pass.
+- [x] Hollowmarch views: gear/stash side by side with filters, upgrade markers and E/S keys;
+      skills as flat lists with per-skill DPS and best-swap supports; log filter chips.
+- [x] Orbling QoL: hub `api.status()` tooltips on its buttons, next-need forecast, opt-in eating
+      quest food on its own.
+- [ ] Hollowmarch: hero sheet grouping, world view (zone progress, farm vs push), forge/tree/atlas
+      polish, the panel card restyled to match the new window.
 - [ ] Live check of each iteration in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord).
 
 ## 4. Before shipping
