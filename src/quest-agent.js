@@ -710,6 +710,13 @@
                 if (UI.btn) UI.btn.dataset.k = "";
                 syncPinDots(); refreshUI(); updateBadge();
             },
+            /** A few words on the addon's state ("Hungry"), shown when hovering its buttons. */
+            status(text) {
+                text = String(text ?? "").slice(0, 80);
+                if (a.status === text) return;
+                a.status = text; UI.addonSig = null;
+                syncPinDots(); refreshUI();
+            },
             visible: () => UI.open && UI.view === "addon:" + a.id
         };
     }
@@ -742,7 +749,7 @@
         if (!a) return;
         unmountAddonView(a);
         if (a.live) { try { a.def.destroy?.(); } catch (e) { /* ignore */ } }
-        a.live = false; a.listeners = {}; a.attention = false;
+        a.live = false; a.listeners = {}; a.attention = false; a.status = "";
     }
     function emitAddons(ev, data) {
         for (const a of ADDONS.values()) {
@@ -750,6 +757,8 @@
             for (const fn of a.listeners[ev] ?? []) { try { fn(data); } catch (e) { console.warn(`[QuestAgent] Addon "${a.id}" ${ev} handler failed:`, e); } }
         }
     }
+    /** "Orbling - Hungry": the addon's name and, if it set one, its status. */
+    const addonTitle = a => t(a.id + ".title") + (a.status ? " - " + a.status : "");
     /** Shown as its own title-bar button right now (pinned, and the HUD sits in the title bar). */
     const pinnedNow = a => a.live && SETTINGS.pins[a.id] === true && UI.mode === "titlebar";
     /** The Auto Quests button's dot: addons with a button of their own show the dot there instead. */
@@ -2051,11 +2060,11 @@
         show(".qb-stats", quests); show(".qb-body", quests); show(".qb-pending", quests);
         show(".qb-set", settings); show(".qb-log", log); show(".qb-stv", stats); show(".qb-addon", !!addon); show(".qb-foot", !quests && !addon);
         for (const a of ADDONS.values()) if (a.view && a !== addon) unmountAddonView(a); // left an addon view
-        const abKey = [...ADDONS.values()].filter(a => a.live).map(a => a.id + (a.attention ? "!" : "") + (a === addon ? "*" : "")).join(",") + currentLang();
+        const abKey = [...ADDONS.values()].filter(a => a.live).map(a => a.id + (a.attention ? "!" : "") + (a === addon ? "*" : "") + (a.status ?? "")).join(",") + currentLang();
         if (UI.addonSig !== abKey) {
             UI.addonSig = abKey;
             UI.panel.querySelector(".qb-addon-btns").innerHTML = [...ADDONS.values()].filter(a => a.live).map(a =>
-                `<button class="qb-act ${a === addon ? "qb-on" : ""}" data-addon="${a.id}" title="${esc(t(a.id + ".title"))}">${svg(a.def.icon || ICON.sparkle, "", 15)}${a.attention ? '<span class="qb-nd qb-att"></span>' : ""}</button>`).join("");
+                `<button class="qb-act ${a === addon ? "qb-on" : ""}" data-addon="${a.id}" title="${esc(addonTitle(a))}">${svg(a.def.icon || ICON.sparkle, "", 15)}${a.attention ? '<span class="qb-nd qb-att"></span>' : ""}</button>`).join("");
         }
         UI.panel.querySelector("#qb-gear").classList.toggle("qb-on", settings || log);
         UI.panel.querySelector("#qb-statsbtn").classList.toggle("qb-on", stats);
@@ -2542,8 +2551,6 @@
             b.className = UI.anchor?.clickableClass ?? "";
             b.setAttribute("role", "button");
             b.setAttribute("tabindex", "0");
-            b.setAttribute("aria-label", t(a.id + ".title"));
-            b.title = t(a.id + ".title");
             b.innerHTML = svg(a.def.icon || ICON.sparkle, "", 18) + '<div class="qb-patt" style="display:none"></div>';
             b.onclick = () => openAddon(a.id);
             b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openAddon(a.id); } };
@@ -2554,11 +2561,15 @@
         }
         syncPinDots();
     }
+    /** Dot and tooltip of each pinned button, from its addon's attention() and status(). */
     function syncPinDots() {
         for (const el of UI.pins ?? []) {
-            const on = !!ADDONS.get(el.dataset.addon)?.attention;
+            const a = ADDONS.get(el.dataset.addon);
+            const on = !!a?.attention;
             const dot = el.querySelector(".qb-patt");
             if (dot && (dot.style.display === "none") === on) dot.style.display = on ? "" : "none";
+            const b = el.firstElementChild, title = a ? addonTitle(a) : "";
+            if (b && b.title !== title) { b.title = title; b.setAttribute("aria-label", title); }
         }
     }
 

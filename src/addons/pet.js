@@ -62,7 +62,12 @@
         "pet.play.ball": "Ball", "pet.play.game": "Orb catch", "pet.play.best": "best {n}",
         "pet.play.hint": "Orb catch: move the pointer (or the arrow keys) and catch falling orbs for 20 seconds.",
         "pet.game.live": "{n} caught, {s}s left", "pet.game.end": "Caught {n}!", "pet.game.best": "Caught {n}! New best!",
-        "pet.msg.hi1": "Hi!", "pet.msg.hi2": "You're back!", "pet.msg.hi3": "Missed you!", "pet.msg.hi4": "Play with me?"
+        "pet.msg.hi1": "Hi!", "pet.msg.hi2": "You're back!", "pet.msg.hi3": "Missed you!", "pet.msg.hi4": "Play with me?",
+        "pet.status.egg": "An egg: tap it to hatch", "pet.status.name": "Waiting for a name", "pet.status.asleep": "Asleep",
+        "pet.status.grow": "Ready to grow", "pet.status.hungry": "Hungry", "pet.status.bored": "Bored", "pet.status.dirty": "Needs cleaning",
+        "pet.status.tired": "Tired", "pet.status.gift": "A gift is waiting", "pet.status.happy": "Happy",
+        "pet.fore": "{need}: low in about {t}", "pet.fore.h": "{n} h", "pet.fore.m": "{n} min",
+        "pet.autoEat": "Eat quest food on its own when hungry", "pet.msg.ateSelf": "Had a {food} on my own!"
     };
 
     // ---- Tuning ---------------------------------------------------------------
@@ -212,7 +217,7 @@
             inv: { snack: 2, feast: 1, cake: 0 }, // a welcome basket
             care: { feed: 0, play: 0, clean: 0, pat: 0, feasts: 0 },
             patDay: "", patXp: 0, warm: 0, gift: { day: "", streak: 0, best: 0 }, hats: [], hat: "",
-            album: [], fed: {}, adultAt: 0, remind: true, lastRemind: 0, plays: 0, news: [], named: false, best: 0
+            album: [], fed: {}, adultAt: 0, remind: true, autoEat: false, lastRemind: 0, plays: 0, news: [], named: false, best: 0
         };
     }
     /** Fill gaps and clamp whatever came out of storage. */
@@ -227,7 +232,7 @@
             form: FORMS.includes(raw.form) ? raw.form : null, xp: num(raw.xp, 0, 0, 1e9), ready: !!raw.ready,
             poops: num(raw.poops, 0, 0, 3) | 0, poopAt: num(raw.poopAt, 0, 0, 1e15), napUntil: num(raw.napUntil, 0, 0, 1e15),
             wokeAt: num(raw.wokeAt, 0, 0, 1e15), patDay: typeof raw.patDay === "string" ? raw.patDay : "", patXp: num(raw.patXp, 0, 0, 99),
-            warm: num(raw.warm, 0, 0, 5) | 0, adultAt: num(raw.adultAt, 0, 0, 1e15), remind: raw.remind !== false,
+            warm: num(raw.warm, 0, 0, 5) | 0, adultAt: num(raw.adultAt, 0, 0, 1e15), remind: raw.remind !== false, autoEat: raw.autoEat === true,
             lastRemind: num(raw.lastRemind, 0, 0, 1e15), plays: num(raw.plays, 0, 0, 1e9) | 0, best: num(raw.best, 0, 0, 9999) | 0,
             hat: HATS.includes(raw.hat) ? raw.hat : ""
         });
@@ -326,12 +331,53 @@
     }
     function adventure(s, now) {
         s.album.push({ name: s.name || "?", form: s.form ?? "classic", pal: s.pal, days: Math.max(1, Math.round((now - s.born) / DAY)) });
-        const keep = { album: s.album, hats: s.hats, hat: s.hat, gift: s.gift, remind: s.remind, inv: s.inv, fed: s.fed, since: s.since, lastRemind: s.lastRemind, plays: s.plays, best: s.best };
+        const keep = { album: s.album, hats: s.hats, hat: s.hat, gift: s.gift, remind: s.remind, autoEat: s.autoEat, inv: s.inv, fed: s.fed, since: s.since, lastRemind: s.lastRemind, plays: s.plays, best: s.best };
         Object.assign(s, freshState(now), keep);
         s.pal = rollPalette(s.album);
     }
     /** Something worth a dot on the title-bar button. */
     const needsCare = (s, now) => s.stage === "egg" || s.ready || giftReady(s, now) || s.poops > 0 || s.n.hunger < 30 || s.n.fun < 25 || (!s.named && s.stage !== "egg");
+    /** Eat one portion: the feed button and eating on its own both come here. */
+    function eat(s, kind, now) {
+        const f = FOODS[kind];
+        if (kind !== "berry") s.inv[kind]--;
+        s.n.hunger = clamp(s.n.hunger + f.hunger, 0, 100); s.n.fun = clamp(s.n.fun + f.fun, 0, 100);
+        gainXp(s, f.xp); s.care.feed++; if (kind === "feast") s.care.feasts++;
+        if (!s.poopAt) s.poopAt = now + rand(3, 5) * HOUR;
+    }
+    /** With autoEat on, a hungry pet that is awake eats quest food from the bag (never the free berries). */
+    function autoEat(s, now) {
+        if (!s.autoEat || s.stage === "egg" || s.n.hunger >= 35 || asleepAt(s, now)) return null;
+        const kind = ["snack", "cake", "feast"].find(k => s.inv[k] > 0);
+        if (!kind) return null;
+        eat(s, kind, now);
+        return kind;
+    }
+    /** A word or two for the hub's button tooltips ("Orbling - Hungry"). */
+    function statusKey(s, now) {
+        if (s.stage === "egg") return "egg";
+        if (!s.named) return "name";
+        if (s.ready) return "grow";
+        if (asleepAt(s, now)) return "asleep";
+        if (s.n.hunger < 30) return "hungry";
+        if (s.poops > 0) return "dirty";
+        if (s.n.fun < 25) return "bored";
+        if (s.n.energy < 20) return "tired";
+        if (giftReady(s, now)) return "gift";
+        return "happy";
+    }
+    /** The need that runs low first while awake, and in how many hours; null if none within a day. */
+    function forecast(s) {
+        const LOW = { hunger: 30, fun: 25, energy: 20, clean: 25 };
+        let best = null;
+        for (const k of NEEDS) {
+            const v = s.n[k] - (k === "clean" ? s.poops * 10 : 0), rate = -RATES.awake[k];
+            if (v <= LOW[k] || rate <= 0) continue;
+            const hrs = (v - LOW[k]) / rate;
+            if (hrs < 24 && (!best || hrs < best.hrs)) best = { need: k, hrs };
+        }
+        return best;
+    }
 
     // ---- Drawing: the room ----------------------------------------------------
     const BED_X = 111, BOWL_X = 22, FLOOR_Y = 56, BASE_Y = 72, POOP_X = [36, 56, 88];
@@ -519,8 +565,15 @@
     // ---- The addon ------------------------------------------------------------
     let S = null, API = null, checkTimer = null, offQuests = null, VIEW = null;
     const T = (k, p) => API.t(k, p);
-    /** Save, and update the attention dot (the hub redraws it). */
-    const commit = () => { save(); if (S && API) API.attention(needsCare(S, clock())); };
+    /** Tell the hub how the pet is doing: the attention dot and the buttons' tooltip. */
+    const signal = () => {
+        if (!S || !API) return;
+        const now = clock();
+        API.attention(needsCare(S, now));
+        API.status?.(T("status." + statusKey(S, now))); // older hubs have no status()
+    };
+    /** Save, and update the dot and tooltip (the hub redraws them). */
+    const commit = () => { save(); signal(); };
     const nameOf = () => S?.name || T("title");
     const save = () => { if (S && API) API.save(S); };
     function load(api, now) {
@@ -537,6 +590,7 @@
             case "food": return T("msg.food", { items: itemsText(n[1]) });
             case "claim": return T("msg.claim", { xp: n[1] });
             case "hat": return T("msg.hat", { hat: T("hat." + n[1]) });
+            case "ate": return T("msg.ateSelf", { food: T("food." + n[1]).toLowerCase() });
             default: return "";
         }
     }
@@ -547,9 +601,11 @@
         advance(S, now);
         const news = reconcile(S, API);
         seasonal(S, now, news);
+        const ate = autoEat(S, now);
+        if (ate) news.push(["ate", ate]);
         const lines = news.map(newsText).filter(Boolean);
         if (VIEW) VIEW.news(lines); else S.news = [...S.news, ...lines].slice(-4);
-        API.attention(needsCare(S, now));
+        signal();
         if (S.remind && S.stage !== "egg" && !API.visible() && !isNight(now) && now - S.lastRemind > 8 * HOUR) {
             const why = S.n.hunger < 20 ? "hungry" : S.n.fun < 15 ? "bored" : S.poops >= 2 ? "dirty" : null;
             if (why) { S.lastRemind = now; API.notify(T("remind.title", { name: nameOf() }), T("remind." + why, { name: nameOf() })); }
@@ -602,6 +658,8 @@
 #qb-panel .pt-xpb i{display:block;height:100%;background:repeating-linear-gradient(90deg,#8f9bff 0 6px,#7b86f5 6px 8px);transition:width .4s}
 #qb-panel .pt-xpt{font-size:10.5px;color:var(--qb-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 #qb-panel .pt-needs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 2px 8px}
+#qb-panel .pt-fore{margin:-3px 2px 8px;font-size:11px;color:var(--qb-muted)}
+#qb-panel .pt-fore:empty{display:none}
 #qb-panel .pt-need{display:flex;align-items:center;gap:4px;color:var(--qb-muted)}
 #qb-panel .pt-bar{flex:1;height:7px;border-radius:2px;background:var(--qb-bg2);box-shadow:inset 0 0 0 1px var(--qb-border);overflow:hidden}
 #qb-panel .pt-bar i{display:block;height:100%;transition:width .4s;background:var(--pt-c)}
@@ -716,11 +774,7 @@
                 if (asleepAt(S, now)) return say(T("msg.zzz"));
                 if (kind !== "berry" && S.inv[kind] <= 0) return;
                 if (S.n.hunger >= 96) { setMode("refuse", 700); return say(T("msg.full")); }
-                const f = FOODS[kind];
-                if (kind !== "berry") S.inv[kind]--;
-                S.n.hunger = clamp(S.n.hunger + f.hunger, 0, 100); S.n.fun = clamp(S.n.fun + f.fun, 0, 100);
-                gainXp(S, f.xp); S.care.feed++; if (kind === "feast") S.care.feasts++;
-                if (!S.poopAt) S.poopAt = now + rand(3, 5) * HOUR;
+                eat(S, kind, now);
                 vs.bowl = kind; vs.tx = BOWL_X + 12; setMode("toBowl");
                 commit(); render();
             },
@@ -790,7 +844,7 @@
                     burst("spark", 14, vs.x, BASE_Y - 18);
                     say(S.stage === "adult" ? T("msg.adult", { name: S.name, form: T("form." + S.form) }) : T("msg.grew", { name: S.name, stage: T("stage." + S.stage).toLowerCase() }), 3600);
                     for (const n of news) queue.push(newsText(n));
-                    save(); render(); API.attention(needsCare(S, clock()));
+                    save(); render(); signal();
                 };
             },
             warm() {
@@ -804,7 +858,7 @@
                         addHat(S, "bow", []);
                         burst("spark", 16, vs.x, BASE_Y - 10);
                         say(T("msg.hatched"), 3000);
-                        save(); render(); API.attention(needsCare(S, clock()));
+                        save(); render(); signal();
                     };
                 }
                 save(); render();
@@ -841,6 +895,7 @@
                 <span class="pt-xpt">${esc(nextXp ? T("xp", { a: Math.floor(S.xp), b: nextXp }) : T("xp.max", { a: Math.floor(S.xp) }))}</span></span>` : ""}
               </div>
               <div class="pt-needs">${NEEDS.map(need).join("")}</div>
+              <div class="pt-fore"></div>
               <div class="pt-acts">${btn("feed", T("act.feed"), vs.tray === "food" ? "pt-on" : "")}${btn("play", T("act.play"), vs.tray === "play" ? "pt-on" : "")}${btn("clean", T("act.clean"))}${btn("nap", T(asleep ? "act.wake" : "act.nap"), asleep ? "pt-on" : "")}</div>
               ${vs.tray === "play" ? `<div class="pt-tray">
                   <button class="pt-food" data-play="ball"><span data-spr="ball"></span>${esc(T("play.ball"))}</button>
@@ -860,6 +915,7 @@
                 <label><input type="checkbox" data-remind ${S.remind ? "checked" : ""}>${esc(T("remind", { name: nameOf() }))}</label>
                 <span class="pt-link" data-act="album">${esc(T("album"))}</span>
               </div>
+              <div class="pt-foot"><label><input type="checkbox" data-autoeat ${S.autoEat ? "checked" : ""}>${esc(T("autoEat"))}</label></div>
               ${S.stage === "adult" ? `<div class="pt-foot">${!adv ? `<span>${esc(T("adventure.soon"))}</span>` : vs.confirmAdv
                   ? `<span>${esc(T("adventure.confirm", { name: S.name }))}</span><span class="pt-link" data-act="adventure-yes">${esc(T("adventure.yes"))}</span><span class="pt-link" data-act="adventure-no">${esc(T("adventure.no"))}</span>`
                   : `<span class="pt-link" data-act="adventure">${esc(T("adventure"))}</span>`}</div>` : ""}`;
@@ -897,6 +953,15 @@
                 const v = S.n[k] - (k === "clean" ? S.poops * 10 : 0);
                 box.querySelector("i").style.width = clamp(v, 0, 100) + "%";
                 box.classList.toggle("pt-low", v < 25);
+                box.title = `${T("need." + k)} ${Math.round(clamp(v, 0, 100))}%`;
+            }
+            // Which need runs low next, so a visit can be planned (awake rates; nights are gentler).
+            const fore = body.querySelector(".pt-fore");
+            if (fore) {
+                const f = asleepAt(S, clock()) ? null : forecast(S);
+                const t = !f ? "" : f.hrs >= 1 ? T("fore.h", { n: Math.round(f.hrs) }) : T("fore.m", { n: Math.max(5, Math.round(f.hrs * 12) * 5) });
+                const text = f ? T("fore", { need: T("need." + f.need), t }) : "";
+                if (fore.textContent !== text) fore.textContent = text;
             }
         }
 
@@ -928,7 +993,7 @@
                 }
                 case "adventure": vs.confirmAdv = true; render(); break;
                 case "adventure-no": vs.confirmAdv = false; render(); break;
-                case "adventure-yes": vs.confirmAdv = false; vs.album = true; adventure(S, clock()); save(); render(); API.attention(needsCare(S, clock())); break;
+                case "adventure-yes": vs.confirmAdv = false; vs.album = true; adventure(S, clock()); save(); render(); signal(); break;
             }
         });
         body.addEventListener("keydown", e => {
@@ -936,7 +1001,14 @@
             if (e.key === "Enter") { e.preventDefault(); body.querySelector('[data-act="name"]')?.click(); }
             if (e.key !== "Escape") e.stopPropagation(); // typing a name must not trigger Discord shortcuts
         });
-        body.addEventListener("change", e => { if (e.target.matches("[data-remind]")) { S.remind = e.target.checked; save(); } });
+        body.addEventListener("change", e => {
+            if (e.target.matches("[data-remind]")) { S.remind = e.target.checked; save(); }
+            if (e.target.matches("[data-autoeat]")) {
+                S.autoEat = e.target.checked;
+                const ate = autoEat(S, clock()); // already hungry: eat now, not in five minutes
+                if (ate) { say(newsText(["ate", ate])); commit(); render(); } else save();
+            }
+        });
 
         // ---- canvas input ----
         const toLogical = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
@@ -1125,7 +1197,7 @@
             news(lines) { queue.push(...lines); if (!vs.bubbleUntil && !vs.game && queue.length) say(queue.shift(), 3200); }
         };
         VIEW = view;
-        API.attention(needsCare(S, now0));
+        signal();
         return {
             unmount() {
                 cancelAnimationFrame(raf);
