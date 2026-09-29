@@ -1,7 +1,8 @@
 // Tab views. Each returns a fresh element; the app swaps it in when the view's
 // signature changes, so scroll position and selection survive sim ticks.
 
-import { ACTS, BASES, CLASSES, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
+import { ACTS, ASCENDANCIES, BASES, CLASSES, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
+import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore } from "../core/game";
 import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
@@ -12,6 +13,8 @@ import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
 import { glyph } from "./glyphs";
+import { portrait } from "./gfx/portrait";
+import { pixText } from "./gfx/pix";
 import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
@@ -44,7 +47,7 @@ export const VIEWS: { id: ViewId; label: string }[] = [
 export function viewSig(id: ViewId, c: Ctx): string {
     const s = c.state;
     switch (id) {
-        case "hero": return `${s.hero.rev}`;
+        case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
@@ -88,7 +91,8 @@ function kv(rows: [string, string | HTMLElement, (() => void)?][]): HTMLElement 
 
 function heroView(c: Ctx): HTMLElement {
     const s = c.sheet();
-    const hero = c.state.hero;
+    const st = c.state;
+    const hero = st.hero;
     const sk = s.skill;
     const critFactor = 1 + (sk.critChance / 100) * (sk.critMulti / 100 - 1);
     const breakdown = (stat: Parameters<Sheet["bag"]["mods"]>[0], title: string) => () => {
@@ -99,58 +103,75 @@ function heroView(c: Ctx): HTMLElement {
         const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
 
+    // Who and where: the hero in the scenery of the current zone.
+    const run = st.activity.run;
+    const zone = run ? runZone(st, run) : ZONES[st.activity.zone]!;
+    const por = portrait(zone, hero.cls);
+    por.className = "portrait";
+    por.style.width = por.width * 2 + "px"; por.style.height = por.height * 2 + "px";
+    const asc = hero.asc ? ASCENDANCIES[hero.asc]?.name : null;
+    const xpNeed = xpToNext(hero.level);
+    const xpF = isFinite(xpNeed) ? hero.xp / xpNeed : 1;
+    const who = h("div", { class: "card sheet-who" },
+        h("h3", { text: hero.name }),
+        h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: zone.name })),
+        h("div", { class: "row", style: "gap:5px;margin-top:8px" },
+            h("span", { class: "tag lv", text: `Level ${hero.level}` }), h("span", { class: "tag", text: CLASSES[hero.cls]?.name ?? hero.cls }),
+            asc ? h("span", { class: "tag asc", text: asc }) : null),
+        h("div", { class: "xpbar", title: isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)} experience` : "max level" }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
+        h("div", { class: "attrs" }, ...([["might", "Might", s.str], ["grace", "Grace", s.dex], ["wit", "Wit", s.int]] as const).map(([g, label, v]) =>
+            h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
+        ...s.problems.map(p => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: p })),
+    );
+
+    // Offence: the two numbers that matter, then how they are made.
+    const rate = Math.min(sk.speed, sk.sustain);
+    const chip = (label: string, value: string, click?: () => void, total = false) => h(click ? "button" : "div", { class: `fchip${total ? " total" : ""}`, on: click ? { click } : {} }, h("span", { text: label }), h("b", { class: "num", text: value }));
+    const op = (t: string) => h("span", { class: "fop", text: t });
+    const formula = h("div", { class: "formula" },
+        chip("Hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")), op("x"),
+        chip("Crit", critFactor.toFixed(2), breakdown("critChance", "Critical chance")), op("x"),
+        chip(sk.kind === "attack" ? "Attacks" : "Casts", `${rate.toFixed(2)}/s`, breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")),
+        ...(sk.kind === "attack" ? [op("x"), chip("Hit chance", pct(sk.hitChance), breakdown("accuracy", "Accuracy"))] : []),
+        op("="), chip("DPS", fmt(sk.dps), undefined, true));
+    const big = (label: string, value: string, colour: string, note: string) =>
+        h("div", { class: "bigstat" }, pixText(value, colour, 4), h("div", null, h("b", { text: label }), h("span", { text: note })));
     const off = h("div", { class: "card" },
-        h("h3", { text: `Offence: ${sk.name}` }),
-        h("div", { class: "row" }, h("div", { class: "big num", text: fmt(sk.dps) }), h("div", { class: "muted", text: "DPS single target" })),
-        h("div", { class: "row", style: "margin-bottom:6px" }, h("div", { class: "big num", text: fmt(sk.packDps) }), h("div", { class: "muted", text: `vs packs (${sk.targets} target${sk.targets > 1 ? "s" : ""})` })),
+        h("h3", { text: `Offence - ${sk.name}` }),
+        h("div", { class: "bigrow" }, big("Single target", fmt(sk.dps), "#ffc233", "damage per second"), big("Against packs", fmt(sk.packDps), "#ff8a5c", `${sk.targets} target${sk.targets > 1 ? "s" : ""} hit`)),
+        formula,
         kv([
-            ["Average hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")],
-            ...DAMAGE_TYPES.filter(t => sk.hit[t][1] > 0).map(t => [`  ${TYPE_NAME[t]}`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`] as [string, string]),
+            ...DAMAGE_TYPES.filter(t => sk.hit[t][1] > 0).map(t => [`${TYPE_NAME[t]} damage`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`] as [string, string]),
             ["Critical chance", `${sk.critChance.toFixed(1)}%`, breakdown("critChance", "Critical chance")],
             ["Critical multiplier", `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", "Critical multiplier")],
-            ["x Crit factor", critFactor.toFixed(2)],
-            [sk.kind === "attack" ? "Attacks per second" : "Casts per second", sk.speed.toFixed(2), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")],
-            ...(sk.kind === "attack" ? [["Hit chance (vs same level)", pct(sk.hitChance), breakdown("accuracy", "Accuracy")] as [string, string, () => void]] : []),
             ["Mana cost", fmt(sk.manaCost)],
             ...(sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`] as [string, string]] : []),
             ...(sk.leech ? [["Life leech", `${sk.leech}%`] as [string, string]] : []),
-        ]),
-        h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${Math.min(sk.speed, sk.sustain).toFixed(2)}/s${sk.sustain < sk.speed ? " (mana-limited)" : ""}${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` }),
-    );
+        ]));
 
+    // Resistances: one badge per element, red below zero, marked when over the cap.
+    const RES_GLYPH = { fire: "skills", cold: "cold", lightning: "lightning", chaos: "chaos" } as const;
+    const res = h("div", { class: "card" }, h("h3", { text: "Resistances" }),
+        h("div", { class: "resrow" }, ...(["fire", "cold", "lightning", "chaos"] as const).map(t => {
+            const v = s.res[t], raw = s.resRaw[t], max = s.maxRes[t];
+            return h("button", { class: `res ${t}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: `${TYPE_NAME[t]} resistance - click for where it comes from`, on: { click: breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`) } },
+                glyph(RES_GLYPH[t], 22), h("b", { class: "num", text: `${v}%` }), h("span", { text: raw > max ? `over cap (${raw})` : `max ${max}` }));
+        })));
+
+    // Defence: tiles with the pool and its layers; each opens its breakdown.
+    const tile = (g: Parameters<typeof glyph>[0], label: string, value: string, stat: Parameters<Sheet["bag"]["mods"]>[0]) =>
+        h("button", { class: `stat ${g}`, title: `${label} - click for where it comes from`, on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
     const pool = s.life + s.es;
     const def = h("div", { class: "card" },
         h("h3", { text: "Defence" }),
-        kv([
-            ["Life", fmt(s.life), breakdown("life", "Life")],
-            ["Energy shield", fmt(s.es), breakdown("energyShield", "Energy shield")],
-            ["Mana", fmt(s.mana), breakdown("mana", "Mana")],
-            ["Armour", fmt(s.armour), breakdown("armour", "Armour")],
-            ["Evasion", fmt(s.evasion), breakdown("evasion", "Evasion")],
-            ["Block", `${s.block.toFixed(0)}%`, breakdown("block", "Block")],
-            ["Life regen", `${fmt(s.lifeRegen)}/s`, breakdown("lifeRegen", "Life regeneration")],
-            ...(["fire", "cold", "lightning", "chaos"] as const).map(t => [`${TYPE_NAME[t]} res`, h("div", { class: "num", style: s.res[t] < 0 ? "color:var(--red)" : "", text: `${s.res[t]}%${s.resRaw[t] > s.maxRes[t] ? ` (${s.resRaw[t]})` : ""}` }), breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`)] as [string, HTMLElement, () => void]),
-        ]),
-        h("h3", { style: "margin-top:8px", text: `Effective HP (pool ${fmt(pool)})` }),
+        h("div", { class: "tiles" },
+            tile("heart", "Life", fmt(s.life), "life"), tile("esorb", "Energy shield", fmt(s.es), "energyShield"), tile("regen", "Life regen", `${fmt(s.lifeRegen)}/s`, "lifeRegen"),
+            tile("armour", "Armour", fmt(s.armour), "armour"), tile("evasion", "Evasion", fmt(s.evasion), "evasion"), tile("block", "Block", `${s.block.toFixed(0)}%`, "block")),
+        h("div", { class: "sub" }, `Effective HP against each type (pool ${fmt(pool)})`),
         ehpBars(s),
-    );
+        kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]]));
 
-    const xpNeed = xpToNext(hero.level);
-    const info = h("div", { class: "card" },
-        h("h3", { text: `${hero.name} - ${CLASSES[hero.cls]?.name ?? hero.cls}` }),
-        kv([
-            ["Level", String(hero.level)],
-            ["Experience", isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)}` : "max"],
-            ["Might / Grace / Wit", `${s.str} / ${s.dex} / ${s.int}`],
-            ["Movement speed", pct(s.moveSpeed)],
-            ["Item rarity", `+${s.rarity}%`],
-            ["Flask healing", pct(s.flaskHeal)],
-            ["Build score", fmt(buildScore(s))],
-        ]),
-        ...s.problems.map(p => h("div", { class: "tag", style: "background:var(--ember);margin-top:4px", text: p })),
-        h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: "Click an underlined stat for where it comes from." }),
-    );
-    return h("div", { class: "grid2" }, off, def, info);
+    return h("div", { class: "sheet" }, who, h("div", { class: "col", style: "gap:14px" }, off, res), def);
 }
 
 function ehpBars(s: Sheet): HTMLElement {

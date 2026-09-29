@@ -8,6 +8,18 @@ import { textSprite } from "./pixfont";
 const DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~]+$/;
 const SELECTOR = "h3:not(.split), h3.split > span, .btn, .sec, .nav .lbl, .plaque";
 
+/** A pixel-font canvas for `text` at a whole-number scale (big numbers on the sheet). */
+export function pixText(text: string, colour: string, scale = 3, outline = ""): HTMLCanvasElement {
+    const src = textSprite(text.toUpperCase(), colour, outline);
+    const c = document.createElement("canvas");
+    c.width = src.width; c.height = src.height;
+    c.getContext("2d")!.drawImage(src, 0, 0);
+    c.className = "pxc";
+    c.style.width = src.width * scale + "px"; c.style.height = src.height * scale + "px";
+    c.setAttribute("aria-hidden", "true");
+    return c;
+}
+
 /** Replace the text of plain-text labels under `root` with pixel-font canvases. */
 export function pixelize(root: ParentNode): void {
     for (const el of root.querySelectorAll<HTMLElement>(SELECTOR)) {

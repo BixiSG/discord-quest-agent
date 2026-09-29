@@ -5221,6 +5221,54 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
 .nav .badge { position: static; transform: none; order: 3; justify-self: end; margin-right: 6px; }
 .nav button .key { order: 4; }
 .nav button .lbl { order: 2; } .nav button svg { order: 1; }
+
+/* hero: a character sheet */
+.sheet { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr) minmax(0, 300px); gap: 14px; align-items: start; }
+@container win (max-width: 1100px) { .sheet { grid-template-columns: minmax(0, 330px) minmax(0, 1fr); } .sheet > :last-child { grid-column: 1 / -1; } }
+@container win (max-width: 760px) { .sheet { grid-template-columns: 1fr; } }
+.portrait-frame { position: relative; line-height: 0; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
+.portrait { image-rendering: pixelated; max-width: 100%; height: auto !important; }
+.where-tag { position: absolute; left: 6px; bottom: 6px; line-height: 1.2; padding: 2px 6px; background: rgba(10,8,6,.78); color: #f3e7d3;
+  font: 700 11px/1.2 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
+.tag.lv { background: #1a1410; color: #ffc233; border-color: #1a1410; } .tag.asc { background: var(--violet); color: #fff; }
+.xpbar { height: 8px; margin: 8px 0 4px; background: #1a1410; border: 2px solid var(--line); } .xpbar i { display: block; height: 100%; background: #ffc233; }
+.attrs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.attr { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 6px; align-items: center; padding: 4px 6px;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.attr svg { grid-row: 1 / span 2; } .attr b { font-size: 16px; line-height: 1; } .attr span { font: 700 10px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.attr.might svg { color: #e5383b; } .attr.grace svg { color: #3fbf5f; } .attr.wit svg { color: #3a7bff; }
+.bigrow { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.bigstat { flex: 1 1 150px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: #1a1410; color: #f3e7d3;
+  clip-path: polygon(0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)); }
+.bigstat b { display: block; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
+.bigstat span { font-size: 11px; color: #b5a48b; }
+.formula { display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px; margin-bottom: 10px; }
+.fchip { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px; min-width: 56px; text-align: left; font: inherit; color: var(--text); cursor: default;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; margin: -4px 0; }
+button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08); }
+.fchip span { font: 700 10px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.fchip b { font-size: 14px; line-height: 1.1; }
+.fchip.total { border-image-source: var(--fr-gold); color: #1a1410; } .fchip.total span { color: #4d4030; }
+.fop { align-self: center; font: 700 16px/1 var(--mono); color: var(--muted); padding: 0 1px; }
+.resrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.res { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px 4px; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
+.res b { font-size: 16px; } .res span { font-size: 10px; color: var(--muted); text-align: center; }
+.res.fire svg { color: #ff5a36; } .res.cold svg { color: #3a9bff; } .res.lightning svg { color: #e0b800; } .res.chaos svg { color: #8b5cf6; }
+.res.neg b { color: var(--red); } .res.cap b { color: var(--green); } .hm.dark .res.cap b { color: #6fe08a; }
+.res:hover, .stat:hover { filter: brightness(1.1); }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.stat { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 6px; align-items: center; text-align: left; padding: 4px 6px;
+  font: inherit; color: var(--text); cursor: pointer; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.stat svg { grid-row: 1 / span 2; } .stat b { font-size: 15px; line-height: 1.05; } .stat span { font: 700 10px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.stat.heart svg { color: #e5383b; } .stat.esorb svg { color: #7fd1ff; } .stat.regen svg { color: #3fbf5f; } .stat.armour svg { color: #9aa4b2; } .stat.evasion svg { color: #19b3a3; } .stat.block svg { color: #ffc233; }
+.sub { font: 700 11px/1.2 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 2px 0 6px; }
+
+.meter { position: relative; height: 18px; background: #1a1410; border: 2px solid var(--line); overflow: hidden; }
+.meter i { position: absolute; left: 0; top: 0; bottom: 0; }
+.meter span { position: relative; display: block; padding-left: 6px; font: 700 11px/14px var(--mono); color: #f3e7d3; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+.tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.stat, .attr { min-width: 0; } .stat b, .stat span, .attr b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -5363,6 +5411,18 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       "#########",
       "#########"
     ],
+    heart: [".##...##.", "####.####", "#########", "#########", ".#######.", "..#####..", "...###...", "....#....", "........."],
+    esorb: ["..#####..", ".#.....#.", "#..##...#", "#.#.....#", "#.......#", "#.......#", "#.......#", ".#.....#.", "..#####.."],
+    armour: ["##.....##", "###...###", "#########", "#########", ".#######.", ".###.###.", ".#######.", "..#####..", "...###..."],
+    evasion: ["......###", "....####.", "...####..", "..####...", ".####....", "####.....", "###......", "##.......", "#........"],
+    block: ["#########", "#.......#", "#.#####.#", "#.#####.#", "#.#####.#", ".#.###.#.", ".#.....#.", "..#...#..", "...###..."],
+    regen: ["...###...", "...###...", "...###...", "#########", "#########", "#########", "...###...", "...###...", "...###..."],
+    cold: ["....#....", ".#..#..#.", "..#.#.#..", "...###...", "#########", "...###...", "..#.#.#..", ".#..#..#.", "....#...."],
+    lightning: [".....###.", "....###..", "...###...", "..######.", ".######..", "....##...", "...##....", "..##.....", ".##......"],
+    chaos: ["..#####..", ".#######.", "##.###.##", "##.###.##", "#########", ".#######.", "..#.#.#..", "..#####..", "........."],
+    might: [".##.##...", "#########", "#########", "#########", "#########", ".#######.", "..#####..", "..#####..", "..#####.."],
+    grace: ["......##.", ".....###.", "....####.", "...####..", "..####...", ".####....", ".##......", "#........", "#........"],
+    wit: [".........", "..#####..", ".#.....#.", "#..###..#", "#..#.#..#", "#..###..#", ".#.....#.", "..#####..", "........."],
     min: [
       ".......",
       ".......",
@@ -5512,6 +5572,18 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
   // src/ui/gfx/pix.ts
   var DRAWABLE = /^[A-Z0-9 .,:/%+\-!?'()~]+$/;
   var SELECTOR = "h3:not(.split), h3.split > span, .btn, .sec, .nav .lbl, .plaque";
+  function pixText(text, colour, scale = 3, outline = "") {
+    const src = textSprite(text.toUpperCase(), colour, outline);
+    const c = document.createElement("canvas");
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext("2d").drawImage(src, 0, 0);
+    c.className = "pxc";
+    c.style.width = src.width * scale + "px";
+    c.style.height = src.height * scale + "px";
+    c.setAttribute("aria-hidden", "true");
+    return c;
+  }
   function pixelize(root) {
     for (const el of root.querySelectorAll(SELECTOR)) {
       if (el.dataset.px !== void 0) continue;
@@ -5908,6 +5980,39 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     }
     const b = baseOf(item);
     return iconFor(b.kind, b.slot);
+  }
+
+  // src/ui/gfx/portrait.ts
+  function portrait(zone, cls, w2 = 150, h2 = 112) {
+    const c = document.createElement("canvas");
+    c.width = w2;
+    c.height = h2;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    const G2 = h2 - 14;
+    const set = setFor(zone.id, zone.name);
+    g.fillStyle = set.sky;
+    g.fillRect(0, 0, w2, h2);
+    set.layers.forEach((l, i) => tileLayer(g, l.sprite, w2, G2 + (l.drop ?? 0), 40 + i * 37));
+    g.globalAlpha = 0.12;
+    g.fillStyle = zone.palette[0];
+    g.fillRect(0, 0, w2, G2);
+    g.globalAlpha = 1;
+    g.fillStyle = set.ground;
+    g.fillRect(0, G2, w2, h2 - G2);
+    g.fillStyle = set.edge;
+    g.fillRect(0, G2, w2, 1);
+    g.fillStyle = "#111";
+    g.fillRect(0, G2 + 1, w2, 1);
+    const hc = HERO_CAST[cls];
+    if (hc && spriteOf(hc.idle)) {
+      g.fillStyle = "rgba(0,0,0,.35)";
+      g.beginPath();
+      g.ellipse(w2 / 2, G2, 14, 3, 0, 0, Math.PI * 2);
+      g.fill();
+      drawSprite(g, hc.idle, 0, Math.round(w2 / 2), G2);
+    }
+    return c;
   }
 
   // src/ui/text.ts
@@ -6610,7 +6715,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     const s = c.state;
     switch (id) {
       case "hero":
-        return `${s.hero.rev}`;
+        return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}`;
       case "gear":
         return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
       case "forge":
@@ -6668,7 +6773,8 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
   }
   function heroView(c) {
     const s = c.sheet();
-    const hero = c.state.hero;
+    const st = c.state;
+    const hero = st.hero;
     const sk = s.skill;
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
@@ -6678,62 +6784,99 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       if (!mods.length) list6.append(h("div", { text: "No modifiers" }), h("div"));
       const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list6, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
+    const run = st.activity.run;
+    const zone = run ? runZone(st, run) : ZONES[st.activity.zone];
+    const por = portrait(zone, hero.cls);
+    por.className = "portrait";
+    por.style.width = por.width * 2 + "px";
+    por.style.height = por.height * 2 + "px";
+    const asc = hero.asc ? ASCENDANCIES[hero.asc]?.name : null;
+    const xpNeed = xpToNext(hero.level);
+    const xpF = isFinite(xpNeed) ? hero.xp / xpNeed : 1;
+    const who = h(
+      "div",
+      { class: "card sheet-who" },
+      h("h3", { text: hero.name }),
+      h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: zone.name })),
+      h(
+        "div",
+        { class: "row", style: "gap:5px;margin-top:8px" },
+        h("span", { class: "tag lv", text: `Level ${hero.level}` }),
+        h("span", { class: "tag", text: CLASSES[hero.cls]?.name ?? hero.cls }),
+        asc ? h("span", { class: "tag asc", text: asc }) : null
+      ),
+      h("div", { class: "xpbar", title: isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)} experience` : "max level" }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
+      h("div", { class: "attrs" }, ...[["might", "Might", s.str], ["grace", "Grace", s.dex], ["wit", "Wit", s.int]].map(([g, label, v]) => h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
+      ...s.problems.map((p) => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: p }))
+    );
+    const rate = Math.min(sk.speed, sk.sustain);
+    const chip = (label, value, click, total = false) => h(click ? "button" : "div", { class: `fchip${total ? " total" : ""}`, on: click ? { click } : {} }, h("span", { text: label }), h("b", { class: "num", text: value }));
+    const op = (t) => h("span", { class: "fop", text: t });
+    const formula = h(
+      "div",
+      { class: "formula" },
+      chip("Hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")),
+      op("x"),
+      chip("Crit", critFactor.toFixed(2), breakdown("critChance", "Critical chance")),
+      op("x"),
+      chip(sk.kind === "attack" ? "Attacks" : "Casts", `${rate.toFixed(2)}/s`, breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")),
+      ...sk.kind === "attack" ? [op("x"), chip("Hit chance", pct(sk.hitChance), breakdown("accuracy", "Accuracy"))] : [],
+      op("="),
+      chip("DPS", fmt(sk.dps), void 0, true)
+    );
+    const big = (label, value, colour, note) => h("div", { class: "bigstat" }, pixText(value, colour, 4), h("div", null, h("b", { text: label }), h("span", { text: note })));
     const off = h(
       "div",
       { class: "card" },
-      h("h3", { text: `Offence: ${sk.name}` }),
-      h("div", { class: "row" }, h("div", { class: "big num", text: fmt(sk.dps) }), h("div", { class: "muted", text: "DPS single target" })),
-      h("div", { class: "row", style: "margin-bottom:6px" }, h("div", { class: "big num", text: fmt(sk.packDps) }), h("div", { class: "muted", text: `vs packs (${sk.targets} target${sk.targets > 1 ? "s" : ""})` })),
+      h("h3", { text: `Offence - ${sk.name}` }),
+      h("div", { class: "bigrow" }, big("Single target", fmt(sk.dps), "#ffc233", "damage per second"), big("Against packs", fmt(sk.packDps), "#ff8a5c", `${sk.targets} target${sk.targets > 1 ? "s" : ""} hit`)),
+      formula,
       kv([
-        ["Average hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")],
-        ...DAMAGE_TYPES.filter((t) => sk.hit[t][1] > 0).map((t) => [`  ${TYPE_NAME[t]}`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`]),
+        ...DAMAGE_TYPES.filter((t) => sk.hit[t][1] > 0).map((t) => [`${TYPE_NAME[t]} damage`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`]),
         ["Critical chance", `${sk.critChance.toFixed(1)}%`, breakdown("critChance", "Critical chance")],
         ["Critical multiplier", `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", "Critical multiplier")],
-        ["x Crit factor", critFactor.toFixed(2)],
-        [sk.kind === "attack" ? "Attacks per second" : "Casts per second", sk.speed.toFixed(2), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")],
-        ...sk.kind === "attack" ? [["Hit chance (vs same level)", pct(sk.hitChance), breakdown("accuracy", "Accuracy")]] : [],
         ["Mana cost", fmt(sk.manaCost)],
         ...sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`]] : [],
         ...sk.leech ? [["Life leech", `${sk.leech}%`]] : []
-      ]),
-      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${Math.min(sk.speed, sk.sustain).toFixed(2)}/s${sk.sustain < sk.speed ? " (mana-limited)" : ""}${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` })
+      ])
     );
+    const RES_GLYPH = { fire: "skills", cold: "cold", lightning: "lightning", chaos: "chaos" };
+    const res = h(
+      "div",
+      { class: "card" },
+      h("h3", { text: "Resistances" }),
+      h("div", { class: "resrow" }, ...["fire", "cold", "lightning", "chaos"].map((t) => {
+        const v = s.res[t], raw = s.resRaw[t], max = s.maxRes[t];
+        return h(
+          "button",
+          { class: `res ${t}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: `${TYPE_NAME[t]} resistance - click for where it comes from`, on: { click: breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`) } },
+          glyph(RES_GLYPH[t], 22),
+          h("b", { class: "num", text: `${v}%` }),
+          h("span", { text: raw > max ? `over cap (${raw})` : `max ${max}` })
+        );
+      }))
+    );
+    const tile = (g, label, value, stat) => h("button", { class: `stat ${g}`, title: `${label} - click for where it comes from`, on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
     const pool = s.life + s.es;
     const def2 = h(
       "div",
       { class: "card" },
       h("h3", { text: "Defence" }),
-      kv([
-        ["Life", fmt(s.life), breakdown("life", "Life")],
-        ["Energy shield", fmt(s.es), breakdown("energyShield", "Energy shield")],
-        ["Mana", fmt(s.mana), breakdown("mana", "Mana")],
-        ["Armour", fmt(s.armour), breakdown("armour", "Armour")],
-        ["Evasion", fmt(s.evasion), breakdown("evasion", "Evasion")],
-        ["Block", `${s.block.toFixed(0)}%`, breakdown("block", "Block")],
-        ["Life regen", `${fmt(s.lifeRegen)}/s`, breakdown("lifeRegen", "Life regeneration")],
-        ...["fire", "cold", "lightning", "chaos"].map((t) => [`${TYPE_NAME[t]} res`, h("div", { class: "num", style: s.res[t] < 0 ? "color:var(--red)" : "", text: `${s.res[t]}%${s.resRaw[t] > s.maxRes[t] ? ` (${s.resRaw[t]})` : ""}` }), breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`)])
-      ]),
-      h("h3", { style: "margin-top:8px", text: `Effective HP (pool ${fmt(pool)})` }),
-      ehpBars(s)
+      h(
+        "div",
+        { class: "tiles" },
+        tile("heart", "Life", fmt(s.life), "life"),
+        tile("esorb", "Energy shield", fmt(s.es), "energyShield"),
+        tile("regen", "Life regen", `${fmt(s.lifeRegen)}/s`, "lifeRegen"),
+        tile("armour", "Armour", fmt(s.armour), "armour"),
+        tile("evasion", "Evasion", fmt(s.evasion), "evasion"),
+        tile("block", "Block", `${s.block.toFixed(0)}%`, "block")
+      ),
+      h("div", { class: "sub" }, `Effective HP against each type (pool ${fmt(pool)})`),
+      ehpBars(s),
+      kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]])
     );
-    const xpNeed = xpToNext(hero.level);
-    const info = h(
-      "div",
-      { class: "card" },
-      h("h3", { text: `${hero.name} - ${CLASSES[hero.cls]?.name ?? hero.cls}` }),
-      kv([
-        ["Level", String(hero.level)],
-        ["Experience", isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)}` : "max"],
-        ["Might / Grace / Wit", `${s.str} / ${s.dex} / ${s.int}`],
-        ["Movement speed", pct(s.moveSpeed)],
-        ["Item rarity", `+${s.rarity}%`],
-        ["Flask healing", pct(s.flaskHeal)],
-        ["Build score", fmt(buildScore(s))]
-      ]),
-      ...s.problems.map((p) => h("div", { class: "tag", style: "background:var(--ember);margin-top:4px", text: p })),
-      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: "Click an underlined stat for where it comes from." })
-    );
-    return h("div", { class: "grid2" }, off, def2, info);
+    return h("div", { class: "sheet" }, who, h("div", { class: "col", style: "gap:14px" }, off, res), def2);
   }
   function ehpBars(s) {
     const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
