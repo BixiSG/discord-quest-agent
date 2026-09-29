@@ -9750,6 +9750,240 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     return box2;
   }
 
+  // src/i18n/errors.ts
+  var idByName = (table, name) => Object.values(table).find((x) => x.name === name)?.id;
+  var FIXED = Object.fromEntries(Object.entries(EN).filter(([k, v]) => k.startsWith("err.") && !v.includes("{")).map(([k, v]) => [v, k]));
+  var PATTERNS = [
+    [/^needs (\d+) ember dust$/, (m4) => t("err.needsDust", { n: m4[1] })],
+    [/^needs (\d+) ember dust \(or spare orbs\)$/, (m4) => t("err.needsDustOrbs", { n: m4[1] })],
+    [/^needs level (\d+)$/, (m4) => t("err.needsLevel", { n: m4[1] })],
+    [/^(\w+): needs level (\d+)$/, (m4) => t("err.slotNeedsLevel", { slot: t(`slot.${m4[1]}`), n: m4[2] })],
+    [/^(.+) needs level (\d+)$/, (m4) => {
+      const id = idByName(SUPPORTS, m4[1]);
+      return t("err.supportNeedsLevel", { name: id ? supportName(id) : m4[1], n: m4[2] });
+    }],
+    [/^(.+) can't be used with this weapon$/, (m4) => {
+      const id = idByName(SKILLS, m4[1]);
+      return t("err.cantUseWith", { skill: id ? skillName(id) : m4[1] });
+    }],
+    [/^(.+) can't be used with no weapon$/, (m4) => {
+      const id = idByName(SKILLS, m4[1]);
+      return t("err.cantUseUnarmed", { skill: id ? skillName(id) : m4[1] });
+    }],
+    [/^(.+) does not support (.+)$/, (m4) => {
+      const sup = idByName(SUPPORTS, m4[1]), sk = idByName(SKILLS, m4[2]);
+      return t("err.noSupport", { support: sup ? supportName(sup) : m4[1], skill: sk ? skillName(sk) : m4[2] });
+    }],
+    [/^needs (\d+) (.+)s$/, (m4) => {
+      const pin = Object.values(PINNACLES).find((p3) => p3.sigilName === m4[2]);
+      return pin ? t("err.needsSigils", { n: m4[1], sigil: sigilName(pin.id) }) : m4[0];
+    }],
+    [/^no (.+) left$/, (m4) => {
+      const id = idByName(CURRENCIES, m4[1]);
+      return t("err.noneLeft", { cur: id ? currencyName(id) : m4[1] });
+    }],
+    [/^already at (\d+)% quality$/, (m4) => t("err.maxQuality", { n: m4[1] })],
+    [/^needs (\d+) Graft$/, (m4) => t("err.needsGraft", { n: m4[1] })],
+    [/^no room for more than (\d+) sockets?$/, (m4) => tn("err.socketCap", Number(m4[1]), { n: m4[1] })],
+    [/^save is from a newer version \((\d+)\)$/, (m4) => t("err.saveNewer", { n: m4[1] })],
+    [/^no migration from version (\d+)$/, (m4) => t("err.saveNoMigration", { n: m4[1] })],
+    // The rest of the save checks name a part of the state: one message, the detail kept as is.
+    [/^(bad|missing|unknown) .+$|^relic (data|with) .+$/, (m4) => t("err.saveBroken", { what: m4[0] })]
+  ];
+  function tErr(msg) {
+    const k = FIXED[msg];
+    if (k) return t(k);
+    for (const [re, f] of PATTERNS) {
+      const m4 = msg.match(re);
+      if (m4) return f(m4);
+    }
+    return msg;
+  }
+
+  // src/ui/common.ts
+  var TYPE_NAME = (t0) => t(`type.${t0}`);
+  function kv(rows) {
+    const el = h("div", { class: "kv" });
+    for (const [k, v, click] of rows) {
+      const key = h("div", { text: k });
+      const val = typeof v === "string" ? h("div", { class: "num", text: v }) : v;
+      if (click) {
+        key.classList.add("click");
+        key.addEventListener("click", click);
+      }
+      el.append(key, val);
+    }
+    return el;
+  }
+  var SLOT_LABEL = (s) => t(`slot.${s === "ring2" ? "ring" : s}`);
+  function chips(opts, cur, pick) {
+    const el = h("div", { class: "chips", attrs: { role: "radiogroup" } });
+    for (const [v, label, n] of opts) {
+      el.append(h(
+        "button",
+        { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur) }, on: { click: () => pick(v) } },
+        label,
+        n !== void 0 ? h("b", { text: String(n) }) : null
+      ));
+    }
+    return el;
+  }
+
+  // src/ui/itemui.ts
+  function itemCell(item, slot, selected, onClick) {
+    const cell = h("div", {
+      class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
+      attrs: { "aria-label": item ? itemName(item) : slot ? t("gear.slotEmpty", { slot: SLOT_LABEL(slot) }) : t("gear.empty"), ...item || slot ? { role: "button", tabindex: "0" } : {}, ...selected ? { "aria-pressed": "true" } : {} },
+      on: { click: onClick }
+    });
+    if (item) cell.append(itemIcon(item));
+    if (slot) {
+      cell.dataset.slot = slot;
+      cell.append(h("span", { class: "lbl", text: SLOT_LABEL(slot) }));
+    }
+    const pips = item ? socketPips(item) : null;
+    if (pips) {
+      cell.append(pips);
+      cell.setAttribute("aria-label", t("gear.cellSockets", { label: cell.getAttribute("aria-label") ?? "", full: item.sockets - emptySockets(item), n: item.sockets }));
+    }
+    return cell;
+  }
+  var tipEl = null;
+  function hideTip() {
+    tipEl?.remove();
+    tipEl = null;
+  }
+  function showTip(anchor, content2) {
+    hideTip();
+    const body = anchor.closest(".body");
+    if (!body || !anchor.isConnected) return;
+    tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content2);
+    body.append(tipEl);
+    placeBeside(tipEl, anchor, body);
+  }
+  function withTip(cell, c, make) {
+    let t2 = null;
+    const show = () => {
+      c.hold = true;
+      t2 = window.setTimeout(() => {
+        if (!dnd.drag && !cell.classList.contains("sel")) showTip(cell, make());
+      }, 130);
+    };
+    const hide = () => {
+      if (t2 !== null) clearTimeout(t2);
+      hideTip();
+      if (!dnd.drag) c.hold = false;
+    };
+    cell.addEventListener("mouseenter", show);
+    cell.addEventListener("mouseleave", hide);
+    cell.addEventListener("focus", () => {
+      if (cell.matches(":focus-visible")) show();
+    });
+    cell.addEventListener("blur", hide);
+  }
+  var dnd = { drag: null };
+  function itemCard(item, c, opts = {}) {
+    const b = baseOf(item);
+    const st = itemStats(item);
+    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
+    const lines = [];
+    if (item.rarity === "rare" || item.rarity === "relic") lines.push(baseName(b.id));
+    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : t(`kind.${b.kind}`)].filter(Boolean).join(" - ")}  ${t("item.levels", { ilvl: item.ilvl, req: levelReq(item) })}` }));
+    if (item.quality || item.locked) card.append(h(
+      "div",
+      { class: "row", style: "gap:4px;margin-top:3px" },
+      item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
+      item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " " + t("item.locked")) : null
+    ));
+    if (st.weapon) {
+      const w2 = st.weapon;
+      const rows = [[t("item.physical"), `${w2.phys[0]}-${w2.phys[1]}`]];
+      for (const [d, r3] of Object.entries(w2.added)) rows.push([TYPE_NAME(d), `${r3[0]}-${r3[1]}`]);
+      rows.push([t("item.aps"), w2.aps.toFixed(2)], [t("item.crit"), `${w2.crit.toFixed(1)}%`], [t("item.hands"), String(w2.hands)]);
+      card.append(kv(rows));
+    }
+    if (st.defence) {
+      const d = st.defence;
+      const rows = [];
+      if (d.armour) rows.push([t("item.armour"), String(d.armour)]);
+      if (d.evasion) rows.push([t("item.evasion"), String(d.evasion)]);
+      if (d.energyShield) rows.push([t("item.es"), String(d.energyShield)]);
+      if (d.block) rows.push([t("item.block"), `${d.block}%`]);
+      card.append(kv(rows));
+    }
+    if (b.implicit?.length) {
+      card.append(h("hr"));
+      for (const m4 of b.implicit) card.append(h("div", { class: "aff", text: modLine(m4) }));
+    }
+    if (item.affixes.length) {
+      card.append(h("hr"));
+      const sorted = [...item.affixes].sort((a, z) => affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1);
+      for (const a of sorted) card.append(h(
+        "div",
+        { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" },
+        affixLine(a),
+        h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })
+      ));
+    }
+    const sockets = socketRows(item);
+    if (sockets) card.append(h("hr"), sockets);
+    const relic = relicOf(item);
+    if (relic) {
+      card.append(h("hr"));
+      for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
+      card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(relic.id) }));
+    }
+    if (c && opts.compareSlot !== void 0) {
+      const slot = opts.compareSlot ?? slotsFor(b).find((s) => !c.state.hero.equipment[s]) ?? slotsFor(b)[0];
+      const trial = trialSheet(c.state, item, slot);
+      if (trial) {
+        card.append(h("hr"), compareRows(c.sheet(), trial));
+      } else {
+        card.append(h("hr"), h("div", { class: "down", text: tErr(canEquip(c.state, item, slot) ?? t("item.cantEquip")) }));
+      }
+    }
+    return card;
+  }
+  function compareRows(now, next) {
+    const rows = [
+      [t("cmp.dps"), now.skill.dps, next.skill.dps],
+      [t("cmp.packDps"), now.skill.packDps, next.skill.packDps],
+      [t("cmp.life"), now.life, next.life],
+      [t("cmp.es"), now.es, next.es],
+      [t("cmp.ehpPhys"), now.ehp.phys, next.ehp.phys],
+      [t("cmp.ehpEle"), (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3]
+    ];
+    const el = h("div", { class: "kv" });
+    for (const [k, a, b] of rows) {
+      if (Math.abs(b - a) < 5e-3 * Math.max(1, a)) continue;
+      const d = b - a;
+      el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + (d / a * 100).toFixed(0) + "%" : t("cmp.new")})` }));
+    }
+    const sa = buildScore(now), sb = buildScore(next);
+    el.append(h("div", { text: t("cmp.score") }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
+    return el;
+  }
+  var lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
+  function markWorn(cell, slot) {
+    cell.classList.add("wornc");
+    cell.append(h("span", { class: "worn", text: t("gear.worn") }));
+    const label = cell.getAttribute("aria-label") ?? "";
+    cell.setAttribute("aria-label", slot ? t("gear.wornAriaSlot", { label, slot: SLOT_LABEL(slot).toLowerCase() }) : t("gear.wornAria", { label }));
+    return cell;
+  }
+  var gridSep = (text) => h("div", { class: "gridsep", text });
+  function placeBeside(el, anchor, body) {
+    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    const w2 = el.offsetWidth, ht = el.offsetHeight;
+    let x = ar.right - br.left + body.scrollLeft + 10;
+    if (x + w2 > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w2 - 10;
+    x = Math.max(body.scrollLeft + 4, x);
+    let y = ar.top - br.top + body.scrollTop - 6;
+    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+  }
+
   // src/ui/hints.ts
   var GLYPH = { market: "market", sockets: "socket", pouch: "gem", echoes: "log", rekindle: "sun" };
   var hintsSeen = (s) => s.settings.hints ?? [];
@@ -9867,59 +10101,6 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
       stones
     ));
     return root;
-  }
-
-  // src/ui/gfx/portrait.ts
-  var cache4 = /* @__PURE__ */ new Map();
-  function paint(zone, w2, h2, cls) {
-    const c = document.createElement("canvas");
-    c.width = w2;
-    c.height = h2;
-    const g = c.getContext("2d");
-    g.imageSmoothingEnabled = false;
-    const G2 = h2 - Math.max(6, Math.round(h2 * 0.12));
-    const set = setFor(zone.id, zone.name);
-    g.fillStyle = set.sky;
-    g.fillRect(0, 0, w2, h2);
-    set.layers.forEach((l, i) => tileLayer(g, l.sprite, w2, G2 + (l.drop ?? 0), 40 + i * 37 + zone.id.length * 13 % 60));
-    g.globalAlpha = 0.12;
-    g.fillStyle = zone.palette[0];
-    g.fillRect(0, 0, w2, G2);
-    g.globalAlpha = 1;
-    g.fillStyle = set.ground;
-    g.fillRect(0, G2, w2, h2 - G2);
-    g.fillStyle = set.edge;
-    g.fillRect(0, G2, w2, 1);
-    g.fillStyle = "#111";
-    g.fillRect(0, G2 + 1, w2, 1);
-    const hc = cls ? HERO_CAST[cls] : null;
-    if (hc && spriteOf(hc.idle)) {
-      g.fillStyle = "rgba(0,0,0,.35)";
-      g.beginPath();
-      g.ellipse(w2 / 2, G2, 14, 3, 0, 0, Math.PI * 2);
-      g.fill();
-      drawSprite(g, hc.idle, 0, Math.round(w2 / 2), G2);
-    }
-    return c;
-  }
-  function copy(src) {
-    const c = document.createElement("canvas");
-    c.width = src.width;
-    c.height = src.height;
-    c.getContext("2d").drawImage(src, 0, 0);
-    return c;
-  }
-  function portrait(zone, cls, w2 = 150, h2 = 112) {
-    return paint(zone, w2, h2, cls);
-  }
-  function scenery(zone, w2, h2) {
-    const key = `${zone.id}|${zone.name}|${w2}x${h2}`;
-    let c = cache4.get(key);
-    if (!c) {
-      c = paint(zone, w2, h2, null);
-      if (spriteOf(setFor(zone.id, zone.name).layers[0].sprite)) cache4.set(key, c);
-    }
-    return copy(c);
   }
 
   // src/ui/forge.ts
@@ -10185,56 +10366,6 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     );
   }
 
-  // src/i18n/errors.ts
-  var idByName = (table, name) => Object.values(table).find((x) => x.name === name)?.id;
-  var FIXED = Object.fromEntries(Object.entries(EN).filter(([k, v]) => k.startsWith("err.") && !v.includes("{")).map(([k, v]) => [v, k]));
-  var PATTERNS = [
-    [/^needs (\d+) ember dust$/, (m4) => t("err.needsDust", { n: m4[1] })],
-    [/^needs (\d+) ember dust \(or spare orbs\)$/, (m4) => t("err.needsDustOrbs", { n: m4[1] })],
-    [/^needs level (\d+)$/, (m4) => t("err.needsLevel", { n: m4[1] })],
-    [/^(\w+): needs level (\d+)$/, (m4) => t("err.slotNeedsLevel", { slot: t(`slot.${m4[1]}`), n: m4[2] })],
-    [/^(.+) needs level (\d+)$/, (m4) => {
-      const id = idByName(SUPPORTS, m4[1]);
-      return t("err.supportNeedsLevel", { name: id ? supportName(id) : m4[1], n: m4[2] });
-    }],
-    [/^(.+) can't be used with this weapon$/, (m4) => {
-      const id = idByName(SKILLS, m4[1]);
-      return t("err.cantUseWith", { skill: id ? skillName(id) : m4[1] });
-    }],
-    [/^(.+) can't be used with no weapon$/, (m4) => {
-      const id = idByName(SKILLS, m4[1]);
-      return t("err.cantUseUnarmed", { skill: id ? skillName(id) : m4[1] });
-    }],
-    [/^(.+) does not support (.+)$/, (m4) => {
-      const sup = idByName(SUPPORTS, m4[1]), sk = idByName(SKILLS, m4[2]);
-      return t("err.noSupport", { support: sup ? supportName(sup) : m4[1], skill: sk ? skillName(sk) : m4[2] });
-    }],
-    [/^needs (\d+) (.+)s$/, (m4) => {
-      const pin = Object.values(PINNACLES).find((p3) => p3.sigilName === m4[2]);
-      return pin ? t("err.needsSigils", { n: m4[1], sigil: sigilName(pin.id) }) : m4[0];
-    }],
-    [/^no (.+) left$/, (m4) => {
-      const id = idByName(CURRENCIES, m4[1]);
-      return t("err.noneLeft", { cur: id ? currencyName(id) : m4[1] });
-    }],
-    [/^already at (\d+)% quality$/, (m4) => t("err.maxQuality", { n: m4[1] })],
-    [/^needs (\d+) Graft$/, (m4) => t("err.needsGraft", { n: m4[1] })],
-    [/^no room for more than (\d+) sockets?$/, (m4) => tn("err.socketCap", Number(m4[1]), { n: m4[1] })],
-    [/^save is from a newer version \((\d+)\)$/, (m4) => t("err.saveNewer", { n: m4[1] })],
-    [/^no migration from version (\d+)$/, (m4) => t("err.saveNoMigration", { n: m4[1] })],
-    // The rest of the save checks name a part of the state: one message, the detail kept as is.
-    [/^(bad|missing|unknown) .+$|^relic (data|with) .+$/, (m4) => t("err.saveBroken", { what: m4[0] })]
-  ];
-  function tErr(msg) {
-    const k = FIXED[msg];
-    if (k) return t(k);
-    for (const [re, f] of PATTERNS) {
-      const m4 = msg.match(re);
-      if (m4) return f(m4);
-    }
-    return msg;
-  }
-
   // src/ui/tree.ts
   var cam = { x: 0, y: 0, z: 0.55, centred: "" };
   var STARS = (() => {
@@ -10425,20 +10556,20 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
       }
       return best;
     };
-    let drag2 = null;
+    let drag = null;
     canvas.addEventListener("pointerdown", (e2) => {
-      drag2 = { x: e2.clientX, y: e2.clientY, moved: 0 };
+      drag = { x: e2.clientX, y: e2.clientY, moved: 0 };
       canvas.setPointerCapture(e2.pointerId);
       canvas.style.cursor = "grabbing";
     });
     canvas.addEventListener("pointermove", (e2) => {
-      if (drag2) {
-        const dx = e2.clientX - drag2.x, dy = e2.clientY - drag2.y;
-        drag2.moved += Math.abs(dx) + Math.abs(dy);
+      if (drag) {
+        const dx = e2.clientX - drag.x, dy = e2.clientY - drag.y;
+        drag.moved += Math.abs(dx) + Math.abs(dy);
         cam.x += dx / cam.z;
         cam.y += dy / cam.z;
-        drag2.x = e2.clientX;
-        drag2.y = e2.clientY;
+        drag.x = e2.clientX;
+        drag.y = e2.clientY;
         draw2();
         const shown = hover ?? selected;
         if (shown && !info.hidden) place(shown);
@@ -10453,8 +10584,8 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
       }
     });
     canvas.addEventListener("pointerup", (e2) => {
-      const wasClick = drag2 && drag2.moved < 6;
-      drag2 = null;
+      const wasClick = drag && drag.moved < 6;
+      drag = null;
       canvas.style.cursor = "grab";
       if (!wasClick) return;
       const n = pick(e2);
@@ -10467,7 +10598,7 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
       draw2();
     });
     canvas.addEventListener("pointerleave", () => {
-      if (!drag2 && hover) {
+      if (!drag && hover) {
         hover = null;
         showInfo(selected);
         draw2();
@@ -10587,6 +10718,59 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
       }
     }
     return { wins, trials, seconds: wins ? Math.round(secs / wins) : 0 };
+  }
+
+  // src/ui/gfx/portrait.ts
+  var cache4 = /* @__PURE__ */ new Map();
+  function paint(zone, w2, h2, cls) {
+    const c = document.createElement("canvas");
+    c.width = w2;
+    c.height = h2;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    const G2 = h2 - Math.max(6, Math.round(h2 * 0.12));
+    const set = setFor(zone.id, zone.name);
+    g.fillStyle = set.sky;
+    g.fillRect(0, 0, w2, h2);
+    set.layers.forEach((l, i) => tileLayer(g, l.sprite, w2, G2 + (l.drop ?? 0), 40 + i * 37 + zone.id.length * 13 % 60));
+    g.globalAlpha = 0.12;
+    g.fillStyle = zone.palette[0];
+    g.fillRect(0, 0, w2, G2);
+    g.globalAlpha = 1;
+    g.fillStyle = set.ground;
+    g.fillRect(0, G2, w2, h2 - G2);
+    g.fillStyle = set.edge;
+    g.fillRect(0, G2, w2, 1);
+    g.fillStyle = "#111";
+    g.fillRect(0, G2 + 1, w2, 1);
+    const hc = cls ? HERO_CAST[cls] : null;
+    if (hc && spriteOf(hc.idle)) {
+      g.fillStyle = "rgba(0,0,0,.35)";
+      g.beginPath();
+      g.ellipse(w2 / 2, G2, 14, 3, 0, 0, Math.PI * 2);
+      g.fill();
+      drawSprite(g, hc.idle, 0, Math.round(w2 / 2), G2);
+    }
+    return c;
+  }
+  function copy(src) {
+    const c = document.createElement("canvas");
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext("2d").drawImage(src, 0, 0);
+    return c;
+  }
+  function portrait(zone, cls, w2 = 150, h2 = 112) {
+    return paint(zone, w2, h2, cls);
+  }
+  function scenery(zone, w2, h2) {
+    const key = `${zone.id}|${zone.name}|${w2}x${h2}`;
+    let c = cache4.get(key);
+    if (!c) {
+      c = paint(zone, w2, h2, null);
+      if (spriteOf(setFor(zone.id, zone.name).layers[0].sprite)) cache4.set(key, c);
+    }
+    return copy(c);
   }
 
   // src/ui/atlas.ts
@@ -10795,83 +10979,481 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     return row;
   }
 
-  // src/ui/views.ts
-  var VIEWS = [
-    { id: "hero" },
-    { id: "gear" },
-    { id: "forge" },
-    { id: "skills" },
-    { id: "tree" },
-    { id: "world" },
-    { id: "atlas" },
-    { id: "log" },
-    { id: "menu" },
-    { id: "market" }
-  ];
-  function viewSig(id, c) {
-    const s = c.state;
-    switch (id) {
-      case "hero":
-        return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
-      case "gear":
-        return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
-      case "forge":
-        return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== void 0 ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map((k) => s.hero.equipment[k]).find((x) => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
-      case "skills":
-        return `${s.hero.rev}:${s.hero.level}`;
-      case "tree":
-        return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-      case "world":
-        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map((x) => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
-      case "atlas":
-        return atlasSig(c);
-      case "log":
-        return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
-      case "menu":
-        return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
-      case "market":
-        return marketSig(s);
-    }
+  // src/ui/gear.ts
+  var gearOpts = { filter: "all", sort: "rarity", marks: /* @__PURE__ */ new Set(), query: "" };
+  function searchText(it) {
+    const b = baseOf(it);
+    return [
+      itemName(it),
+      baseName(b.id),
+      SLOT_LABEL(b.slot),
+      ...it.affixes.map((a) => affixLine(a)),
+      ...relicLines(it),
+      ...(it.stones ?? []).filter((k) => !!k).map((k) => stoneFullName(k))
+    ].join("\n").toLowerCase();
   }
-  function renderView(id, c) {
-    switch (id) {
-      case "hero":
-        return heroView(c);
-      case "gear":
-        return gearView(c);
-      case "forge":
-        return forgeView(c);
-      case "tree":
-        return treeView(c);
-      case "skills":
-        return skillsView(c);
-      case "world":
-        return worldView(c);
-      case "atlas":
-        return atlasView(c);
-      case "log":
-        return logView(c);
-      case "menu":
-        return menuView(c);
-      case "market":
-        return marketView(c);
+  var matchesQuery = (text, q) => q.trim().toLowerCase().split(/\s+/).every((w2) => text.includes(w2));
+  function applySearch(grid) {
+    const q = gearOpts.query.trim();
+    let shown = 0;
+    for (const cell of grid.querySelectorAll(".cell[data-uid]")) {
+      const ok = !q || matchesQuery(cell.dataset.q ?? "", q);
+      cell.hidden = !ok;
+      if (ok) shown++;
     }
+    for (const cell of grid.querySelectorAll(".cell.empty")) cell.hidden = !!q;
+    grid.querySelector(".nomatch")?.toggleAttribute("hidden", !q || shown > 0);
   }
-  var TYPE_COLOR = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
-  var TYPE_NAME = (t0) => t(`type.${t0}`);
-  function kv(rows) {
-    const el = h("div", { class: "kv" });
-    for (const [k, v, click] of rows) {
-      const key = h("div", { text: k });
-      const val = typeof v === "string" ? h("div", { class: "num", text: v }) : v;
-      if (click) {
-        key.classList.add("click");
-        key.addEventListener("click", click);
+  var SLOT_GROUP = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
+  var SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+  function gearSig(s) {
+    let locks = 0;
+    for (const x of s.stash) if (x.locked) locks++;
+    for (const x of s.relics) if (x.locked) locks++;
+    for (const k of SLOTS) if (s.hero.equipment[k]?.locked) locks++;
+    return `${s.stashCap}:${s.relics.length}:${s.relics[s.relics.length - 1]?.uid ?? 0}:${locks}:${gearOpts.marks.size}:${Object.keys(s.codex).length}:${s.settings.upkeep}:${s.stashFull ?? false}`;
+  }
+  var upgradeCache = { rev: -1, level: -1, map: /* @__PURE__ */ new Map() };
+  function upgradeOf(st, item) {
+    if (upgradeCache.rev !== st.hero.rev || upgradeCache.level !== st.hero.level) upgradeCache = { rev: st.hero.rev, level: st.hero.level, map: /* @__PURE__ */ new Map() };
+    let v = upgradeCache.map.get(item.uid);
+    if (v === void 0) {
+      v = upgradeSlot(st, item);
+      upgradeCache.map.set(item.uid, v);
+    }
+    return v;
+  }
+  function gearView(c) {
+    const st = c.state;
+    const eq = st.hero.equipment;
+    hideTip();
+    dnd.drag = null;
+    c.hold = false;
+    const root = h("div", { class: "gear" });
+    const endDrag = () => {
+      dnd.drag = null;
+      c.hold = false;
+      root.classList.remove("dragging");
+      root.querySelectorAll(".drop-ok, .over").forEach((e2) => e2.classList.remove("drop-ok", "over"));
+    };
+    for (const uid of [...gearOpts.marks]) if (!st.stash.some((x) => x.uid === uid)) gearOpts.marks.delete(uid);
+    const doll = h("div", { class: "doll" });
+    const hc = HERO_CAST[st.hero.cls];
+    const fig = h("div", { class: "fig" });
+    const art = hc ? spriteCanvas(hc.idle) : null;
+    if (art) {
+      art.className = "figart";
+      art.style.width = art.width * 3 + "px";
+      art.style.height = art.height * 3 + "px";
+      fig.append(art);
+    }
+    doll.append(fig);
+    const wb = eq.weapon ? baseOf(eq.weapon) : null;
+    for (const s of SLOTS) {
+      const it = eq[s];
+      const cell = itemCell(it, s, c.sel.slot === s && c.sel.uid === void 0, () => {
+        c.sel = { slot: s };
+        c.rerender();
+      });
+      if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
+        const bow = wb.kind === "bow";
+        cell.classList.add(bow ? "only" : "blocked");
+        cell.querySelector(".lbl").textContent = bow ? t("gear.quiverOnly") : t("gear.twoHand");
+        cell.title = bow ? t("gear.quiverTip") : t("gear.twoHandTip", { base: baseName(wb.id) });
+        cell.setAttribute("aria-label", t("gear.offhandAria", { why: cell.title }));
+        if (!bow) cell.tabIndex = -1;
       }
-      el.append(key, val);
+      cell.addEventListener("mouseenter", () => {
+        if (dnd.drag) return;
+        root.classList.add("slotpick");
+        for (const el of root.querySelectorAll(".stash .cell[data-uid]")) {
+          const x = ownedItem(st, Number(el.dataset.uid));
+          el.classList.toggle("fits", !!x && slotsFor(baseOf(x)).includes(s));
+        }
+      });
+      cell.addEventListener("mouseleave", () => {
+        root.classList.remove("slotpick");
+        root.querySelectorAll(".fits").forEach((e2) => e2.classList.remove("fits"));
+      });
+      if (it) {
+        if (it.locked) cell.append(lockBadge());
+        withTip(cell, c, () => itemCard(it, c));
+        cell.draggable = true;
+        cell.addEventListener("dragstart", (e2) => {
+          dnd.drag = { slot: s };
+          c.hold = true;
+          hideTip();
+          root.classList.add("dragging");
+          e2.dataTransfer?.setData("text/plain", "slot:" + s);
+          if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
+        });
+        cell.addEventListener("dragend", endDrag);
+      }
+      cell.addEventListener("dragover", (e2) => {
+        const it2 = dnd.drag?.uid !== void 0 ? ownedItem(st, dnd.drag.uid) : void 0;
+        if (it2 && slotsFor(baseOf(it2)).includes(s) && !canEquip(st, it2, s)) {
+          e2.preventDefault();
+          cell.classList.add("over");
+        }
+      });
+      cell.addEventListener("dragleave", () => cell.classList.remove("over"));
+      cell.addEventListener("drop", (e2) => {
+        e2.preventDefault();
+        const uid = dnd.drag?.uid;
+        endDrag();
+        if (uid !== void 0) c.act((x) => {
+          const err = equip(x, uid, s);
+          if (!err) c.sel = { slot: s };
+          return err;
+        });
+      });
+      doll.append(cell);
     }
-    return el;
+    const ownedCell = (it, markable) => {
+      const cell = itemCell(it, null, c.sel.uid === it.uid, () => {
+        c.sel = { uid: it.uid };
+        c.rerender();
+      });
+      if (markable) {
+        cell.addEventListener("click", (e2) => {
+          if (!e2.shiftKey && !e2.ctrlKey && !e2.metaKey) return;
+          e2.stopImmediatePropagation();
+          if (it.locked) {
+            c.toast(t("gear.noMarkLocked"));
+            return;
+          }
+          if (gearOpts.marks.has(it.uid)) gearOpts.marks.delete(it.uid);
+          else gearOpts.marks.add(it.uid);
+          c.rerender();
+        }, { capture: true });
+        if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
+      }
+      cell.dataset.uid = String(it.uid);
+      cell.dataset.q = searchText(it);
+      cell.addEventListener("mouseenter", () => {
+        if (dnd.drag) return;
+        const targets = slotsFor(baseOf(it));
+        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
+        root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
+      });
+      cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e2) => e2.classList.remove("cmp")));
+      if (it.locked) cell.append(lockBadge());
+      if (upgradeOf(st, it)) cell.classList.add("upg");
+      else if (levelReq(it) > st.hero.level) cell.classList.add("req");
+      withTip(cell, c, () => {
+        const targets = slotsFor(baseOf(it));
+        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
+        const worn = eq[cmp];
+        return h(
+          "div",
+          { class: "tipcols" },
+          itemCard(it, c, { compareSlot: cmp }),
+          worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: t("gear.equippedLbl") }), itemCard(worn, null)) : null
+        );
+      });
+      cell.draggable = true;
+      cell.addEventListener("dragstart", (e2) => {
+        dnd.drag = { uid: it.uid };
+        c.hold = true;
+        hideTip();
+        root.classList.add("dragging");
+        for (const t2 of slotsFor(baseOf(it))) if (!canEquip(st, it, t2)) root.querySelector(`.doll [data-slot="${t2}"]`)?.classList.add("drop-ok");
+        e2.dataTransfer?.setData("text/plain", "stash:" + it.uid);
+        if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
+      });
+      cell.addEventListener("dragend", endDrag);
+      return cell;
+    };
+    const ups = new Set(st.stash.filter((it) => upgradeOf(st, it)).map((it) => it.uid));
+    const caseUps = st.relics.filter((it) => upgradeOf(st, it)).length;
+    const groupOf = (it) => SLOT_GROUP[baseOf(it).slot] ?? "all";
+    const inFilter = (it, f) => f === "all" || (f === "upgrades" ? ups.has(it.uid) : f === "sockets" ? emptySockets(it) > 0 : groupOf(it) === f);
+    const count = (f) => f === "relics" ? st.relics.length : st.stash.filter((it) => inFilter(it, f)).length;
+    const wornEmpty = SLOTS.filter((s) => eq[s] && emptySockets(eq[s]) > 0);
+    const relicsTab = gearOpts.filter === "relics";
+    const grid = h("div", { class: `stash${relicsTab ? " codex" : ""}` });
+    if (relicsTab) {
+      const worn = new Map(SLOTS.map((s) => eq[s]).filter((x) => !!x?.relic).map((x) => [x.relic, x]));
+      for (const def2 of Object.values(RELICS).sort((a, b) => a.level - b.level || relicName(a.id).localeCompare(relicName(b.id), lang()))) {
+        const own = st.relics.find((x) => x.relic === def2.id);
+        const seen = st.codex[def2.id] ?? 0;
+        if (own) {
+          grid.append(ownedCell(own, false));
+          continue;
+        }
+        const w2 = worn.get(def2.id);
+        if (w2) {
+          const ws = SLOTS.find((s) => eq[s] === w2);
+          const cell = markWorn(itemCell(w2, null, false, () => {
+            c.sel = { slot: ws };
+            c.rerender();
+          }), ws);
+          withTip(cell, c, () => itemCard(w2, null));
+          grid.append(cell);
+          continue;
+        }
+        const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? t("gear.ghostAria", { name: relicName(def2.id), n: seen }) : t("gear.unknownRelicAria") } });
+        if (seen) ghost.append(itemIcon({ uid: -1, base: def2.base, ilvl: def2.level, rarity: "relic", affixes: [], relic: def2.id }), h("span", { class: "cnt num", text: `x${seen}` }));
+        else ghost.append(h("span", { class: "q", text: "?" }));
+        withTip(ghost, c, () => h(
+          "div",
+          { class: "card item" },
+          h("div", { class: "name relic", text: seen ? relicName(def2.id) : t("gear.unknownRelic") }),
+          h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : def2.season ? t("hollow.onlyTip") : t("gear.dropsFrom", { n: def2.level }) }),
+          seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(def2.id) }) : null
+        ));
+        grid.append(ghost);
+      }
+    } else {
+      const shown = st.stash.filter((it) => inFilter(it, gearOpts.filter));
+      const byRarity = (a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
+      shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b) : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b) : byRarity);
+      const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
+      const worn = gearOpts.filter === "sockets" ? wornEmpty : grouped ? SLOTS.filter((s) => eq[s] && groupOf(eq[s]) === gearOpts.filter) : [];
+      if (worn.length) {
+        grid.append(gridSep(t("gear.wornSep")));
+        for (const s of worn) {
+          const w2 = eq[s];
+          const cell = markWorn(itemCell(w2, null, c.sel.slot === s && c.sel.uid === void 0, () => {
+            c.sel = { slot: s };
+            c.rerender();
+          }), s);
+          if (w2.locked) cell.append(lockBadge());
+          withTip(cell, c, () => itemCard(w2, c));
+          grid.append(cell);
+        }
+        grid.append(gridSep(t("gear.inStash", { n: shown.length })));
+      }
+      for (const it of shown) grid.append(ownedCell(it, true));
+      if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
+      if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: t("gear.stashEmpty") }));
+      else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? t("gear.noUpgrades") : t("gear.noneHere") }));
+      if (shown.length) {
+        grid.append(h("div", { class: "muted nomatch", style: "grid-column:1/-1;padding:6px 0", text: t("gear.noMatch") }));
+        applySearch(grid);
+      }
+    }
+    grid.addEventListener("dragover", (e2) => {
+      if (dnd.drag?.slot) {
+        e2.preventDefault();
+        grid.classList.add("over");
+      }
+    });
+    grid.addEventListener("dragleave", () => grid.classList.remove("over"));
+    grid.addEventListener("drop", (e2) => {
+      e2.preventDefault();
+      const s = dnd.drag?.slot;
+      endDrag();
+      if (s) c.act((x) => unequip(x, s));
+    });
+    const sort = h("select", { attrs: { "aria-label": t("gear.sortAria") } });
+    for (const [v, label] of [["rarity", t("gear.sortRarity")], ["level", t("gear.sortLevel")], ["slot", t("gear.sortSlot")]]) {
+      const o = h("option", { text: label, attrs: { value: v } });
+      if (gearOpts.sort === v) o.selected = true;
+      sort.append(o);
+    }
+    sort.addEventListener("change", () => {
+      gearOpts.sort = sort.value;
+      c.rerender();
+    });
+    const full = st.stash.length >= st.stashCap;
+    const room = stashRoomCost(st);
+    const roomBtn = room === null ? null : h("button", {
+      class: "btn alt small",
+      text: t("gear.roomBtn", { n: STASH_STEP }),
+      attrs: st.dust >= room ? {} : { disabled: "" },
+      title: t("gear.roomTip", { cost: fmt(room), max: STASH_MAX }),
+      on: { click: () => c.act(buyStashRoom, t("gear.roomToast", { n: st.stashCap + STASH_STEP })) }
+    });
+    const found = Object.keys(st.codex).length, total = Object.keys(RELICS).length;
+    const head = relicsTab ? h("h3", { class: "split" }, h("span", { text: t("gear.codex") }), h("span", { class: "num", title: t("gear.codexTip"), text: t("gear.codexCount", { found, total, n: codexRarity(st) }) })) : h("h3", { class: "split" }, h("span", { text: t("gear.stash") }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
+    const note = relicsTab ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("gear.caseNote") }) : st.stashFull ? h(
+      "div",
+      { class: "warnbar", attrs: { role: "status" } },
+      glyph("forge", 14),
+      h("span", { text: st.settings.upkeep ? t("gear.fullUpkeep") : t("gear.fullNoUpkeep") })
+    ) : full && st.settings.upkeep ? h(
+      "div",
+      { class: "note", style: "margin-bottom:8px" },
+      glyph("forge", 14),
+      h("span", { text: t("gear.fullNote") })
+    ) : null;
+    const search = h("input", { class: "search", attrs: { type: "search", placeholder: t("gear.search"), "aria-label": t("gear.searchAria"), spellcheck: "false" } });
+    search.value = gearOpts.query;
+    search.addEventListener("input", () => {
+      gearOpts.query = search.value;
+      applySearch(grid);
+    });
+    search.addEventListener("focus", () => {
+      c.hold = true;
+    });
+    search.addEventListener("blur", () => {
+      c.hold = false;
+    });
+    search.addEventListener("keydown", (e2) => {
+      if (e2.key === "Escape" && search.value) {
+        e2.stopPropagation();
+        e2.preventDefault();
+        search.value = gearOpts.query = "";
+        applySearch(grid);
+      }
+    });
+    const filters = ["all", "upgrades", "weapons", "armour", "jewellery", "sockets", "relics"].filter((f) => f !== "sockets" || gearOpts.filter === "sockets" || count("sockets") > 0 || wornEmpty.length > 0);
+    const stashCard = h(
+      "div",
+      { class: "card" },
+      head,
+      note,
+      h(
+        "div",
+        { class: "row", style: "margin-bottom:8px;justify-content:space-between;flex-wrap:wrap;gap:6px" },
+        chips(
+          filters.map((f) => [f, t(`gear.${f}`), f === "sockets" ? count(f) + wornEmpty.length : count(f)]),
+          gearOpts.filter,
+          (v) => {
+            gearOpts.filter = v;
+            c.sel = {};
+            c.rerender();
+          }
+        ),
+        relicsTab ? null : h("div", { class: "row", style: "gap:6px" }, search, sort)
+      ),
+      grid
+    );
+    const free = (xs) => xs.filter((x) => !x.locked);
+    const plain = free(st.stash.filter((x) => x.rarity === "plain")), ench = free(st.stash.filter((x) => x.rarity === "enchanted"));
+    const old = outdatedItems(st);
+    const marked = st.stash.filter((x) => gearOpts.marks.has(x.uid));
+    const bulk = (label, xs, title, key) => h("button", {
+      class: "btn alt small",
+      text: t("common.count", { label, n: xs.length }),
+      title,
+      attrs: { ...xs.length ? {} : { disabled: "" }, ...key ? { "data-key": key } : {} },
+      on: { click: () => c.act((s) => {
+        const n = salvage(s, xs.map((x) => x.uid));
+        for (const x of xs) gearOpts.marks.delete(x.uid);
+        c.sel = {};
+        c.toast(t("gear.salvaged", { n }));
+      }) }
+    });
+    const anvil = h("div", { class: "anvil", title: t("gear.anvilTip"), attrs: { "aria-label": t("gear.anvilAria") } }, glyph("forge", 18), h("span", { text: t("gear.salvage") }));
+    anvil.addEventListener("dragover", (e2) => {
+      if (dnd.drag?.uid !== void 0) {
+        e2.preventDefault();
+        anvil.classList.add("over");
+      }
+    });
+    anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
+    anvil.addEventListener("drop", (e2) => {
+      e2.preventDefault();
+      const uid = dnd.drag?.uid;
+      endDrag();
+      if (uid !== void 0) c.act((x) => {
+        if (!salvage(x, [uid])) return t("gear.lockedNoSalvage");
+        c.sel = {};
+      });
+    });
+    const upCount = ups.size + caseUps;
+    const tools = h(
+      "div",
+      { class: "row tools" },
+      anvil,
+      h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
+      h("button", {
+        class: "btn small",
+        text: t("gear.equipUps", { n: upCount }),
+        title: t("gear.equipUpsTip"),
+        attrs: upCount ? {} : { disabled: "" },
+        on: { click: () => c.act((s) => {
+          const n = equipUpgrades(s);
+          c.toast(n ? tn("gear.equippedN", n) : t("gear.nothingToEquip"));
+        }) }
+      }),
+      bulk(t("gear.salvageOutdated"), old, t("gear.salvageOutdatedTip")),
+      bulk(t("gear.salvagePlain"), plain, t("gear.salvagePlainTip")),
+      bulk(t("gear.salvageEnchanted"), ench, t("gear.salvageEnchantedTip")),
+      marked.length ? bulk(t("gear.salvageMarked"), marked, t("gear.salvageMarkedTip")) : null,
+      marked.length ? h("button", { class: "btn alt small", text: t("gear.clearMarks"), on: { click: () => {
+        gearOpts.marks.clear();
+        c.rerender();
+      } } }) : null
+    );
+    const selItem = c.sel.uid !== void 0 ? ownedItem(st, c.sel.uid) : void 0;
+    const selSlot = c.sel.slot;
+    let pop = null;
+    const close = h("button", { class: "x popx", text: "x", title: t("gear.putBack"), attrs: { "aria-label": t("common.close"), "data-esc": "" }, on: { click: () => {
+      c.sel = {};
+      c.rerender();
+    } } });
+    const lockBtn = (it) => h("button", {
+      class: "btn alt",
+      text: it.locked ? t("gear.unlock") : t("gear.lock"),
+      attrs: { "data-key": "l" },
+      title: it.locked ? t("gear.unlockTip") : t("gear.lockTip"),
+      on: { click: () => c.act((s) => setLocked(s, it.uid, !it.locked)) }
+    });
+    if (selItem) {
+      const targets = slotsFor(baseOf(selItem));
+      const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t2) => !eq[t2]) ?? targets[0] : targets[0]);
+      const card = itemCard(selItem, c, { compareSlot: cmp });
+      const row = h("div", { class: "row popacts" });
+      targets.forEach((ts, i) => {
+        const err = canEquip(st, selItem, ts);
+        row.append(h("button", {
+          class: "btn",
+          text: targets.length > 1 ? t(ts === "ring1" ? "gear.equipLeft" : "gear.equipRight") : t("gear.equip"),
+          attrs: { ...err ? { disabled: "" } : {}, ...i === 0 ? { "data-key": "e" } : {} },
+          title: err ? tErr(err) : i === 0 ? t("gear.equipKey") : "",
+          on: { click: () => c.act((s) => {
+            const e2 = equip(s, selItem.uid, ts);
+            if (!e2) c.sel = { slot: ts };
+            return e2;
+          }) }
+        }));
+      });
+      row.append(lockBtn(selItem));
+      row.append(h("button", {
+        class: "btn alt",
+        text: t("gear.salvageFor", { n: salvageValue(selItem) }),
+        title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
+        attrs: { "data-key": "s", ...selItem.locked ? { disabled: "" } : {} },
+        on: { click: () => c.act((s) => {
+          salvage(s, [selItem.uid]);
+          c.sel = {};
+        }) }
+      }));
+      card.append(row);
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(selItem) } }, card, close);
+    } else if (selSlot && eq[selSlot]) {
+      const it = eq[selSlot];
+      const card = itemCard(it, c);
+      card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: t("gear.unequip"), title: it.relic ? t("gear.toCase") : t("gear.toStash"), on: { click: () => c.act((s) => unequip(s, selSlot)) } }), lockBtn(it)));
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(it) } }, card, close);
+    }
+    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": t("gear.helpAria") }, title: t("gear.help") });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("gear.equippedHead") }), help), doll);
+    root.append(equipped, h("div", { class: "col" }, stashCard, tools));
+    root.addEventListener("click", (e2) => {
+      if ((c.sel.uid !== void 0 || c.sel.slot) && !e2.target.closest(".cell, .gpop, button, select, .anvil")) {
+        c.sel = {};
+        c.rerender();
+      }
+    });
+    if (pop) {
+      const p3 = pop;
+      requestAnimationFrame(() => {
+        const body = root.closest(".body");
+        const anchor = root.querySelector(".cell.sel");
+        if (!body || !anchor) return;
+        body.append(p3);
+        placeBeside(p3, anchor, body);
+      });
+    }
+    return root;
   }
+
+  // src/ui/hero.ts
+  var TYPE_COLOR = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
   function heroView(c) {
     const s = c.sheet();
     const st = c.state;
@@ -11055,1032 +11637,29 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     }
     return el;
   }
-  var SLOT_LABEL = (s) => t(`slot.${s === "ring2" ? "ring" : s}`);
-  function itemCell(item, slot, selected, onClick) {
-    const cell = h("div", {
-      class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
-      attrs: { "aria-label": item ? itemName(item) : slot ? t("gear.slotEmpty", { slot: SLOT_LABEL(slot) }) : t("gear.empty"), ...item || slot ? { role: "button", tabindex: "0" } : {}, ...selected ? { "aria-pressed": "true" } : {} },
-      on: { click: onClick }
-    });
-    if (item) cell.append(itemIcon(item));
-    if (slot) {
-      cell.dataset.slot = slot;
-      cell.append(h("span", { class: "lbl", text: SLOT_LABEL(slot) }));
-    }
-    const pips = item ? socketPips(item) : null;
-    if (pips) {
-      cell.append(pips);
-      cell.setAttribute("aria-label", t("gear.cellSockets", { label: cell.getAttribute("aria-label") ?? "", full: item.sockets - emptySockets(item), n: item.sockets }));
-    }
-    return cell;
-  }
-  var tipEl = null;
-  function hideTip() {
-    tipEl?.remove();
-    tipEl = null;
-  }
-  function showTip(anchor, content2) {
-    hideTip();
-    const body = anchor.closest(".body");
-    if (!body || !anchor.isConnected) return;
-    tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content2);
-    body.append(tipEl);
-    placeBeside(tipEl, anchor, body);
-  }
-  function withTip(cell, c, make) {
-    let t2 = null;
-    const show = () => {
-      c.hold = true;
-      t2 = window.setTimeout(() => {
-        if (!drag && !cell.classList.contains("sel")) showTip(cell, make());
-      }, 130);
+  function sourceNames(st) {
+    const map = /* @__PURE__ */ new Map();
+    const add = (en, local) => {
+      if (!map.has(en)) map.set(en, local);
     };
-    const hide = () => {
-      if (t2 !== null) clearTimeout(t2);
-      hideTip();
-      if (!drag) c.hold = false;
-    };
-    cell.addEventListener("mouseenter", show);
-    cell.addEventListener("mouseleave", hide);
-    cell.addEventListener("focus", () => {
-      if (cell.matches(":focus-visible")) show();
-    });
-    cell.addEventListener("blur", hide);
-  }
-  var drag = null;
-  function itemCard(item, c, opts = {}) {
-    const b = baseOf(item);
-    const st = itemStats(item);
-    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
-    const lines = [];
-    if (item.rarity === "rare" || item.rarity === "relic") lines.push(baseName(b.id));
-    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : t(`kind.${b.kind}`)].filter(Boolean).join(" - ")}  ${t("item.levels", { ilvl: item.ilvl, req: levelReq(item) })}` }));
-    if (item.quality || item.locked) card.append(h(
-      "div",
-      { class: "row", style: "gap:4px;margin-top:3px" },
-      item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
-      item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " " + t("item.locked")) : null
-    ));
-    if (st.weapon) {
-      const w2 = st.weapon;
-      const rows = [[t("item.physical"), `${w2.phys[0]}-${w2.phys[1]}`]];
-      for (const [d, r3] of Object.entries(w2.added)) rows.push([TYPE_NAME(d), `${r3[0]}-${r3[1]}`]);
-      rows.push([t("item.aps"), w2.aps.toFixed(2)], [t("item.crit"), `${w2.crit.toFixed(1)}%`], [t("item.hands"), String(w2.hands)]);
-      card.append(kv(rows));
-    }
-    if (st.defence) {
-      const d = st.defence;
-      const rows = [];
-      if (d.armour) rows.push([t("item.armour"), String(d.armour)]);
-      if (d.evasion) rows.push([t("item.evasion"), String(d.evasion)]);
-      if (d.energyShield) rows.push([t("item.es"), String(d.energyShield)]);
-      if (d.block) rows.push([t("item.block"), `${d.block}%`]);
-      card.append(kv(rows));
-    }
-    if (b.implicit?.length) {
-      card.append(h("hr"));
-      for (const m4 of b.implicit) card.append(h("div", { class: "aff", text: modLine(m4) }));
-    }
-    if (item.affixes.length) {
-      card.append(h("hr"));
-      const sorted = [...item.affixes].sort((a, z) => affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1);
-      for (const a of sorted) card.append(h(
-        "div",
-        { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" },
-        affixLine(a),
-        h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })
-      ));
-    }
-    const sockets = socketRows(item);
-    if (sockets) card.append(h("hr"), sockets);
-    const relic = relicOf(item);
-    if (relic) {
-      card.append(h("hr"));
-      for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
-      card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(relic.id) }));
-    }
-    if (c && opts.compareSlot !== void 0) {
-      const slot = opts.compareSlot ?? slotsFor(b).find((s) => !c.state.hero.equipment[s]) ?? slotsFor(b)[0];
-      const trial = trialSheet(c.state, item, slot);
-      if (trial) {
-        card.append(h("hr"), compareRows(c.sheet(), trial));
-      } else {
-        card.append(h("hr"), h("div", { class: "down", text: tErr(canEquip(c.state, item, slot) ?? t("item.cantEquip")) }));
-      }
-    }
-    return card;
-  }
-  function compareRows(now, next) {
-    const rows = [
-      [t("cmp.dps"), now.skill.dps, next.skill.dps],
-      [t("cmp.packDps"), now.skill.packDps, next.skill.packDps],
-      [t("cmp.life"), now.life, next.life],
-      [t("cmp.es"), now.es, next.es],
-      [t("cmp.ehpPhys"), now.ehp.phys, next.ehp.phys],
-      [t("cmp.ehpEle"), (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3]
-    ];
-    const el = h("div", { class: "kv" });
-    for (const [k, a, b] of rows) {
-      if (Math.abs(b - a) < 5e-3 * Math.max(1, a)) continue;
-      const d = b - a;
-      el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + (d / a * 100).toFixed(0) + "%" : t("cmp.new")})` }));
-    }
-    const sa = buildScore(now), sb = buildScore(next);
-    el.append(h("div", { text: t("cmp.score") }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
-    return el;
-  }
-  var gearOpts = { filter: "all", sort: "rarity", marks: /* @__PURE__ */ new Set(), query: "" };
-  function searchText(it) {
-    const b = baseOf(it);
-    return [
-      itemName(it),
-      baseName(b.id),
-      SLOT_LABEL(b.slot),
-      ...it.affixes.map((a) => affixLine(a)),
-      ...relicLines(it),
-      ...(it.stones ?? []).filter((k) => !!k).map((k) => stoneFullName(k))
-    ].join("\n").toLowerCase();
-  }
-  var matchesQuery = (text, q) => q.trim().toLowerCase().split(/\s+/).every((w2) => text.includes(w2));
-  function applySearch(grid) {
-    const q = gearOpts.query.trim();
-    let shown = 0;
-    for (const cell of grid.querySelectorAll(".cell[data-uid]")) {
-      const ok = !q || matchesQuery(cell.dataset.q ?? "", q);
-      cell.hidden = !ok;
-      if (ok) shown++;
-    }
-    for (const cell of grid.querySelectorAll(".cell.empty")) cell.hidden = !!q;
-    grid.querySelector(".nomatch")?.toggleAttribute("hidden", !q || shown > 0);
-  }
-  var SLOT_GROUP = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
-  var SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
-  function gearSig(s) {
-    let locks = 0;
-    for (const x of s.stash) if (x.locked) locks++;
-    for (const x of s.relics) if (x.locked) locks++;
-    for (const k of SLOTS) if (s.hero.equipment[k]?.locked) locks++;
-    return `${s.stashCap}:${s.relics.length}:${s.relics[s.relics.length - 1]?.uid ?? 0}:${locks}:${gearOpts.marks.size}:${Object.keys(s.codex).length}:${s.settings.upkeep}:${s.stashFull ?? false}`;
-  }
-  var upgradeCache = { rev: -1, level: -1, map: /* @__PURE__ */ new Map() };
-  function upgradeOf(st, item) {
-    if (upgradeCache.rev !== st.hero.rev || upgradeCache.level !== st.hero.level) upgradeCache = { rev: st.hero.rev, level: st.hero.level, map: /* @__PURE__ */ new Map() };
-    let v = upgradeCache.map.get(item.uid);
-    if (v === void 0) {
-      v = upgradeSlot(st, item);
-      upgradeCache.map.set(item.uid, v);
-    }
-    return v;
-  }
-  function chips(opts, cur, pick) {
-    const el = h("div", { class: "chips", attrs: { role: "radiogroup" } });
-    for (const [v, label, n] of opts) {
-      el.append(h(
-        "button",
-        { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur) }, on: { click: () => pick(v) } },
-        label,
-        n !== void 0 ? h("b", { text: String(n) }) : null
-      ));
-    }
-    return el;
-  }
-  var lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
-  function markWorn(cell, slot) {
-    cell.classList.add("wornc");
-    cell.append(h("span", { class: "worn", text: t("gear.worn") }));
-    const label = cell.getAttribute("aria-label") ?? "";
-    cell.setAttribute("aria-label", slot ? t("gear.wornAriaSlot", { label, slot: SLOT_LABEL(slot).toLowerCase() }) : t("gear.wornAria", { label }));
-    return cell;
-  }
-  var gridSep = (text) => h("div", { class: "gridsep", text });
-  function gearView(c) {
-    const st = c.state;
-    const eq = st.hero.equipment;
-    hideTip();
-    drag = null;
-    c.hold = false;
-    const root = h("div", { class: "gear" });
-    const endDrag = () => {
-      drag = null;
-      c.hold = false;
-      root.classList.remove("dragging");
-      root.querySelectorAll(".drop-ok, .over").forEach((e2) => e2.classList.remove("drop-ok", "over"));
-    };
-    for (const uid of [...gearOpts.marks]) if (!st.stash.some((x) => x.uid === uid)) gearOpts.marks.delete(uid);
-    const doll = h("div", { class: "doll" });
-    const hc = HERO_CAST[st.hero.cls];
-    const fig = h("div", { class: "fig" });
-    const art = hc ? spriteCanvas(hc.idle) : null;
-    if (art) {
-      art.className = "figart";
-      art.style.width = art.width * 3 + "px";
-      art.style.height = art.height * 3 + "px";
-      fig.append(art);
-    }
-    doll.append(fig);
-    const wb = eq.weapon ? baseOf(eq.weapon) : null;
+    for (const c0 of Object.values(CLASSES)) add(c0.name, className(c0.id));
+    add("Might", t("attr.str"));
+    add("Grace", t("attr.dex"));
+    add("Wit", t("attr.int"));
+    for (const s of Object.values(SKILLS)) add(s.name, skillName(s.id));
+    for (const s of Object.values(SUPPORTS)) add(s.name, supportName(s.id));
+    for (const n of Object.values(PASSIVES)) add(n.name, nodeName(n));
+    for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
+    for (const p3 of Object.values(COMPANIONS)) add(`Companion: ${p3.name}`, `${t("pets.title")}: ${companionName(p3.id)}`);
+    add("Map", t("atlas.maps"));
     for (const s of SLOTS) {
-      const it = eq[s];
-      const cell = itemCell(it, s, c.sel.slot === s && c.sel.uid === void 0, () => {
-        c.sel = { slot: s };
-        c.rerender();
-      });
-      if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
-        const bow = wb.kind === "bow";
-        cell.classList.add(bow ? "only" : "blocked");
-        cell.querySelector(".lbl").textContent = bow ? t("gear.quiverOnly") : t("gear.twoHand");
-        cell.title = bow ? t("gear.quiverTip") : t("gear.twoHandTip", { base: baseName(wb.id) });
-        cell.setAttribute("aria-label", t("gear.offhandAria", { why: cell.title }));
-        if (!bow) cell.tabIndex = -1;
-      }
-      cell.addEventListener("mouseenter", () => {
-        if (drag) return;
-        root.classList.add("slotpick");
-        for (const el of root.querySelectorAll(".stash .cell[data-uid]")) {
-          const x = ownedItem(st, Number(el.dataset.uid));
-          el.classList.toggle("fits", !!x && slotsFor(baseOf(x)).includes(s));
-        }
-      });
-      cell.addEventListener("mouseleave", () => {
-        root.classList.remove("slotpick");
-        root.querySelectorAll(".fits").forEach((e2) => e2.classList.remove("fits"));
-      });
-      if (it) {
-        if (it.locked) cell.append(lockBadge());
-        withTip(cell, c, () => itemCard(it, c));
-        cell.draggable = true;
-        cell.addEventListener("dragstart", (e2) => {
-          drag = { slot: s };
-          c.hold = true;
-          hideTip();
-          root.classList.add("dragging");
-          e2.dataTransfer?.setData("text/plain", "slot:" + s);
-          if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
-        });
-        cell.addEventListener("dragend", endDrag);
-      }
-      cell.addEventListener("dragover", (e2) => {
-        const it2 = drag?.uid !== void 0 ? ownedItem(st, drag.uid) : void 0;
-        if (it2 && slotsFor(baseOf(it2)).includes(s) && !canEquip(st, it2, s)) {
-          e2.preventDefault();
-          cell.classList.add("over");
-        }
-      });
-      cell.addEventListener("dragleave", () => cell.classList.remove("over"));
-      cell.addEventListener("drop", (e2) => {
-        e2.preventDefault();
-        const uid = drag?.uid;
-        endDrag();
-        if (uid !== void 0) c.act((x) => {
-          const err = equip(x, uid, s);
-          if (!err) c.sel = { slot: s };
-          return err;
-        });
-      });
-      doll.append(cell);
+      const it = st.hero.equipment[s];
+      if (it) add(itemLabel(it), itemName(it));
     }
-    const ownedCell = (it, markable) => {
-      const cell = itemCell(it, null, c.sel.uid === it.uid, () => {
-        c.sel = { uid: it.uid };
-        c.rerender();
-      });
-      if (markable) {
-        cell.addEventListener("click", (e2) => {
-          if (!e2.shiftKey && !e2.ctrlKey && !e2.metaKey) return;
-          e2.stopImmediatePropagation();
-          if (it.locked) {
-            c.toast(t("gear.noMarkLocked"));
-            return;
-          }
-          if (gearOpts.marks.has(it.uid)) gearOpts.marks.delete(it.uid);
-          else gearOpts.marks.add(it.uid);
-          c.rerender();
-        }, { capture: true });
-        if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
-      }
-      cell.dataset.uid = String(it.uid);
-      cell.dataset.q = searchText(it);
-      cell.addEventListener("mouseenter", () => {
-        if (drag) return;
-        const targets = slotsFor(baseOf(it));
-        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
-        root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
-      });
-      cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e2) => e2.classList.remove("cmp")));
-      if (it.locked) cell.append(lockBadge());
-      if (upgradeOf(st, it)) cell.classList.add("upg");
-      else if (levelReq(it) > st.hero.level) cell.classList.add("req");
-      withTip(cell, c, () => {
-        const targets = slotsFor(baseOf(it));
-        const cmp = upgradeOf(st, it) ?? targets.find((t2) => !eq[t2]) ?? targets[0];
-        const worn = eq[cmp];
-        return h(
-          "div",
-          { class: "tipcols" },
-          itemCard(it, c, { compareSlot: cmp }),
-          worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: t("gear.equippedLbl") }), itemCard(worn, null)) : null
-        );
-      });
-      cell.draggable = true;
-      cell.addEventListener("dragstart", (e2) => {
-        drag = { uid: it.uid };
-        c.hold = true;
-        hideTip();
-        root.classList.add("dragging");
-        for (const t2 of slotsFor(baseOf(it))) if (!canEquip(st, it, t2)) root.querySelector(`.doll [data-slot="${t2}"]`)?.classList.add("drop-ok");
-        e2.dataTransfer?.setData("text/plain", "stash:" + it.uid);
-        if (e2.dataTransfer) e2.dataTransfer.effectAllowed = "move";
-      });
-      cell.addEventListener("dragend", endDrag);
-      return cell;
-    };
-    const ups = new Set(st.stash.filter((it) => upgradeOf(st, it)).map((it) => it.uid));
-    const caseUps = st.relics.filter((it) => upgradeOf(st, it)).length;
-    const groupOf = (it) => SLOT_GROUP[baseOf(it).slot] ?? "all";
-    const inFilter = (it, f) => f === "all" || (f === "upgrades" ? ups.has(it.uid) : f === "sockets" ? emptySockets(it) > 0 : groupOf(it) === f);
-    const count = (f) => f === "relics" ? st.relics.length : st.stash.filter((it) => inFilter(it, f)).length;
-    const wornEmpty = SLOTS.filter((s) => eq[s] && emptySockets(eq[s]) > 0);
-    const relicsTab = gearOpts.filter === "relics";
-    const grid = h("div", { class: `stash${relicsTab ? " codex" : ""}` });
-    if (relicsTab) {
-      const worn = new Map(SLOTS.map((s) => eq[s]).filter((x) => !!x?.relic).map((x) => [x.relic, x]));
-      for (const def2 of Object.values(RELICS).sort((a, b) => a.level - b.level || relicName(a.id).localeCompare(relicName(b.id), lang()))) {
-        const own = st.relics.find((x) => x.relic === def2.id);
-        const seen = st.codex[def2.id] ?? 0;
-        if (own) {
-          grid.append(ownedCell(own, false));
-          continue;
-        }
-        const w2 = worn.get(def2.id);
-        if (w2) {
-          const ws = SLOTS.find((s) => eq[s] === w2);
-          const cell = markWorn(itemCell(w2, null, false, () => {
-            c.sel = { slot: ws };
-            c.rerender();
-          }), ws);
-          withTip(cell, c, () => itemCard(w2, null));
-          grid.append(cell);
-          continue;
-        }
-        const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? t("gear.ghostAria", { name: relicName(def2.id), n: seen }) : t("gear.unknownRelicAria") } });
-        if (seen) ghost.append(itemIcon({ uid: -1, base: def2.base, ilvl: def2.level, rarity: "relic", affixes: [], relic: def2.id }), h("span", { class: "cnt num", text: `x${seen}` }));
-        else ghost.append(h("span", { class: "q", text: "?" }));
-        withTip(ghost, c, () => h(
-          "div",
-          { class: "card item" },
-          h("div", { class: "name relic", text: seen ? relicName(def2.id) : t("gear.unknownRelic") }),
-          h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : def2.season ? t("hollow.onlyTip") : t("gear.dropsFrom", { n: def2.level }) }),
-          seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(def2.id) }) : null
-        ));
-        grid.append(ghost);
-      }
-    } else {
-      const shown = st.stash.filter((it) => inFilter(it, gearOpts.filter));
-      const byRarity = (a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
-      shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b) : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b) : byRarity);
-      const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
-      const worn = gearOpts.filter === "sockets" ? wornEmpty : grouped ? SLOTS.filter((s) => eq[s] && groupOf(eq[s]) === gearOpts.filter) : [];
-      if (worn.length) {
-        grid.append(gridSep(t("gear.wornSep")));
-        for (const s of worn) {
-          const w2 = eq[s];
-          const cell = markWorn(itemCell(w2, null, c.sel.slot === s && c.sel.uid === void 0, () => {
-            c.sel = { slot: s };
-            c.rerender();
-          }), s);
-          if (w2.locked) cell.append(lockBadge());
-          withTip(cell, c, () => itemCard(w2, c));
-          grid.append(cell);
-        }
-        grid.append(gridSep(t("gear.inStash", { n: shown.length })));
-      }
-      for (const it of shown) grid.append(ownedCell(it, true));
-      if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
-      if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: t("gear.stashEmpty") }));
-      else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? t("gear.noUpgrades") : t("gear.noneHere") }));
-      if (shown.length) {
-        grid.append(h("div", { class: "muted nomatch", style: "grid-column:1/-1;padding:6px 0", text: t("gear.noMatch") }));
-        applySearch(grid);
-      }
-    }
-    grid.addEventListener("dragover", (e2) => {
-      if (drag?.slot) {
-        e2.preventDefault();
-        grid.classList.add("over");
-      }
-    });
-    grid.addEventListener("dragleave", () => grid.classList.remove("over"));
-    grid.addEventListener("drop", (e2) => {
-      e2.preventDefault();
-      const s = drag?.slot;
-      endDrag();
-      if (s) c.act((x) => unequip(x, s));
-    });
-    const sort = h("select", { attrs: { "aria-label": t("gear.sortAria") } });
-    for (const [v, label] of [["rarity", t("gear.sortRarity")], ["level", t("gear.sortLevel")], ["slot", t("gear.sortSlot")]]) {
-      const o = h("option", { text: label, attrs: { value: v } });
-      if (gearOpts.sort === v) o.selected = true;
-      sort.append(o);
-    }
-    sort.addEventListener("change", () => {
-      gearOpts.sort = sort.value;
-      c.rerender();
-    });
-    const full = st.stash.length >= st.stashCap;
-    const room = stashRoomCost(st);
-    const roomBtn = room === null ? null : h("button", {
-      class: "btn alt small",
-      text: t("gear.roomBtn", { n: STASH_STEP }),
-      attrs: st.dust >= room ? {} : { disabled: "" },
-      title: t("gear.roomTip", { cost: fmt(room), max: STASH_MAX }),
-      on: { click: () => c.act(buyStashRoom, t("gear.roomToast", { n: st.stashCap + STASH_STEP })) }
-    });
-    const found = Object.keys(st.codex).length, total = Object.keys(RELICS).length;
-    const head = relicsTab ? h("h3", { class: "split" }, h("span", { text: t("gear.codex") }), h("span", { class: "num", title: t("gear.codexTip"), text: t("gear.codexCount", { found, total, n: codexRarity(st) }) })) : h("h3", { class: "split" }, h("span", { text: t("gear.stash") }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
-    const note = relicsTab ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("gear.caseNote") }) : st.stashFull ? h(
-      "div",
-      { class: "warnbar", attrs: { role: "status" } },
-      glyph("forge", 14),
-      h("span", { text: st.settings.upkeep ? t("gear.fullUpkeep") : t("gear.fullNoUpkeep") })
-    ) : full && st.settings.upkeep ? h(
-      "div",
-      { class: "note", style: "margin-bottom:8px" },
-      glyph("forge", 14),
-      h("span", { text: t("gear.fullNote") })
-    ) : null;
-    const search = h("input", { class: "search", attrs: { type: "search", placeholder: t("gear.search"), "aria-label": t("gear.searchAria"), spellcheck: "false" } });
-    search.value = gearOpts.query;
-    search.addEventListener("input", () => {
-      gearOpts.query = search.value;
-      applySearch(grid);
-    });
-    search.addEventListener("focus", () => {
-      c.hold = true;
-    });
-    search.addEventListener("blur", () => {
-      c.hold = false;
-    });
-    search.addEventListener("keydown", (e2) => {
-      if (e2.key === "Escape" && search.value) {
-        e2.stopPropagation();
-        e2.preventDefault();
-        search.value = gearOpts.query = "";
-        applySearch(grid);
-      }
-    });
-    const filters = ["all", "upgrades", "weapons", "armour", "jewellery", "sockets", "relics"].filter((f) => f !== "sockets" || gearOpts.filter === "sockets" || count("sockets") > 0 || wornEmpty.length > 0);
-    const stashCard = h(
-      "div",
-      { class: "card" },
-      head,
-      note,
-      h(
-        "div",
-        { class: "row", style: "margin-bottom:8px;justify-content:space-between;flex-wrap:wrap;gap:6px" },
-        chips(
-          filters.map((f) => [f, t(`gear.${f}`), f === "sockets" ? count(f) + wornEmpty.length : count(f)]),
-          gearOpts.filter,
-          (v) => {
-            gearOpts.filter = v;
-            c.sel = {};
-            c.rerender();
-          }
-        ),
-        relicsTab ? null : h("div", { class: "row", style: "gap:6px" }, search, sort)
-      ),
-      grid
-    );
-    const free = (xs) => xs.filter((x) => !x.locked);
-    const plain = free(st.stash.filter((x) => x.rarity === "plain")), ench = free(st.stash.filter((x) => x.rarity === "enchanted"));
-    const old = outdatedItems(st);
-    const marked = st.stash.filter((x) => gearOpts.marks.has(x.uid));
-    const bulk = (label, xs, title, key) => h("button", {
-      class: "btn alt small",
-      text: t("common.count", { label, n: xs.length }),
-      title,
-      attrs: { ...xs.length ? {} : { disabled: "" }, ...key ? { "data-key": key } : {} },
-      on: { click: () => c.act((s) => {
-        const n = salvage(s, xs.map((x) => x.uid));
-        for (const x of xs) gearOpts.marks.delete(x.uid);
-        c.sel = {};
-        c.toast(t("gear.salvaged", { n }));
-      }) }
-    });
-    const anvil = h("div", { class: "anvil", title: t("gear.anvilTip"), attrs: { "aria-label": t("gear.anvilAria") } }, glyph("forge", 18), h("span", { text: t("gear.salvage") }));
-    anvil.addEventListener("dragover", (e2) => {
-      if (drag?.uid !== void 0) {
-        e2.preventDefault();
-        anvil.classList.add("over");
-      }
-    });
-    anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
-    anvil.addEventListener("drop", (e2) => {
-      e2.preventDefault();
-      const uid = drag?.uid;
-      endDrag();
-      if (uid !== void 0) c.act((x) => {
-        if (!salvage(x, [uid])) return t("gear.lockedNoSalvage");
-        c.sel = {};
-      });
-    });
-    const upCount = ups.size + caseUps;
-    const tools = h(
-      "div",
-      { class: "row tools" },
-      anvil,
-      h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
-      h("button", {
-        class: "btn small",
-        text: t("gear.equipUps", { n: upCount }),
-        title: t("gear.equipUpsTip"),
-        attrs: upCount ? {} : { disabled: "" },
-        on: { click: () => c.act((s) => {
-          const n = equipUpgrades(s);
-          c.toast(n ? tn("gear.equippedN", n) : t("gear.nothingToEquip"));
-        }) }
-      }),
-      bulk(t("gear.salvageOutdated"), old, t("gear.salvageOutdatedTip")),
-      bulk(t("gear.salvagePlain"), plain, t("gear.salvagePlainTip")),
-      bulk(t("gear.salvageEnchanted"), ench, t("gear.salvageEnchantedTip")),
-      marked.length ? bulk(t("gear.salvageMarked"), marked, t("gear.salvageMarkedTip")) : null,
-      marked.length ? h("button", { class: "btn alt small", text: t("gear.clearMarks"), on: { click: () => {
-        gearOpts.marks.clear();
-        c.rerender();
-      } } }) : null
-    );
-    const selItem = c.sel.uid !== void 0 ? ownedItem(st, c.sel.uid) : void 0;
-    const selSlot = c.sel.slot;
-    let pop = null;
-    const close = h("button", { class: "x popx", text: "x", title: t("gear.putBack"), attrs: { "aria-label": t("common.close"), "data-esc": "" }, on: { click: () => {
-      c.sel = {};
-      c.rerender();
-    } } });
-    const lockBtn = (it) => h("button", {
-      class: "btn alt",
-      text: it.locked ? t("gear.unlock") : t("gear.lock"),
-      attrs: { "data-key": "l" },
-      title: it.locked ? t("gear.unlockTip") : t("gear.lockTip"),
-      on: { click: () => c.act((s) => setLocked(s, it.uid, !it.locked)) }
-    });
-    if (selItem) {
-      const targets = slotsFor(baseOf(selItem));
-      const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t2) => !eq[t2]) ?? targets[0] : targets[0]);
-      const card = itemCard(selItem, c, { compareSlot: cmp });
-      const row = h("div", { class: "row popacts" });
-      targets.forEach((ts, i) => {
-        const err = canEquip(st, selItem, ts);
-        row.append(h("button", {
-          class: "btn",
-          text: targets.length > 1 ? t(ts === "ring1" ? "gear.equipLeft" : "gear.equipRight") : t("gear.equip"),
-          attrs: { ...err ? { disabled: "" } : {}, ...i === 0 ? { "data-key": "e" } : {} },
-          title: err ? tErr(err) : i === 0 ? t("gear.equipKey") : "",
-          on: { click: () => c.act((s) => {
-            const e2 = equip(s, selItem.uid, ts);
-            if (!e2) c.sel = { slot: ts };
-            return e2;
-          }) }
-        }));
-      });
-      row.append(lockBtn(selItem));
-      row.append(h("button", {
-        class: "btn alt",
-        text: t("gear.salvageFor", { n: salvageValue(selItem) }),
-        title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
-        attrs: { "data-key": "s", ...selItem.locked ? { disabled: "" } : {} },
-        on: { click: () => c.act((s) => {
-          salvage(s, [selItem.uid]);
-          c.sel = {};
-        }) }
-      }));
-      card.append(row);
-      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(selItem) } }, card, close);
-    } else if (selSlot && eq[selSlot]) {
-      const it = eq[selSlot];
-      const card = itemCard(it, c);
-      card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: t("gear.unequip"), title: it.relic ? t("gear.toCase") : t("gear.toStash"), on: { click: () => c.act((s) => unequip(s, selSlot)) } }), lockBtn(it)));
-      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(it) } }, card, close);
-    }
-    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": t("gear.helpAria") }, title: t("gear.help") });
-    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("gear.equippedHead") }), help), doll);
-    root.append(equipped, h("div", { class: "col" }, stashCard, tools));
-    root.addEventListener("click", (e2) => {
-      if ((c.sel.uid !== void 0 || c.sel.slot) && !e2.target.closest(".cell, .gpop, button, select, .anvil")) {
-        c.sel = {};
-        c.rerender();
-      }
-    });
-    if (pop) {
-      const p3 = pop;
-      requestAnimationFrame(() => {
-        const body = root.closest(".body");
-        const anchor = root.querySelector(".cell.sel");
-        if (!body || !anchor) return;
-        body.append(p3);
-        placeBeside(p3, anchor, body);
-      });
-    }
-    return root;
+    return (src) => map.get(src) ?? src;
   }
-  function placeBeside(el, anchor, body) {
-    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
-    const w2 = el.offsetWidth, ht = el.offsetHeight;
-    let x = ar.right - br.left + body.scrollLeft + 10;
-    if (x + w2 > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w2 - 10;
-    x = Math.max(body.scrollLeft + 4, x);
-    let y = ar.top - br.top + body.scrollTop - 6;
-    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
-    el.style.left = x + "px";
-    el.style.top = y + "px";
-  }
-  var pctDelta = (a, b) => b / Math.max(0.01, a) - 1;
-  var fmtPct = (d) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
-  function skillsView(c) {
-    const hero = c.state.hero;
-    const cur = c.sheet();
-    const colourOf = (tags) => tags.includes("spell") ? "#3a7bff" : tags.some((t2) => t2 === "projectile" || t2 === "bow") ? "#3fbf5f" : tags.some((t2) => t2 === "attack" || t2 === "melee") ? "#e5383b" : "#e6d9b8";
-    const gem = (colour, big = false, size = big ? 36 : 26) => h("span", { class: `gem${big ? " big" : ""}`, style: `color:${colour}` }, glyph("gem", size), h("span", { class: "shine" }, glyph("gemshine", size)));
-    const skills = h("div", { class: "list" });
-    for (const s of Object.values(SKILLS)) {
-      const locked = s.level > hero.level;
-      const on = hero.skill === s.id;
-      let meta;
-      if (locked) meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
-      else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: t("skills.dps", { dps: fmt(cur.skill.packDps) }) });
-      else {
-        const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
-        const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
-        meta = h(
-          "span",
-          { class: "col", style: "gap:1px;align-items:flex-end" },
-          h("span", { class: "num", style: "font-weight:700", text: fmt(sh.skill.packDps) }),
-          h("span", { class: `delta ${d >= 0 ? "up" : "down"}`, text: fmtPct(d) })
-        );
-      }
-      skills.append(h(
-        "div",
-        {
-          class: `li${on ? " on" : ""}${locked ? " locked" : ""}`,
-          attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
-          title: locked ? t("skills.unlocksAt", { n: s.level }) : on ? t("skills.main") : t("skills.packTip"),
-          on: { click: () => {
-            if (!locked && !on) c.act((st) => setSkill(st, s.id), t("skills.selected", { name: skillName(s.id) }));
-          } }
-        },
-        h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: skillName(s.id) })),
-        h("div", { class: "meta" }, meta),
-        h("div", { class: "ds", text: skillBlurb(s.id) }),
-        h("div", { class: "tags" }, ...s.tags.map((x) => h("span", { class: "tag", text: tagName(x) })), h("span", { class: "tag", text: t("skills.eff", { n: s.effectiveness }) }))
-      ));
-    }
-    const slots = supportSlots(hero.level);
-    const active = hero.supports.slice(0, slots);
-    const full = active.length >= slots;
-    const trial = (ids) => deriveSheet({ ...hero, supports: ids, rev: -1 }).skill.packDps;
-    const rows = Object.values(SUPPORTS).map((s) => {
-      const locked = s.level > hero.level;
-      const on = active.includes(s.id);
-      const fits = !s.requires.length || s.requires.some((t2) => cur.skill.tags.includes(t2));
-      let d = null, swap;
-      if (!locked && fits) {
-        if (on) d = pctDelta(cur.skill.packDps, trial(active.filter((x) => x !== s.id)));
-        else if (!full) d = pctDelta(cur.skill.packDps, trial([...active, s.id]));
-        else for (const out of active) {
-          const v = pctDelta(cur.skill.packDps, trial(active.map((x) => x === out ? s.id : x)));
-          if (d === null || v > d) {
-            d = v;
-            swap = out;
-          }
-        }
-      }
-      return { s, on, locked, fits, d, swap };
-    });
-    const rank = (r3) => r3.on ? 0 : r3.locked ? 3 : r3.fits ? 1 : 2;
-    rows.sort((a, b) => rank(a) - rank(b) || (a.on ? (a.d ?? 0) - (b.d ?? 0) : (b.d ?? -9) - (a.d ?? -9)) || a.s.level - b.s.level);
-    const sups = h("div", { class: "list" });
-    for (const r3 of rows) {
-      const { s, on, locked, fits, d, swap } = r3;
-      let meta, tip;
-      const needs = s.requires.map((x) => tagName(x)).join(t("common.or"));
-      if (locked) {
-        meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
-        tip = t("skills.unlocksAt", { n: s.level });
-      } else if (!fits) {
-        meta = h("span", { class: "tag", text: t("skills.noFit") });
-        tip = t("skills.needs", { tags: needs });
-      } else if (on) {
-        meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) }));
-        tip = t("skills.clickRemove", { pct: fmtPct(d ?? 0) });
-      } else {
-        const good = (d ?? 0) > 0;
-        const swapName = swap && SUPPORTS[swap] ? supportName(swap) : swap ?? "";
-        meta = h(
-          "span",
-          { class: "col", style: "gap:1px;align-items:flex-end" },
-          h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
-          swap ? h("span", { class: "muted", style: "font-size:8px", text: t("skills.for", { name: swapName }) }) : null
-        );
-        tip = swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) });
-      }
-      sups.append(h(
-        "div",
-        { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
-          if (locked || !fits) return;
-          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)), t("skills.removed", { name: supportName(s.id) }));
-          else if (!full) c.act((st) => setSupports(st, [...active, s.id]), t("skills.added", { name: supportName(s.id) }));
-          else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), t("skills.swapped", { out: supportName(swap), name: supportName(s.id) }));
-        } } },
-        h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: supportName(s.id) })),
-        h("div", { class: "meta" }, meta),
-        h("div", { class: "ds", text: supportBlurb(s.id) + (s.requires.length ? "  " + t("skills.needsShort", { tags: needs }) : "") })
-      ));
-    }
-    const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
-    const main = SKILLS[hero.skill];
-    const links = h(
-      "div",
-      { class: "links" },
-      h("div", { class: "sock main", title: main ? skillBlurb(main.id) : "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main ? skillName(main.id) : hero.skill }))
-    );
-    [1, 1, 8, 18, 32].forEach((lvl, i) => {
-      links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
-      const id = active[i];
-      const sup = id ? SUPPORTS[id] : void 0;
-      if (sup) {
-        const row = rows.find((r3) => r3.s.id === id);
-        links.append(h(
-          "button",
-          {
-            class: "sock",
-            title: t("skills.sockTip", { name: supportName(sup.id), blurb: supportBlurb(sup.id) }) + (row?.d != null ? " " + t("skills.sockWorth", { pct: fmtPct(-row.d) }) : ""),
-            on: { click: () => c.act((st) => setSupports(st, active.filter((x) => x !== id)), t("skills.removed", { name: supportName(sup.id) })) }
-          },
-          gem(colourOf(sup.requires)),
-          h("b", { text: supportName(sup.id) })
-        ));
-      } else if (i < slots) {
-        links.append(h("div", { class: "sock empty", title: t("skills.emptyTip") }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("skills.empty") })));
-      } else {
-        links.append(h("div", { class: "sock locked", title: t("skills.opensAt", { n: lvl }) }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("common.level", { n: lvl }) })));
-      }
-    });
-    const bar2 = h("div", { class: "card socketbar" }, h("h3", { text: t("skills.links") }), links);
-    requestAnimationFrame(() => {
-      for (const b of links.querySelectorAll(".sock b")) if (b.scrollWidth > b.clientWidth + 1) b.classList.add("long");
-    });
-    return h("div", { class: "col", style: "gap:14px" }, bar2, h(
-      "div",
-      { class: "grid2" },
-      h("div", null, h("div", { class: "sec", text: t("skills.mainSkill") }), skills),
-      h("div", null, h(
-        "div",
-        { class: "sec" },
-        t("skills.supports") + " ",
-        h("span", { class: "num", text: `${active.length}/${slots}` }),
-        next ? h("span", { class: "muted", text: t("skills.nextSlot", { n: next }) }) : null
-      ), sups)
-    ));
-  }
-  var openActs = /* @__PURE__ */ new Set();
-  function worldView(c) {
-    const st = c.state;
-    const root = h("div", { class: "col", style: "gap:14px" });
-    const inMaps = st.activity.mode === "map";
-    const push = h(
-      "button",
-      {
-        class: `toggle${st.activity.autoPush ? " on" : ""}`,
-        attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
-        on: { click: () => c.act((s) => {
-          s.activity.autoPush = !s.activity.autoPush;
-        }) }
-      },
-      h("i"),
-      h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") }))
-    );
-    root.append(push);
-    if (hollowNight(st)) root.append(hollowCard(c));
-    root.append(contractBoard(c), shrineCard(c));
-    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
-    const hc = HERO_CAST[st.hero.cls];
-    for (const act of ACTS) {
-      if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
-      const done = !!st.world.clears[act.zones[act.zones.length - 1]];
-      const current2 = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
-      if (done && !current2 && !openActs.has(act.id)) {
-        const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
-        root.append(h(
-          "div",
-          { class: "card act folded" },
-          h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
-          h(
-            "div",
-            { class: "row" },
-            h("span", { class: "tag done", text: t("world.cleared") }),
-            h("span", { class: "muted grow", text: t("world.folded", { places: act.zones.length, clears: fmt(total) }) }),
-            h("button", { class: "btn alt small", text: t("world.openRoad"), on: { click: () => {
-              openActs.add(act.id);
-              c.rerender();
-            } } })
-          )
-        ));
-        continue;
-      }
-      const road = h("div", { class: "road" });
-      const stop = (id, n) => {
-        const z = ZONES[id];
-        const open = st.world.unlocked.includes(id);
-        const here = st.activity.mode === "zone" && st.activity.zone === id;
-        const clears = st.world.clears[id] ?? 0;
-        const thumb = scenery(z, 112, 62);
-        thumb.className = "thumb";
-        const name = zoneName(id);
-        const el = h(
-          "button",
-          {
-            class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
-            attrs: { "aria-label": open ? t("world.stopAria", { name, level: z.level, clears }) : t("world.stopAriaLocked", { name, level: z.level }) },
-            title: open ? z.story ? zoneStory(id) : name : t("world.notReached"),
-            on: { click: () => {
-              if (open && !here) c.act((s) => setZone(s, id), t("world.travelling", { zone: name }));
-            } }
-          },
-          h(
-            "div",
-            { class: "pic" },
-            thumb,
-            h("span", { class: "num-badge", text: n }),
-            z.boss ? h("span", { class: "flag boss", text: t("world.boss") }) : z.trial ? h("span", { class: "flag trial", text: t("world.trial") }) : null,
-            here && hc ? (() => {
-              const a = spriteCanvas(hc.idle);
-              if (a) a.className = "hero-mark";
-              return a;
-            })() : null,
-            open ? null : h("span", { class: "lock" }, glyph("block", 18))
-          ),
-          h("b", { text: name }),
-          h("span", { class: "meta" }, h("span", { class: "tag", text: t("world.lvl", { n: z.level }) }), h("span", { text: open ? tn("world.clears", clears) : t("world.locked") }))
-        );
-        return el;
-      };
-      act.zones.forEach((id, i) => {
-        if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
-        road.append(stop(id, String(i + 1)));
-      });
-      const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: t("world.offRoad") }), stop(act.trial, "T"));
-      root.append(h(
-        "div",
-        { class: "card act" },
-        h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
-        h("div", { class: "story muted", text: done ? actOutro(act.id) : actIntro(act.id) }),
-        road,
-        trial,
-        done && !current2 ? h(
-          "div",
-          { class: "row", style: "justify-content:flex-end;margin-top:8px" },
-          h("button", { class: "btn alt small", text: t("world.foldRoad"), on: { click: () => {
-            openActs.delete(act.id);
-            c.rerender();
-          } } })
-        ) : null
-      ));
-    }
-    requestAnimationFrame(() => {
-      const here = root.querySelector(".stop.here");
-      const body = root.closest(".body");
-      if (here && body && body.scrollTop === 0) {
-        const top = here.getBoundingClientRect().top - body.getBoundingClientRect().top;
-        if (top > body.clientHeight - 60) body.scrollTop = top - 80;
-      }
-    });
-    return root;
-  }
-  var CONTRACT_GLYPH = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem", lanterns: "pumpkin" };
-  var hollowSig = (s) => hollowNight(s) ? `${lanternsSnuffed(s)}:${hollowNightsLeft(s)}:${!!s.codex[HOLLOW_RELIC]}:${s.companions[HOLLOW_PET] !== void 0}` : "";
-  function hollowCard(c) {
-    const st = c.state;
-    const find = (name, found) => h(
-      "div",
-      { class: "row", style: "gap:8px" },
-      h("span", { class: `tag${found ? " done" : ""}`, text: found ? t("hollow.found") : t("hollow.notYet") }),
-      h("span", { text: name })
-    );
-    return h(
-      "div",
-      { class: "card hollow" },
-      h(
-        "h3",
-        { class: "split" },
-        h("span", { class: "row", style: "gap:6px" }, glyph("pumpkin", 16), h("span", { text: t("hollow.title") })),
-        h("span", { class: "num", text: tn("hollow.nights", hollowNightsLeft(st)) })
-      ),
-      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("hollow.blurb") }),
-      kv([[t("hollow.snuffed"), fmt(lanternsSnuffed(st))]]),
-      h(
-        "div",
-        { class: "col", style: "gap:4px;margin-top:6px" },
-        find(relicName(HOLLOW_RELIC), !!st.codex[HOLLOW_RELIC]),
-        find(companionName(HOLLOW_PET), st.companions[HOLLOW_PET] !== void 0)
-      ),
-      endgameOpen(st) ? h("div", { class: "muted", style: "font-size:12px;margin-top:8px", text: t("hollow.litMaps") }) : null
-    );
-  }
-  function contractBoard(c) {
-    const st = c.state;
-    const cost = rerollCost(st);
-    const rows = h("div", { class: "contracts" });
-    st.contracts.list.forEach((k, i) => {
-      const done = k.n >= k.target;
-      rows.append(h(
-        "div",
-        { class: `contract${done ? " done" : ""}` },
-        h("span", { class: "cg" }, glyph(CONTRACT_GLYPH[k.kind], 16)),
-        h(
-          "div",
-          { class: "grow col", style: "gap:3px;min-width:0" },
-          h("b", { text: contractGoal(k.kind, k.target, k.tier) }),
-          h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, k.n / k.target * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
-          h("span", { class: "muted", style: "font-size:12px", text: t("contracts.reward", { text: rewardLine(k, st) }) })
-        ),
-        done ? h("button", { class: "btn small", text: t("contracts.claim"), on: { click: () => c.act((s) => claimContract(s, i), t("contracts.claimed")) } }) : h("button", {
-          class: "btn alt small",
-          text: t("contracts.reroll", { cost: fmt(cost) }),
-          title: t("contracts.rerollTip", { cost: fmt(cost) }),
-          attrs: st.dust >= cost ? {} : { disabled: "" },
-          on: { click: () => c.act((s) => rerollContract(s, i)) }
-        })
-      ));
-    });
-    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("contracts.title") }), h("span", { class: "num", text: t("contracts.done", { n: fmt(st.contracts.done) }) })), rows);
-  }
-  function rewardLine(k, s) {
-    const parts = [t("reward.dust", { n: contractDust(s, k) })];
-    if (k.currency && CURRENCIES[k.currency[0]]) parts.push(t("reward.currency", { n: k.currency[1], name: currencyName(k.currency[0]) }));
-    if (k.extra) parts.push(t(`reward.${k.extra}`));
-    return parts.join(t("common.list"));
-  }
-  function shrineSig(s) {
-    const cost = blessingCost(s);
-    return `${BLESSINGS.map((b) => Math.ceil(Math.max(0, (s.blessings[b.id] ?? 0) - s.simTo) / 6e4)).join(",")}:${s.dust >= cost}:${spareOrbValue(s) + s.dust >= cost}:${s.shrine.keep.join(",")}:${s.shrine.orbs}`;
-  }
-  var BLESS_GLYPH = { insight: "regen", fortune: "gem", plenty: "gear", hoard: "forge" };
-  function shrineCard(c) {
-    const st = c.state;
-    const cost = blessingCost(st);
-    const spare = spareOrbValue(st);
-    const canPay = st.dust + (st.shrine.orbs ? spare : 0) >= cost;
-    const rows = h("div", { class: "contracts" });
-    for (const b of BLESSINGS) {
-      const left = Math.max(0, (st.blessings[b.id] ?? 0) - st.simTo);
-      const keep = st.shrine.keep.includes(b.id);
-      rows.append(h(
-        "div",
-        { class: `contract bless${left ? " done" : ""}` },
-        h("span", { class: "cg" }, glyph(BLESS_GLYPH[b.id] ?? "gem", 16)),
-        h(
-          "div",
-          { class: "grow col", style: "gap:2px;min-width:0" },
-          h("b", { text: t("shrine.line", { name: blessingName(b.id), text: blessingText(b.id, b.value) }) }),
-          h("span", { class: "muted", style: "font-size:12px", text: left ? t(keep ? "shrine.leftKept" : "shrine.left", { time: fmtDuration2(left) }) : keep ? t("shrine.keptUp") : t("shrine.notRunning") })
-        ),
-        h("button", {
-          class: `chip${keep ? " on" : ""}`,
-          attrs: { role: "switch", "aria-checked": String(keep) },
-          title: t("shrine.keepTip"),
-          on: { click: () => c.act((s) => {
-            setKeep(s, b.id, !keep);
-            if (!keep && !left) return bless(s, b.id);
-          }) }
-        }, t("shrine.keep")),
-        h("button", {
-          class: "btn small",
-          text: t("shrine.hour"),
-          title: t(st.shrine.orbs ? "shrine.hourTipOrbs" : "shrine.hourTip", { name: blessingName(b.id), cost: fmt(cost) }),
-          attrs: canPay ? {} : { disabled: "" },
-          on: { click: () => c.act((s) => bless(s, b.id), t("shrine.blessed", { name: blessingName(b.id) })) }
-        })
-      ));
-    }
-    const orbs = h(
-      "button",
-      {
-        class: `toggle${st.shrine.orbs ? " on" : ""}`,
-        attrs: { role: "switch", "aria-checked": String(st.shrine.orbs) },
-        on: { click: () => c.act((s) => {
-          s.shrine.orbs = !s.shrine.orbs;
-        }) }
-      },
-      h("i"),
-      h("span", null, h("b", { text: t("shrine.orbs") }), h("small", { text: t("shrine.orbsNote", { n: ORB_RESERVE, v: fmt(spare) }) }))
-    );
-    return h(
-      "div",
-      { class: "card" },
-      h("h3", { class: "split" }, h("span", { text: t("shrine.title") }), h("span", { class: "num", text: t("shrine.cost", { cost: fmt(cost) }) })),
-      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("shrine.note") }),
-      rows,
-      h("div", { style: "margin-top:8px" }, orbs)
-    );
-  }
+
+  // src/ui/log.ts
   var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
   var LOG_KINDS2 = { level: "var(--gold)", loot: "var(--r-enchanted)", death: "var(--ember)", zone: "var(--teal)", boss: "var(--violet)", info: "var(--paper2)" };
   var logFilter = "all";
@@ -12143,6 +11722,8 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     const hh = Math.floor(m4 / 60);
     return hh < 48 ? t("ago.h", { n: hh }) : t("ago.d", { n: Math.floor(hh / 24) });
   }
+
+  // src/ui/menu.ts
   function menuView(c) {
     const st = c.state;
     const keep = h("select");
@@ -12450,27 +12031,464 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
     if (r3.group) parts.push(t("rule.with", { group: groupName(r3.group) }));
     return t(r3.action === "keep" ? "rule.keep" : "rule.salvage", { what: parts.join(t("common.list")) });
   }
-  function sourceNames(st) {
-    const map = /* @__PURE__ */ new Map();
-    const add = (en, local) => {
-      if (!map.has(en)) map.set(en, local);
-    };
-    for (const c0 of Object.values(CLASSES)) add(c0.name, className(c0.id));
-    add("Might", t("attr.str"));
-    add("Grace", t("attr.dex"));
-    add("Wit", t("attr.int"));
-    for (const s of Object.values(SKILLS)) add(s.name, skillName(s.id));
-    for (const s of Object.values(SUPPORTS)) add(s.name, supportName(s.id));
-    for (const n of Object.values(PASSIVES)) add(n.name, nodeName(n));
-    for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
-    for (const p3 of Object.values(COMPANIONS)) add(`Companion: ${p3.name}`, `${t("pets.title")}: ${companionName(p3.id)}`);
-    add("Map", t("atlas.maps"));
-    for (const s of SLOTS) {
-      const it = st.hero.equipment[s];
-      if (it) add(itemLabel(it), itemName(it));
+
+  // src/ui/skills.ts
+  var pctDelta = (a, b) => b / Math.max(0.01, a) - 1;
+  var fmtPct = (d) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
+  function skillsView(c) {
+    const hero = c.state.hero;
+    const cur = c.sheet();
+    const colourOf = (tags) => tags.includes("spell") ? "#3a7bff" : tags.some((t2) => t2 === "projectile" || t2 === "bow") ? "#3fbf5f" : tags.some((t2) => t2 === "attack" || t2 === "melee") ? "#e5383b" : "#e6d9b8";
+    const gem = (colour, big = false, size = big ? 36 : 26) => h("span", { class: `gem${big ? " big" : ""}`, style: `color:${colour}` }, glyph("gem", size), h("span", { class: "shine" }, glyph("gemshine", size)));
+    const skills = h("div", { class: "list" });
+    for (const s of Object.values(SKILLS)) {
+      const locked = s.level > hero.level;
+      const on = hero.skill === s.id;
+      let meta;
+      if (locked) meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
+      else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: t("skills.dps", { dps: fmt(cur.skill.packDps) }) });
+      else {
+        const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
+        const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
+        meta = h(
+          "span",
+          { class: "col", style: "gap:1px;align-items:flex-end" },
+          h("span", { class: "num", style: "font-weight:700", text: fmt(sh.skill.packDps) }),
+          h("span", { class: `delta ${d >= 0 ? "up" : "down"}`, text: fmtPct(d) })
+        );
+      }
+      skills.append(h(
+        "div",
+        {
+          class: `li${on ? " on" : ""}${locked ? " locked" : ""}`,
+          attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
+          title: locked ? t("skills.unlocksAt", { n: s.level }) : on ? t("skills.main") : t("skills.packTip"),
+          on: { click: () => {
+            if (!locked && !on) c.act((st) => setSkill(st, s.id), t("skills.selected", { name: skillName(s.id) }));
+          } }
+        },
+        h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: skillName(s.id) })),
+        h("div", { class: "meta" }, meta),
+        h("div", { class: "ds", text: skillBlurb(s.id) }),
+        h("div", { class: "tags" }, ...s.tags.map((x) => h("span", { class: "tag", text: tagName(x) })), h("span", { class: "tag", text: t("skills.eff", { n: s.effectiveness }) }))
+      ));
     }
-    return (src) => map.get(src) ?? src;
+    const slots = supportSlots(hero.level);
+    const active = hero.supports.slice(0, slots);
+    const full = active.length >= slots;
+    const trial = (ids) => deriveSheet({ ...hero, supports: ids, rev: -1 }).skill.packDps;
+    const rows = Object.values(SUPPORTS).map((s) => {
+      const locked = s.level > hero.level;
+      const on = active.includes(s.id);
+      const fits = !s.requires.length || s.requires.some((t2) => cur.skill.tags.includes(t2));
+      let d = null, swap;
+      if (!locked && fits) {
+        if (on) d = pctDelta(cur.skill.packDps, trial(active.filter((x) => x !== s.id)));
+        else if (!full) d = pctDelta(cur.skill.packDps, trial([...active, s.id]));
+        else for (const out of active) {
+          const v = pctDelta(cur.skill.packDps, trial(active.map((x) => x === out ? s.id : x)));
+          if (d === null || v > d) {
+            d = v;
+            swap = out;
+          }
+        }
+      }
+      return { s, on, locked, fits, d, swap };
+    });
+    const rank = (r3) => r3.on ? 0 : r3.locked ? 3 : r3.fits ? 1 : 2;
+    rows.sort((a, b) => rank(a) - rank(b) || (a.on ? (a.d ?? 0) - (b.d ?? 0) : (b.d ?? -9) - (a.d ?? -9)) || a.s.level - b.s.level);
+    const sups = h("div", { class: "list" });
+    for (const r3 of rows) {
+      const { s, on, locked, fits, d, swap } = r3;
+      let meta, tip;
+      const needs = s.requires.map((x) => tagName(x)).join(t("common.or"));
+      if (locked) {
+        meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
+        tip = t("skills.unlocksAt", { n: s.level });
+      } else if (!fits) {
+        meta = h("span", { class: "tag", text: t("skills.noFit") });
+        tip = t("skills.needs", { tags: needs });
+      } else if (on) {
+        meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) }));
+        tip = t("skills.clickRemove", { pct: fmtPct(d ?? 0) });
+      } else {
+        const good = (d ?? 0) > 0;
+        const swapName = swap && SUPPORTS[swap] ? supportName(swap) : swap ?? "";
+        meta = h(
+          "span",
+          { class: "col", style: "gap:1px;align-items:flex-end" },
+          h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
+          swap ? h("span", { class: "muted", style: "font-size:8px", text: t("skills.for", { name: swapName }) }) : null
+        );
+        tip = swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) });
+      }
+      sups.append(h(
+        "div",
+        { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
+          if (locked || !fits) return;
+          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)), t("skills.removed", { name: supportName(s.id) }));
+          else if (!full) c.act((st) => setSupports(st, [...active, s.id]), t("skills.added", { name: supportName(s.id) }));
+          else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), t("skills.swapped", { out: supportName(swap), name: supportName(s.id) }));
+        } } },
+        h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: supportName(s.id) })),
+        h("div", { class: "meta" }, meta),
+        h("div", { class: "ds", text: supportBlurb(s.id) + (s.requires.length ? "  " + t("skills.needsShort", { tags: needs }) : "") })
+      ));
+    }
+    const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
+    const main = SKILLS[hero.skill];
+    const links = h(
+      "div",
+      { class: "links" },
+      h("div", { class: "sock main", title: main ? skillBlurb(main.id) : "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main ? skillName(main.id) : hero.skill }))
+    );
+    [1, 1, 8, 18, 32].forEach((lvl, i) => {
+      links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
+      const id = active[i];
+      const sup = id ? SUPPORTS[id] : void 0;
+      if (sup) {
+        const row = rows.find((r3) => r3.s.id === id);
+        links.append(h(
+          "button",
+          {
+            class: "sock",
+            title: t("skills.sockTip", { name: supportName(sup.id), blurb: supportBlurb(sup.id) }) + (row?.d != null ? " " + t("skills.sockWorth", { pct: fmtPct(-row.d) }) : ""),
+            on: { click: () => c.act((st) => setSupports(st, active.filter((x) => x !== id)), t("skills.removed", { name: supportName(sup.id) })) }
+          },
+          gem(colourOf(sup.requires)),
+          h("b", { text: supportName(sup.id) })
+        ));
+      } else if (i < slots) {
+        links.append(h("div", { class: "sock empty", title: t("skills.emptyTip") }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("skills.empty") })));
+      } else {
+        links.append(h("div", { class: "sock locked", title: t("skills.opensAt", { n: lvl }) }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("common.level", { n: lvl }) })));
+      }
+    });
+    const bar2 = h("div", { class: "card socketbar" }, h("h3", { text: t("skills.links") }), links);
+    requestAnimationFrame(() => {
+      for (const b of links.querySelectorAll(".sock b")) if (b.scrollWidth > b.clientWidth + 1) b.classList.add("long");
+    });
+    return h("div", { class: "col", style: "gap:14px" }, bar2, h(
+      "div",
+      { class: "grid2" },
+      h("div", null, h("div", { class: "sec", text: t("skills.mainSkill") }), skills),
+      h("div", null, h(
+        "div",
+        { class: "sec" },
+        t("skills.supports") + " ",
+        h("span", { class: "num", text: `${active.length}/${slots}` }),
+        next ? h("span", { class: "muted", text: t("skills.nextSlot", { n: next }) }) : null
+      ), sups)
+    ));
   }
+
+  // src/ui/world.ts
+  var openActs = /* @__PURE__ */ new Set();
+  function worldView(c) {
+    const st = c.state;
+    const root = h("div", { class: "col", style: "gap:14px" });
+    const inMaps = st.activity.mode === "map";
+    const push = h(
+      "button",
+      {
+        class: `toggle${st.activity.autoPush ? " on" : ""}`,
+        attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
+        on: { click: () => c.act((s) => {
+          s.activity.autoPush = !s.activity.autoPush;
+        }) }
+      },
+      h("i"),
+      h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") }))
+    );
+    root.append(push);
+    if (hollowNight(st)) root.append(hollowCard(c));
+    root.append(contractBoard(c), shrineCard(c));
+    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
+    const hc = HERO_CAST[st.hero.cls];
+    for (const act of ACTS) {
+      if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
+      const done = !!st.world.clears[act.zones[act.zones.length - 1]];
+      const current2 = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
+      if (done && !current2 && !openActs.has(act.id)) {
+        const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
+        root.append(h(
+          "div",
+          { class: "card act folded" },
+          h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
+          h(
+            "div",
+            { class: "row" },
+            h("span", { class: "tag done", text: t("world.cleared") }),
+            h("span", { class: "muted grow", text: t("world.folded", { places: act.zones.length, clears: fmt(total) }) }),
+            h("button", { class: "btn alt small", text: t("world.openRoad"), on: { click: () => {
+              openActs.add(act.id);
+              c.rerender();
+            } } })
+          )
+        ));
+        continue;
+      }
+      const road = h("div", { class: "road" });
+      const stop = (id, n) => {
+        const z = ZONES[id];
+        const open = st.world.unlocked.includes(id);
+        const here = st.activity.mode === "zone" && st.activity.zone === id;
+        const clears = st.world.clears[id] ?? 0;
+        const thumb = scenery(z, 112, 62);
+        thumb.className = "thumb";
+        const name = zoneName(id);
+        const el = h(
+          "button",
+          {
+            class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
+            attrs: { "aria-label": open ? t("world.stopAria", { name, level: z.level, clears }) : t("world.stopAriaLocked", { name, level: z.level }) },
+            title: open ? z.story ? zoneStory(id) : name : t("world.notReached"),
+            on: { click: () => {
+              if (open && !here) c.act((s) => setZone(s, id), t("world.travelling", { zone: name }));
+            } }
+          },
+          h(
+            "div",
+            { class: "pic" },
+            thumb,
+            h("span", { class: "num-badge", text: n }),
+            z.boss ? h("span", { class: "flag boss", text: t("world.boss") }) : z.trial ? h("span", { class: "flag trial", text: t("world.trial") }) : null,
+            here && hc ? (() => {
+              const a = spriteCanvas(hc.idle);
+              if (a) a.className = "hero-mark";
+              return a;
+            })() : null,
+            open ? null : h("span", { class: "lock" }, glyph("block", 18))
+          ),
+          h("b", { text: name }),
+          h("span", { class: "meta" }, h("span", { class: "tag", text: t("world.lvl", { n: z.level }) }), h("span", { text: open ? tn("world.clears", clears) : t("world.locked") }))
+        );
+        return el;
+      };
+      act.zones.forEach((id, i) => {
+        if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
+        road.append(stop(id, String(i + 1)));
+      });
+      const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: t("world.offRoad") }), stop(act.trial, "T"));
+      root.append(h(
+        "div",
+        { class: "card act" },
+        h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
+        h("div", { class: "story muted", text: done ? actOutro(act.id) : actIntro(act.id) }),
+        road,
+        trial,
+        done && !current2 ? h(
+          "div",
+          { class: "row", style: "justify-content:flex-end;margin-top:8px" },
+          h("button", { class: "btn alt small", text: t("world.foldRoad"), on: { click: () => {
+            openActs.delete(act.id);
+            c.rerender();
+          } } })
+        ) : null
+      ));
+    }
+    requestAnimationFrame(() => {
+      const here = root.querySelector(".stop.here");
+      const body = root.closest(".body");
+      if (here && body && body.scrollTop === 0) {
+        const top = here.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        if (top > body.clientHeight - 60) body.scrollTop = top - 80;
+      }
+    });
+    return root;
+  }
+  var CONTRACT_GLYPH = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem", lanterns: "pumpkin" };
+  var hollowSig = (s) => hollowNight(s) ? `${lanternsSnuffed(s)}:${hollowNightsLeft(s)}:${!!s.codex[HOLLOW_RELIC]}:${s.companions[HOLLOW_PET] !== void 0}` : "";
+  function hollowCard(c) {
+    const st = c.state;
+    const find = (name, found) => h(
+      "div",
+      { class: "row", style: "gap:8px" },
+      h("span", { class: `tag${found ? " done" : ""}`, text: found ? t("hollow.found") : t("hollow.notYet") }),
+      h("span", { text: name })
+    );
+    return h(
+      "div",
+      { class: "card hollow" },
+      h(
+        "h3",
+        { class: "split" },
+        h("span", { class: "row", style: "gap:6px" }, glyph("pumpkin", 16), h("span", { text: t("hollow.title") })),
+        h("span", { class: "num", text: tn("hollow.nights", hollowNightsLeft(st)) })
+      ),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("hollow.blurb") }),
+      kv([[t("hollow.snuffed"), fmt(lanternsSnuffed(st))]]),
+      h(
+        "div",
+        { class: "col", style: "gap:4px;margin-top:6px" },
+        find(relicName(HOLLOW_RELIC), !!st.codex[HOLLOW_RELIC]),
+        find(companionName(HOLLOW_PET), st.companions[HOLLOW_PET] !== void 0)
+      ),
+      endgameOpen(st) ? h("div", { class: "muted", style: "font-size:12px;margin-top:8px", text: t("hollow.litMaps") }) : null
+    );
+  }
+  function contractBoard(c) {
+    const st = c.state;
+    const cost = rerollCost(st);
+    const rows = h("div", { class: "contracts" });
+    st.contracts.list.forEach((k, i) => {
+      const done = k.n >= k.target;
+      rows.append(h(
+        "div",
+        { class: `contract${done ? " done" : ""}` },
+        h("span", { class: "cg" }, glyph(CONTRACT_GLYPH[k.kind], 16)),
+        h(
+          "div",
+          { class: "grow col", style: "gap:3px;min-width:0" },
+          h("b", { text: contractGoal(k.kind, k.target, k.tier) }),
+          h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, k.n / k.target * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
+          h("span", { class: "muted", style: "font-size:12px", text: t("contracts.reward", { text: rewardLine(k, st) }) })
+        ),
+        done ? h("button", { class: "btn small", text: t("contracts.claim"), on: { click: () => c.act((s) => claimContract(s, i), t("contracts.claimed")) } }) : h("button", {
+          class: "btn alt small",
+          text: t("contracts.reroll", { cost: fmt(cost) }),
+          title: t("contracts.rerollTip", { cost: fmt(cost) }),
+          attrs: st.dust >= cost ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => rerollContract(s, i)) }
+        })
+      ));
+    });
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("contracts.title") }), h("span", { class: "num", text: t("contracts.done", { n: fmt(st.contracts.done) }) })), rows);
+  }
+  function rewardLine(k, s) {
+    const parts = [t("reward.dust", { n: contractDust(s, k) })];
+    if (k.currency && CURRENCIES[k.currency[0]]) parts.push(t("reward.currency", { n: k.currency[1], name: currencyName(k.currency[0]) }));
+    if (k.extra) parts.push(t(`reward.${k.extra}`));
+    return parts.join(t("common.list"));
+  }
+  function shrineSig(s) {
+    const cost = blessingCost(s);
+    return `${BLESSINGS.map((b) => Math.ceil(Math.max(0, (s.blessings[b.id] ?? 0) - s.simTo) / 6e4)).join(",")}:${s.dust >= cost}:${spareOrbValue(s) + s.dust >= cost}:${s.shrine.keep.join(",")}:${s.shrine.orbs}`;
+  }
+  var BLESS_GLYPH = { insight: "regen", fortune: "gem", plenty: "gear", hoard: "forge" };
+  function shrineCard(c) {
+    const st = c.state;
+    const cost = blessingCost(st);
+    const spare = spareOrbValue(st);
+    const canPay = st.dust + (st.shrine.orbs ? spare : 0) >= cost;
+    const rows = h("div", { class: "contracts" });
+    for (const b of BLESSINGS) {
+      const left = Math.max(0, (st.blessings[b.id] ?? 0) - st.simTo);
+      const keep = st.shrine.keep.includes(b.id);
+      rows.append(h(
+        "div",
+        { class: `contract bless${left ? " done" : ""}` },
+        h("span", { class: "cg" }, glyph(BLESS_GLYPH[b.id] ?? "gem", 16)),
+        h(
+          "div",
+          { class: "grow col", style: "gap:2px;min-width:0" },
+          h("b", { text: t("shrine.line", { name: blessingName(b.id), text: blessingText(b.id, b.value) }) }),
+          h("span", { class: "muted", style: "font-size:12px", text: left ? t(keep ? "shrine.leftKept" : "shrine.left", { time: fmtDuration2(left) }) : keep ? t("shrine.keptUp") : t("shrine.notRunning") })
+        ),
+        h("button", {
+          class: `chip${keep ? " on" : ""}`,
+          attrs: { role: "switch", "aria-checked": String(keep) },
+          title: t("shrine.keepTip"),
+          on: { click: () => c.act((s) => {
+            setKeep(s, b.id, !keep);
+            if (!keep && !left) return bless(s, b.id);
+          }) }
+        }, t("shrine.keep")),
+        h("button", {
+          class: "btn small",
+          text: t("shrine.hour"),
+          title: t(st.shrine.orbs ? "shrine.hourTipOrbs" : "shrine.hourTip", { name: blessingName(b.id), cost: fmt(cost) }),
+          attrs: canPay ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => bless(s, b.id), t("shrine.blessed", { name: blessingName(b.id) })) }
+        })
+      ));
+    }
+    const orbs = h(
+      "button",
+      {
+        class: `toggle${st.shrine.orbs ? " on" : ""}`,
+        attrs: { role: "switch", "aria-checked": String(st.shrine.orbs) },
+        on: { click: () => c.act((s) => {
+          s.shrine.orbs = !s.shrine.orbs;
+        }) }
+      },
+      h("i"),
+      h("span", null, h("b", { text: t("shrine.orbs") }), h("small", { text: t("shrine.orbsNote", { n: ORB_RESERVE, v: fmt(spare) }) }))
+    );
+    return h(
+      "div",
+      { class: "card" },
+      h("h3", { class: "split" }, h("span", { text: t("shrine.title") }), h("span", { class: "num", text: t("shrine.cost", { cost: fmt(cost) }) })),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("shrine.note") }),
+      rows,
+      h("div", { style: "margin-top:8px" }, orbs)
+    );
+  }
+
+  // src/ui/views.ts
+  var VIEWS = [
+    { id: "hero" },
+    { id: "gear" },
+    { id: "forge" },
+    { id: "skills" },
+    { id: "tree" },
+    { id: "world" },
+    { id: "atlas" },
+    { id: "log" },
+    { id: "menu" },
+    { id: "market" }
+  ];
+  function viewSig(id, c) {
+    const s = c.state;
+    switch (id) {
+      case "hero":
+        return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
+      case "gear":
+        return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
+      case "forge":
+        return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== void 0 ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map((k) => s.hero.equipment[k]).find((x) => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
+      case "skills":
+        return `${s.hero.rev}:${s.hero.level}`;
+      case "tree":
+        return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
+      case "world":
+        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map((x) => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
+      case "atlas":
+        return atlasSig(c);
+      case "log":
+        return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
+      case "menu":
+        return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
+      case "market":
+        return marketSig(s);
+    }
+  }
+  function renderView(id, c) {
+    switch (id) {
+      case "hero":
+        return heroView(c);
+      case "gear":
+        return gearView(c);
+      case "forge":
+        return forgeView(c);
+      case "tree":
+        return treeView(c);
+      case "skills":
+        return skillsView(c);
+      case "world":
+        return worldView(c);
+      case "atlas":
+        return atlasView(c);
+      case "log":
+        return logView(c);
+      case "menu":
+        return menuView(c);
+      case "market":
+        return marketView(c);
+    }
+  }
+
+  // src/ui/creation.ts
   var CALLING_SCENE = { vanguard: "a1_lock", strider: "a1_cliffs", arcanist: "a1_chapel" };
   var SCENE_W = 120;
   var SCENE_H = 84;

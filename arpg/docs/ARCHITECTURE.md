@@ -14,12 +14,16 @@
         i18n/            strings: en.ts (source) + ru.ts, uk.ts; content names,
                          plurals, log references, the core's messages
         platform/        browser glue: IndexedDB store, clock, hub adapter
-        ui/              Shadow DOM overlay, views, canvas renderers
+        ui/              Shadow DOM overlay, canvas renderers, and one module
+                         per tab (views.ts dispatches: hero, gear, forge,
+                         skills, tree, world, atlas, log, menu, market;
+                         itemui.ts and common.ts are what they share)
         main.ts          entry: registers with the hub or boots standalone
       test/              Vitest, one file per core module + content checks
       tools/             balance simulator, ASCII check
       dev/play.html      plain browser page (no Discord, no hub)
-      dist/arpg.js       one IIFE, pure ASCII (build output, committed)
+      dist/arpg.js       one IIFE, pure ASCII (build output, committed); the
+                         minified copy that ships is ../src/addons/arpg.js
 
 ## Rules
 
