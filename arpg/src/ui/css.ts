@@ -536,6 +536,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .work select { flex: 1 1 140px; min-width: 0; }
 .qbar { flex: 1 1 80px; height: 8px; border: 2px solid var(--line); background: var(--paper2); position: relative; }
 .qbar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); }
+/* worn items in item lists: a gold frame and tag; hover links between the doll and the stash */
+.cell.wornc::after { content: ""; position: absolute; inset: -6px; border: 2px solid #ffc233; box-shadow: 0 0 6px rgba(255,194,51,.55); pointer-events: none; }
+.cell.wornc .worn { background: #ffc233; color: #1a1410; border: 1px solid #1a1410; z-index: 1; white-space: nowrap; }
+.gridsep { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 4px 0 2px; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.gridsep::after { content: ""; flex: 1; border-bottom: 2px dashed color-mix(in srgb, var(--line) 40%, transparent); }
+.doll .cell.cmp { outline: 3px solid #ffc233; outline-offset: 1px; animation: cmpglow .9s ease-in-out infinite alternate; }
+@keyframes cmpglow { from { outline-color: #ffc233; } to { outline-color: #ff8a3a; } }
+.gear.slotpick .stash .cell[data-uid]:not(.fits) { opacity: .3; }
+.gear.slotpick .stash .cell.fits { outline: 2px solid var(--teal); outline-offset: 1px; }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }

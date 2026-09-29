@@ -12,7 +12,7 @@ import { fmt, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { glyph } from "./glyphs";
-import { itemCard, withTip, type Ctx } from "./views";
+import { itemCard, markWorn, withTip, type Ctx } from "./views";
 
 const SLOT_NAMES: Record<string, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
 
@@ -21,17 +21,27 @@ const forgeOpts = { until: false };
 
 export function forgeView(c: Ctx): HTMLElement {
     const st = c.state;
-    const items: Item[] = [...SLOTS.map(s => st.hero.equipment[s]).filter((x): x is Item => !!x), ...st.stash, ...st.relics];
+    // The rack in three groups: what is worn (framed in gold), the stash, the relic case.
     const rack = h("div", { class: "stash" });
-    for (const it of items) {
-        const worn = SLOTS.some(s => st.hero.equipment[s]?.uid === it.uid);
-        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" },
+    const cellFor = (it: Item) => {
+        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it), role: "button", tabindex: "0" },
             on: { click: () => { c.sel = { uid: it.uid }; c.rerender(); } } }, itemIcon(it));
         withTip(cell, c, () => itemCard(it, null));
-        if (worn) cell.append(h("span", { class: "worn", text: "worn" }));
         if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
-        rack.append(cell);
-    }
+        return cell;
+    };
+    const group = (label: string, list: Item[], worn = false) => {
+        if (!list.length) return;
+        rack.append(h("div", { class: "gridsep", text: `${label} (${list.length})` }));
+        for (const it of list) {
+            const cell = cellFor(it);
+            if (worn) markWorn(cell, SLOTS.find(s => st.hero.equipment[s] === it));
+            rack.append(cell);
+        }
+    };
+    group("Worn", SLOTS.map(s => st.hero.equipment[s]).filter((x): x is Item => !!x), true);
+    group("Stash", st.stash);
+    group("Relic case", st.relics);
     const found = c.sel.uid !== undefined ? findItem(st, c.sel.uid) : null;
     const inStash = !!found && !found.slot;
 

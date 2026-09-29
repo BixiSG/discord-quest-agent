@@ -6206,6 +6206,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .work select { flex: 1 1 140px; min-width: 0; }
 .qbar { flex: 1 1 80px; height: 8px; border: 2px solid var(--line); background: var(--paper2); position: relative; }
 .qbar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); }
+/* worn items in item lists: a gold frame and tag; hover links between the doll and the stash */
+.cell.wornc::after { content: ""; position: absolute; inset: -6px; border: 2px solid #ffc233; box-shadow: 0 0 6px rgba(255,194,51,.55); pointer-events: none; }
+.cell.wornc .worn { background: #ffc233; color: #1a1410; border: 1px solid #1a1410; z-index: 1; white-space: nowrap; }
+.gridsep { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; padding: 4px 0 2px; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.gridsep::after { content: ""; flex: 1; border-bottom: 2px dashed color-mix(in srgb, var(--line) 40%, transparent); }
+.doll .cell.cmp { outline: 3px solid #ffc233; outline-offset: 1px; animation: cmpglow .9s ease-in-out infinite alternate; }
+@keyframes cmpglow { from { outline-color: #ffc233; } to { outline-color: #ff8a3a; } }
+.gear.slotpick .stash .cell[data-uid]:not(.fits) { opacity: .3; }
+.gear.slotpick .stash .cell.fits { outline: 2px solid var(--teal); outline-offset: 1px; }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
@@ -7143,23 +7152,32 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var forgeOpts = { until: false };
   function forgeView(c) {
     const st = c.state;
-    const items = [...SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), ...st.stash, ...st.relics];
     const rack = h("div", { class: "stash" });
-    for (const it of items) {
-      const worn = SLOTS.some((s) => st.hero.equipment[s]?.uid === it.uid);
+    const cellFor = (it) => {
       const cell = h("div", {
         class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`,
-        attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" },
+        attrs: { "aria-label": itemLabel(it), role: "button", tabindex: "0" },
         on: { click: () => {
           c.sel = { uid: it.uid };
           c.rerender();
         } }
       }, itemIcon(it));
       withTip(cell, c, () => itemCard(it, null));
-      if (worn) cell.append(h("span", { class: "worn", text: "worn" }));
       if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
-      rack.append(cell);
-    }
+      return cell;
+    };
+    const group = (label, list6, worn = false) => {
+      if (!list6.length) return;
+      rack.append(h("div", { class: "gridsep", text: `${label} (${list6.length})` }));
+      for (const it of list6) {
+        const cell = cellFor(it);
+        if (worn) markWorn(cell, SLOTS.find((s) => st.hero.equipment[s] === it));
+        rack.append(cell);
+      }
+    };
+    group("Worn", SLOTS.map((s) => st.hero.equipment[s]).filter((x) => !!x), true);
+    group("Stash", st.stash);
+    group("Relic case", st.relics);
     const found = c.sel.uid !== void 0 ? findItem(st, c.sel.uid) : null;
     const inStash = !!found && !found.slot;
     const anvil = h("div", { class: "card anvilcard" }, h("h3", { text: "On the anvil" }));
@@ -8166,6 +8184,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return el;
   }
   var lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
+  function markWorn(cell, slot) {
+    cell.classList.add("wornc");
+    cell.append(h("span", { class: "worn", text: "worn" }));
+    cell.setAttribute("aria-label", `${cell.getAttribute("aria-label") ?? ""} (worn${slot ? ", " + SLOT_LABEL[slot].toLowerCase() : ""})`);
+    return cell;
+  }
+  var gridSep = (text) => h("div", { class: "gridsep", text });
   function gearView(c) {
     const st = c.state;
     const eq = st.hero.equipment;
@@ -8206,6 +8231,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
         if (!bow) cell.tabIndex = -1;
       }
+      cell.addEventListener("mouseenter", () => {
+        if (drag) return;
+        root.classList.add("slotpick");
+        for (const el of root.querySelectorAll(".stash .cell[data-uid]")) {
+          const x = ownedItem(st, Number(el.dataset.uid));
+          el.classList.toggle("fits", !!x && slotsFor(baseOf(x)).includes(s));
+        }
+      });
+      cell.addEventListener("mouseleave", () => {
+        root.classList.remove("slotpick");
+        root.querySelectorAll(".fits").forEach((e) => e.classList.remove("fits"));
+      });
       if (it) {
         if (it.locked) cell.append(lockBadge());
         withTip(cell, c, () => itemCard(it, c));
@@ -8259,6 +8296,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }, { capture: true });
         if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
       }
+      cell.dataset.uid = String(it.uid);
+      cell.addEventListener("mouseenter", () => {
+        if (drag) return;
+        const targets = slotsFor(baseOf(it));
+        const cmp = upgradeOf(st, it) ?? targets.find((t) => !eq[t]) ?? targets[0];
+        root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
+      });
+      cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach((e) => e.classList.remove("cmp")));
       if (it.locked) cell.append(lockBadge());
       if (upgradeOf(st, it)) cell.classList.add("upg");
       else if (levelReq(it) > st.hero.level) cell.classList.add("req");
@@ -8303,11 +8348,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }
         const w2 = worn.get(def2.id);
         if (w2) {
-          const cell = itemCell(w2, null, false, () => {
-            c.sel = { slot: SLOTS.find((s) => eq[s] === w2) };
+          const ws = SLOTS.find((s) => eq[s] === w2);
+          const cell = markWorn(itemCell(w2, null, false, () => {
+            c.sel = { slot: ws };
             c.rerender();
-          });
-          cell.append(h("span", { class: "worn", text: "worn" }));
+          }), ws);
           withTip(cell, c, () => itemCard(w2, null));
           grid.append(cell);
           continue;
@@ -8328,6 +8373,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const shown = st.stash.filter((it) => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
       const byRarity = (a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
       shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b) : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b) : byRarity);
+      const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
+      const worn = grouped ? SLOTS.filter((s) => eq[s] && groupOf(eq[s]) === gearOpts.filter) : [];
+      if (worn.length) {
+        grid.append(gridSep("Worn"));
+        for (const s of worn) {
+          const w2 = eq[s];
+          const cell = markWorn(itemCell(w2, null, c.sel.slot === s && c.sel.uid === void 0, () => {
+            c.sel = { slot: s };
+            c.rerender();
+          }), s);
+          if (w2.locked) cell.append(lockBadge());
+          withTip(cell, c, () => itemCard(w2, c));
+          grid.append(cell);
+        }
+        grid.append(gridSep(`In the stash (${shown.length})`));
+      }
       for (const it of shown) grid.append(ownedCell(it, true));
       if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
       if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));

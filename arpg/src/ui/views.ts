@@ -334,6 +334,17 @@ function chips<T extends string>(opts: [T, string, number?][], cur: T, pick: (v:
 /** A small lock in the cell's corner. */
 const lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9));
 
+/** Marks a cell as an item the hero is wearing: a gold frame and a "worn" tag (Gear lists, the codex, the Forge rack). */
+export function markWorn(cell: HTMLElement, slot?: Slot): HTMLElement {
+    cell.classList.add("wornc");
+    cell.append(h("span", { class: "worn", text: "worn" }));
+    cell.setAttribute("aria-label", `${cell.getAttribute("aria-label") ?? ""} (worn${slot ? ", " + SLOT_LABEL[slot].toLowerCase() : ""})`);
+    return cell;
+}
+
+/** A label across the whole item grid ("Worn", "Stash"). */
+const gridSep = (text: string) => h("div", { class: "gridsep", text });
+
 function gearView(c: Ctx): HTMLElement {
     const st = c.state;
     const eq = st.hero.equipment;
@@ -363,6 +374,16 @@ function gearView(c: Ctx): HTMLElement {
             cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
             if (!bow) cell.tabIndex = -1; // nothing can go there: not a stop for the keyboard
         }
+        // Hover a slot: the stash items that fit it light up, the rest fade.
+        cell.addEventListener("mouseenter", () => {
+            if (drag) return;
+            root.classList.add("slotpick");
+            for (const el of root.querySelectorAll<HTMLElement>(".stash .cell[data-uid]")) {
+                const x = ownedItem(st, Number(el.dataset.uid));
+                el.classList.toggle("fits", !!x && slotsFor(baseOf(x)).includes(s));
+            }
+        });
+        cell.addEventListener("mouseleave", () => { root.classList.remove("slotpick"); root.querySelectorAll(".fits").forEach(e => e.classList.remove("fits")); });
         if (it) {
             if (it.locked) cell.append(lockBadge());
             withTip(cell, c, () => itemCard(it, c));
@@ -398,6 +419,15 @@ function gearView(c: Ctx): HTMLElement {
             }, { capture: true });
             if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
         }
+        cell.dataset.uid = String(it.uid);
+        // Hover a stash item: the worn piece it would replace glows on the doll.
+        cell.addEventListener("mouseenter", () => {
+            if (drag) return;
+            const targets = slotsFor(baseOf(it));
+            const cmp = upgradeOf(st, it) ?? targets.find(t => !eq[t]) ?? targets[0]!;
+            root.querySelector(`.doll [data-slot="${cmp}"]`)?.classList.add("cmp");
+        });
+        cell.addEventListener("mouseleave", () => root.querySelectorAll(".doll .cmp").forEach(e => e.classList.remove("cmp")));
         if (it.locked) cell.append(lockBadge());
         if (upgradeOf(st, it)) cell.classList.add("upg");
         else if (levelReq(it) > st.hero.level) cell.classList.add("req");
@@ -435,8 +465,8 @@ function gearView(c: Ctx): HTMLElement {
             if (own) { grid.append(ownedCell(own, false)); continue; }
             const w = worn.get(def.id);
             if (w) {
-                const cell = itemCell(w, null, false, () => { c.sel = { slot: SLOTS.find(s => eq[s] === w)! }; c.rerender(); });
-                cell.append(h("span", { class: "worn", text: "worn" }));
+                const ws = SLOTS.find(s => eq[s] === w)!;
+                const cell = markWorn(itemCell(w, null, false, () => { c.sel = { slot: ws }; c.rerender(); }), ws);
                 withTip(cell, c, () => itemCard(w, null));
                 grid.append(cell);
                 continue;
@@ -456,6 +486,20 @@ function gearView(c: Ctx): HTMLElement {
         shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b)
             : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b)
             : byRarity);
+        // A group (weapons, armour, jewellery) shows what is worn in it first, framed in gold, to compare at a glance.
+        const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
+        const worn = grouped ? SLOTS.filter(s => eq[s] && groupOf(eq[s]!) === gearOpts.filter) : [];
+        if (worn.length) {
+            grid.append(gridSep("Worn"));
+            for (const s of worn) {
+                const w = eq[s]!;
+                const cell = markWorn(itemCell(w, null, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); }), s);
+                if (w.locked) cell.append(lockBadge());
+                withTip(cell, c, () => itemCard(w, c));
+                grid.append(cell);
+            }
+            grid.append(gridSep(`In the stash (${shown.length})`));
+        }
         for (const it of shown) grid.append(ownedCell(it, true));
         if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
         if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
