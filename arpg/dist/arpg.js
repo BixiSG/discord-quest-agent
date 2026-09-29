@@ -6553,6 +6553,11 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
       hub = api;
       generation++;
     },
+    /** The hub's title-bar button: straight into the game window, no panel card in between. */
+    launch(api) {
+      hub = api;
+      void openGame();
+    },
     mount(el, api) {
       hub = api;
       let view = null;

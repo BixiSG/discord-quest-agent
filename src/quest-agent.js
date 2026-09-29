@@ -178,6 +178,7 @@
         "tool.dismiss": "Dismiss (hide from this list)", "set.clearHidden": "Show dismissed quests ({n})",
         "set.folder": "Install folder", "set.folderDesc": "Uninstall.bat, config.json and the agent files.",
         "set.addons": "Addons",
+        "set.pin": "Button in Discord's title bar", "set.pinDesc": "Opens {name} in one click, next to the quest agent's button.",
         "title.stats": "Stats", "head.stats": "Stats and history",
         "stats.perMonth": "orbs / 30 days", "stats.perWeek": "about {n} a week",
         "stats.range": "usually {lo} to {hi} per 30 days", "stats.rangeSoon": "a usual range shows after 6 weeks of history",
@@ -465,6 +466,7 @@
         skipped: [],
         hidden: [],          // quest ids dismissed from the Skipped group (persisted)
         addons: {},          // addon id -> switched on (Settings > Addons)
+        pins: {},            // addon id -> own button in Discord's title bar
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
@@ -494,7 +496,10 @@
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
             if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
-            if (s.addons && typeof s.addons === "object") for (const [k, v] of Object.entries(s.addons)) if (typeof v === "boolean" && /^[a-z][a-z0-9-]{1,23}$/.test(k)) SETTINGS.addons[k] = v;
+            for (const field of ["addons", "pins"]) {
+                const m = s[field];
+                if (m && typeof m === "object") for (const [k, v] of Object.entries(m)) if (typeof v === "boolean" && /^[a-z][a-z0-9-]{1,23}$/.test(k)) SETTINGS[field][k] = v;
+            }
             if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
             if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
             if (Number.isFinite(s.goal) && s.goal >= 0) SETTINGS.goal = Math.min(1e7, Math.round(s.goal));
@@ -664,10 +669,13 @@
     // after this one, one evaluation each so a broken addon can't take the
     // agent down. Each queues a definition on window.__questAgentAddons:
     //   { id, icon: 24px SVG path, strings: { "<id>.key": "English" },
-    //     init(api), mount(el, api) -> { unmount() }, destroy() }
+    //     init(api), mount(el, api) -> { unmount() }, destroy(),
+    //     launch(api) (optional: what its title-bar button does instead of
+    //     opening the panel view, e.g. a game opening its own window) }
     // Switched-on ones (Settings > Addons) get a header button and a panel
-    // view. They run in the page with the agent's own access, which is why
-    // only addons shipped with this project are loaded.
+    // view, and optionally their own button in Discord's title bar. They run
+    // in the page with the agent's own access, which is why only addons
+    // shipped with this project are loaded.
     const ADDONS = new Map(); // id -> { id, def, api, live, view, attention, listeners }
     const ADDON_ID = /^[a-z][a-z0-9-]{1,23}$/;
     function addonApi(a) {
@@ -700,7 +708,7 @@
                 if (a.attention === on) return;
                 a.attention = on; UI.addonSig = null;
                 if (UI.btn) UI.btn.dataset.k = "";
-                refreshUI(); updateBadge();
+                syncPinDots(); refreshUI(); updateBadge();
             },
             visible: () => UI.open && UI.view === "addon:" + a.id
         };
@@ -714,7 +722,7 @@
             a.api = addonApi(a);
             ADDONS.set(def.id, a);
             if (SETTINGS.addons[def.id] === true) startAddon(def.id);
-            UI.sig = null; UI.addonSig = null; refreshUI();
+            UI.sig = null; UI.addonSig = null; installPins(); refreshUI();
             return true;
         } catch (e) { console.warn("[QuestAgent] Addon rejected:", e); return false; }
     }
@@ -742,7 +750,23 @@
             for (const fn of a.listeners[ev] ?? []) { try { fn(data); } catch (e) { console.warn(`[QuestAgent] Addon "${a.id}" ${ev} handler failed:`, e); } }
         }
     }
-    const addonAttention = () => [...ADDONS.values()].some(a => a.live && a.attention);
+    /** Shown as its own title-bar button right now (pinned, and the HUD sits in the title bar). */
+    const pinnedNow = a => a.live && SETTINGS.pins[a.id] === true && UI.mode === "titlebar";
+    /** The Auto Quests button's dot: addons with a button of their own show the dot there instead. */
+    const addonAttention = () => [...ADDONS.values()].some(a => a.live && a.attention && !pinnedNow(a));
+    /** A title-bar button click: the addon's own launch() if it has one, else its panel view (toggled). */
+    function openAddon(id) {
+        const a = ADDONS.get(id);
+        if (!a?.live) return;
+        if (typeof a.def.launch === "function") {
+            try { a.def.launch(a.api); } catch (e) { console.warn(`[QuestAgent] Addon "${id}" failed to launch:`, e); }
+            return;
+        }
+        const v = "addon:" + id;
+        if (UI.open && UI.view === v) { togglePanel(false); return; }
+        UI.view = v; UI.sig = null;
+        togglePanel(true);
+    }
 
     // ---- State ----------------------------------------------------------
     const state = {
@@ -1227,7 +1251,16 @@
             on = !!on;
             SETTINGS.addons[id] = on; saveSettings();
             if (on) { startAddon(id); UI.view = "addon:" + id; } else { stopAddon(id); if (UI.view === "addon:" + id) UI.view = "settings"; }
-            UI.sig = null; UI.addonSig = null; refreshUI(); updateBadge();
+            UI.sig = null; UI.addonSig = null; installPins(); refreshUI(); updateBadge();
+            return on;
+        },
+        /** Give a switched-on addon its own button in Discord's title bar (or take it away). */
+        setPin(id, on) {
+            if (!ADDONS.has(id)) return false;
+            on = !!on;
+            SETTINGS.pins[id] = on; saveSettings();
+            if (UI.btn) UI.btn.dataset.k = ""; // the Auto Quests dot may move to or from the new button
+            UI.sig = null; installPins(); refreshUI(); updateBadge();
             return on;
         },
         retryAllFailed() {
@@ -1283,7 +1316,7 @@
     // ---- HUD: toolbar button + floating quest panel ----------------------
     // Discord's class names are hashed and change on updates, so the button
     // clones them off the live Inbox button instead of hardcoding them.
-    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null };
+    const UI = { btn: null, panel: null, style: null, observer: null, tick: null, open: false, pos: null, sig: null, view: "quests", keyHandler: null, badgeTimer: null, mode: "none", firstTry: null, lang: null, anchor: null, pins: [], pinKey: null };
 
     // Inline icons keep the panel pure-ASCII (no glyphs to mangle) and crisp.
     const ICON = {
@@ -1307,6 +1340,7 @@
         bell: "M12 2a1.5 1.5 0 0 1 1.5 1.5v.6A6 6 0 0 1 18 10v4l1.7 2.3a1 1 0 0 1-.8 1.7H5.1a1 1 0 0 1-.8-1.7L6 14v-4a6 6 0 0 1 4.5-5.9v-.6A1.5 1.5 0 0 1 12 2Zm-2.5 17h5a2.5 2.5 0 0 1-5 0Z",
         bolt: "M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z",
         timer: "M9 2a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H9Zm3 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-1 4a1 1 0 1 1 2 0v3.6l2.2 1.3a1 1 0 0 1-1 1.7l-2.7-1.6a1 1 0 0 1-.5-.9V10Z",
+        pin: "M15.3 2.3a1 1 0 0 1 1.4 0l5 5a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.1.2l-3.4 3.4.6 3.6a1 1 0 0 1-.3.9l-1 1a1 1 0 0 1-1.4 0l-3.6-3.6-5.3 5.3a1 1 0 0 1-1.4-1.4l5.3-5.3-3.6-3.6a1 1 0 0 1 0-1.4l1-1a1 1 0 0 1 .9-.3l3.6.6 3.4-3.4a1 1 0 0 1 .2-1.1l1-1Z",
         sparkle: "M11 2.5l1.9 5.6 5.6 1.9-5.6 1.9L11 17.5l-1.9-5.6-5.6-1.9 5.6-1.9L11 2.5Zm7.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z",
         github: "M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3Z",
         bug: "M12 3a4 4 0 0 1 4 4v1h2a1 1 0 1 1 0 2h-2v2h3a1 1 0 1 1 0 2h-3v.5a4 4 0 0 1-8 0V14H5a1 1 0 1 1 0-2h3v-2H6a1 1 0 1 1 0-2h2V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v1h4V7a2 2 0 0 0-2-2Z",
@@ -1528,6 +1562,10 @@
 #qb-panel .qb-opt .qb-oi{width:32px;height:32px;border-radius:var(--qb-rs);background:var(--qb-bg2);display:flex;align-items:center;
  justify-content:center;color:var(--qb-muted);flex:none}
 #qb-panel .qb-opt.qb-on .qb-oi{color:var(--qb-text)}
+#qb-panel .qb-opt.qb-nest{padding:4px 14px 8px 56px}
+#qb-panel .qb-opt.qb-nest .qb-oi{width:24px;height:24px}
+#qb-panel .qb-opt.qb-nest .qb-oi svg{width:13px;height:13px}
+#qb-panel .qb-opt.qb-nest .qb-ot b{font-size:12.5px}
 #qb-panel .qb-ot{flex:1;min-width:0}
 #qb-panel .qb-ot b{display:block;font-weight:500;font-size:13.5px}
 #qb-panel .qb-ot span{display:block;font-size:11px;color:var(--qb-muted);margin-top:1px}
@@ -1659,7 +1697,7 @@
 #qb-badge.qb-claim{background:var(--status-positive,#23a55a)}
 #qb-badge.qb-work{background:var(--status-warning,#f0b232)}
 #qb-badge.qb-hold{background:var(--primary-400,#80848e)}
-#qb-att{position:absolute;left:-3px;bottom:-2px;width:7px;height:7px;border-radius:50%;background:#ff73b3;
+#qb-att,.qb-pin .qb-patt{position:absolute;left:-3px;bottom:-2px;width:7px;height:7px;border-radius:50%;background:#ff73b3;
  border:2px solid var(--background-base-lower,#1e1f22);box-sizing:content-box;pointer-events:none}
 #qb-btn .qb-ring{position:absolute;inset:1px;border-radius:50%;box-sizing:border-box;
  border:1.5px solid rgba(240,178,50,.25);border-top-color:#f0b232;
@@ -1834,7 +1872,9 @@
              </div>`;
         box.innerHTML = `
           ${ADDONS.size ? `<div class="qb-sec">${esc(t("set.addons"))}</div>` + [...ADDONS.values()].map(a =>
-              opt("addon:" + a.id, a.live, a.def.icon || ICON.sparkle, esc(t(a.id + ".title")), esc(t(a.id + ".desc")))).join("") : ""}
+              opt("addon:" + a.id, a.live, a.def.icon || ICON.sparkle, esc(t(a.id + ".title")), esc(t(a.id + ".desc"))) +
+              // Switched on: a nested row for its own title-bar button.
+              (a.live ? opt("pin:" + a.id, SETTINGS.pins[a.id] === true, ICON.pin, esc(t("set.pin")), esc(t("set.pinDesc", { name: t(a.id + ".title") }))).replace('class="qb-opt', 'class="qb-opt qb-nest') : "")).join("") : ""}
           <div class="qb-sec">${esc(t("set.about"))}</div>
           ${link("changelog", ICON.sparkle, esc(t("set.whatsNew")), esc(newsDesc), "chev", unread ? `<span class="qb-pill">${esc(t("set.new"))}</span>` : "")}
           ${canOpenFolder ? link("folder", ICON.folder, esc(t("set.folder")), `<span title="${esc(t("set.folderDesc"))}">${esc(INSTALL_ROOT)}</span>`, "ext") : ""}
@@ -2254,6 +2294,7 @@
             const on = !opt.classList.contains("qb-on");
             if (key.startsWith("type:")) ops.setType(key.slice(5), on);
             else if (key.startsWith("addon:")) { ops.setAddon(key.slice(6), on); return; }
+            else if (key.startsWith("pin:")) { ops.setPin(key.slice(4), on); return; }
             else ops.setSetting(key, on);
             UI.sig = null; renderPanel();
         };
@@ -2471,8 +2512,54 @@
         else document.body.appendChild(wrapper);
         UI.btn = wrapper;
         UI.mode = anchor ? "titlebar" : "floating";
+        UI.anchor = anchor ? { wrapperClass: anchor.wrapperClass, clickableClass: anchor.clickableClass } : null;
+        UI.pinKey = null; // (re)place the addon buttons next to the new one
+        installPins();
         updateBadge();
         return true;
+    }
+
+    /** Pinned addons get a title-bar button of their own, right after the
+     *  Auto Quests one and styled the same way. Title bar only: the floating
+     *  fallback stays a single button. Cheap when nothing changed, since the
+     *  DOM observer calls it on every mutation Discord makes. */
+    function installPins() {
+        if (typeof document === "undefined") return;
+        const want = UI.mode === "titlebar" && UI.btn?.isConnected ? [...ADDONS.values()].filter(pinnedNow) : [];
+        const key = want.map(a => a.id).join(",") + "|" + currentLang();
+        const els = UI.pins ?? [];
+        if (UI.pinKey === key && els.every(el => el.isConnected && el.parentNode === UI.btn.parentNode)) return;
+        for (const el of els) el.remove();
+        UI.pins = [];
+        UI.pinKey = key;
+        let after = UI.btn;
+        for (const a of want) {
+            const wrap = document.createElement("div");
+            wrap.className = (UI.anchor?.wrapperClass ?? "") + " qb-pin";
+            wrap.style.position = "relative";
+            wrap.dataset.addon = a.id;
+            const b = document.createElement("div");
+            b.className = UI.anchor?.clickableClass ?? "";
+            b.setAttribute("role", "button");
+            b.setAttribute("tabindex", "0");
+            b.setAttribute("aria-label", t(a.id + ".title"));
+            b.title = t(a.id + ".title");
+            b.innerHTML = svg(a.def.icon || ICON.sparkle, "", 18) + '<div class="qb-patt" style="display:none"></div>';
+            b.onclick = () => openAddon(a.id);
+            b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openAddon(a.id); } };
+            wrap.appendChild(b);
+            after.after(wrap);
+            after = wrap;
+            UI.pins.push(wrap);
+        }
+        syncPinDots();
+    }
+    function syncPinDots() {
+        for (const el of UI.pins ?? []) {
+            const on = !!ADDONS.get(el.dataset.addon)?.attention;
+            const dot = el.querySelector(".qb-patt");
+            if (dot && (dot.style.display === "none") === on) dot.style.display = on ? "" : "none";
+        }
     }
 
     function installUI() {
@@ -2485,11 +2572,12 @@
         UI.observer = new MutationObserver(() => {
             if (!UI.btn?.isConnected) installButton();
             else if (UI.mode === "floating" && UI.promote == null) UI.promote = setTimeout(() => { UI.promote = null; installButton(); }, 1000);
+            else if (UI.pins?.length) installPins(); // Discord dropped a pinned button but kept ours
         });
         UI.observer.observe(document.body, { childList: true, subtree: true });
         // The observer only fires on DOM changes; a quiet client still gets a
         // retry (this is also what promotes the floating button after 20 s).
-        UI.badgeTimer = setInterval(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); if (!UI.open) updateBadge(); }, 5000);
+        UI.badgeTimer = setInterval(() => { if (!UI.btn?.isConnected || UI.mode === "floating") installButton(); else installPins(); if (!UI.open) updateBadge(); }, 5000);
     }
 
     function removeUI() {
@@ -2500,8 +2588,9 @@
         if (UI.promote != null) { clearTimeout(UI.promote); UI.promote = null; }
         if (UI.keyHandler) { document.removeEventListener("keydown", UI.keyHandler); UI.keyHandler = null; }
         UI.btn?.remove(); UI.panel?.remove(); UI.style?.remove();
+        for (const el of UI.pins ?? []) el.remove();
         document.querySelector("#qb-toast")?.remove();
-        UI.btn = UI.panel = UI.style = null; UI.open = false; UI.mode = "none";
+        UI.btn = UI.panel = UI.style = null; UI.open = false; UI.mode = "none"; UI.pins = []; UI.pinKey = null;
     }
 
     // ---- Install --------------------------------------------------------
@@ -2556,7 +2645,7 @@
         stats: orbStats, historyCsv, syncHistory,
         get orbGlyph() { return !!ORB_PATHS; }, // false = Discord's glyph wasn't found, the HUD uses its own
         diagnostics,
-        addons: { list: () => [...ADDONS.keys()], set: ops.setAddon, get: id => ADDONS.get(id)?.api ?? null },
+        addons: { list: () => [...ADDONS.keys()], set: ops.setAddon, pin: ops.setPin, open: openAddon, get: id => ADDONS.get(id)?.api ?? null },
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
               toast: showToast, ownToast: showOwnToast, get buttonMode() { return UI.mode; },
               show(view) { UI.view = ["settings", "changelog", "stats"].includes(view) || /^addon:/.test(view) ? view : "quests"; UI.sig = null; togglePanel(true); } }

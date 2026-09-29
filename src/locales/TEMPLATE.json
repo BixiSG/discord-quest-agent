@@ -268,5 +268,7 @@
   "pet.msg.hi2": "You're back!",
   "pet.msg.hi3": "Missed you!",
   "pet.msg.hi4": "Play with me?",
-  "set.addons": "Addons"
+  "set.addons": "Addons",
+  "set.pin": "Button in Discord's title bar",
+  "set.pinDesc": "Opens {name} in one click, next to the quest agent's button."
 }
