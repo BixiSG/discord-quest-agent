@@ -128,3 +128,12 @@ One entry per loop iteration, newest last.
 - Balance at 96 h (1 seed each): Vanguard L71 T17, Strider L63 T10,
   Arcanist L71 T17. Strider still the weakest; noted for later.
 - Screenshots regenerated into arpg/docs/shots; arpg/README.md written.
+
+## 7 - Review P5, final report
+- Review P5 (5 findings, all fixed): forged rares roll bases the hero can
+  wear and skip the loot filter (refused when the stash is full, before
+  paying); the map device's XP cap yields to the player's tier and to level
+  100, and is shown in the Atlas tab; mana sustain accounts for regeneration
+  while travelling (fight share 0.6, matches the sim); auto-push's map cap
+  only ever goes down. Launcher and installer: no findings. 99 tests.
+- FINAL_REPORT.md written; roadmap complete.

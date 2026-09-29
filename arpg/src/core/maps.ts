@@ -1,6 +1,6 @@
 // Endgame logic: the map stash, map runs, the atlas and pinnacles.
 
-import { ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, depthMult, emptyAtlas, mapLevel, tierName, type AtlasEffects, type ZoneDef } from "./data";
+import { MAX_LEVEL, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, depthMult, emptyAtlas, mapLevel, tierName, type AtlasEffects, type ZoneDef } from "./data";
 import { Rng, hashSeed } from "./rng";
 import { pushLog } from "./game";
 import type { GameState, MapItem, RunMap } from "./state";
@@ -125,6 +125,15 @@ export function addMap(state: GameState, m: MapItem): boolean {
 
 // ---- runs ------------------------------------------------------------------------
 
+/** The tier auto-push keeps to for experience (0 = no cap). */
+export function autoXpCap(state: GameState): number {
+    const act = state.activity;
+    if (!act.autoPush || act.mapTier > 0 || state.hero.level >= MAX_LEVEL) return 0;
+    let t = 1;
+    while (mapLevel(t + 1) <= state.hero.level + 4) t++;
+    return t;
+}
+
 /** Takes the next map (or a queued pinnacle) out of the stash; the Outskirts when there is none. */
 export function startMapRun(state: GameState): RunMap {
     const act = state.activity;
@@ -139,8 +148,8 @@ export function startMapRun(state: GameState): RunMap {
     }
     if (state.maps.length) {
         // Auto-push also keeps to tiers the hero can learn from (monster level at most hero level + 4).
-        let xpCap = 0;
-        if (act.autoPush) { xpCap = 1; while (mapLevel(xpCap + 1) <= state.hero.level + 4) xpCap++; }
+        // Not over the player's own choice, and not at max level, where XP no longer matters.
+        const xpCap = autoXpCap(state);
         const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter(t => t > 0);
         const want = caps.length ? Math.min(...caps) : 0;
         const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);

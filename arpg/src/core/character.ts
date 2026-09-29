@@ -62,6 +62,8 @@ export interface Sheet {
     bag: StatBag;
 }
 
+/** Share of run time spent fighting (the rest is travel), measured with the sim. */
+export const FIGHT_SHARE = 0.6;
 export const UNARMED = { phys: [2, 5] as [number, number], aps: 1.2, crit: 5 };
 
 export function supportSlots(level: number): number {
@@ -255,7 +257,8 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     for (const t of DAMAGE_TYPES) avgHit += (hit[t][0] + hit[t][1]) / 2;
     const critFactor = 1 + (critChance / 100) * (critMulti / 100 - 1);
     // Sustained DPS: a skill can't be used faster than mana regeneration pays for it.
-    const sustain = manaCost > 0 ? manaRegen / manaCost : Infinity;
+    // The hero fights about FIGHT_SHARE of the time; mana keeps regenerating while travelling.
+    const sustain = manaCost > 0 ? manaRegen / manaCost / FIGHT_SHARE : Infinity;
     const dps = avgHit * critFactor * Math.min(speed, sustain) * hc;
     return {
         id: def.id, name: def.name, kind: def.kind, shape: def.shape, fx: def.fx, tags: [...tags],

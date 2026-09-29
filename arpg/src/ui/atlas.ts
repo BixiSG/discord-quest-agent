@@ -1,7 +1,7 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
 import { ATLAS, CURRENCIES, MAP_MODS, MAX_TIER, PINNACLES, tierName } from "../core/data";
-import { atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
+import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
 import { MAP_DEATH_XP } from "../core/sim/engine";
 import type { Ctx } from "./views";
@@ -41,6 +41,7 @@ export function atlasView(c: Ctx): HTMLElement {
         h("div", { class: "row" }, "Order", tierSel,
             h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
             h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
+            autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
             st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
         tierChips(st.atlas.tiers),
         h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));

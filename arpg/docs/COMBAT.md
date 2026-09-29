@@ -79,7 +79,8 @@ Single-target skills hit one.
 
 Mana regenerates 7% of maximum per second plus flat regeneration. Skill mana
 cost grows 2% per hero level and is multiplied by each support's multiplier.
-Sheet DPS uses `min(speed, manaRegen / manaCost)` uses per second, so a
+Sheet DPS uses `min(speed, manaRegen / manaCost / 0.6)` uses per second (the
+hero fights about 60% of the time and regenerates while travelling), so a
 mana-starved build shows what it really does.
 
 - Life regeneration: flat per second plus percent of max life.

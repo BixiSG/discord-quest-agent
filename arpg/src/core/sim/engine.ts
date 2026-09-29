@@ -361,7 +361,7 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
         state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
         // Auto-push for maps: three deaths in a row and the device prefers a tier lower.
         if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
-            act.autoCap = run.map.tier - 1;
+            act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
             act.deaths = 0;
             pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
         }

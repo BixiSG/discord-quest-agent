@@ -2,7 +2,7 @@
 // seeded by (save seed, craft counter), so crafting is deterministic too.
 
 import { CURRENCIES, ZONES, mapLevel } from "./data";
-import { receiveItem } from "./game";
+import { receiveItem, upgradeSlot } from "./game";
 import { Rng, hashSeed } from "./rng";
 import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, countAffixes, eligibleAffixes, rareName, rollAffixes } from "./items";
 import type { GameState } from "./state";
@@ -105,13 +105,18 @@ export function forgeRare(state: GameState, slot: string): { err: string | null;
     const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
     const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
     let item: Item;
-    try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots }); } catch { return { err: "nothing to forge for that slot" }; }
+    // A base the hero can wear; the item level (affix tiers) may still run two levels ahead.
+    try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level }); } catch { return { err: "nothing to forge for that slot" }; }
+    item.crafted = true;
+    // A paid-for item never meets the loot filter: it is worn if better, else kept.
+    const upgrade = state.settings.autoEquip && upgradeSlot(state, item);
+    if (!upgrade && state.stash.length >= state.stashCap) return { err: "stash full" };
     state.nextUid++;
     state.craftSeq++;
     state.dust -= cost;
-    item.crafted = true;
-    const r = receiveItem(state, item);
-    return { err: null, item, equipped: r.equipped };
+    if (upgrade) { const r = receiveItem(state, item); if (r.equipped) return { err: null, item, equipped: true }; }
+    if (state.stash.length < state.stashCap) state.stash.push(item);
+    return { err: null, item, equipped: false };
 }
 
 export function buyCurrency(state: GameState, currency: string, n = 1): string | null {

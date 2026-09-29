@@ -2213,14 +2213,14 @@
     if (r3 < rare + ench) return "enchanted";
     return "plain";
   }
-  function pickBase(rng, ilvl, slots) {
-    const pool = Object.values(BASES).filter((b2) => b2.level <= ilvl && (!slots || slots.includes(b2.slot)));
+  function pickBase(rng, ilvl, slots, maxBaseLevel = ilvl) {
+    const pool = Object.values(BASES).filter((b2) => b2.level <= Math.min(ilvl, maxBaseLevel) && (!slots || slots.includes(b2.slot)));
     const b = rng.weighted(pool, (x) => (x.slot === "weapon" ? 0.7 : 1) * (ilvl - x.level < 14 ? 3 : 1));
     if (!b) throw new Error("no base for ilvl " + ilvl);
     return b;
   }
   function rollItem(rng, uid, ilvl, opts = {}) {
-    const base = opts.base ? BASES[opts.base] : pickBase(rng, ilvl, opts.slots);
+    const base = opts.base ? BASES[opts.base] : pickBase(rng, ilvl, opts.slots, opts.maxBaseLevel);
     if (!base) throw new Error("unknown base " + opts.base);
     const item = { uid, base: base.id, ilvl, rarity: opts.rarity ?? pickRarity(rng, opts.rarityBonus), affixes: [] };
     rollAffixes(rng, item);
@@ -2412,6 +2412,7 @@
   var SLOTS = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring1", "ring2"];
 
   // src/core/character.ts
+  var FIGHT_SHARE = 0.6;
   var UNARMED = { phys: [2, 5], aps: 1.2, crit: 5 };
   function supportSlots(level) {
     return SUPPORT_SLOT_LEVELS.filter((l) => l <= level).length;
@@ -2628,7 +2629,7 @@
     let avgHit = 0;
     for (const t of DAMAGE_TYPES) avgHit += (hit[t][0] + hit[t][1]) / 2;
     const critFactor = 1 + critChance / 100 * (critMulti / 100 - 1);
-    const sustain = manaCost > 0 ? manaRegen / manaCost : Infinity;
+    const sustain = manaCost > 0 ? manaRegen / manaCost / FIGHT_SHARE : Infinity;
     const dps = avgHit * critFactor * Math.min(speed, sustain) * hc;
     return {
       id: def2.id,
@@ -3085,6 +3086,13 @@
     state.maps[low] = m4;
     return true;
   }
+  function autoXpCap(state) {
+    const act = state.activity;
+    if (!act.autoPush || act.mapTier > 0 || state.hero.level >= MAX_LEVEL) return 0;
+    let t = 1;
+    while (mapLevel(t + 1) <= state.hero.level + 4) t++;
+    return t;
+  }
   function startMapRun(state) {
     const act = state.activity;
     const pin = act.pinnacle ? PINNACLES[act.pinnacle] : void 0;
@@ -3097,11 +3105,7 @@
       }
     }
     if (state.maps.length) {
-      let xpCap = 0;
-      if (act.autoPush) {
-        xpCap = 1;
-        while (mapLevel(xpCap + 1) <= state.hero.level + 4) xpCap++;
-      }
+      const xpCap = autoXpCap(state);
       const caps = [act.mapTier, act.autoCap ?? 0, xpCap].filter((t) => t > 0);
       const want = caps.length ? Math.min(...caps) : 0;
       const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
@@ -3509,7 +3513,7 @@
     if (run.map) {
       state.hero.xp = Math.max(0, state.hero.xp - MAP_DEATH_XP * xpToNext(state.hero.level));
       if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
-        act.autoCap = run.map.tier - 1;
+        act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
         act.deaths = 0;
         pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
       }
@@ -4733,16 +4737,22 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
     let item;
     try {
-      item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots });
+      item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level });
     } catch {
       return { err: "nothing to forge for that slot" };
     }
+    item.crafted = true;
+    const upgrade = state.settings.autoEquip && upgradeSlot(state, item);
+    if (!upgrade && state.stash.length >= state.stashCap) return { err: "stash full" };
     state.nextUid++;
     state.craftSeq++;
     state.dust -= cost;
-    item.crafted = true;
-    const r3 = receiveItem(state, item);
-    return { err: null, item, equipped: r3.equipped };
+    if (upgrade) {
+      const r3 = receiveItem(state, item);
+      if (r3.equipped) return { err: null, item, equipped: true };
+    }
+    if (state.stash.length < state.stashCap) state.stash.push(item);
+    return { err: null, item, equipped: false };
   }
   function buyCurrency(state, currency, n = 1) {
     const def2 = CURRENCIES[currency];
@@ -5125,6 +5135,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         tierSel,
         h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
         h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
+        autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
         st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
       ),
       tierChips(st.atlas.tiers),

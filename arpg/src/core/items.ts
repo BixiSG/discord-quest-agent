@@ -101,6 +101,8 @@ export interface RollOpts {
     base?: string;
     /** Restrict to these slots. */
     slots?: string[];
+    /** Only bases up to this level (e.g. ones the hero can wear). */
+    maxBaseLevel?: number;
 }
 
 export function pickRarity(rng: Rng, bonus = 0): Rarity {
@@ -113,15 +115,15 @@ export function pickRarity(rng: Rng, bonus = 0): Rarity {
 }
 
 /** Bases that can drop at an item level: the newest tier of each kind weighs most. */
-export function pickBase(rng: Rng, ilvl: number, slots?: string[]): BaseDef {
-    const pool = Object.values(BASES).filter(b => b.level <= ilvl && (!slots || slots.includes(b.slot)));
+export function pickBase(rng: Rng, ilvl: number, slots?: string[], maxBaseLevel = ilvl): BaseDef {
+    const pool = Object.values(BASES).filter(b => b.level <= Math.min(ilvl, maxBaseLevel) && (!slots || slots.includes(b.slot)));
     const b = rng.weighted(pool, x => (x.slot === "weapon" ? 0.7 : 1) * (ilvl - x.level < 14 ? 3 : 1));
     if (!b) throw new Error("no base for ilvl " + ilvl);
     return b;
 }
 
 export function rollItem(rng: Rng, uid: number, ilvl: number, opts: RollOpts = {}): Item {
-    const base = opts.base ? BASES[opts.base] : pickBase(rng, ilvl, opts.slots);
+    const base = opts.base ? BASES[opts.base] : pickBase(rng, ilvl, opts.slots, opts.maxBaseLevel);
     if (!base) throw new Error("unknown base " + opts.base);
     const item: Item = { uid, base: base.id, ilvl, rarity: opts.rarity ?? pickRarity(rng, opts.rarityBonus), affixes: [] };
     rollAffixes(rng, item);

@@ -170,3 +170,32 @@ describe("P4 review fixes", () => {
         expect(forgeRare(g, "helmet").err).toMatch(/dust/);
     });
 });
+
+import { levelReq } from "../src/core/items";
+import { autoXpCap } from "../src/core/maps";
+
+describe("P5 review fixes", () => {
+    it("forged rares are wearable and never lost to the filter", () => {
+        const g = g0(); g.hero.level = 7; g.hero.rev++;
+        g.settings.filter = [{ on: true, action: "salvage", rarity: ["rare"] }];
+        g.settings.autoEquip = false;
+        for (let i = 0; i < 30; i++) {
+            g.dust = 1e6;
+            const r = forgeRare(g, "body");
+            expect(r.err).toBeNull();
+            expect(levelReq(r.item!)).toBeLessThanOrEqual(9);
+            expect(g.stash.some(x => x.uid === r.item!.uid)).toBe(true);
+        }
+        g.stashCap = g.stash.length; g.dust = 1e6;
+        expect(forgeRare(g, "body").err).toMatch(/stash/);
+        expect(g.dust).toBe(1e6);
+    });
+    it("the XP cap yields to the player's tier and to max level", () => {
+        const g = endgame();
+        expect(autoXpCap(g)).toBeGreaterThan(0);
+        g.activity.mapTier = 30;
+        expect(autoXpCap(g)).toBe(0);
+        g.activity.mapTier = 0; g.hero.level = 100;
+        expect(autoXpCap(g)).toBe(0);
+    });
+});

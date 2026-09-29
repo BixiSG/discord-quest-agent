@@ -55,5 +55,5 @@ before the next phase starts.
 - [x] Polish: tooltips, keyboard, perf audit, a11y basics
 - [x] Launcher: user-installed addons from <Root>\addons\*.js
 - [x] Install script for %LOCALAPPDATA%\DiscordQuestAgent\addons\arpg.js
-- [ ] FINAL_REPORT.md + screenshots
-- [ ] Review P5
+- [x] FINAL_REPORT.md + screenshots
+- [x] Review P5
