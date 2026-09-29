@@ -52,6 +52,8 @@ export interface Item {
     relic?: string;
     /** Relic rolls, one per relic mod with a range. */
     relicRolls?: number[];
+    /** Touched by crafting currency (salvages as plain). */
+    crafted?: boolean;
 }
 
 export interface AffixRoll {

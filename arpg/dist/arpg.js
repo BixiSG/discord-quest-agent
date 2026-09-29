@@ -2184,7 +2184,7 @@
     return affixOf(a).tiers.length - a.tier;
   }
   function salvageValue(item) {
-    const r3 = { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
+    const r3 = item.crafted ? 1 : { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
     return Math.max(1, Math.round(r3 * (1 + item.ilvl / 10)));
   }
   function levelReq(item) {
@@ -2638,6 +2638,26 @@
     if (b.kind === "quiver" && (!w2 || baseOf(w2).kind !== "bow")) return "needs a bow";
     return null;
   }
+  function dropsOffhand(state, item, slot) {
+    const off = state.hero.equipment.offhand;
+    if (slot !== "weapon" || !off) return false;
+    const b = baseOf(item), ob = baseOf(off);
+    return b.weapon?.hands === 2 && !(b.kind === "bow" && ob.kind === "quiver") || ob.kind === "quiver" && b.kind !== "bow";
+  }
+  function displacedCount(state, item, slot) {
+    return (state.hero.equipment[slot] ? 1 : 0) + (dropsOffhand(state, item, slot) ? 1 : 0);
+  }
+  function makeRoom(state, n) {
+    const free = () => state.stashCap - state.stash.length;
+    if (free() >= n) return true;
+    const victims = state.stash.filter((x) => x.rarity !== "relic").sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.ilvl - b.ilvl);
+    for (const v of victims) {
+      if (free() >= n) break;
+      state.stash.splice(state.stash.indexOf(v), 1);
+      salvageItem(state, v);
+    }
+    return free() >= n;
+  }
   function putOn(state, item, slot) {
     const eq = state.hero.equipment;
     const off = [];
@@ -2665,10 +2685,7 @@
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
-    const eq = state.hero.equipment;
-    const b = baseOf(item);
-    const out = (eq[target] ? 1 : 0) + (target === "weapon" && eq.offhand && (b.weapon?.hands === 2 || baseOf(eq.offhand).kind === "quiver") ? 1 : 0);
-    if (state.stash.length - 1 + out > state.stashCap) return "stash full";
+    if (state.stash.length - 1 + displacedCount(state, item, target) > state.stashCap) return "stash full";
     state.stash.splice(i, 1);
     state.stash.push(...putOn(state, item, target));
     return null;
@@ -2711,8 +2728,7 @@
     state.totals.items++;
     if (state.settings.autoEquip) {
       const slot = upgradeSlot(state, item);
-      const displaced = slot ? (state.hero.equipment[slot] ? 1 : 0) + (slot === "weapon" && state.hero.equipment.offhand ? 1 : 0) : 0;
-      if (slot && state.stash.length + displaced <= state.stashCap) {
+      if (slot && makeRoom(state, displacedCount(state, item, slot))) {
         for (const old of putOn(state, item, slot)) state.stash.push(old);
         pushLog(state, "loot", `Equipped a new ${BASES[item.base].name}.`);
         return { kept: true, equipped: true };
@@ -3273,8 +3289,60 @@
       if (!def2 || !def2.tiers[a.tier] || !Array.isArray(a.rolls) || a.rolls.length !== def2.mods.length) throw new SaveError(`bad affix ${String(a?.id)}`);
       a.rolls.forEach((r3) => num(r3, "affix roll"));
     }
-    if (i.rarity === "relic" && (!i.relic || !RELICS[i.relic])) throw new SaveError(`unknown relic ${String(i.relic)}`);
+    for (const a of i.affixes) {
+      const t = AFFIXES[a.id].tiers[a.tier];
+      a.rolls = a.rolls.map((r3, k) => Math.min(t.ranges[k][1], Math.max(t.ranges[k][0], Math.round(r3))));
+    }
+    if (i.rarity === "relic") {
+      const def2 = i.relic ? RELICS[i.relic] : void 0;
+      if (!def2) throw new SaveError(`unknown relic ${String(i.relic)}`);
+      if (!Array.isArray(i.relicRolls) || i.relicRolls.length !== def2.mods.length) throw new SaveError("bad relic rolls");
+      i.relicRolls = i.relicRolls.map((r3, k) => {
+        num(r3, "relic roll");
+        const [lo, hi] = def2.mods[k].range;
+        return Math.min(hi, Math.max(lo, Math.round(r3)));
+      });
+      if (i.affixes.length) throw new SaveError("relic with affixes");
+    } else if (i.relic !== void 0 || i.relicRolls !== void 0) throw new SaveError("relic data on a non-relic item");
     return i;
+  }
+  var RARITIES = ["plain", "enchanted", "rare", "relic"];
+  var strs = (v, ok) => Array.isArray(v) ? v.filter((x) => typeof x === "string" && (!ok || ok(x))) : void 0;
+  var pos = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.round(v) : void 0;
+  function cleanRule(v) {
+    if (!v || typeof v !== "object") return null;
+    const r3 = v;
+    if (r3.action !== "keep" && r3.action !== "salvage") return null;
+    const out = { on: r3.on !== false, action: r3.action };
+    const rarity = strs(r3.rarity, (s) => RARITIES.includes(s));
+    if (rarity?.length) out.rarity = rarity;
+    const slots = strs(r3.slots);
+    if (slots?.length) out.slots = slots;
+    const minIlvl = pos(r3.minIlvl);
+    if (minIlvl) out.minIlvl = minIlvl;
+    const behind = pos(r3.behind);
+    if (behind) out.behind = behind;
+    const minAffixes = pos(r3.minAffixes);
+    if (minAffixes) out.minAffixes = minAffixes;
+    if (typeof r3.group === "string") out.group = r3.group;
+    return out;
+  }
+  function cleanPassives(hero) {
+    const wanted = new Set(strs(hero.passives, (id) => !!PASSIVES[id] && PASSIVES[id].kind !== "start") ?? []);
+    const start = CLASSES[hero.cls].startNode;
+    const kept = [];
+    const seen = /* @__PURE__ */ new Set([start]);
+    const queue = [start];
+    while (queue.length) {
+      for (const l of PASSIVES[queue.shift()]?.links ?? []) {
+        if (wanted.has(l) && !seen.has(l)) {
+          seen.add(l);
+          kept.push(l);
+          queue.push(l);
+        }
+      }
+    }
+    return kept.slice(0, Math.max(0, passivePoints(hero.level, hero.bonusPoints)));
   }
   function validateState(raw) {
     const s = obj(raw, "state");
@@ -3293,7 +3361,7 @@
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
     if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc].cls !== hero.cls)) delete hero.asc;
     hero.ascNodes = Array.isArray(hero.ascNodes) ? hero.ascNodes.filter((id) => ASC_NODES[id]?.asc === hero.asc).slice(0, hero.ascPoints) : [];
-    hero.passives = Array.isArray(hero.passives) ? hero.passives.filter((id) => PASSIVES[id] && PASSIVES[id].kind !== "start") : [];
+    hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {
       if (!SLOTS.includes(k)) throw new SaveError(`bad slot ${k}`);
@@ -3324,7 +3392,7 @@
     const set = obj(s.settings, "settings");
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
-    if (!Array.isArray(set.filter)) set.filter = structuredClone(DEFAULT_FILTER);
+    set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r3) => !!r3) : structuredClone(DEFAULT_FILTER);
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
@@ -3424,10 +3492,10 @@
         this.dying.clear();
       }
       this.background(zone.palette, zone.id);
-      const pos = this.positions(state);
+      const pos2 = this.positions(state);
       if (run && (run.phase === "fight" || run.phase === "dead")) {
         run.monsters.forEach((m4, i) => {
-          const p = pos[i];
+          const p = pos2[i];
           if (m4.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
           const died = this.dying.get(i);
           const fade = died ? 1 - (now - died) / 400 : 1;
@@ -3459,7 +3527,7 @@
       const dead = run?.phase === "dead";
       drawHero(g, HERO_X + lunge, GROUND, CLASSES[state.hero.cls]?.color ?? "#e2543b", walking ? now : 0, now - this.heroHurt < 120, dead);
       this.fx = this.fx.filter((f) => now - f.t < 350);
-      for (const f of this.fx) this.drawFx(f, pos, now);
+      for (const f of this.fx) this.drawFx(f, pos2, now);
       g.textAlign = "center";
       this.floats = this.floats.filter((f) => now - f.t < 800);
       for (const f of this.floats) {
@@ -3517,10 +3585,10 @@
       g.fillStyle = shade(pal[1], -0.2);
       for (let x = -(this.travel * 1.2 % 24); x < W; x += 24) g.fillRect(x, GROUND + 8, 10, 2);
     }
-    drawFx(f, pos, now) {
+    drawFx(f, pos2, now) {
       const g = this.g;
       const k = (now - f.t) / 350;
-      const targets = f.targets.map((i) => pos[i]).filter((p) => !!p);
+      const targets = f.targets.map((i) => pos2[i]).filter((p) => !!p);
       g.lineWidth = 2;
       if (f.kind === "arc") {
         g.strokeStyle = `rgba(255,255,255,${1 - k})`;
@@ -4046,6 +4114,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const err = eff(copy, rng);
     if (err) return err;
     state.craftSeq++;
+    copy.crafted = true;
     Object.assign(found.item, copy);
     if (!copy.name) delete found.item.name;
     state.currency[currency]--;
@@ -4978,18 +5047,20 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   }
 
   // src/ui/app.ts
-  var GEO_KEY = "hollowmarch.window";
-  var QUICK_KEY = "hollowmarch.quicksave";
+  var GEO_KEY = "window";
+  var QUICK_KEY = "quicksave";
   var BACKUP_MS = 5 * 6e4;
   var AUTOSAVE_MS = 2e4;
   var REPORT_MIN_MS = 6e4;
   var STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
   var GameWindow = class _GameWindow {
-    constructor(store2, hooks = {}) {
+    constructor(store2, kv2, hooks = {}) {
       this.store = store2;
+      this.kv = kv2;
       this.hooks = hooks;
     }
     store;
+    kv;
     hooks;
     host = null;
     root;
@@ -5011,10 +5082,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     stopKeys = null;
     onUnload = () => {
       if (!this.state) return;
-      try {
-        localStorage.setItem(QUICK_KEY, JSON.stringify(wrap(this.state, Date.now())));
-      } catch {
-      }
+      this.kv.set(QUICK_KEY, wrap(this.state, Date.now()));
       void this.save();
     };
     onResize = () => this.refit();
@@ -5101,20 +5169,17 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     geo = { x: 80, y: 60, w: 760, h: 620 };
     placeWindow(stage) {
-      try {
-        const g = JSON.parse(localStorage.getItem(GEO_KEY) ?? "null");
-        if (g && typeof g.x === "number") this.geo = g;
-      } catch {
-      }
+      const g = this.kv.get(GEO_KEY);
+      if (g && [g.x, g.y, g.w, g.h].every((v) => typeof v === "number" && Number.isFinite(v))) this.geo = { x: g.x, y: g.y, w: g.w, h: g.h };
       const fit = () => {
         const vw = window.innerWidth, vh = window.innerHeight;
-        const g = this.geo;
-        g.w = Math.max(360, Math.min(g.w, vw - 8));
-        g.h = Math.max(320, Math.min(g.h, vh - 8));
-        g.x = Math.max(0, Math.min(g.x, vw - g.w));
-        g.y = Math.max(0, Math.min(g.y, vh - g.h));
-        Object.assign(this.win.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px" });
-        stage.style.height = Math.round(Math.min(g.w * H / W, g.h * 0.36)) + "px";
+        const g2 = this.geo;
+        g2.w = Math.max(360, Math.min(g2.w, vw - 8));
+        g2.h = Math.max(320, Math.min(g2.h, vh - 8));
+        g2.x = Math.max(0, Math.min(g2.x, vw - g2.w));
+        g2.y = Math.max(0, Math.min(g2.y, vh - g2.h));
+        Object.assign(this.win.style, { left: g2.x + "px", top: g2.y + "px", width: g2.w + "px", height: g2.h + "px" });
+        stage.style.height = Math.round(Math.min(g2.w * H / W, g2.h * 0.36)) + "px";
       };
       fit();
       this.refit = fit;
@@ -5137,10 +5202,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           handle.removeEventListener("pointermove", move);
           handle.removeEventListener("pointerup", up);
           handle.removeEventListener("pointercancel", up);
-          try {
-            localStorage.setItem(GEO_KEY, JSON.stringify(this.geo));
-          } catch {
-          }
+          this.kv.set(GEO_KEY, this.geo);
         };
         handle.addEventListener("pointermove", move);
         handle.addEventListener("pointerup", up);
@@ -5158,8 +5220,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     async load() {
       let quick = null;
       try {
-        const q = localStorage.getItem(QUICK_KEY);
-        if (q) quick = _GameWindow.accept(JSON.parse(q));
+        const q = this.kv.get(QUICK_KEY);
+        if (q) quick = _GameWindow.accept(q);
       } catch (e) {
         console.warn("[Hollowmarch] quick save unusable:", e);
       }
@@ -5192,10 +5254,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           this.lastBackup = Date.now();
         }
         await this.store.put("main", wrap(s, Date.now()));
-        try {
-          localStorage.removeItem(QUICK_KEY);
-        } catch {
-        }
+        if (this.kv.get(QUICK_KEY)) this.kv.del(QUICK_KEY);
       } catch (e) {
         console.warn("[Hollowmarch] save failed:", e);
       }
@@ -5306,6 +5365,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         resetGame: () => {
           this.stopLoop();
           this.state = null;
+          this.kv.del(QUICK_KEY);
           void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation());
         },
         storeKind: this.store.kind
@@ -5509,6 +5569,77 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     };
   }
 
+  // src/platform/kv.ts
+  function localKV(prefix = "hollowmarch.") {
+    let ls = null;
+    try {
+      ls = window.localStorage;
+      ls.getItem("x");
+    } catch {
+      ls = null;
+    }
+    const mem = /* @__PURE__ */ new Map();
+    const read = (k) => {
+      try {
+        return ls ? ls.getItem(prefix + k) : mem.get(k) ?? null;
+      } catch {
+        return null;
+      }
+    };
+    return {
+      get(k) {
+        const raw = read(k);
+        if (raw === null) return null;
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return null;
+        }
+      },
+      set(k, v) {
+        const raw = JSON.stringify(v);
+        try {
+          if (ls) ls.setItem(prefix + k, raw);
+          else mem.set(k, raw);
+        } catch {
+        }
+      },
+      del(k) {
+        try {
+          if (ls) ls.removeItem(prefix + k);
+          else mem.delete(k);
+        } catch {
+        }
+      }
+    };
+  }
+  function hubKV(api) {
+    const all = () => {
+      const o = api.load();
+      return o && typeof o === "object" ? { ...o } : {};
+    };
+    const kv2 = (o) => o.kv && typeof o.kv === "object" ? { ...o.kv } : {};
+    return {
+      get(k) {
+        return kv2(all())[k] ?? null;
+      },
+      set(k, v) {
+        const o = all();
+        const m4 = kv2(o);
+        m4[k] = v;
+        o.kv = m4;
+        api.save(o);
+      },
+      del(k) {
+        const o = all();
+        const m4 = kv2(o);
+        delete m4[k];
+        o.kv = m4;
+        api.save(o);
+      }
+    };
+  }
+
   // src/main.ts
   var ID = "arpg";
   var ICON = "M12 1.5c1.7 3.1 4.6 4.9 4.6 8.9a4.6 4.6 0 0 1-9.2 0c0-1.9.8-3.2 1.9-4.3.2 1.4.9 2.4 2.2 2.8-.6-2.6-.2-5 .5-7.4ZM4 17h16v2.5H4ZM7 21h10v1.5H7Z";
@@ -5536,11 +5667,19 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
       opening = null;
     });
   }
+  var generation = 0;
   async function doOpen() {
+    const gen = generation;
     if (!game) {
-      game = new GameWindow(await store(), {
+      const st = await store();
+      if (gen !== generation) return;
+      const kv2 = hub ? hubKV(hub) : localKV();
+      game = new GameWindow(st, kv2, {
         summary: (s) => {
-          hub?.save(s);
+          if (hub) {
+            const o = hub.load() ?? {};
+            hub.save({ ...o, summary: s });
+          }
           refreshCard?.();
         },
         theme: () => hub?.theme() === "light" ? "light" : hub ? "dark" : "light",
@@ -5560,13 +5699,15 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
     strings: STRINGS,
     init(api) {
       hub = api;
+      generation++;
     },
     mount(el, api) {
       hub = api;
       let view = null;
       const draw = () => {
         view?.unmount();
-        const saved = api.load();
+        const o = api.load();
+        const saved = o?.summary ?? (o && typeof o.level === "number" ? o : null);
         view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, !!game?.isOpen, () => void openGame());
       };
       draw();
@@ -5577,11 +5718,13 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
       } };
     },
     destroy() {
-      const g = game;
+      const g = game, gen = ++generation;
       game = null;
       void (g ? g.close() : Promise.resolve()).finally(() => {
-        hub = null;
-        refreshCard = null;
+        if (gen === generation) {
+          hub = null;
+          refreshCard = null;
+        }
       });
     }
   };

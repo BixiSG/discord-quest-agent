@@ -42,3 +42,41 @@ describe("stash limits", () => {
         expect(g.stashFull).toBe(true);
     });
 });
+
+import { applyCurrency } from "../src/core/crafting";
+import { salvageValue } from "../src/core/items";
+
+describe("P2 review fixes", () => {
+    it("drops broken filter rules and bad relic data, trims passives", () => {
+        const g = g0() as any;
+        g.settings.filter = [null, { action: "nope" }, { on: true, action: "keep", rarity: ["rare", 5] }];
+        g.hero.level = 5;
+        g.hero.passives = Array(50).fill("keystone0").concat(["start_vanguard", "vanguard_in0"]);
+        const s = validateState(g);
+        expect(s.settings.filter).toEqual([{ on: true, action: "keep", rarity: ["rare"] }]);
+        expect(s.hero.passives).toEqual(["vanguard_in0"]);
+        const r = g0() as any;
+        r.stash.push({ uid: 5, base: "ring_ember", ilvl: 30, rarity: "relic", relic: "emberknot", relicRolls: ["x", 1, 1], affixes: [] });
+        expect(() => validateState(r)).toThrow(SaveError);
+        const r2 = g0() as any;
+        r2.stash.push({ uid: 5, base: "ring_ember", ilvl: 30, rarity: "rare", relic: "emberknot", affixes: [] });
+        expect(() => validateState(r2)).toThrow(SaveError);
+    });
+    it("crafted items salvage as plain", () => {
+        const g = g0();
+        g.stash.push({ uid: 9, base: "plate_body6", ilvl: 70, rarity: "plain", affixes: [] });
+        g.currency.kindling = 1;
+        const plain = salvageValue(g.stash[0]!);
+        expect(applyCurrency(g, "kindling", 9)).toBeNull();
+        expect(salvageValue(g.stash[0]!)).toBe(plain);
+    });
+    it("a full stash still takes upgrades, giving up its weakest item", () => {
+        const g = g0();
+        g.stashCap = 2;
+        const worn = g.hero.equipment.weapon!.uid;
+        g.stash.push({ uid: 101, base: "sword1", ilvl: 1, rarity: "plain", affixes: [] }, { uid: 102, base: "ring_iron", ilvl: 5, rarity: "rare", affixes: [], name: "X" });
+        const r = receiveItem(g, { uid: 103, base: "sword1", ilvl: 1, rarity: "rare", name: "Big", affixes: [{ id: "phys_local", tier: 0, rolls: [500] }] });
+        expect(r.equipped).toBe(true);
+        expect(g.stash.map(x => x.uid).sort()).toEqual([102, worn].sort());
+    });
+});

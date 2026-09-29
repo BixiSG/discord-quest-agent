@@ -5,6 +5,7 @@
 import { GameWindow, type Summary } from "./ui/app";
 import { mountCard } from "./ui/card";
 import { openStore, type SaveStore } from "./platform/store";
+import { hubKV, localKV } from "./platform/kv";
 
 const ID = "arpg";
 const ICON = "M12 1.5c1.7 3.1 4.6 4.9 4.6 8.9a4.6 4.6 0 0 1-9.2 0c0-1.9.8-3.2 1.9-4.3.2 1.4.9 2.4 2.2 2.8-.6-2.6-.2-5 .5-7.4ZM4 17h16v2.5H4ZM7 21h10v1.5H7Z";
@@ -44,10 +45,17 @@ function openGame(): Promise<void> {
     return (opening ??= doOpen().finally(() => { opening = null; }));
 }
 
+/** Bumped by destroy(): anything started before it must not act afterwards. */
+let generation = 0;
+
 async function doOpen(): Promise<void> {
+    const gen = generation;
     if (!game) {
-        game = new GameWindow(await store(), {
-            summary: (s: Summary) => { hub?.save(s); refreshCard?.(); },
+        const st = await store();
+        if (gen !== generation) return; // switched off while opening
+        const kv = hub ? hubKV(hub) : localKV();
+        game = new GameWindow(st, kv, {
+            summary: (s: Summary) => { if (hub) { const o = (hub.load() as Record<string, unknown> | null) ?? {}; hub.save({ ...o, summary: s }); } refreshCard?.(); },
             theme: () => (hub?.theme() === "light" ? "light" : hub ? "dark" : "light"),
             onClose: () => { refreshCard?.(); if (standalone) showOpener(); },
         });
@@ -61,13 +69,14 @@ const def = {
     version: 1,
     icon: ICON,
     strings: STRINGS,
-    init(api: HubApi) { hub = api; },
+    init(api: HubApi) { hub = api; generation++; },
     mount(el: HTMLElement, api: HubApi) {
         hub = api;
         let view: { unmount(): void } | null = null;
         const draw = () => {
             view?.unmount();
-            const saved = api.load() as Summary | null;
+            const o = api.load() as { summary?: Summary; level?: number } | null;
+            const saved = o?.summary ?? (o && typeof o.level === "number" ? (o as Summary) : null);
             view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, !!game?.isOpen, () => void openGame());
         };
         draw();
@@ -75,10 +84,11 @@ const def = {
         return { unmount() { view?.unmount(); if (refreshCard === draw) refreshCard = null; } };
     },
     destroy() {
-        // Switched off in Settings: save and close, then let go of the hub.
-        const g = game;
+        // Switched off in Settings: save and close, then let go of the hub,
+        // unless the addon was switched back on meanwhile (a newer generation).
+        const g = game, gen = ++generation;
         game = null;
-        void (g ? g.close() : Promise.resolve()).finally(() => { hub = null; refreshCard = null; });
+        void (g ? g.close() : Promise.resolve()).finally(() => { if (gen === generation) { hub = null; refreshCard = null; } });
     },
 };
 

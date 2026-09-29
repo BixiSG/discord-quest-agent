@@ -31,16 +31,16 @@ before the next phase starts.
 - [x] Review P1
 
 ## P2 - depth
-- [ ] Canvas passive tree (shared tree, three class starts)
-- [ ] Classes: Strider (dex), Arcanist (int) with their skills
-- [ ] Crafting currencies + crafting bench UI
-- [ ] Loot filter (rules on rarity/slot/ilvl/affix count) + auto-salvage
-- [ ] Uniques
-- [ ] Review P2
+- [x] Canvas passive tree (shared tree, three class starts)
+- [x] Classes: Strider (dex), Arcanist (int) with their skills
+- [x] Crafting currencies + crafting bench UI
+- [x] Loot filter (rules on rarity/slot/ilvl/affix count) + auto-salvage
+- [x] Uniques
+- [x] Review P2
 
 ## P3 - story
-- [ ] Acts 2 and 3 with story text, bosses
-- [ ] Ascendancy trials and two ascendancies per class
+- [x] Acts 2 and 3 with story text, bosses
+- [x] Ascendancy trials and two ascendancies per class
 - [ ] Review P3
 
 ## P4 - endgame

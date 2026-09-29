@@ -11,15 +11,16 @@ import type { GameState } from "../core/state";
 import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
 import { supportSlots } from "../core/character";
 import type { SaveStore } from "../platform/store";
+import type { KV } from "../platform/kv";
 import { Battle, W as BW, H as BH } from "./battle";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { itemCard } from "./views";
 
-const GEO_KEY = "hollowmarch.window";
+const GEO_KEY = "window";
 /** Synchronous copy written on pagehide, when an IndexedDB write may not finish. */
-const QUICK_KEY = "hollowmarch.quicksave";
+const QUICK_KEY = "quicksave";
 const BACKUP_MS = 5 * 60e3;
 const AUTOSAVE_MS = 20e3;
 const REPORT_MIN_MS = 60e3;
@@ -57,12 +58,12 @@ export class GameWindow {
     private stopKeys: ((e: Event) => void) | null = null;
     private onUnload = () => {
         if (!this.state) return;
-        try { localStorage.setItem(QUICK_KEY, JSON.stringify(wrap(this.state, Date.now()))); } catch { /* quota: IndexedDB save below may still land */ }
+        this.kv.set(QUICK_KEY, wrap(this.state, Date.now()));
         void this.save();
     };
     private onResize = () => this.refit();
 
-    constructor(private store: SaveStore, private hooks: AppHooks = {}) {}
+    constructor(private store: SaveStore, private kv: KV, private hooks: AppHooks = {}) {}
 
     get isOpen(): boolean { return !!this.host; }
 
@@ -133,7 +134,8 @@ export class GameWindow {
 
     private geo = { x: 80, y: 60, w: 760, h: 620 };
     private placeWindow(stage: HTMLElement): void {
-        try { const g = JSON.parse(localStorage.getItem(GEO_KEY) ?? "null"); if (g && typeof g.x === "number") this.geo = g; } catch { /* default */ }
+        const g = this.kv.get(GEO_KEY) as typeof this.geo | null;
+        if (g && [g.x, g.y, g.w, g.h].every(v => typeof v === "number" && Number.isFinite(v))) this.geo = { x: g.x, y: g.y, w: g.w, h: g.h };
         const fit = () => {
             const vw = window.innerWidth, vh = window.innerHeight;
             const g = this.geo;
@@ -156,7 +158,7 @@ export class GameWindow {
             const move = (ev: PointerEvent) => { apply(ev.clientX - lx, ev.clientY - ly, this.geo); lx = ev.clientX; ly = ev.clientY; this.refit(); };
             const up = () => {
                 handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up);
-                try { localStorage.setItem(GEO_KEY, JSON.stringify(this.geo)); } catch { /* ignore */ }
+                this.kv.set(GEO_KEY, this.geo);
             };
             handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
         });
@@ -175,8 +177,8 @@ export class GameWindow {
     private async load(): Promise<boolean> {
         let quick: SaveEnvelope<GameState> | null = null;
         try {
-            const q = localStorage.getItem(QUICK_KEY);
-            if (q) quick = GameWindow.accept(JSON.parse(q));
+            const q = this.kv.get(QUICK_KEY);
+            if (q) quick = GameWindow.accept(q);
         } catch (e) { console.warn("[Hollowmarch] quick save unusable:", e); }
         for (const key of ["main", "backup"]) {
             try {
@@ -204,7 +206,7 @@ export class GameWindow {
                 this.lastBackup = Date.now();
             }
             await this.store.put("main", wrap(s, Date.now()));
-            try { localStorage.removeItem(QUICK_KEY); } catch { /* ignore */ }
+            if (this.kv.get(QUICK_KEY)) this.kv.del(QUICK_KEY);
         } catch (e) { console.warn("[Hollowmarch] save failed:", e); }
         this.hooks.summary?.(summaryOf(s));
     }
@@ -303,7 +305,11 @@ export class GameWindow {
                     return null;
                 } catch (e) { return e instanceof SaveError ? e.message : "could not read that save"; }
             },
-            resetGame: () => { this.stopLoop(); this.state = null; void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation()); },
+            resetGame: () => {
+                this.stopLoop(); this.state = null;
+                this.kv.del(QUICK_KEY);
+                void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation());
+            },
             storeKind: this.store.kind,
         };
     }

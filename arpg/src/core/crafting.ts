@@ -75,6 +75,7 @@ export function applyCurrency(state: GameState, currency: string, uid: number): 
     const err = eff(copy, rng);
     if (err) return err;
     state.craftSeq++;
+    copy.crafted = true;
     Object.assign(found.item, copy);
     if (!copy.name) delete found.item.name;
     state.currency[currency]!--;

@@ -42,3 +42,22 @@ One entry per loop iteration, newest last.
   crafting RNG), relics (10), rule-based loot filter, currency drops, save v2
   migration with fixture test. UI: Tree (canvas pan/zoom), Forge, filter
   editor. 72 tests.
+
+## 3 - Balance bot, P3 content, Review P2
+- tools/bot.ts plays the balance sim like a player: best skill + greedy
+  supports, greedy passives and ascendancy nodes by build score.
+- P3: Acts 2 (Glass Barrens) and 3 (Sunfall), 14 zones, 11 monsters, 7 new
+  bosses, story beats (boss text, act outros, "The road remembers" modal and
+  report lines), three trials (open after a set zone, +2 ascendancy points on
+  first clear, auto-push returns to the road), six ascendancies (6 nodes each)
+  chosen in the Tree view, +2 passive points per act boss, save v3.
+- Retune from bot runs: spellScale 1.06^L (was 1.075^L, spells were 8x
+  weapons), hero life +16/level (was 12), monster damage 1.055^L.
+  24 h bot result: Vanguard L48 Act 3, Strider L53 Sunfall, Arcanist L54.
+- Review P2 (9 findings, all fixed): full stash no longer blocks upgrades
+  (weakest unprotected stash item is salvaged instead); validation sanitises
+  filter rules, relic rolls, affix rolls, passives (connected, unique, within
+  budget); crafted items salvage as plain (Kindling dust exploit); geometry
+  and quick save go through a KV that uses hub storage in Discord (no
+  localStorage there); reset clears the quick save; destroy/init races use a
+  generation counter; bow swap with a quiver at a full stash works.

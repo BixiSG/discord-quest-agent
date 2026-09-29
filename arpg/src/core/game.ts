@@ -68,6 +68,33 @@ export function canEquip(state: GameState, item: Item, slot: Slot): string | nul
     return null;
 }
 
+/** Does putting a weapon in `slot` also take the off-hand off? (Same rule as putOn.) */
+function dropsOffhand(state: GameState, item: Item, slot: Slot): boolean {
+    const off = state.hero.equipment.offhand;
+    if (slot !== "weapon" || !off) return false;
+    const b = baseOf(item), ob = baseOf(off);
+    return (b.weapon?.hands === 2 && !(b.kind === "bow" && ob.kind === "quiver")) || (ob.kind === "quiver" && b.kind !== "bow");
+}
+
+/** How many worn items equipping `item` in `slot` takes off. */
+export function displacedCount(state: GameState, item: Item, slot: Slot): number {
+    return (state.hero.equipment[slot] ? 1 : 0) + (dropsOffhand(state, item, slot) ? 1 : 0);
+}
+
+/** Salvages the least valuable unprotected stash items to free `n` places. */
+function makeRoom(state: GameState, n: number): boolean {
+    const free = () => state.stashCap - state.stash.length;
+    if (free() >= n) return true;
+    const victims = state.stash.filter(x => x.rarity !== "relic")
+        .sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.ilvl - b.ilvl);
+    for (const v of victims) {
+        if (free() >= n) break;
+        state.stash.splice(state.stash.indexOf(v), 1);
+        salvageItem(state, v);
+    }
+    return free() >= n;
+}
+
 /** Puts an item on; whatever it displaces goes to the stash. The item must not be in the stash. */
 function putOn(state: GameState, item: Item, slot: Slot): Item[] {
     const eq = state.hero.equipment;
@@ -93,10 +120,7 @@ export function equip(state: GameState, uid: number, slot?: Slot): string | null
     const target = slot ?? bestSlot(state, item);
     const err = canEquip(state, item, target);
     if (err) return err;
-    const eq = state.hero.equipment;
-    const b = baseOf(item);
-    const out = (eq[target] ? 1 : 0) + (target === "weapon" && eq.offhand && (b.weapon?.hands === 2 || baseOf(eq.offhand).kind === "quiver") ? 1 : 0);
-    if (state.stash.length - 1 + out > state.stashCap) return "stash full";
+    if (state.stash.length - 1 + displacedCount(state, item, target) > state.stashCap) return "stash full";
     state.stash.splice(i, 1);
     state.stash.push(...putOn(state, item, target));
     return null;
@@ -144,9 +168,8 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
     state.totals.items++;
     if (state.settings.autoEquip) {
         const slot = upgradeSlot(state, item);
-        // Gear taken off must fit in the stash: never salvage something the player wore.
-        const displaced = slot ? (state.hero.equipment[slot] ? 1 : 0) + (slot === "weapon" && state.hero.equipment.offhand ? 1 : 0) : 0;
-        if (slot && state.stash.length + displaced <= state.stashCap) {
+        // Gear taken off goes to the stash, never to salvage: a full stash gives up its least valuable items first.
+        if (slot && makeRoom(state, displacedCount(state, item, slot))) {
             for (const old of putOn(state, item, slot)) state.stash.push(old);
             pushLog(state, "loot", `Equipped a new ${BASES[item.base]!.name}.`);
             return { kept: true, equipped: true };

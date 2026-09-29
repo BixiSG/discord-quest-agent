@@ -241,7 +241,8 @@ export const tierIlvl = (i: number) => AFFIX_ILVLS[i] ?? 1;
 
 /** Ember dust from salvaging. */
 export function salvageValue(item: Item): number {
-    const r = { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
+    // Crafted items salvage as plain, so currency can't be turned into dust.
+    const r = item.crafted ? 1 : { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
     return Math.max(1, Math.round(r * (1 + item.ilvl / 10)));
 }
 
