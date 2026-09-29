@@ -2267,7 +2267,7 @@
     const local = (stat) => mods.filter((m4) => m4.stat === stat).reduce((s, m4) => s + m4.value, 0);
     const out = { global: mods.filter((m4) => !m4.stat.startsWith("local.")) };
     if (b.weapon) {
-      const inc = 1 + local("local.physInc") / 100;
+      const inc = 1 + (local("local.physInc") + (item.quality ?? 0)) / 100;
       const added = {};
       for (const t of ["fire", "cold", "lightning"]) {
         const lo = local(`local.addMin.${t}`), hi = local(`local.addMax.${t}`);
@@ -2282,7 +2282,7 @@
       };
     }
     if (b.defence) {
-      const inc = 1 + local("local.defInc") / 100;
+      const inc = 1 + (local("local.defInc") + (item.quality ?? 0)) / 100;
       const d = b.defence;
       out.defence = {
         armour: Math.round((d.armour + local("local.armour")) * inc),
@@ -6657,6 +6657,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     if (err) return err;
     state.craftSeq++;
     copy2.crafted = true;
+    copy2.locked = true;
     Object.assign(found.item, copy2);
     if (!copy2.name) delete found.item.name;
     state.currency[currency]--;

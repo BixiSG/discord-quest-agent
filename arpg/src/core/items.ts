@@ -188,7 +188,7 @@ export function itemStats(item: Item): ItemStats {
     const local = (stat: string) => mods.filter(m => m.stat === stat).reduce((s, m) => s + m.value, 0);
     const out: ItemStats = { global: mods.filter(m => !m.stat.startsWith("local.")) };
     if (b.weapon) {
-        const inc = 1 + local("local.physInc") / 100;
+        const inc = 1 + (local("local.physInc") + (item.quality ?? 0)) / 100;
         const added: Partial<Record<DamageType, [number, number]>> = {};
         for (const t of ["fire", "cold", "lightning"] as const) {
             const lo = local(`local.addMin.${t}`), hi = local(`local.addMax.${t}`);
@@ -203,7 +203,7 @@ export function itemStats(item: Item): ItemStats {
         };
     }
     if (b.defence) {
-        const inc = 1 + local("local.defInc") / 100;
+        const inc = 1 + (local("local.defInc") + (item.quality ?? 0)) / 100;
         const d = b.defence;
         out.defence = {
             armour: Math.round((d.armour + local("local.armour")) * inc),

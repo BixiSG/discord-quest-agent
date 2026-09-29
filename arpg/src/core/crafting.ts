@@ -4,7 +4,8 @@
 import { CURRENCIES, ZONES, mapLevel } from "./data";
 import { receiveItem, upgradeSlot } from "./game";
 import { Rng, hashSeed } from "./rng";
-import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, countAffixes, eligibleAffixes, rareName, rollAffixes } from "./items";
+import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, rollAffixes, rollTier, salvageValue } from "./items";
+import { AFFIXES, type AffixDef } from "./data";
 import type { GameState } from "./state";
 import type { Item, Slot } from "./types";
 import { SLOTS } from "./types";
@@ -77,9 +78,100 @@ export function applyCurrency(state: GameState, currency: string, uid: number): 
     if (err) return err;
     state.craftSeq++;
     copy.crafted = true;
+    // Worked at the Forge: locked, so upkeep and bulk salvage leave it alone.
+    copy.locked = true;
     Object.assign(found.item, copy);
     if (!copy.name) delete found.item.name;
     state.currency[currency]!--;
+    if (found.slot) state.hero.rev++;
+    return null;
+}
+
+/** Reroll currencies "Use until upgrade" repeats. */
+export const REROLLS = ["reshaper", "tempest", "temper"];
+
+/**
+ * Uses a reroll currency on a stash item again and again, up to `tries`
+ * times, until the item would raise the build score (the currency runs out
+ * or the tries do otherwise). Returns the uses and whether it got there.
+ */
+export function craftUntilUpgrade(state: GameState, currency: string, uid: number, tries = 20): { err: string | null; used: number; upgrade: boolean } {
+    if (!REROLLS.includes(currency)) return { err: "only rerolls repeat", used: 0, upgrade: false };
+    if (!state.stash.some(x => x.uid === uid) && !state.relics.some(x => x.uid === uid)) return { err: "only stash items", used: 0, upgrade: false };
+    let used = 0;
+    for (; used < tries; ) {
+        const err = applyCurrency(state, currency, uid);
+        if (err) return { err: used ? null : err, used, upgrade: false };
+        used++;
+        const it = findItem(state, uid)!.item;
+        if (upgradeSlot(state, it)) return { err: null, used, upgrade: true };
+    }
+    return { err: null, used, upgrade: false };
+}
+
+// ---- hone and bench ----------------------------------------------------------
+
+export const MAX_QUALITY = 20;
+
+/** Ember dust to hone an item one point of quality further; null when it can't take more. */
+export function honeCost(item: Item): number | null {
+    const b = baseOf(item);
+    if (!b.weapon && !b.defence) return null;
+    const q = item.quality ?? 0;
+    if (q >= MAX_QUALITY) return null;
+    return Math.round((20 + item.ilvl * 2) * (1 + q * 0.5));
+}
+
+/** Hone: +1% quality, which is increased local damage on weapons and defences on armour. */
+export function hone(state: GameState, uid: number): string | null {
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const b = baseOf(found.item);
+    if (!b.weapon && !b.defence) return "only weapons and armour take quality";
+    const cost = honeCost(found.item);
+    if (cost === null) return `already at ${MAX_QUALITY}% quality`;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    found.item.quality = (found.item.quality ?? 0) + 1;
+    found.item.locked = true;
+    if (found.slot) state.hero.rev++;
+    return null;
+}
+
+export const BENCH_GRAFTS = 3;
+export const benchDust = (item: Item) => 10 + item.ilvl * 3;
+
+/** Affixes the bench can put on an item: what fits once its benched affix (if any) is gone. */
+export function benchOptions(item: Item): AffixDef[] {
+    if (item.rarity !== "enchanted" && item.rarity !== "rare") return [];
+    const copy = structuredClone(item);
+    copy.affixes = copy.affixes.filter(a => !a.bench);
+    return eligibleAffixes(copy);
+}
+
+/**
+ * The bench: adds a chosen affix (a random tier the item level allows) to an
+ * enchanted or rare item with room. One benched affix per item: a new one
+ * replaces the old. Costs Graft and ember dust.
+ */
+export function benchCraft(state: GameState, uid: number, affixId: string): string | null {
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const item = found.item;
+    if (item.rarity !== "enchanted" && item.rarity !== "rare") return "needs an enchanted or rare item";
+    const def = AFFIXES[affixId];
+    if (!def || !benchOptions(item).some(a => a.id === affixId)) return "that affix doesn't fit";
+    if ((state.currency.graft ?? 0) < BENCH_GRAFTS) return `needs ${BENCH_GRAFTS} Graft`;
+    const dust = benchDust(item);
+    if (state.dust < dust) return `needs ${dust} ember dust`;
+    const rng = new Rng(hashSeed(state.seed, 0x62656e63, state.craftSeq));
+    const roll = rollTier(rng, def, item.ilvl);
+    item.affixes = [...item.affixes.filter(a => !a.bench), { ...roll, bench: true }];
+    state.currency.graft! -= BENCH_GRAFTS;
+    state.dust -= dust;
+    state.craftSeq++;
+    item.crafted = true;
+    item.locked = true;
     if (found.slot) state.hero.rev++;
     return null;
 }
@@ -117,6 +209,35 @@ export function forgeRare(state: GameState, slot: string): { err: string | null;
     if (upgrade) { const r = receiveItem(state, item); if (r.equipped) return { err: null, item, equipped: true }; }
     if (state.stash.length < state.stashCap) state.stash.push(item);
     return { err: null, item, equipped: false };
+}
+
+/**
+ * Forges rares for a slot until one is an upgrade (worn at once), up to
+ * `tries`; the misses are salvaged on the spot. Returns how many were made.
+ */
+export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): { err: string | null; made: number; item?: Item } {
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    let made = 0;
+    for (; made < tries; ) {
+        const cost = forgeCost(state);
+        if (state.dust < cost) return { err: made ? null : `needs ${cost} ember dust`, made };
+        const rng = new Rng(hashSeed(state.seed, 0x666f7267, state.craftSeq));
+        let item: Item;
+        try { item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level }); } catch { return { err: "nothing to forge for that slot", made }; }
+        item.crafted = true;
+        state.nextUid++;
+        state.craftSeq++;
+        state.dust -= cost;
+        made++;
+        if (upgradeSlot(state, item)) {
+            const r = receiveItem(state, item);
+            if (r.equipped) return { err: null, made, item };
+        }
+        const v = salvageValue(item);
+        state.dust += v;
+        state.totals.salvaged++;
+    }
+    return { err: null, made };
 }
 
 export function buyCurrency(state: GameState, currency: string, n = 1): string | null {
