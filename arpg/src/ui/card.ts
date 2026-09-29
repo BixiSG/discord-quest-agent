@@ -11,6 +11,7 @@ import { pixelize } from "./gfx/pix";
 import { portrait, scenery } from "./gfx/portrait";
 import { loadSprites } from "./gfx/sprites";
 import { installTips } from "./tips";
+import { loadPixelFont } from "./gfx/webfont";
 import type { Summary } from "./app";
 
 export interface CardApi {
@@ -32,26 +33,27 @@ const CARD_CSS = `
 :host { display: block; }
 .hc { position: relative; margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
 .hc .bar { height: 30px; cursor: default; padding-right: 8px; }
-.hc .logo { font-size: 14px; }
-.hc .state { margin-left: auto; font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
+.hc .logo { font-size: 16px; }
+.hc .state { margin-left: auto; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
 .hc .state.live { padding: 3px 6px; background: #1a1410; color: #19b3a3; }
 .hc .in { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
 .hc .chero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; overflow: visible; white-space: normal; }
 .hc .pic { line-height: 0; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
 .hc .pic canvas { image-rendering: pixelated; width: 176px; height: 132px; display: block; }
 .hc .facts { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.hc .name { font: 700 18px/1.05 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; overflow-wrap: anywhere; }
+.hc .name { font: 700 16px/1.05 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; overflow-wrap: anywhere; }
 .hc .facts .muted { font-size: 12px; }
 .hc .xpbar { margin: 2px 0 0; }
-.hc .xpl { font: 700 10px/1 var(--mono); color: var(--muted); }
+.hc .xpl { font: 700 8px/1 var(--mono); color: var(--muted); }
 .hc .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .hc .acts .btn { flex: 1 1 auto; }
-.hc .hint { font-size: 11px; color: var(--muted); }
+.hc .hint { font-size: 12px; color: var(--muted); }
 .hc.new .chero { grid-template-columns: 1fr; }
 .hc.new .pic canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; }
 `;
 
 export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null, status: CardStatus, act: CardActions): { unmount(): void } {
+    void loadPixelFont();
     const holder = document.createElement("div");
     const root = holder.attachShadow({ mode: "open" });
     const style = document.createElement("style");

@@ -64,7 +64,7 @@ export function forgeView(c: Ctx): HTMLElement {
     return h("div", { class: "col", style: "gap:14px" },
         h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Forge a rare" }), h("span", { class: "num", text: `${fmt(cost)} dust / item level ${maxIlvl(st)}` })),
             h("div", { class: "row", style: "align-items:center;gap:12px" }, dust,
-                h("div", { class: "muted grow", style: "font-size:11px", text: "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust." })),
+                h("div", { class: "muted grow", style: "font-size:12px", text: "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust." })),
             smith,
             st.dust < cost ? h("div", { class: "note", style: "margin-top:10px" }, glyph("forge", 16),
                 h("span", { text: `${fmt(cost - st.dust)} more ember dust for a rare. Salvaging drops on the Gear tab (or a loot rule that salvages) makes dust.` })) : null),

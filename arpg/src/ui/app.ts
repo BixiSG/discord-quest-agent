@@ -26,6 +26,7 @@ import { loadSprites } from "./gfx/sprites";
 import { Hud, HUD_H } from "./hud";
 import { Sound, type Sfx } from "./sfx";
 import { installTips } from "./tips";
+import { loadPixelFont } from "./gfx/webfont";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { itemCard } from "./views";
 
@@ -157,6 +158,7 @@ export class GameWindow {
         host.id = "hollowmarch-root";
         this.host = host;
         this.root = host.attachShadow({ mode: "open" });
+        void loadPixelFont();
         const style = document.createElement("style");
         style.textContent = CSS;
         this.root.append(style);

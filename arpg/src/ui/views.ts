@@ -565,7 +565,7 @@ function skillsView(c: Ctx): HTMLElement {
         else {
             const good = (d ?? 0) > 0;
             meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
-                swap ? h("span", { class: "muted", style: "font-size:10.5px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null);
+                swap ? h("span", { class: "muted", style: "font-size:8px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null);
             tip = swap ? `Click to swap out ${SUPPORTS[swap]?.name}: ${fmtPct(d ?? 0)} pack DPS` : `Click to add: ${fmtPct(d ?? 0)} pack DPS`;
         }
         sups.append(h("div", { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
@@ -730,9 +730,9 @@ function menuView(c: Ctx): HTMLElement {
             auto,
             filterEditor(c),
             h("div", { class: "row" }, "Otherwise", keep),
-            h("div", { class: "muted", style: "font-size:11px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
+            h("div", { class: "muted", style: "font-size:12px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
         h("div", { class: "card col" }, h("h3", { text: "Save" }),
-            h("div", { class: "muted", style: "font-size:11px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
+            h("div", { class: "muted", style: "font-size:12px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
             h("div", { class: "row" }, h("button", { class: "btn", text: "Export", on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
                 h("button", { class: "btn alt", text: "Copy", on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast("Copied"), () => c.toast("Select and copy it by hand")); } } })),
             out, inp,
@@ -845,6 +845,6 @@ export function creationView(onStart: (name: string, cls: string) => void): HTML
         grid,
         h("div", { class: "card col" }, h("h3", { text: "Name your Kindled" }),
             h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: "Wake up", on: { click: start } })),
-            h("div", { class: "muted", style: "font-size:11px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })));
+            h("div", { class: "muted", style: "font-size:12px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })));
     return root;
 }

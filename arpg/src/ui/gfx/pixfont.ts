@@ -56,6 +56,8 @@ const G: Record<string, string[]> = {
     " ": ["...", "...", "...", "...", "...", "...", "..."],
 };
 
+/** The glyph bitmaps, also the source of the "Hollow Pixel" web font (tools/make-font.ts). */
+export const GLYPHS: Readonly<Record<string, string[]>> = G;
 export const GLYPH_H = 7;
 const glyphOf = (ch: string) => G[ch] ?? G[ch.toUpperCase()] ?? G["?"]!;
 

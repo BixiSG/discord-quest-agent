@@ -10,7 +10,8 @@
     "check": "tsc -p . && vitest run && node build.mjs",
     "balance": "node tools/run-balance.mjs",
     "smoke": "node tools/shots.mjs /tmp/hm-shots",
-    "assets": "node tools/pack-assets.mjs"
+    "assets": "node tools/pack-assets.mjs",
+    "font": "node tools/run-ts.mjs tools/make-font.ts"
   },
   "license": "MIT",
   "devDependencies": {

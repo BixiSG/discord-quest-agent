@@ -62,7 +62,7 @@ export function atlasView(c: Ctx): HTMLElement {
             autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
             st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
         tierChips(st.atlas.tiers),
-        h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));
+        h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));
 
     // Map stash.
     const list = h("div", { class: "col", style: "gap:4px" });
@@ -75,7 +75,7 @@ export function atlasView(c: Ctx): HTMLElement {
         list.append(h("div", { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
             thumb,
             h("div", { class: "grow" }, h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m.rarity]};color:#1a1410`, text: tierName(m.tier) }), h("b", { text: mapLabel(m) })),
-                m.mods.length ? h("div", { class: "muted", style: "font-size:11px;margin-top:2px", text: m.mods.map(id => MAP_MODS[id]?.text ?? id).join(" / ") }) : null)));
+                m.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m.mods.map(id => MAP_MODS[id]?.text ?? id).join(" / ") }) : null)));
     }
     if (!maps.length) list.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
     const sel = st.maps.find(m => m.uid === c.sel.uid);
@@ -103,7 +103,7 @@ export function atlasView(c: Ctx): HTMLElement {
             h("div", { class: "tag", text: own ? "taken" : err ? (locked ? "locked" : "no points") : "take" })));
     }
     root.append(h("div", { class: "card col" }, h("h3", { text: `Atlas (${left} point${left === 1 ? "" : "s"} left)` }),
-        h("div", { class: "muted", style: "font-size:11px", text: `First clears of tiers 1-${MAX_TIER} give a point each, every fifth Depth one more, pinnacles two.` }), grid));
+        h("div", { class: "muted", style: "font-size:12px", text: `First clears of tiers 1-${MAX_TIER} give a point each, every fifth Depth one more, pinnacles two.` }), grid));
 
     // Pinnacles.
     const pins = h("div", { class: "grid2" });

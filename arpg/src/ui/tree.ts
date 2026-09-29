@@ -30,7 +30,7 @@ export function treeView(c: Ctx): HTMLElement {
     const head = h("div", { class: "row" },
         h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: `${pts} point${pts === 1 ? "" : "s"} left` }),
         h("span", { class: "tag", text: `${hero.passives.length} taken` }),
-        h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
+        h("span", { class: "muted", style: "font-size:12px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
         h("span", { class: "grow" }),
         h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
         h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
@@ -134,8 +134,8 @@ export function treeView(c: Ctx): HTMLElement {
             if (err) row.append(h("span", { class: "muted", text: err }));
         }
         if (pinned) info.append(row);
-        else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
-        else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: "Click to pin it (refund)." }));
+        else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
+        else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:12px", text: "Click to pin it (refund)." }));
         pixelize(info);
         place(n);
     }
