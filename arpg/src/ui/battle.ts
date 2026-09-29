@@ -3,7 +3,7 @@
 // nothing here changes the game.
 
 import { CLASSES, MONSTERS, ZONES, type MonsterDef } from "../core/data";
-import type { SimEvents } from "../core/sim/engine";
+import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
 
@@ -82,7 +82,7 @@ export class Battle {
     draw(state: GameState, sheet: Sheet, now: number): void {
         const g = this.g;
         const run = state.activity.run;
-        const zone = ZONES[run?.zone ?? state.activity.zone]!;
+        const zone = run ? runZone(state, run) : ZONES[state.activity.zone]!;
         const dt = this.lastDraw ? Math.min(100, now - this.lastDraw) : 16;
         this.lastDraw = now;
         if (run?.phase === "travel") this.travel += dt * 0.06;

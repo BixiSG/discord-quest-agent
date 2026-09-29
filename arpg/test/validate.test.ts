@@ -28,18 +28,17 @@ describe("validateState", () => {
 });
 
 describe("stash limits", () => {
-    it("auto-equip never salvages worn gear when the stash is full", () => {
+    it("auto-equip with a full stash salvages the cheapest item, never the upgrade", () => {
         const g = g0();
         g.stashCap = 0;
-        const weapon = g.hero.equipment.weapon!;
         const big = { uid: 77, base: "sword1", ilvl: 1, rarity: "rare" as const, name: "Big", affixes: [{ id: "phys_local", tier: 0, rolls: [500] }] };
         receiveItem(g, big);
-        expect(g.hero.equipment.weapon).toBe(weapon);
+        expect(g.hero.equipment.weapon?.uid).toBe(77);
+        expect(g.log.some(l => l.text.includes("to make room"))).toBe(true);
         g.stashCap = 60;
-        receiveItem(g, { ...big, uid: 78 });
+        receiveItem(g, { ...big, uid: 78, affixes: [{ id: "phys_local", tier: 0, rolls: [900] }] });
         expect(g.hero.equipment.weapon?.uid).toBe(78);
-        expect(g.stash.map(x => x.uid)).toContain(weapon.uid);
-        expect(g.stashFull).toBe(true);
+        expect(g.stash.map(x => x.uid)).toContain(77);
     });
 });
 

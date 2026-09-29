@@ -31,7 +31,7 @@ For each damage type T:
   with `spellScale(L) = 1.06^(L-1) * (1 + 0.015 (L-1))` (weapons carry the
   same growth for attacks through their bases).
 
-Hero life before modifiers is `classLife + 16 (L-1)`.
+Hero life before modifiers is `classLife + 20 (L-1)`.
 
 Unarmed attacks use 2-5 phys at 1.2 attacks per second.
 
@@ -97,8 +97,8 @@ multipliers over the level tables in `src/core/data/scaling.ts`:
 Monster armour counts at half against the hero's hits. Packs have 2-6 normal
 monsters, sometimes a **champion** (x3 life, x1.5 damage, x3 XP). Bosses
 spawn one level above their zone with their own multipliers in
-`data/monsters.ts` (the Tide-Warden: x25 life, x2.4 damage; the Chapel
-Keeper: x12 life, x1.8 damage) and 10-40% resistances.
+`data/monsters.ts` (the Tide-Warden: x25 life, x2.0 damage; the Chapel
+Keeper: x12 life, x1.6 damage) and 10-40% resistances.
 
 ## 10. Experience
 

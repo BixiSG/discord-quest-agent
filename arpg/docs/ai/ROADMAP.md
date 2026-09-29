@@ -41,13 +41,13 @@ before the next phase starts.
 ## P3 - story
 - [x] Acts 2 and 3 with story text, bosses
 - [x] Ascendancy trials and two ascendancies per class
-- [ ] Review P3
+- [x] Review P3
 
 ## P4 - endgame
-- [ ] Maps with tiers and mods, map drops
-- [ ] Atlas tree
-- [ ] Pinnacle bosses
-- [ ] Infinite scaling (depth past tier 16)
+- [x] Maps with tiers and mods, map drops
+- [x] Atlas tree
+- [x] Pinnacle bosses
+- [x] Infinite scaling (depth past tier 16)
 - [ ] Review P4
 
 ## P5 - ship

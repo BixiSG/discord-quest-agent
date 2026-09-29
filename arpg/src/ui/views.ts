@@ -12,6 +12,7 @@ import { iconFor } from "./icons";
 import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
+import { atlasSig, atlasView } from "./atlas";
 import { DEFAULT_FILTER, describeRule, type FilterRule } from "../core/filter";
 
 export interface Ctx {
@@ -28,10 +29,10 @@ export interface Ctx {
     storeKind: string;
 }
 
-export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "log" | "menu";
+export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "atlas" | "log" | "menu";
 export const VIEWS: { id: ViewId; label: string }[] = [
     { id: "hero", label: "Hero" }, { id: "gear", label: "Gear" }, { id: "forge", label: "Forge" }, { id: "skills", label: "Skills" },
-    { id: "tree", label: "Tree" }, { id: "world", label: "World" }, { id: "log", label: "Log" }, { id: "menu", label: "Menu" },
+    { id: "tree", label: "Tree" }, { id: "world", label: "World" }, { id: "atlas", label: "Atlas" }, { id: "log", label: "Log" }, { id: "menu", label: "Menu" },
 ];
 
 /** What a view depends on; it is rebuilt when this changes. */
@@ -44,6 +45,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
         case "world": return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+        case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
     }
@@ -57,6 +59,7 @@ export function renderView(id: ViewId, c: Ctx): HTMLElement {
         case "tree": return treeView(c);
         case "skills": return skillsView(c);
         case "world": return worldView(c);
+        case "atlas": return atlasView(c);
         case "log": return logView(c);
         case "menu": return menuView(c);
     }

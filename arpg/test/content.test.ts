@@ -92,6 +92,6 @@ import { spellScale, heroBaseLife } from "../src/core/data";
 describe("hero curves match COMBAT.md", () => {
     it("pins spell scale and base life", () => {
         expect(spellScale(11)).toBeCloseTo(Math.pow(1.06, 10) * 1.15);
-        expect(heroBaseLife(11, 60)).toBe(220);
+        expect(heroBaseLife(11, 60)).toBe(260);
     });
 });

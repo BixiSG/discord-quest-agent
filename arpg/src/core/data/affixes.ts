@@ -50,9 +50,9 @@ const CASTER = ["caster"];
 
 const list: AffixDef[] = [
     // ---- prefixes: life and defences
-    A("life", "prefix", "Hale", "life", [...DEF, ...JEWEL], 1000, [{ stat: "life", kind: "flat" }], "+{0} to maximum life", [12], [150]),
+    A("life", "prefix", "Hale", "life", [...DEF, ...JEWEL], 1000, [{ stat: "life", kind: "flat" }], "+{0} to maximum life", [15], [210]),
     A("mana", "prefix", "Lucid", "mana", ["amulet", "ring", "helmet", "gloves", "caster", "focus"], 700, [{ stat: "mana", kind: "flat" }], "+{0} to maximum mana", [10], [90]),
-    A("es", "prefix", "Shimmering", "es", ["es", "amulet", "belt"], 800, [{ stat: "energyShield", kind: "flat" }], "+{0} to maximum energy shield", [6], [90]),
+    A("es", "prefix", "Shimmering", "es", ["es", "amulet", "belt"], 800, [{ stat: "energyShield", kind: "flat" }], "+{0} to maximum energy shield", [8], [120]),
     A("ar_local", "prefix", "Tempered", "defFlat", ["ar"], 900, [{ stat: "local.armour", kind: "flat" }], "+{0} to armour", [10], [260]),
     A("ev_local", "prefix", "Slippery", "defFlat", ["ev"], 900, [{ stat: "local.evasion", kind: "flat" }], "+{0} to evasion", [10], [260]),
     A("es_local", "prefix", "Glowing", "defFlat", ["es"], 900, [{ stat: "local.energyShield", kind: "flat" }], "+{0} to energy shield (local)", [4], [60]),

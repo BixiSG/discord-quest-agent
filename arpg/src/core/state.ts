@@ -33,9 +33,28 @@ export interface MonsterState {
     atk: number;
 }
 
+export interface MapItem {
+    uid: number;
+    tier: number;
+    area: string;
+    mods: string[];
+    rarity: "plain" | "enchanted" | "rare";
+}
+
+/** What a map run is: set at run start from the consumed map (or a pinnacle). */
+export interface RunMap {
+    tier: number;
+    area: string;
+    mods: string[];
+    level: number;
+    pinnacle?: string;
+}
+
 export interface RunState {
     rng: RngState;
     zone: string;
+    /** Map runs: zone is "map" and this describes the map. */
+    map?: RunMap;
     /** Index of the current pack; packs === done means the boss (if any) is up. */
     pack: number;
     packs: number;
@@ -53,7 +72,7 @@ export interface RunState {
 
 export interface LogEntry { t: number; kind: "level" | "loot" | "death" | "zone" | "boss" | "info"; text: string }
 
-export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number }
+export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number }
 
 export interface GameState {
     seed: number;
@@ -69,6 +88,8 @@ export interface GameState {
         unlocked: string[];
         clears: Record<string, number>;
         storySeen: string[];
+        /** One-time rewards already granted ("act:1", "trial:a1_trial"). */
+        rewards: string[];
     };
     activity: {
         zone: string;
@@ -80,7 +101,23 @@ export interface GameState {
         run: RunState | null;
         /** Milliseconds not yet simulated (less than a step). */
         acc: number;
+        /** "zone" runs activity.zone; "map" runs maps from the map stash. */
+        mode: "zone" | "map";
+        /** Map tier to run; 0 = the highest available. */
+        mapTier: number;
+        /** A pinnacle fight to run next. */
+        pinnacle?: string;
     };
+    maps: MapItem[];
+    mapCap: number;
+    atlas: {
+        points: number;
+        nodes: string[];
+        /** Tiers completed at least once (atlas points are granted on first completion). */
+        tiers: number[];
+    };
+    sigils: Record<string, number>;
+    pinnacleKills: Record<string, number>;
     settings: {
         /** Loot filter: minimum rarity kept (P1). */
         keep: "plain" | "enchanted" | "rare";

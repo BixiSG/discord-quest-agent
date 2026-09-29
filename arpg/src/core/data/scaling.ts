@@ -36,7 +36,7 @@ export function spellScale(level: number): number {
 }
 /** Hero life before modifiers. */
 export function heroBaseLife(level: number, classLife: number): number {
-    return classLife + 16 * (level - 1);
+    return classLife + 20 * (level - 1);
 }
 export function heroBaseMana(level: number): number {
     return 40 + 6 * (level - 1);

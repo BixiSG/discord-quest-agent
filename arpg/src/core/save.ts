@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -29,6 +29,25 @@ export const MIGRATIONS: Record<number, Migration> = {
     2: (s: any) => {
         s.hero.ascNodes ??= [];
         s.hero.ascPoints ??= 0;
+        return s;
+    },
+    // v4 (P4): maps, atlas, sigils, pinnacles.
+    3: (s: any) => {
+        s.activity.mode ??= "zone";
+        s.activity.mapTier ??= 0;
+        s.maps ??= [];
+        s.mapCap ??= 40;
+        s.atlas ??= { points: 0, nodes: [], tiers: [] };
+        s.sigils ??= {};
+        s.pinnacleKills ??= {};
+        // Rewards ledger: mark what P3 already granted (2 points per act or trial),
+        // so reconcileRewards() only adds what is missing.
+        const acts = [["a1_lock", "act:1"], ["a2_throne", "act:2"], ["a3_sunfall", "act:3"]];
+        const trials = ["a1_trial", "a2_trial", "a3_trial"];
+        const clears = s.world.clears ?? {};
+        const actsDone = acts.filter(([z]) => clears[z!] > 0).map(([, k]) => k);
+        const trialsDone = trials.filter(z => clears[z] > 0).map(z => "trial:" + z);
+        s.world.rewards ??= [...actsDone.slice(0, Math.floor((s.hero.bonusPoints ?? 0) / 2)), ...trialsDone.slice(0, Math.floor((s.hero.ascPoints ?? 0) / 2))];
         return s;
     },
 };

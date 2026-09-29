@@ -2,7 +2,7 @@
 // drag and resize. Owns the game state while open. Closed means closed: no
 // timers, no drawing; the next open catches up from the saved timestamp.
 
-import { advance, STEP_MS, type SimEvents } from "../core/sim/engine";
+import { advance, runSheet, runZone, STEP_MS, type SimEvents } from "../core/sim/engine";
 import { startReport, type Report } from "../core/sim/report";
 import { newGame, sheetOf } from "../core/game";
 import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type SaveEnvelope } from "../core/save";
@@ -259,7 +259,7 @@ export class GameWindow {
         const frame = () => {
             this.raf = requestAnimationFrame(frame);
             if (!this.state || document.hidden) return;
-            this.battle.draw(this.state, sheetOf(this.state), performance.now());
+            this.battle.draw(this.state, runSheet(this.state), performance.now());
             this.drawHud();
             this.renderTab(false);
         };
@@ -329,7 +329,7 @@ export class GameWindow {
     private hudEls: Record<string, { fill: HTMLElement; text: HTMLElement }> = {};
     private drawHud(): void {
         const s = this.state!;
-        const sh = sheetOf(s);
+        const sh = runSheet(s);
         const run = s.activity.run;
         if (!this.hud.childElementCount) {
             for (const k of ["life", "es", "mana", "flask", "xp", "zone"]) {
@@ -352,9 +352,9 @@ export class GameWindow {
         set("flask", (hh?.flask ?? 30) / 30, "#3fbf5f", `Flask ${Math.floor(hh?.flask ?? 30)} / 30`);
         const need = xpToNext(s.hero.level);
         set("xp", isFinite(need) ? s.hero.xp / need : 1, "#ffc233", `Level ${s.hero.level}  ${isFinite(need) ? ((s.hero.xp / need) * 100).toFixed(1) + "%" : "max"}`);
-        const z = ZONES[s.activity.zone]!;
+        const z = run ? runZone(s, run) : ZONES[s.activity.zone]!;
         const packs = run ? run.packs + (run.boss ? 1 : 0) : 1;
-        set("zone", run ? run.pack / packs : 0, "#19b3a3", `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
+        set("zone", run ? run.pack / packs : 0, "#19b3a3", run?.map ? `${z.name} (L${z.level})  ${s.maps.length} maps left` : `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
         const free = supportSlots(s.hero.level) > s.hero.supports.filter(id => SUPPORTS[id] && SUPPORTS[id]!.level <= s.hero.level).length
             && Object.values(SUPPORTS).some(x => x.level <= s.hero.level && !s.hero.supports.includes(x.id));
         const skillsTab = this.tabs.querySelector('[data-v="skills"]');
@@ -390,10 +390,15 @@ export class GameWindow {
         }));
     }
 
+    private storyBox: HTMLElement | null = null;
+    /** One story window at a time: later beats are added to the open one. */
     private showStory(text: string): void {
-        const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), h("div", { class: "story", text }));
+        if (this.storyBox?.isConnected) { this.storyBox.append(h("div", { class: "story", style: "margin-top:6px", text })); return; }
+        const box = h("div", { class: "col" }, h("div", { class: "story", text }));
+        const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), box);
         const close = this.modal(card);
-        card.append(h("button", { class: "btn", text: "Onward", on: { click: () => close() } }));
+        this.storyBox = box;
+        card.append(h("button", { class: "btn", text: "Onward", on: { click: () => { close(); this.storyBox = null; } } }));
     }
 
     private showReport(r: Report): void {
@@ -420,7 +425,8 @@ export class GameWindow {
 
 export function summaryOf(s: GameState): Summary {
     const need = xpToNext(s.hero.level);
-    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
+    const run = s.activity.run;
+    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: run ? runZone(s, run).name : ZONES[s.activity.zone]?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
 }
 
 export { SAVE_VERSION };

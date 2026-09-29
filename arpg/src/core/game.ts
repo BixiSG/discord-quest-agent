@@ -3,7 +3,7 @@
 
 import { deriveSheet, type Sheet } from "./character";
 import { BASES, CLASSES, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
-import { baseOf, levelReq, salvageValue } from "./items";
+import { baseOf, itemLabel, levelReq, salvageValue } from "./items";
 import { hashSeed } from "./rng";
 import { DEFAULT_FILTER, keepItem } from "./filter";
 import { newTotals, type GameState, type LogEntry } from "./state";
@@ -20,8 +20,9 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         seed, createdAt: opts.now, simTo: opts.now,
         hero: { name: opts.name, cls: cls.id, level: 1, xp: 0, skill: cls.startSkill, supports: [], equipment: {}, passives: [], bonusPoints: 0, ascNodes: [], ascPoints: 0, rev: 0 },
         stash: [], stashCap: 60, dust: 0, currency: {},
-        world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
-        activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
+        world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
+        activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
+        maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
         settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
         totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
@@ -81,18 +82,40 @@ export function displacedCount(state: GameState, item: Item, slot: Slot): number
     return (state.hero.equipment[slot] ? 1 : 0) + (dropsOffhand(state, item, slot) ? 1 : 0);
 }
 
-/** Salvages the least valuable unprotected stash items to free `n` places. */
-function makeRoom(state: GameState, n: number): boolean {
-    const free = () => state.stashCap - state.stash.length;
-    if (free() >= n) return true;
-    const victims = state.stash.filter(x => x.rarity !== "relic")
-        .sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.ilvl - b.ilvl);
+/** The worn items equipping `item` in `slot` would take off. */
+function displacedItems(state: GameState, item: Item, slot: Slot): Item[] {
+    const eq = state.hero.equipment;
+    const out: Item[] = [];
+    if (eq[slot]) out.push(eq[slot]!);
+    if (dropsOffhand(state, item, slot)) out.push(eq.offhand!);
+    return out;
+}
+
+const itemValue = (x: Item) => RARITY_RANK[x.rarity] * 1000 + x.ilvl;
+
+/**
+ * Equips an upgrade even when the stash is full. The cheapest of the stash
+ * items and the items coming off is salvaged to make room; relics and crafted
+ * items are never picked. Returns false (nothing changes) when it can't fit.
+ */
+function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
+    const off = displacedItems(state, item, slot);
+    const need = off.length - (state.stashCap - state.stash.length);
+    const victims: Item[] = [];
+    if (need > 0) {
+        const pool = [...state.stash, ...off].filter(x => x.rarity !== "relic" && !x.crafted).sort((a, b) => itemValue(a) - itemValue(b));
+        if (pool.length < need) return false;
+        victims.push(...pool.slice(0, need));
+    }
+    putOn(state, item, slot);
     for (const v of victims) {
-        if (free() >= n) break;
-        state.stash.splice(state.stash.indexOf(v), 1);
+        const i = state.stash.indexOf(v);
+        if (i >= 0) state.stash.splice(i, 1);
         salvageItem(state, v);
     }
-    return free() >= n;
+    for (const o of off) if (!victims.includes(o)) state.stash.push(o);
+    if (victims.length) pushLog(state, "loot", `Stash full: salvaged ${victims.map(itemLabel).join(", ")} to make room.`);
+    return true;
 }
 
 /** Puts an item on; whatever it displaces goes to the stash. The item must not be in the stash. */
@@ -168,9 +191,7 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
     state.totals.items++;
     if (state.settings.autoEquip) {
         const slot = upgradeSlot(state, item);
-        // Gear taken off goes to the stash, never to salvage: a full stash gives up its least valuable items first.
-        if (slot && makeRoom(state, displacedCount(state, item, slot))) {
-            for (const old of putOn(state, item, slot)) state.stash.push(old);
+        if (slot && equipWithRoom(state, item, slot)) {
             pushLog(state, "loot", `Equipped a new ${BASES[item.base]!.name}.`);
             return { kept: true, equipped: true };
         }

@@ -10,3 +10,4 @@ export * from "./passives";
 export * from "./currency";
 export * from "./relics";
 export * from "./ascendancies";
+export * from "./maps";

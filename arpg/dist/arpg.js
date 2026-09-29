@@ -112,7 +112,7 @@
     return Math.pow(1.06, l) * (1 + 0.015 * l);
   }
   function heroBaseLife(level, classLife) {
-    return classLife + 16 * (level - 1);
+    return classLife + 20 * (level - 1);
   }
   function heroBaseMana(level) {
     return 40 + 6 * (level - 1);
@@ -737,9 +737,9 @@
   var CASTER = ["caster"];
   var list = [
     // ---- prefixes: life and defences
-    A("life", "prefix", "Hale", "life", [...DEF, ...JEWEL], 1e3, [{ stat: "life", kind: "flat" }], "+{0} to maximum life", [12], [150]),
+    A("life", "prefix", "Hale", "life", [...DEF, ...JEWEL], 1e3, [{ stat: "life", kind: "flat" }], "+{0} to maximum life", [15], [210]),
     A("mana", "prefix", "Lucid", "mana", ["amulet", "ring", "helmet", "gloves", "caster", "focus"], 700, [{ stat: "mana", kind: "flat" }], "+{0} to maximum mana", [10], [90]),
-    A("es", "prefix", "Shimmering", "es", ["es", "amulet", "belt"], 800, [{ stat: "energyShield", kind: "flat" }], "+{0} to maximum energy shield", [6], [90]),
+    A("es", "prefix", "Shimmering", "es", ["es", "amulet", "belt"], 800, [{ stat: "energyShield", kind: "flat" }], "+{0} to maximum energy shield", [8], [120]),
     A("ar_local", "prefix", "Tempered", "defFlat", ["ar"], 900, [{ stat: "local.armour", kind: "flat" }], "+{0} to armour", [10], [260]),
     A("ev_local", "prefix", "Slippery", "defFlat", ["ev"], 900, [{ stat: "local.evasion", kind: "flat" }], "+{0} to evasion", [10], [260]),
     A("es_local", "prefix", "Glowing", "defFlat", ["es"], 900, [{ stat: "local.energyShield", kind: "flat" }], "+{0} to energy shield (local)", [4], [60]),
@@ -1110,7 +1110,7 @@
       name: "The Tide-Warden",
       boss: true,
       life: 25,
-      damage: 2.4,
+      damage: 2,
       speed: 0.7,
       split: { phys: 0.6, cold: 0.4 },
       armour: 1.5,
@@ -1125,7 +1125,7 @@
       name: "Chapel Keeper",
       boss: true,
       life: 12,
-      damage: 1.8,
+      damage: 1.6,
       speed: 0.8,
       split: { phys: 0.5, chaos: 0.5 },
       armour: 1,
@@ -1140,7 +1140,7 @@
       name: "The Drowned Knight",
       boss: true,
       life: 14,
-      damage: 2,
+      damage: 1.7,
       speed: 0.9,
       split: { phys: 0.8, cold: 0.2 },
       armour: 2.2,
@@ -1155,7 +1155,7 @@
       name: "The Sandwright",
       boss: true,
       life: 16,
-      damage: 2,
+      damage: 1.8,
       speed: 0.7,
       split: { phys: 0.6, fire: 0.4 },
       armour: 2,
@@ -1170,7 +1170,7 @@
       name: "The Mirror Warden",
       boss: true,
       life: 18,
-      damage: 2.2,
+      damage: 1.9,
       speed: 0.9,
       split: { lightning: 0.5, phys: 0.5 },
       armour: 1,
@@ -1185,7 +1185,7 @@
       name: "The Glass Regent",
       boss: true,
       life: 28,
-      damage: 2.6,
+      damage: 2.1,
       speed: 0.75,
       split: { lightning: 0.4, fire: 0.3, phys: 0.3 },
       armour: 1.4,
@@ -1200,7 +1200,7 @@
       name: "The Cinder Matron",
       boss: true,
       life: 20,
-      damage: 2.4,
+      damage: 2,
       speed: 0.8,
       split: { fire: 0.7, chaos: 0.3 },
       armour: 1.2,
@@ -1215,7 +1215,7 @@
       name: "The Ember Judge",
       boss: true,
       life: 22,
-      damage: 2.5,
+      damage: 2.1,
       speed: 0.85,
       split: { fire: 0.5, phys: 0.5 },
       armour: 2,
@@ -1225,12 +1225,73 @@
       xp: 18,
       look: { shape: "tall", body: "#ff9a2e", eye: "#111111", size: 1.8 }
     },
+    // ---- pinnacles
+    p_drownedsun: {
+      id: "p_drownedsun",
+      name: "The Drowned Sun",
+      boss: true,
+      life: 70,
+      damage: 2.6,
+      speed: 0.8,
+      split: { cold: 0.5, fire: 0.3, phys: 0.2 },
+      armour: 1.5,
+      evasion: 1,
+      accuracy: 1.4,
+      res: { fire: 40, cold: 50, lightning: 40, chaos: 40 },
+      xp: 60,
+      look: { shape: "giant", body: "#1f5a6a", eye: "#ffe066", size: 2.1 }
+    },
+    p_glasschoir: {
+      id: "p_glasschoir",
+      name: "The Glass Choir",
+      boss: true,
+      life: 80,
+      damage: 2.8,
+      speed: 1.1,
+      split: { lightning: 0.6, phys: 0.4 },
+      armour: 1,
+      evasion: 2,
+      accuracy: 1.5,
+      res: { fire: 40, cold: 40, lightning: 55, chaos: 40 },
+      xp: 70,
+      look: { shape: "robe", body: "#c8f2ff", eye: "#ff5a36", size: 2.1 }
+    },
+    p_ashenking: {
+      id: "p_ashenking",
+      name: "The Ashen King",
+      boss: true,
+      life: 95,
+      damage: 3,
+      speed: 0.8,
+      split: { fire: 0.5, phys: 0.3, chaos: 0.2 },
+      armour: 2.4,
+      evasion: 0.8,
+      accuracy: 1.5,
+      res: { fire: 55, cold: 40, lightning: 40, chaos: 45 },
+      xp: 85,
+      look: { shape: "giant", body: "#4a2a20", eye: "#ff3b1f", size: 2.2 }
+    },
+    p_hollowcrown: {
+      id: "p_hollowcrown",
+      name: "The Hollow Crown",
+      boss: true,
+      life: 130,
+      damage: 3.3,
+      speed: 0.9,
+      split: { chaos: 0.6, cold: 0.2, lightning: 0.2 },
+      armour: 2,
+      evasion: 1.5,
+      accuracy: 1.6,
+      res: { fire: 50, cold: 50, lightning: 50, chaos: 60 },
+      xp: 120,
+      look: { shape: "robe", body: "#1a1422", eye: "#b9a4ff", size: 2.3 }
+    },
     lastdawn: {
       id: "lastdawn",
       name: "The Last Dawn",
       boss: true,
       life: 34,
-      damage: 2.8,
+      damage: 2.3,
       speed: 0.7,
       split: { fire: 0.5, lightning: 0.2, chaos: 0.3 },
       armour: 1.6,
@@ -1947,6 +2008,70 @@
   var ASCENDANCIES = Object.fromEntries(list4.map((a) => [a.id, a]));
   var ASC_NODES = Object.fromEntries(list4.flatMap((a) => a.nodes.map((n) => [n.id, { ...n, asc: a.id }])));
 
+  // src/core/data/maps.ts
+  var MAX_TIER = 16;
+  function mapLevel(tier) {
+    return tier <= MAX_TIER ? 42 + tier * 2 : 74 + (tier - MAX_TIER);
+  }
+  function depthMult(tier) {
+    return tier <= MAX_TIER ? 1 : Math.pow(1.06, tier - MAX_TIER);
+  }
+  var tierName = (tier) => tier === 0 ? "Outskirts" : tier <= MAX_TIER ? `Tier ${tier}` : `Depth ${tier - MAX_TIER}`;
+  var MAP_AREAS = Object.fromEntries([
+    ["cinderfield", "Cinderfield", ["ashwalker", "hound", "cinderbat"], "cindermatron", ["#4a3a36", "#6a4a3a", "#ffb35c"]],
+    ["saltflats", "Salt Flats", ["crab", "scorpion", "bleached"], "sandwright", ["#d9d2c3", "#bfb5a0", "#ffffff"]],
+    ["drownedspire", "Drowned Spire", ["drowned", "eel", "bogwitch"], "tidewarden", ["#1f3b45", "#335866", "#9ff3ff"]],
+    ["glassmaze", "Glass Maze", ["wasp", "scorpion", "wraith"], "mirrorwarden", ["#b8e6f5", "#86b7c7", "#ff5a36"]],
+    ["lanternrow", "Lantern Row", ["lampman", "drowned", "sunpriest"], "keeper", ["#26262e", "#3e3a36", "#ffd84a"]],
+    ["bonecoast", "Bone Coast", ["gull", "crab", "drowned"], "drownedknight", ["#8aa0ab", "#cfc6b0", "#e9e4d4"]],
+    ["ashcathedral", "Ash Cathedral", ["sunpriest", "ashwalker", "wraith"], "emberjudge", ["#2b2233", "#5b4a4a", "#ffc233"]],
+    ["moltenweir", "Molten Weir", ["magmacrab", "hound", "eel"], "cindermatron", ["#2e1a16", "#7a2e1f", "#ff5a36"]],
+    ["mirrorsea", "Mirror Sea", ["eel", "wasp", "jackal"], "glassregent", ["#6fb3cf", "#4d8aa3", "#ffffff"]],
+    ["sunscar", "The Sunscar", ["hound", "sunpriest", "magmacrab", "cinderbat"], "lastdawn", ["#120c0c", "#3a1a10", "#ffe066"]]
+  ].map(([id, name, monsters, boss, palette]) => [id, { id, name, monsters, boss, palette }]));
+  var list5 = [
+    { id: "hardy", text: "Monsters have 40% more life", life: 40, qty: 8, rarity: 10 },
+    { id: "savage", text: "Monsters deal 30% more damage", damage: 30, qty: 8, rarity: 12 },
+    { id: "frenzied", text: "Monsters attack 20% faster", speed: 20, qty: 7, rarity: 8 },
+    { id: "searing", text: "Monsters deal 40% extra damage as fire", extra: ["fire", 0.4], qty: 7, rarity: 10 },
+    { id: "freezing", text: "Monsters deal 40% extra damage as cold", extra: ["cold", 0.4], qty: 7, rarity: 10 },
+    { id: "shocking", text: "Monsters deal 40% extra damage as lightning", extra: ["lightning", 0.4], qty: 7, rarity: 10 },
+    { id: "rotting", text: "Monsters deal 25% extra damage as chaos", extra: ["chaos", 0.25], qty: 8, rarity: 10 },
+    { id: "crowded", text: "40% more monster packs", packs: 40, qty: 12, rarity: 6 },
+    { id: "parched", text: "You regenerate 60% less life", hero: [{ stat: "lifeRegen", kind: "more", value: -60 }, { stat: "lifeRegenPct", kind: "more", value: -60 }], qty: 6, rarity: 8 },
+    { id: "exposed", text: "-12% to all maximum resistances", hero: ["fire", "cold", "lightning"].map((t) => ({ stat: `maxRes.${t}`, kind: "flat", value: -12 })), qty: 10, rarity: 12 },
+    { id: "brittle", text: "You take 15% more damage", hero: [{ stat: "dmgTaken", kind: "more", value: 15 }], qty: 9, rarity: 10 },
+    { id: "dulled", text: "You deal 15% less damage", hero: [{ stat: "damage", kind: "more", value: -15 }], qty: 9, rarity: 10 }
+  ];
+  var MAP_MODS = Object.fromEntries(list5.map((m4) => [m4.id, m4]));
+  var emptyAtlas = () => ({ mapDrop: 0, quantity: 0, rarity: 0, currency: 0, packs: 0, xp: 0, modEffect: 0, fragments: 0, upgrade: 0, bossRelic: 0 });
+  var ATLAS = Object.fromEntries([
+    ["a_cart", "Cartographer", "20% increased map drop chance", { mapDrop: 20 }, []],
+    ["a_cart2", "Surveyor", "25% increased map drop chance", { mapDrop: 25 }, ["a_cart"]],
+    ["a_climb", "Ladder of Ash", "10% chance for dropped maps to be a tier higher", { upgrade: 10 }, ["a_cart"]],
+    ["a_climb2", "Stair of Stars", "15% chance for dropped maps to be a tier higher", { upgrade: 15 }, ["a_climb"]],
+    ["a_qty", "Plunder", "10% increased item quantity in maps", { quantity: 10 }, []],
+    ["a_qty2", "Hoard", "15% increased item quantity in maps", { quantity: 15 }, ["a_qty"]],
+    ["a_rar", "Gilded Paths", "25% increased item rarity in maps", { rarity: 25 }, ["a_qty"]],
+    ["a_rar2", "Crowned Paths", "35% increased item rarity in maps", { rarity: 35 }, ["a_rar"]],
+    ["a_cur", "Emberfall", "30% increased currency drops in maps", { currency: 30 }, ["a_qty"]],
+    ["a_cur2", "Starfall Veins", "40% increased currency drops in maps", { currency: 40 }, ["a_cur"]],
+    ["a_packs", "Teeming", "15% more monster packs in maps", { packs: 15 }, []],
+    ["a_xp", "Hard Lessons", "15% increased experience in maps", { xp: 15 }, ["a_packs"]],
+    ["a_xp2", "Harder Lessons", "20% increased experience in maps", { xp: 20 }, ["a_xp"]],
+    ["a_mods", "Dangerous Ground", "30% increased rewards from map mods", { modEffect: 30 }, ["a_packs"]],
+    ["a_mods2", "Deadly Ground", "40% increased rewards from map mods", { modEffect: 40 }, ["a_mods"]],
+    ["a_frag", "Sigil Seeker", "40% increased sigil drop chance", { fragments: 40 }, ["a_mods"]],
+    ["a_frag2", "Sigil Hunter", "60% increased sigil drop chance", { fragments: 60 }, ["a_frag"]],
+    ["a_boss", "Relic Hunter", "Map bosses have a 6% chance to drop a relic", { bossRelic: 6 }, ["a_rar"]]
+  ].map(([id, name, text, eff, requires]) => [id, { id, name, text, eff, requires }]));
+  var PINNACLES = Object.fromEntries([
+    ["drownedsun", "The Drowned Sun", "p_drownedsun", "tide_sigil", "Tide Sigil", 3, 80, 6, ["#0f2a33", "#1f4a55", "#ffe066"], "A second sun rose from the sea and never learned to shine."],
+    ["glasschoir", "The Glass Choir", "p_glasschoir", "prism_sigil", "Prism Sigil", 3, 84, 10, ["#a8e6f5", "#6fa3b8", "#ffffff"], "A thousand shards singing one note. The note is your name."],
+    ["ashenking", "The Ashen King", "p_ashenking", "ash_sigil", "Ash Sigil", 3, 88, 14, ["#1c1414", "#4a2a20", "#ff5a36"], "He was crowned the day the sun fell and has ruled the ash since."],
+    ["hollowcrown", "The Hollow Crown", "p_hollowcrown", "hollow_sigil", "Hollow Sigil", 4, 96, 18, ["#0a0a0f", "#2a2233", "#b9a4ff"], "At the bottom of the Depths, the thing that ate the sun's light waits to be fed again."]
+  ].map(([id, name, boss, sigil, sigilName, cost, level, minTier, palette, text]) => [id, { id, name, boss, sigil, sigilName, cost, level, minTier, palette, text }]));
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
@@ -1954,9 +2079,9 @@
       for (const m4 of mods) this.add(m4);
     }
     add(m4) {
-      let list5 = this.by.get(m4.stat);
-      if (!list5) this.by.set(m4.stat, list5 = []);
-      list5.push(m4);
+      let list6 = this.by.get(m4.stat);
+      if (!list6) this.by.set(m4.stat, list6 = []);
+      list6.push(m4);
     }
     addAll(mods) {
       for (const m4 of mods) this.add(m4);
@@ -2597,8 +2722,13 @@
       stashCap: 60,
       dust: 0,
       currency: {},
-      world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
-      activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
+      world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
+      activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
+      maps: [],
+      mapCap: 40,
+      atlas: { points: 0, nodes: [], tiers: [] },
+      sigils: {},
+      pinnacleKills: {},
       settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER) },
       totals: newTotals(),
       nextUid: 1,
@@ -2647,16 +2777,32 @@
   function displacedCount(state, item, slot) {
     return (state.hero.equipment[slot] ? 1 : 0) + (dropsOffhand(state, item, slot) ? 1 : 0);
   }
-  function makeRoom(state, n) {
-    const free = () => state.stashCap - state.stash.length;
-    if (free() >= n) return true;
-    const victims = state.stash.filter((x) => x.rarity !== "relic").sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.ilvl - b.ilvl);
+  function displacedItems(state, item, slot) {
+    const eq = state.hero.equipment;
+    const out = [];
+    if (eq[slot]) out.push(eq[slot]);
+    if (dropsOffhand(state, item, slot)) out.push(eq.offhand);
+    return out;
+  }
+  var itemValue = (x) => RARITY_RANK[x.rarity] * 1e3 + x.ilvl;
+  function equipWithRoom(state, item, slot) {
+    const off = displacedItems(state, item, slot);
+    const need = off.length - (state.stashCap - state.stash.length);
+    const victims = [];
+    if (need > 0) {
+      const pool = [...state.stash, ...off].filter((x) => x.rarity !== "relic" && !x.crafted).sort((a, b) => itemValue(a) - itemValue(b));
+      if (pool.length < need) return false;
+      victims.push(...pool.slice(0, need));
+    }
+    putOn(state, item, slot);
     for (const v of victims) {
-      if (free() >= n) break;
-      state.stash.splice(state.stash.indexOf(v), 1);
+      const i = state.stash.indexOf(v);
+      if (i >= 0) state.stash.splice(i, 1);
       salvageItem(state, v);
     }
-    return free() >= n;
+    for (const o of off) if (!victims.includes(o)) state.stash.push(o);
+    if (victims.length) pushLog(state, "loot", `Stash full: salvaged ${victims.map(itemLabel).join(", ")} to make room.`);
+    return true;
   }
   function putOn(state, item, slot) {
     const eq = state.hero.equipment;
@@ -2728,8 +2874,7 @@
     state.totals.items++;
     if (state.settings.autoEquip) {
       const slot = upgradeSlot(state, item);
-      if (slot && makeRoom(state, displacedCount(state, item, slot))) {
-        for (const old of putOn(state, item, slot)) state.stash.push(old);
+      if (slot && equipWithRoom(state, item, slot)) {
         pushLog(state, "loot", `Equipped a new ${BASES[item.base].name}.`);
         return { kept: true, equipped: true };
       }
@@ -2798,6 +2943,224 @@
     return null;
   }
 
+  // src/core/maps.ts
+  var endgameOpen = (state) => !!state.world.clears.a3_sunfall;
+  function atlasEffects(state) {
+    const e = emptyAtlas();
+    for (const id of state.atlas?.nodes ?? []) {
+      const n = ATLAS[id];
+      if (!n) continue;
+      for (const [k, v] of Object.entries(n.eff)) e[k] += v ?? 0;
+    }
+    return e;
+  }
+  var atlasPointsLeft = (state) => state.atlas.points - state.atlas.nodes.length;
+  function canTakeAtlas(state, id) {
+    const n = ATLAS[id];
+    if (!n) return "unknown node";
+    if (state.atlas.nodes.includes(id)) return "already taken";
+    if (atlasPointsLeft(state) <= 0) return "no atlas points";
+    if (!n.requires.every((r3) => state.atlas.nodes.includes(r3))) return "take the node before it first";
+    return null;
+  }
+  function takeAtlas(state, id) {
+    const err = canTakeAtlas(state, id);
+    if (err) return err;
+    state.atlas.nodes.push(id);
+    return null;
+  }
+  function setMapMode(state, on) {
+    if (on && !endgameOpen(state)) return "clear the Sunfall first";
+    const act = state.activity;
+    if (act.mode === "map" === on) return null;
+    act.mode = on ? "map" : "zone";
+    if (!act.run?.map) {
+      act.runIndex++;
+      act.run = null;
+    }
+    return null;
+  }
+  function setMapTier(state, tier) {
+    if (!Number.isInteger(tier) || tier < 0) return "bad tier";
+    state.activity.mapTier = tier;
+    return null;
+  }
+  function queuePinnacle(state, id) {
+    const p = PINNACLES[id];
+    if (!p) return "unknown pinnacle";
+    if ((state.sigils[p.sigil] ?? 0) < p.cost) return `needs ${p.cost} ${p.sigilName}s`;
+    if (!endgameOpen(state)) return "clear the Sunfall first";
+    state.activity.pinnacle = id;
+    if (state.activity.mode !== "map") setMapMode(state, true);
+    return null;
+  }
+  function rollMods(rng, n, keep = []) {
+    const pool = Object.keys(MAP_MODS).filter((m4) => !keep.includes(m4));
+    const out = [...keep];
+    while (out.length < keep.length + n && pool.length) out.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
+    return out;
+  }
+  function rollMap(rng, uid, tier) {
+    const r3 = rng.next();
+    const rarity = r3 < 0.1 ? "rare" : r3 < 0.4 ? "enchanted" : "plain";
+    const n = rarity === "rare" ? rng.int(3, 4) : rarity === "enchanted" ? rng.int(1, 2) : 0;
+    const area = rng.pick(Object.keys(MAP_AREAS).sort());
+    return { uid, tier: Math.max(1, tier), area, mods: rollMods(rng, n), rarity };
+  }
+  function mapLabel(m4) {
+    return `${MAP_AREAS[m4.area]?.name ?? m4.area} (${tierName(m4.tier)})`;
+  }
+  function craftMap(state, currency, uid) {
+    const m4 = state.maps.find((x) => x.uid === uid);
+    if (!m4) return "map not found";
+    if (!CURRENCIES[currency]) return "unknown currency";
+    if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
+    const rng = new Rng(hashSeed(state.seed, 7168368, state.craftSeq));
+    switch (currency) {
+      case "kindling":
+        if (m4.rarity !== "plain") return "needs a plain map";
+        m4.rarity = "enchanted";
+        m4.mods = rollMods(rng, rng.int(1, 2));
+        break;
+      case "reshaper":
+        if (m4.rarity !== "enchanted") return "needs an enchanted map";
+        m4.mods = rollMods(rng, rng.int(1, 2));
+        break;
+      case "graft":
+        if (m4.rarity !== "enchanted" || m4.mods.length >= 2) return "needs an enchanted map with one mod";
+        m4.mods = rollMods(rng, 1, m4.mods);
+        break;
+      case "crownseal":
+        if (m4.rarity !== "enchanted") return "needs an enchanted map";
+        m4.rarity = "rare";
+        m4.mods = rollMods(rng, 1, m4.mods);
+        break;
+      case "forgeheart":
+        if (m4.rarity !== "plain") return "needs a plain map";
+        m4.rarity = "rare";
+        m4.mods = rollMods(rng, rng.int(3, 4));
+        break;
+      case "tempest":
+        if (m4.rarity !== "rare") return "needs a rare map";
+        m4.mods = rollMods(rng, rng.int(3, 4));
+        break;
+      case "starfall":
+        if (m4.rarity !== "rare" || m4.mods.length >= 5) return "needs a rare map with room";
+        m4.mods = rollMods(rng, 1, m4.mods);
+        break;
+      case "salt":
+        if (m4.rarity === "plain") return "already plain";
+        m4.rarity = "plain";
+        m4.mods = [];
+        break;
+      default:
+        return "does nothing to maps";
+    }
+    state.craftSeq++;
+    state.currency[currency]--;
+    return null;
+  }
+  function addMap(state, m4) {
+    if (state.maps.length < state.mapCap) {
+      state.maps.push(m4);
+      return true;
+    }
+    let low = 0;
+    state.maps.forEach((x, i) => {
+      if (x.tier < state.maps[low].tier) low = i;
+    });
+    if (state.maps[low].tier >= m4.tier) return false;
+    state.maps[low] = m4;
+    return true;
+  }
+  function startMapRun(state) {
+    const act = state.activity;
+    const pin = act.pinnacle ? PINNACLES[act.pinnacle] : void 0;
+    if (pin) {
+      act.pinnacle = void 0;
+      if ((state.sigils[pin.sigil] ?? 0) >= pin.cost) {
+        state.sigils[pin.sigil] -= pin.cost;
+        pushLog(state, "zone", `The way to ${pin.name} opens.`);
+        return { tier: MAX_TIER, area: "sunscar", mods: [], level: pin.level, pinnacle: pin.id };
+      }
+    }
+    if (state.maps.length) {
+      const want = act.mapTier;
+      const sorted = [...state.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length || a.uid - b.uid);
+      const pick = want > 0 ? sorted.find((m4) => m4.tier <= want) ?? sorted[sorted.length - 1] : sorted[0];
+      state.maps.splice(state.maps.indexOf(pick), 1);
+      return { tier: pick.tier, area: pick.area, mods: [...pick.mods], level: mapLevel(pick.tier) };
+    }
+    return { tier: 0, area: "cinderfield", mods: [], level: mapLevel(0) };
+  }
+  function mapZone(m4, atlas) {
+    const area = MAP_AREAS[m4.area] ?? MAP_AREAS.cinderfield;
+    if (m4.pinnacle) {
+      const p = PINNACLES[m4.pinnacle];
+      return { id: "map", act: 4, name: p.name, level: p.level, packs: 0, packSize: [0, 0], monsters: area.monsters, boss: p.boss, champion: 0, palette: p.palette };
+    }
+    const packs = m4.mods.reduce((s, id) => s + (MAP_MODS[id]?.packs ?? 0), 0) + atlas.packs;
+    return {
+      id: "map",
+      act: 4,
+      name: `${area.name} - ${tierName(m4.tier)}`,
+      level: m4.level,
+      packs: Math.round((m4.tier === 0 ? 6 : 8) * (1 + packs / 100)),
+      packSize: [4, 6],
+      monsters: area.monsters,
+      ...m4.tier > 0 ? { boss: area.boss } : {},
+      champion: 0.2,
+      palette: area.palette
+    };
+  }
+  var effCache = /* @__PURE__ */ new WeakMap();
+  function mapEffects(m4, atlas) {
+    const c = effCache.get(m4);
+    if (c) return c;
+    const depth = depthMult(m4.tier);
+    const e = { life: depth, damage: depth, speed: 1, extra: [], hero: [], quantity: atlas.quantity, rarity: atlas.rarity };
+    const reward = 1 + atlas.modEffect / 100;
+    for (const id of m4.mods) {
+      const d = MAP_MODS[id];
+      if (!d) continue;
+      if (d.life) e.life *= 1 + d.life / 100;
+      if (d.damage) e.damage *= 1 + d.damage / 100;
+      if (d.speed) e.speed *= 1 + d.speed / 100;
+      if (d.extra) e.extra.push(d.extra);
+      if (d.hero) e.hero.push(...d.hero.map((x) => ({ ...x, src: "Map" })));
+      e.quantity += d.qty * reward;
+      e.rarity += d.rarity * reward;
+    }
+    if (m4.tier > MAX_TIER) {
+      e.quantity += (m4.tier - MAX_TIER) * 3;
+      e.rarity += (m4.tier - MAX_TIER) * 4;
+    }
+    effCache.set(m4, e);
+    return e;
+  }
+  function completeMap(state, m4) {
+    if (m4.pinnacle) {
+      const first = !state.pinnacleKills[m4.pinnacle];
+      state.pinnacleKills[m4.pinnacle] = (state.pinnacleKills[m4.pinnacle] ?? 0) + 1;
+      if (first) {
+        state.atlas.points += 2;
+        pushLog(state, "boss", `${PINNACLES[m4.pinnacle].name} is defeated: +2 atlas points.`);
+      }
+      return;
+    }
+    if (m4.tier > 0 && !state.atlas.tiers.includes(m4.tier)) {
+      state.atlas.tiers.push(m4.tier);
+      if (m4.tier <= MAX_TIER || (m4.tier - MAX_TIER) % 5 === 0) {
+        state.atlas.points++;
+        pushLog(state, "info", `${tierName(m4.tier)} completed for the first time: +1 atlas point.`);
+      }
+    }
+  }
+  function dropTier(rng, tier, atlas) {
+    const base = Math.max(1, tier);
+    return rng.chance((12 + atlas.upgrade) / 100) ? base + 1 : base;
+  }
+
   // src/core/sim/engine.ts
   var STEP_MS = 100;
   var DT = STEP_MS / 1e3;
@@ -2809,8 +3172,10 @@
   var FLASK_S = 2;
   var flaskAmount = (level, sheet) => (40 + 14 * level) * sheet.flaskHeal;
   function newRun(state, sheet) {
-    const z = zoneOf(state.activity.zone);
-    const rng = new Rng(hashSeed(state.seed, state.activity.runIndex));
+    const act = state.activity;
+    const map = act.mode === "map" ? startMapRun(state) : void 0;
+    const z = map ? mapZone(map, atlasEffects(state)) : zoneOf(act.zone);
+    const rng = new Rng(hashSeed(state.seed, act.runIndex));
     const run = {
       rng: rng.state(),
       zone: z.id,
@@ -2825,9 +3190,10 @@
       xp: 0,
       elapsed: 0
     };
-    const prev = state.activity.run;
+    if (map) run.map = map;
+    const prev = act.run;
     if (prev && prev.zone === z.id) run.hero.flask = prev.hero.flask;
-    spawnPack(run, z, rng);
+    spawnPack(run, z, rng, effectsOf(state, run));
     run.rng = rng.state();
     return run;
   }
@@ -2836,20 +3202,35 @@
     if (!z) throw new Error("unknown zone " + id);
     return z;
   }
-  function makeMonster(def2, level, champion, rng) {
+  function runZone(state, run) {
+    return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
+  }
+  var effectsOf = (state, run) => run.map ? mapEffects(run.map, atlasEffects(state)) : null;
+  var mapSheets = /* @__PURE__ */ new WeakMap();
+  function runSheet(state) {
+    const run = state.activity.run;
+    const eff = run ? effectsOf(state, run) : null;
+    if (!run?.map || !eff?.hero.length) return sheetOf(state);
+    const c = mapSheets.get(run.map);
+    if (c && c.rev === state.hero.rev) return c.sheet;
+    const sheet = deriveSheet(state.hero, eff.hero);
+    mapSheets.set(run.map, { rev: state.hero.rev, sheet });
+    return sheet;
+  }
+  function makeMonster(def2, level, champion, rng, eff) {
     const d = MONSTERS[def2];
-    const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1));
+    const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1) * (eff?.life ?? 1));
     return { def: def2, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
   }
-  function spawnPack(run, z, rng) {
+  function spawnPack(run, z, rng, eff) {
     run.monsters = [];
     if (run.pack >= run.packs) {
-      if (z.boss) run.monsters.push(makeMonster(z.boss, z.level + 1, false, rng));
+      if (z.boss) run.monsters.push(makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff));
       return;
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
     const champ = rng.chance(z.champion);
-    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng));
+    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng, eff));
   }
   function advance(state, now, ev = {}, maxSteps = Infinity) {
     if (now - state.simTo > MAX_OFFLINE_MS) state.simTo = now - MAX_OFFLINE_MS;
@@ -2864,12 +3245,13 @@
     return true;
   }
   function step(state, ev = {}) {
-    let sheet = sheetOf(state);
-    if (!state.activity.run) state.activity.run = newRun(state, sheet);
+    if (!state.activity.run) state.activity.run = newRun(state, sheetOf(state));
     const run = state.activity.run;
+    let sheet = runSheet(state);
     const rng = new Rng(run.rng);
     const h2 = run.hero;
-    const z = zoneOf(run.zone);
+    const z = runZone(state, run);
+    const eff = effectsOf(state, run);
     run.elapsed += DT;
     h2.life = Math.min(sheet.life, h2.life + sheet.lifeRegen * DT);
     h2.mana = Math.min(sheet.mana, h2.mana + sheet.manaRegen * DT);
@@ -2885,13 +3267,13 @@
         run.timer -= DT;
         if (run.timer <= 0) {
           state.activity.runIndex++;
-          state.activity.run = newRun(state, sheet);
+          state.activity.run = newRun(state, sheetOf(state));
         }
         break;
       case "travel":
         run.timer -= DT * sheet.moveSpeed;
         if (run.timer <= 0) {
-          spawnPack(run, z, rng);
+          spawnPack(run, z, rng, eff);
           run.phase = run.monsters.length ? "fight" : "done";
         }
         break;
@@ -2907,7 +3289,7 @@
             h2.cd += 1 / Math.max(0.1, sheet.skill.speed);
           } else h2.cd = 0.2;
         }
-        monstersAct(run, sheet, rng, ev);
+        monstersAct(run, sheet, rng, ev, eff);
         if (h2.life <= 0) {
           heroDied(state, run, ev);
           break;
@@ -2970,14 +3352,14 @@
     }
     return sheet;
   }
-  function monstersAct(run, sheet, rng, ev) {
+  function monstersAct(run, sheet, rng, ev, eff) {
     const h2 = run.hero;
     run.monsters.forEach((m4, i) => {
       if (m4.life <= 0 || h2.life <= 0) return;
       const d = MONSTERS[m4.def];
       m4.atk -= DT;
       if (m4.atk > 0) return;
-      m4.atk += rng.range(0.85, 1.15) / d.speed;
+      m4.atk += rng.range(0.85, 1.15) / (d.speed * (eff?.speed ?? 1));
       if (!d.spell) {
         const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m4.level) * d.accuracy, sheet.evasion));
         if (rng.chance(evade)) {
@@ -2989,10 +3371,13 @@
         ev.monsterHit?.(i, 0, "block");
         return;
       }
-      const base = monsterDamage(m4.level) * d.damage * (m4.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
+      const base = monsterDamage(m4.level) * d.damage * (m4.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
       let dmg = 0;
       for (const t of DAMAGE_TYPES) {
-        const share = d.split[t];
+        let share = d.split[t] ?? 0;
+        if (eff) {
+          for (const [et, es] of eff.extra) if (et === t) share += es;
+        }
         if (!share) continue;
         let x = base * share;
         if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
@@ -3010,7 +3395,9 @@
   function onKill(state, run, m4, sheet, rng, ev) {
     const d = MONSTERS[m4.def];
     const hero = state.hero;
-    const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain);
+    const atlas = run.map ? atlasEffects(state) : null;
+    const eff = effectsOf(state, run);
+    const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
     run.kills++;
     run.xp += xp;
     state.totals.kills++;
@@ -3018,30 +3405,53 @@
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m4, xp);
     let changed = gainXp(state, xp, ev);
-    const qty = 1 + sheet.quantity / 100;
+    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m4.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-      const bonus = sheet.rarity + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const bonus = sheet.rarity + (eff?.rarity ?? 0) + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
       const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
-      const relicChance = (d.boss ? 0.04 : m4.champion ? 0.01 : 3e-3) * (1 + sheet.rarity / 200);
+      const pin = run.map?.pinnacle && d.boss;
+      const relicChance = pin && k === 0 ? 1 : (d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m4.champion ? 0.01 : 3e-3) * (1 + bonus / 200);
       const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m4.level) || rollItem(rng, state.nextUid, m4.level, opts);
       state.nextUid++;
       const r3 = receiveItem(state, item);
       if (r3.equipped) changed = true;
       ev.loot?.(item, r3.kept, r3.equipped);
     }
-    const cRolls = d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m4.champion ? 0.12 : 0.02) * qty;
+    const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
+    const cChance = (d.boss ? 0.6 : m4.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100);
     for (let k = 0; k < cRolls; k++) {
       if (!rng.chance(cChance)) continue;
       const cur = rng.weighted(CURRENCY_ORDER, (id) => CURRENCIES[id].drop);
       state.currency[cur] = (state.currency[cur] ?? 0) + 1;
       ev.currency?.(cur);
     }
+    endgameDrops(state, run, m4, rng);
     if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
-    return changed ? sheetOf(state) : sheet;
+    return changed ? runSheet(state) : sheet;
+  }
+  function endgameDrops(state, run, m4, rng) {
+    const d = MONSTERS[m4.def];
+    const inMap = !!run.map && !run.map.pinnacle;
+    const act3 = !run.map && ZONES[run.zone]?.act === 3;
+    if (!inMap && !act3) return;
+    const atlas = atlasEffects(state);
+    const tier = inMap ? run.map.tier : 0;
+    const base = d.boss ? 0.6 : m4.champion ? 0.06 : 0.012;
+    const chance = base * (act3 ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
+    if (rng.chance(chance)) {
+      if (addMap(state, rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas)))) state.totals.maps = (state.totals.maps ?? 0) + 1;
+    }
+    if (inMap && d.boss && tier > 0) {
+      const eligible = Object.values(PINNACLES).filter((p) => tier >= p.minTier);
+      if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
+        const p = eligible[rng.int(0, eligible.length - 1)];
+        state.sigils[p.sigil] = (state.sigils[p.sigil] ?? 0) + 1;
+        pushLog(state, "loot", `Found a ${p.sigilName}.`);
+      }
+    }
   }
   function gainXp(state, xp, ev = {}) {
     const hero = state.hero;
@@ -3067,9 +3477,24 @@
     const act = state.activity;
     act.streak = 0;
     act.deaths++;
-    pushLog(state, "death", `Died in ${zoneOf(run.zone).name}.`);
+    pushLog(state, "death", `Died in ${runZone(state, run).name}.`);
     ev.death?.(run.zone);
-    if (act.autoPush && act.deaths >= 3) {
+    if (run.map) {
+      state.hero.xp = Math.max(0, state.hero.xp - 0.05 * xpToNext(state.hero.level));
+      if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
+        act.mapTier = run.map.tier - 1;
+        act.deaths = 0;
+        pushLog(state, "zone", `Too deep: running ${tierName(act.mapTier)} and below for now.`);
+      }
+      return;
+    }
+    if (act.autoPush && act.deaths >= 3 && ZONES[act.zone]?.trial) {
+      const road = [...ZONE_ORDER].reverse().find((id) => state.world.unlocked.includes(id) && (state.world.clears[id] ?? 0) > 0) ?? ZONE_ORDER[0];
+      ev.zone?.(act.zone, road, "retreat");
+      pushLog(state, "zone", `Fell back to ${zoneOf(road).name}.`);
+      act.zone = road;
+      act.deaths = 0;
+    } else if (act.autoPush && act.deaths >= 3) {
       const i = ZONE_ORDER.indexOf(act.zone);
       if (i > 0) {
         const to = ZONE_ORDER[i - 1];
@@ -3087,30 +3512,60 @@
       pushLog(state, "boss", z.bossText);
       ev.story?.(z.bossText);
     }
-    if (z.trial) {
-      hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
-      hero.rev++;
-      pushLog(state, "info", `${z.name} passed: +${TRIAL_POINTS} ascendancy points.`);
-    }
+    void hero;
     const actDef = ACTS.find((a) => a.zones[a.zones.length - 1] === zoneId);
-    if (actDef) {
-      hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
-      hero.rev++;
-      pushLog(state, "info", `Act ${actDef.id} complete: +${ACT_BOSS_POINTS} passive points. ${actDef.outro}`);
-      ev.story?.(actDef.outro);
-    }
-    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
-      if (after === zoneId && !state.world.unlocked.includes(trial)) {
-        state.world.unlocked.push(trial);
-        pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
-        ev.zone?.(zoneId, trial, "unlock");
+    if (actDef) ev.story?.(actDef.outro);
+    reconcileRewards(state, ev);
+  }
+  function reconcileRewards(state, ev = {}) {
+    const w2 = state.world, hero = state.hero;
+    w2.rewards ??= [];
+    const cleared = (z) => (w2.clears[z] ?? 0) > 0;
+    for (const a of ACTS) {
+      const key = `act:${a.id}`;
+      if (cleared(a.zones[a.zones.length - 1]) && !w2.rewards.includes(key)) {
+        w2.rewards.push(key);
+        hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
+        hero.rev++;
+        pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
       }
     }
+    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
+      if (cleared(after) && !w2.unlocked.includes(trial)) {
+        w2.unlocked.push(trial);
+        pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+        ev.zone?.(after, trial, "unlock");
+      }
+      const key = `trial:${trial}`;
+      if (cleared(trial) && !w2.rewards.includes(key)) {
+        w2.rewards.push(key);
+        hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
+        hero.rev++;
+        pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
+      }
+    }
+    ZONE_ORDER.forEach((z, i) => {
+      const next = ZONE_ORDER[i + 1];
+      if (next && cleared(z) && !w2.unlocked.includes(next)) w2.unlocked.push(next);
+    });
   }
   function finishRun(state, ev) {
     const act = state.activity;
     const run = act.run;
     state.totals.runs++;
+    if (run.map) {
+      completeMap(state, run.map);
+      act.deaths = 0;
+      act.streak++;
+      if (act.autoPush && act.mapTier > 0 && act.streak >= 5) {
+        act.mapTier = 0;
+        act.streak = 0;
+      }
+      ev.runDone?.(run.zone);
+      act.runIndex++;
+      act.run = newRun(state, sheetOf(state));
+      return;
+    }
     const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
     if (first) firstClear(state, run.zone, ev);
@@ -3203,7 +3658,7 @@
   }
 
   // src/core/save.ts
-  var SAVE_VERSION = 3;
+  var SAVE_VERSION = 4;
   var MIGRATIONS = {
     // v2 (P2): passive bonus points, loot filter rules, crafting counter.
     1: (s) => {
@@ -3221,6 +3676,23 @@
     2: (s) => {
       s.hero.ascNodes ??= [];
       s.hero.ascPoints ??= 0;
+      return s;
+    },
+    // v4 (P4): maps, atlas, sigils, pinnacles.
+    3: (s) => {
+      s.activity.mode ??= "zone";
+      s.activity.mapTier ??= 0;
+      s.maps ??= [];
+      s.mapCap ??= 40;
+      s.atlas ??= { points: 0, nodes: [], tiers: [] };
+      s.sigils ??= {};
+      s.pinnacleKills ??= {};
+      const acts = [["a1_lock", "act:1"], ["a2_throne", "act:2"], ["a3_sunfall", "act:3"]];
+      const trials = ["a1_trial", "a2_trial", "a3_trial"];
+      const clears = s.world.clears ?? {};
+      const actsDone = acts.filter(([z]) => clears[z] > 0).map(([, k]) => k);
+      const trialsDone = trials.filter((z) => clears[z] > 0).map((z) => "trial:" + z);
+      s.world.rewards ??= [...actsDone.slice(0, Math.floor((s.hero.bonusPoints ?? 0) / 2)), ...trialsDone.slice(0, Math.floor((s.hero.ascPoints ?? 0) / 2))];
       return s;
     }
   };
@@ -3314,10 +3786,16 @@
     const r3 = v;
     if (r3.action !== "keep" && r3.action !== "salvage") return null;
     const out = { on: r3.on !== false, action: r3.action };
-    const rarity = strs(r3.rarity, (s) => RARITIES.includes(s));
-    if (rarity?.length) out.rarity = rarity;
-    const slots = strs(r3.slots);
-    if (slots?.length) out.slots = slots;
+    if (r3.rarity !== void 0) {
+      const rarity = strs(r3.rarity, (s) => RARITIES.includes(s));
+      if (!rarity?.length) return null;
+      out.rarity = rarity;
+    }
+    if (r3.slots !== void 0) {
+      const slots = strs(r3.slots);
+      if (!slots?.length) return null;
+      out.slots = slots;
+    }
     const minIlvl = pos(r3.minIlvl);
     if (minIlvl) out.minIlvl = minIlvl;
     const behind = pos(r3.behind);
@@ -3360,7 +3838,7 @@
     hero.supports = Array.isArray(hero.supports) ? hero.supports.filter((id) => SUPPORTS[id]) : [];
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
     if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc].cls !== hero.cls)) delete hero.asc;
-    hero.ascNodes = Array.isArray(hero.ascNodes) ? hero.ascNodes.filter((id) => ASC_NODES[id]?.asc === hero.asc).slice(0, hero.ascPoints) : [];
+    hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter((id) => ASC_NODES[id]?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
     hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {
@@ -3378,6 +3856,7 @@
     if (!world.unlocked.length) world.unlocked = ["a1_shore"];
     world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
     world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
+    world.rewards = strs(world.rewards) ?? [];
     const act = obj(s.activity, "activity");
     if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) {
       act.zone = world.unlocked[world.unlocked.length - 1];
@@ -3393,9 +3872,31 @@
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r3) => !!r3) : structuredClone(DEFAULT_FILTER);
+    if (act.mode !== "map") act.mode = "zone";
+    act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
+    if (act.pinnacle !== void 0 && !PINNACLES[act.pinnacle]) delete act.pinnacle;
+    if (act.run?.map) {
+      const m4 = act.run.map;
+      if (!MAP_AREAS[m4.area] || !Array.isArray(m4.mods) || m4.mods.some((x) => !MAP_MODS[x]) || !Number.isFinite(m4.tier) || !Number.isFinite(m4.level) || m4.pinnacle !== void 0 && !PINNACLES[m4.pinnacle]) act.run = null;
+    }
+    s.maps = Array.isArray(s.maps) ? s.maps.filter((m4) => m4 && Number.isFinite(m4.uid) && Number.isInteger(m4.tier) && m4.tier >= 1 && MAP_AREAS[m4.area] && Array.isArray(m4.mods) && m4.mods.every((x) => MAP_MODS[x]) && ["plain", "enchanted", "rare"].includes(m4.rarity)) : [];
+    s.mapCap = Number.isInteger(s.mapCap) && s.mapCap > 0 ? s.mapCap : 40;
+    const atlas = s.atlas && typeof s.atlas === "object" ? s.atlas : { points: 0, nodes: [], tiers: [] };
+    atlas.points = Number.isFinite(atlas.points) && atlas.points >= 0 ? atlas.points : 0;
+    atlas.tiers = Array.isArray(atlas.tiers) ? [...new Set(atlas.tiers.filter((t) => Number.isInteger(t) && t >= 1))] : [];
+    const nodes = [];
+    for (const id of Array.isArray(atlas.nodes) ? atlas.nodes : []) {
+      if (ATLAS[id] && !nodes.includes(id) && ATLAS[id].requires.every((r3) => nodes.includes(r3)) && nodes.length < atlas.points) nodes.push(id);
+    }
+    atlas.nodes = nodes;
+    s.atlas = atlas;
+    const counts = (o) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0));
+    s.sigils = counts(s.sigils);
+    s.pinnacleKills = counts(s.pinnacleKills);
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
+    reconcileRewards(s);
     return s;
   }
 
@@ -3481,7 +3982,7 @@
     draw(state, sheet, now) {
       const g = this.g;
       const run = state.activity.run;
-      const zone = ZONES[run?.zone ?? state.activity.zone];
+      const zone = run ? runZone(state, run) : ZONES[state.activity.zone];
       const dt = this.lastDraw ? Math.min(100, now - this.lastDraw) : 16;
       this.lastDraw = now;
       if (run?.phase === "travel") this.travel += dt * 0.06;
@@ -4438,6 +4939,153 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     return card;
   }
 
+  // src/ui/atlas.ts
+  var MAP_CRAFTS = ["kindling", "reshaper", "graft", "crownseal", "forgeheart", "tempest", "starfall", "salt"];
+  var RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare: "var(--r-rare)" };
+  function atlasSig(c) {
+    const s = c.state;
+    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
+  }
+  function atlasView(c) {
+    const st = c.state;
+    if (!endgameOpen(st)) {
+      return h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: "The Cinderlands" }),
+        h("div", { class: "story", text: "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it." }),
+        h("div", { class: "muted", text: "Maps also drop in Act 3 once you get there; keep them for later." }),
+        h("div", { class: "tag", text: `${st.maps.length} maps collected` })
+      );
+    }
+    const root = h("div", { class: "col" });
+    const mode = h("input", { attrs: { type: "checkbox" } });
+    mode.checked = st.activity.mode === "map";
+    mode.addEventListener("change", () => c.act((s) => setMapMode(s, mode.checked)));
+    const tiers = [...new Set(st.maps.map((m4) => m4.tier))].sort((a, b) => a - b);
+    const tierSel = h("select");
+    tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
+    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below`, attrs: { value: String(t) } }));
+    tierSel.value = String(tiers.includes(st.activity.mapTier) ? st.activity.mapTier : 0);
+    tierSel.addEventListener("change", () => c.act((s) => setMapTier(s, +tierSel.value)));
+    const deepest = Math.max(0, ...st.atlas.tiers);
+    root.append(h(
+      "div",
+      { class: "card col" },
+      h("h3", { text: "The map device" }),
+      h("label", { class: "chk" }, mode, "Run maps instead of story zones (no maps left: the Outskirts, which drop Tier 1 maps)"),
+      h(
+        "div",
+        { class: "row" },
+        "Order",
+        tierSel,
+        h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
+        h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` })
+      ),
+      tierChips(st.atlas.tiers),
+      h("div", { class: "muted", style: "font-size:11px", text: "Dying in a map loses it and 5% of a level's experience. Mods make maps harder and richer." })
+    ));
+    const list6 = h("div", { class: "col", style: "gap:4px" });
+    const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
+    for (const m4 of maps.slice(0, 40)) {
+      const on = c.sel.uid === m4.uid;
+      list6.append(h(
+        "div",
+        { class: `zone${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
+          c.sel = { uid: m4.uid };
+          c.rerender();
+        } } },
+        h("div", { class: "tag", style: `background:${RCOLOR[m4.rarity]}`, text: tierName(m4.tier) }),
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { style: "font-weight:800", text: mapLabel(m4) }),
+          m4.mods.length ? h("div", { class: "muted", style: "font-size:11px", text: m4.mods.map((id) => MAP_MODS[id]?.text ?? id).join(" / ") }) : null
+        )
+      ));
+    }
+    if (!maps.length) list6.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    const sel = st.maps.find((m4) => m4.uid === c.sel.uid);
+    const bench = h("div", { class: "row", style: "gap:4px" });
+    if (sel) {
+      for (const id of MAP_CRAFTS) {
+        const have = st.currency[id] ?? 0;
+        bench.append(h("button", {
+          class: "btn alt",
+          text: `${CURRENCIES[id].name} (${have})`,
+          title: CURRENCIES[id].blurb,
+          attrs: have ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => craftMap(s, id, sel.uid)) }
+        }));
+      }
+    }
+    root.append(h(
+      "div",
+      { class: "card col" },
+      h("h3", { text: "Maps" }),
+      list6,
+      sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null
+    ));
+    const left = atlasPointsLeft(st);
+    const grid = h("div", { class: "grid2" });
+    for (const n of Object.values(ATLAS)) {
+      const own = st.atlas.nodes.includes(n.id);
+      const err = own ? null : canTakeAtlas(st, n.id);
+      const locked = !own && !!err && err !== "no atlas points";
+      grid.append(h(
+        "div",
+        { class: `skill${own ? " on" : ""}${locked ? " locked" : ""}`, on: { click: () => {
+          if (!own && !err) c.act((s) => takeAtlas(s, n.id));
+        } } },
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { class: "nm", text: n.name }),
+          h("div", { class: "ds", text: n.text }),
+          n.requires.length ? h("div", { class: "ds muted", text: `After: ${n.requires.map((r3) => ATLAS[r3]?.name ?? r3).join(", ")}` }) : null
+        ),
+        h("div", { class: "tag", text: own ? "taken" : err ? locked ? "locked" : "no points" : "take" })
+      ));
+    }
+    root.append(h(
+      "div",
+      { class: "card col" },
+      h("h3", { text: `Atlas (${left} point${left === 1 ? "" : "s"} left)` }),
+      h("div", { class: "muted", style: "font-size:11px", text: `First clears of tiers 1-${MAX_TIER} give a point each, every fifth Depth one more, pinnacles two.` }),
+      grid
+    ));
+    const pins = h("div", { class: "grid2" });
+    for (const p of Object.values(PINNACLES)) {
+      const have = st.sigils[p.sigil] ?? 0;
+      const queued = st.activity.pinnacle === p.id;
+      pins.append(h(
+        "div",
+        { class: "skill", style: "cursor:default" },
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { class: "nm", text: p.name }),
+          h("div", { class: "ds", text: p.text }),
+          h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
+          h("button", {
+            class: "btn hot",
+            style: "margin-top:6px",
+            text: queued ? "Next run" : `Challenge (${have}/${p.cost})`,
+            attrs: have >= p.cost && !queued ? {} : { disabled: "" },
+            on: { click: () => c.act((s) => queuePinnacle(s, p.id), `${p.name} is next`) }
+          })
+        )
+      ));
+    }
+    root.append(h("div", { class: "card col" }, h("h3", { text: "Pinnacles" }), pins));
+    return root;
+  }
+  function tierChips(done) {
+    const row = h("div", { class: "row", style: "gap:3px" });
+    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: "tag", style: done.includes(t) ? "background:var(--teal)" : "opacity:.5", text: String(t) }));
+    return row;
+  }
+
   // src/ui/views.ts
   var VIEWS = [
     { id: "hero", label: "Hero" },
@@ -4446,6 +5094,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     { id: "skills", label: "Skills" },
     { id: "tree", label: "Tree" },
     { id: "world", label: "World" },
+    { id: "atlas", label: "Atlas" },
     { id: "log", label: "Log" },
     { id: "menu", label: "Menu" }
   ];
@@ -4464,6 +5113,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
       case "world":
         return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+      case "atlas":
+        return atlasSig(c);
       case "log":
         return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
       case "menu":
@@ -4484,6 +5135,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         return skillsView(c);
       case "world":
         return worldView(c);
+      case "atlas":
+        return atlasView(c);
       case "log":
         return logView(c);
       case "menu":
@@ -4512,10 +5165,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list5 = h("div", { class: "kv" });
-      for (const m4 of mods) list5.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list5.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list5, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list6 = h("div", { class: "kv" });
+      for (const m4 of mods) list6.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list6.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list6, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const off = h(
       "div",
@@ -5011,10 +5664,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   function creationView(onStart) {
     const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
     let cls = Object.keys(CLASSES)[0];
-    const list5 = h("div", { class: "col" });
+    const list6 = h("div", { class: "col" });
     const draw = () => {
-      clear(list5);
-      for (const k of Object.values(CLASSES)) list5.append(h(
+      clear(list6);
+      for (const k of Object.values(CLASSES)) list6.append(h(
         "div",
         { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => {
           cls = k.id;
@@ -5040,7 +5693,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         h("h3", { text: "Name your Kindled" }),
         name,
         h("h3", { text: "Choose a calling" }),
-        list5,
+        list6,
         h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })
       )
     );
@@ -5311,7 +5964,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       const frame = () => {
         this.raf = requestAnimationFrame(frame);
         if (!this.state || document.hidden) return;
-        this.battle.draw(this.state, sheetOf(this.state), performance.now());
+        this.battle.draw(this.state, runSheet(this.state), performance.now());
         this.drawHud();
         this.renderTab(false);
       };
@@ -5385,7 +6038,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     hudEls = {};
     drawHud() {
       const s = this.state;
-      const sh = sheetOf(s);
+      const sh = runSheet(s);
       const run = s.activity.run;
       if (!this.hud.childElementCount) {
         for (const k of ["life", "es", "mana", "flask", "xp", "zone"]) {
@@ -5408,9 +6061,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       set("flask", (hh?.flask ?? 30) / 30, "#3fbf5f", `Flask ${Math.floor(hh?.flask ?? 30)} / 30`);
       const need = xpToNext(s.hero.level);
       set("xp", isFinite(need) ? s.hero.xp / need : 1, "#ffc233", `Level ${s.hero.level}  ${isFinite(need) ? (s.hero.xp / need * 100).toFixed(1) + "%" : "max"}`);
-      const z = ZONES[s.activity.zone];
+      const z = run ? runZone(s, run) : ZONES[s.activity.zone];
       const packs = run ? run.packs + (run.boss ? 1 : 0) : 1;
-      set("zone", run ? run.pack / packs : 0, "#19b3a3", `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
+      set("zone", run ? run.pack / packs : 0, "#19b3a3", run?.map ? `${z.name} (L${z.level})  ${s.maps.length} maps left` : `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
       const free = supportSlots(s.hero.level) > s.hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= s.hero.level).length && Object.values(SUPPORTS).some((x) => x.level <= s.hero.level && !s.hero.supports.includes(x.id));
       const skillsTab = this.tabs.querySelector('[data-v="skills"]');
       if (skillsTab && skillsTab.textContent !== (free ? "Skills !" : "Skills")) skillsTab.textContent = free ? "Skills !" : "Skills";
@@ -5441,10 +6094,21 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         this.startLoop();
       }));
     }
+    storyBox = null;
+    /** One story window at a time: later beats are added to the open one. */
     showStory(text) {
-      const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), h("div", { class: "story", text }));
+      if (this.storyBox?.isConnected) {
+        this.storyBox.append(h("div", { class: "story", style: "margin-top:6px", text }));
+        return;
+      }
+      const box2 = h("div", { class: "col" }, h("div", { class: "story", text }));
+      const card = h("div", { class: "card col" }, h("h3", { text: "The road remembers" }), box2);
       const close = this.modal(card);
-      card.append(h("button", { class: "btn", text: "Onward", on: { click: () => close() } }));
+      this.storyBox = box2;
+      card.append(h("button", { class: "btn", text: "Onward", on: { click: () => {
+        close();
+        this.storyBox = null;
+      } } }));
     }
     showReport(r3) {
       const rows = [
@@ -5475,7 +6139,8 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
   };
   function summaryOf(s) {
     const need = xpToNext(s.hero.level);
-    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
+    const run = s.activity.run;
+    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: run ? runZone(s, run).name : ZONES[s.activity.zone]?.name ?? s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
   }
 
   // src/ui/card.ts

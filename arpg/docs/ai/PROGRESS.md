@@ -61,3 +61,25 @@ One entry per loop iteration, newest last.
   and quick save go through a KV that uses hub storage in Discord (no
   localStorage there); reset clears the quick save; destroy/init races use a
   generation counter; bow swap with a quiver at a full stash works.
+
+## 4 - Review P3, P4 endgame
+- Review P3 (6 findings, all fixed): rewards ledger (`world.rewards`) with an
+  idempotent `reconcileRewards()` run on every load, so pre-P3 saves get their
+  trial unlocks, act and trial points exactly once (v4 migration infers what
+  P3 already paid); auto-push retreats out of trials; full-stash upgrades
+  salvage the cheapest of stash + displaced items (never relics or crafted),
+  with a log line; filter rules with only invalid conditions are dropped, not
+  widened; ascendancy node validation; story beats share one window.
+- P4: the Cinderlands. Maps (tier 1-16, then Depths forever: level 74+N,
+  x1.06^N life/damage, more quantity/rarity), 10 map areas, 12 map mods,
+  map crafting with the item currencies, map drops (Act 3 at 25%, Outskirts
+  when out of maps), 18-node atlas tree (points per first tier clear, every
+  fifth Depth, pinnacles), 4 pinnacle bosses behind sigils from map bosses,
+  map death costs the map and 5% of a level, map auto-tiering (3 deaths ->
+  a tier lower, 5 clean -> highest again). Atlas tab. Save v4. 92 tests.
+- Balance (strider, 1 seed, 168 h): Act 3 done ~12 h, T8 at 48 h, T9 at
+  144 h, level 63. Softer boss damage (-15-25%), +20 life/level, bigger life/ES
+  affixes. Known: deaths ~30/h in maps stall levels, dust piles up unused;
+  bot does not craft. P5 balance pass.
+- Tools: tools/run-ts.mjs (run any TS tool), tools/make-save.ts (bot-played
+  HM1 export), tools/shots-endgame.mjs (imports it and screenshots late views).

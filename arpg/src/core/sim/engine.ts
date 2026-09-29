@@ -8,6 +8,9 @@ import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
 import { DAMAGE_TYPES, type Item } from "../types";
 import { sheetOf, receiveItem, pushLog } from "../game";
+import { deriveSheet } from "../character";
+import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
+import { PINNACLES, tierName } from "../data";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -36,16 +39,20 @@ export interface SimEvents {
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
 
 export function newRun(state: GameState, sheet: Sheet): RunState {
-    const z = zoneOf(state.activity.zone);
-    const rng = new Rng(hashSeed(state.seed, state.activity.runIndex));
+    const act = state.activity;
+    // Maps are taken out of the stash when the run starts; a death loses them.
+    const map = act.mode === "map" ? startMapRun(state) : undefined;
+    const z = map ? mapZone(map, atlasEffects(state)) : zoneOf(act.zone);
+    const rng = new Rng(hashSeed(state.seed, act.runIndex));
     const run: RunState = {
         rng: rng.state(), zone: z.id, pack: 0, packs: z.packs, boss: !!z.boss, phase: "fight", timer: 0, monsters: [],
         hero: { life: sheet.life, es: sheet.es, mana: sheet.mana, flask: FLASK_MAX, flaskLeft: 0, flaskRate: 0, cd: 0.3, esDelay: 0 },
         kills: 0, xp: 0, elapsed: 0,
     };
-    const prev = state.activity.run;
+    if (map) run.map = map;
+    const prev = act.run;
     if (prev && prev.zone === z.id) run.hero.flask = prev.hero.flask;
-    spawnPack(run, z, rng);
+    spawnPack(run, z, rng, effectsOf(state, run));
     run.rng = rng.state();
     return run;
 }
@@ -56,21 +63,42 @@ export function zoneOf(id: string): ZoneDef {
     return z;
 }
 
-function makeMonster(def: string, level: number, champion: boolean, rng: Rng): MonsterState {
+/** The zone a run is in: a story zone, or one built from its map. */
+export function runZone(state: GameState, run: RunState): ZoneDef {
+    return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
+}
+
+const effectsOf = (state: GameState, run: RunState): MapEffects | null => (run.map ? mapEffects(run.map, atlasEffects(state)) : null);
+
+// A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
+const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
+/** The stat sheet in effect for the current run. */
+export function runSheet(state: GameState): Sheet {
+    const run = state.activity.run;
+    const eff = run ? effectsOf(state, run) : null;
+    if (!run?.map || !eff?.hero.length) return sheetOf(state);
+    const c = mapSheets.get(run.map);
+    if (c && c.rev === state.hero.rev) return c.sheet;
+    const sheet = deriveSheet(state.hero, eff.hero);
+    mapSheets.set(run.map, { rev: state.hero.rev, sheet });
+    return sheet;
+}
+
+function makeMonster(def: string, level: number, champion: boolean, rng: Rng, eff: MapEffects | null): MonsterState {
     const d = MONSTERS[def]!;
-    const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1));
+    const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1) * (eff?.life ?? 1));
     return { def, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
 }
 
-function spawnPack(run: RunState, z: ZoneDef, rng: Rng): void {
+function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null): void {
     run.monsters = [];
     if (run.pack >= run.packs) {
-        if (z.boss) run.monsters.push(makeMonster(z.boss, z.level + 1, false, rng));
+        if (z.boss) run.monsters.push(makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff));
         return;
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
     const champ = rng.chance(z.champion);
-    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng));
+    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng, eff));
 }
 
 /**
@@ -92,12 +120,13 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
 
 /** One 100 ms step. */
 export function step(state: GameState, ev: SimEvents = {}): void {
-    let sheet = sheetOf(state);
-    if (!state.activity.run) state.activity.run = newRun(state, sheet);
+    if (!state.activity.run) state.activity.run = newRun(state, sheetOf(state));
     const run = state.activity.run;
+    let sheet = runSheet(state);
     const rng = new Rng(run.rng);
     const h = run.hero;
-    const z = zoneOf(run.zone);
+    const z = runZone(state, run);
+    const eff = effectsOf(state, run);
     run.elapsed += DT;
 
     // Timers and recovery apply in every phase.
@@ -111,12 +140,12 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     switch (run.phase) {
         case "dead":
             run.timer -= DT;
-            if (run.timer <= 0) { state.activity.runIndex++; state.activity.run = newRun(state, sheet); }
+            if (run.timer <= 0) { state.activity.runIndex++; state.activity.run = newRun(state, sheetOf(state)); }
             break;
         case "travel":
             run.timer -= DT * sheet.moveSpeed;
             if (run.timer <= 0) {
-                spawnPack(run, z, rng);
+                spawnPack(run, z, rng, eff);
                 run.phase = run.monsters.length ? "fight" : "done";
             }
             break;
@@ -132,7 +161,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
                     h.cd += 1 / Math.max(0.1, sheet.skill.speed);
                 } else h.cd = 0.2;
             }
-            monstersAct(run, sheet, rng, ev);
+            monstersAct(run, sheet, rng, ev, eff);
             if (h.life <= 0) {
                 heroDied(state, run, ev);
                 break;
@@ -191,23 +220,24 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
     return sheet;
 }
 
-function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents): void {
+function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): void {
     const h = run.hero;
     run.monsters.forEach((m, i) => {
         if (m.life <= 0 || h.life <= 0) return;
         const d = MONSTERS[m.def]!;
         m.atk -= DT;
         if (m.atk > 0) return;
-        m.atk += rng.range(0.85, 1.15) / d.speed;
+        m.atk += rng.range(0.85, 1.15) / (d.speed * (eff?.speed ?? 1));
         if (!d.spell) {
             const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m.level) * d.accuracy, sheet.evasion));
             if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
         }
         if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
-        const base = monsterDamage(m.level) * d.damage * (m.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
+        const base = monsterDamage(m.level) * d.damage * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
-            const share = d.split[t];
+            let share = d.split[t] ?? 0;
+            if (eff) for (const [et, es] of eff.extra) if (et === t) share += es;
             if (!share) continue;
             let x = base * share;
             if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
@@ -226,7 +256,9 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents): void
 function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, rng: Rng, ev: SimEvents): Sheet {
     const d = MONSTERS[m.def]!;
     const hero = state.hero;
-    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain);
+    const atlas = run.map ? atlasEffects(state) : null;
+    const eff = effectsOf(state, run);
+    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
     run.kills++; run.xp += xp;
     state.totals.kills++;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
@@ -235,14 +267,15 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     let changed = gainXp(state, xp, ev);
 
     // Loot (GDD: items go straight to the stash through the filter).
-    const qty = 1 + sheet.quantity / 100;
+    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-        const bonus = sheet.rarity + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
+        const bonus = sheet.rarity + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
-        const relicChance = (d.boss ? 0.04 : m.champion ? 0.01 : 0.003) * (1 + sheet.rarity / 200);
+        const pin = run.map?.pinnacle && d.boss;
+        const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
         const item = (rng.chance(relicChance) && rollRelic(rng, state.nextUid, m.level)) || rollItem(rng, state.nextUid, m.level, opts);
         state.nextUid++;
         const r = receiveItem(state, item);
@@ -250,16 +283,40 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         ev.loot?.(item, r.kept, r.equipped);
     }
     // Crafting currency.
-    const cRolls = d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty;
+    const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100);
     for (let k = 0; k < cRolls; k++) {
         if (!rng.chance(cChance)) continue;
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
         state.currency[cur] = (state.currency[cur] ?? 0) + 1;
         ev.currency?.(cur);
     }
+    endgameDrops(state, run, m, rng);
     if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
-    return changed ? sheetOf(state) : sheet;
+    return changed ? runSheet(state) : sheet;
+}
+
+/** Maps drop in the endgame and in the last act; sigils from map bosses. */
+function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng): void {
+    const d = MONSTERS[m.def]!;
+    const inMap = !!run.map && !run.map.pinnacle;
+    const act3 = !run.map && ZONES[run.zone]?.act === 3;
+    if (!inMap && !act3) return;
+    const atlas = atlasEffects(state);
+    const tier = inMap ? run.map!.tier : 0;
+    const base = d.boss ? 0.6 : m.champion ? 0.06 : 0.012;
+    const chance = base * (act3 ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
+    if (rng.chance(chance)) {
+        if (addMap(state, rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas)))) state.totals.maps = (state.totals.maps ?? 0) + 1;
+    }
+    if (inMap && d.boss && tier > 0) {
+        const eligible = Object.values(PINNACLES).filter(p => tier >= p.minTier);
+        if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
+            const p = eligible[rng.int(0, eligible.length - 1)]!;
+            state.sigils[p.sigil] = (state.sigils[p.sigil] ?? 0) + 1;
+            pushLog(state, "loot", `Found a ${p.sigilName}.`);
+        }
+    }
 }
 
 /** Adds XP; returns true when the hero levelled up. */
@@ -288,9 +345,26 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     const act = state.activity;
     act.streak = 0;
     act.deaths++;
-    pushLog(state, "death", `Died in ${zoneOf(run.zone).name}.`);
+    pushLog(state, "death", `Died in ${runZone(state, run).name}.`);
     ev.death?.(run.zone);
-    if (act.autoPush && act.deaths >= 3) {
+    if (run.map) {
+        // GDD: dying in a map costs the map and 5% of a level's experience.
+        state.hero.xp = Math.max(0, state.hero.xp - 0.05 * xpToNext(state.hero.level));
+        // Auto-push for maps: three deaths in a row and the device prefers a tier lower.
+        if (act.autoPush && act.deaths >= 3 && run.map.tier > 1 && !run.map.pinnacle) {
+            act.mapTier = run.map.tier - 1;
+            act.deaths = 0;
+            pushLog(state, "zone", `Too deep: running ${tierName(act.mapTier)} and below for now.`);
+        }
+        return;
+    }
+    if (act.autoPush && act.deaths >= 3 && ZONES[act.zone]?.trial) {
+        // Too hard for now: back to the furthest open road.
+        const road = [...ZONE_ORDER].reverse().find(id => state.world.unlocked.includes(id) && (state.world.clears[id] ?? 0) > 0) ?? ZONE_ORDER[0]!;
+        ev.zone?.(act.zone, road, "retreat");
+        pushLog(state, "zone", `Fell back to ${zoneOf(road).name}.`);
+        act.zone = road; act.deaths = 0;
+    } else if (act.autoPush && act.deaths >= 3) {
         const i = ZONE_ORDER.indexOf(act.zone);
         if (i > 0) {
             const to = ZONE_ORDER[i - 1]!;
@@ -306,31 +380,67 @@ function firstClear(state: GameState, zoneId: string, ev: SimEvents): void {
     const z = zoneOf(zoneId);
     const hero = state.hero;
     if (z.bossText) { pushLog(state, "boss", z.bossText); ev.story?.(z.bossText); }
-    if (z.trial) {
-        hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
-        hero.rev++;
-        pushLog(state, "info", `${z.name} passed: +${TRIAL_POINTS} ascendancy points.`);
-    }
+    void hero;
     const actDef = ACTS.find(a => a.zones[a.zones.length - 1] === zoneId);
-    if (actDef) {
-        hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
-        hero.rev++;
-        pushLog(state, "info", `Act ${actDef.id} complete: +${ACT_BOSS_POINTS} passive points. ${actDef.outro}`);
-        ev.story?.(actDef.outro);
-    }
-    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
-        if (after === zoneId && !state.world.unlocked.includes(trial)) {
-            state.world.unlocked.push(trial);
-            pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
-            ev.zone?.(zoneId, trial, "unlock");
+    if (actDef) ev.story?.(actDef.outro);
+    reconcileRewards(state, ev);
+}
+
+/**
+ * Grants every one-time reward the clears have earned and not yet received,
+ * and opens trials whose road zone is cleared. Idempotent: the rewards ledger
+ * (world.rewards) makes it safe to run on every load, which is how saves from
+ * before a reward existed catch up.
+ */
+export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
+    const w = state.world, hero = state.hero;
+    w.rewards ??= [];
+    const cleared = (z: string) => (w.clears[z] ?? 0) > 0;
+    for (const a of ACTS) {
+        const key = `act:${a.id}`;
+        if (cleared(a.zones[a.zones.length - 1]!) && !w.rewards.includes(key)) {
+            w.rewards.push(key);
+            hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
+            hero.rev++;
+            pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
         }
     }
+    for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
+        if (cleared(after) && !w.unlocked.includes(trial)) {
+            w.unlocked.push(trial);
+            pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+            ev.zone?.(after, trial, "unlock");
+        }
+        const key = `trial:${trial}`;
+        if (cleared(trial) && !w.rewards.includes(key)) {
+            w.rewards.push(key);
+            hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
+            hero.rev++;
+            pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
+        }
+    }
+    // The road: every zone after a cleared one is open.
+    ZONE_ORDER.forEach((z, i) => {
+        const next = ZONE_ORDER[i + 1];
+        if (next && cleared(z) && !w.unlocked.includes(next)) w.unlocked.push(next);
+    });
 }
 
 function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
     const run = act.run!;
     state.totals.runs++;
+    if (run.map) {
+        completeMap(state, run.map);
+        act.deaths = 0;
+        // Five clean maps in a row at a capped tier: try the highest again.
+        act.streak++;
+        if (act.autoPush && act.mapTier > 0 && act.streak >= 5) { act.mapTier = 0; act.streak = 0; }
+        ev.runDone?.(run.zone);
+        act.runIndex++;
+        act.run = newRun(state, sheetOf(state));
+        return;
+    }
     const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
     if (first) firstClear(state, run.zone, ev);

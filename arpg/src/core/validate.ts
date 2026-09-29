@@ -1,12 +1,13 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
 import { DEFAULT_FILTER, type FilterRule } from "./filter";
 import { newTotals } from "./state";
+import { reconcileRewards } from "./sim/engine";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
@@ -51,8 +52,9 @@ function cleanRule(v: unknown): FilterRule | null {
     const r = v as Record<string, unknown>;
     if (r.action !== "keep" && r.action !== "salvage") return null;
     const out: FilterRule = { on: r.on !== false, action: r.action };
-    const rarity = strs(r.rarity, s => RARITIES.includes(s)); if (rarity?.length) out.rarity = rarity as FilterRule["rarity"];
-    const slots = strs(r.slots); if (slots?.length) out.slots = slots;
+    // A condition that was set but holds nothing valid would widen the rule to match everything: drop the rule instead.
+    if (r.rarity !== undefined) { const rarity = strs(r.rarity, s => RARITIES.includes(s)); if (!rarity?.length) return null; out.rarity = rarity as FilterRule["rarity"]; }
+    if (r.slots !== undefined) { const slots = strs(r.slots); if (!slots?.length) return null; out.slots = slots; }
     const minIlvl = pos(r.minIlvl); if (minIlvl) out.minIlvl = minIlvl;
     const behind = pos(r.behind); if (behind) out.behind = behind;
     const minAffixes = pos(r.minAffixes); if (minAffixes) out.minAffixes = minAffixes;
@@ -88,7 +90,7 @@ export function validateState(raw: unknown): GameState {
     hero.supports = Array.isArray(hero.supports) ? hero.supports.filter(id => SUPPORTS[id]) : [];
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
     if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc]!.cls !== hero.cls)) delete hero.asc;
-    hero.ascNodes = Array.isArray(hero.ascNodes) ? hero.ascNodes.filter(id => ASC_NODES[id]?.asc === hero.asc).slice(0, hero.ascPoints) : [];
+    hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter(id => ASC_NODES[id]?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
     hero.passives = cleanPassives(hero);
     obj(hero.equipment, "equipment");
     for (const k of Object.keys(hero.equipment)) {
@@ -106,6 +108,7 @@ export function validateState(raw: unknown): GameState {
     if (!world.unlocked.length) world.unlocked = ["a1_shore"];
     world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
     world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
+    world.rewards = strs(world.rewards) ?? [];
     const act = obj(s.activity, "activity") as unknown as GameState["activity"];
     if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) { act.zone = world.unlocked[world.unlocked.length - 1]!; act.run = null; }
     if (act.run && (!ZONES[act.run.zone] || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
@@ -118,8 +121,33 @@ export function validateState(raw: unknown): GameState {
     if (!["plain", "enchanted", "rare"].includes(set.keep)) set.keep = "rare";
     set.autoEquip = set.autoEquip !== false;
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
+    // ---- endgame (v4)
+    if (act.mode !== "map") act.mode = "zone";
+    act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
+    if (act.pinnacle !== undefined && !PINNACLES[act.pinnacle]) delete act.pinnacle;
+    if (act.run?.map) {
+        const m = act.run.map;
+        if (!MAP_AREAS[m.area] || !Array.isArray(m.mods) || m.mods.some(x => !MAP_MODS[x]) || !Number.isFinite(m.tier) || !Number.isFinite(m.level)
+            || (m.pinnacle !== undefined && !PINNACLES[m.pinnacle])) act.run = null;
+    }
+    s.maps = Array.isArray(s.maps) ? s.maps.filter(m => m && Number.isFinite(m.uid) && Number.isInteger(m.tier) && m.tier >= 1 && MAP_AREAS[m.area]
+        && Array.isArray(m.mods) && m.mods.every(x => MAP_MODS[x]) && ["plain", "enchanted", "rare"].includes(m.rarity)) : [];
+    s.mapCap = Number.isInteger(s.mapCap) && s.mapCap > 0 ? s.mapCap : 40;
+    const atlas = s.atlas && typeof s.atlas === "object" ? s.atlas : { points: 0, nodes: [], tiers: [] };
+    atlas.points = Number.isFinite(atlas.points) && atlas.points >= 0 ? atlas.points : 0;
+    atlas.tiers = Array.isArray(atlas.tiers) ? [...new Set(atlas.tiers.filter(t => Number.isInteger(t) && t >= 1))] : [];
+    const nodes: string[] = [];
+    for (const id of Array.isArray(atlas.nodes) ? atlas.nodes : []) {
+        if (ATLAS[id] && !nodes.includes(id) && ATLAS[id]!.requires.every(r => nodes.includes(r)) && nodes.length < atlas.points) nodes.push(id);
+    }
+    atlas.nodes = nodes;
+    s.atlas = atlas;
+    const counts = (o: unknown) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => typeof v === "number" && Number.isFinite(v) && v >= 0)) as Record<string, number>;
+    s.sigils = counts(s.sigils);
+    s.pinnacleKills = counts(s.pinnacleKills);
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
+    reconcileRewards(s);
     return s;
 }

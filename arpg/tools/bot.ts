@@ -3,7 +3,8 @@
 
 import { buildScore, setSkill, setSupports, sheetOf } from "../src/core/game";
 import { deriveSheet, supportSlots } from "../src/core/character";
-import { ASCENDANCIES, PASSIVES, SKILLS, SUPPORTS } from "../src/core/data";
+import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS } from "../src/core/data";
+import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
 
@@ -58,6 +59,12 @@ export function botTune(state: GameState): void {
         let pick = open[0]!, ps = -1;
         for (const n of open) { const v = score({ ...hero, ascNodes: [...hero.ascNodes, n.id] }); if (v > ps) { ps = v; pick = n; } }
         takeAscNode(state, pick.id);
+    }
+    // Endgame: run maps, spend atlas points in table order, fight pinnacles when sigils allow.
+    if (endgameOpen(state)) {
+        setMapMode(state, true);
+        for (const id of Object.keys(ATLAS)) if (!canTakeAtlas(state, id)) takeAtlas(state, id);
+        for (const p of Object.values(PINNACLES)) if (!state.activity.pinnacle && (state.sigils[p.sigil] ?? 0) >= p.cost) queuePinnacle(state, p.id);
     }
     void sheetOf(state);
 }
