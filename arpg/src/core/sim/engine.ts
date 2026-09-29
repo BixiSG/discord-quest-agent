@@ -13,6 +13,7 @@ import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollM
 import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
+import { blessing, tickShrine } from "../shrine";
 import { ACT_COMPANION } from "../data";
 
 export const STEP_MS = 100;
@@ -277,7 +278,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     const atlas = run.map ? atlasEffects(state) : null;
     let changed0 = false;
     const eff = effectsOf(state, run);
-    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
+    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
     run.kills++; run.xp += xp;
     state.totals.kills++;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
@@ -290,12 +291,12 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     let changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
-    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
+    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0) + blessing(state, "plenty")) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-        const bonus = sheet.rarity + codexRarity(state) + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
+        const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
         const pin = run.map?.pinnacle && d.boss;
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
@@ -308,7 +309,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     }
     // Crafting currency.
     const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100);
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100);
     for (let k = 0; k < cRolls; k++) {
         if (!rng.chance(cChance)) continue;
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
@@ -490,6 +491,7 @@ function tryTrial(state: GameState, ev: SimEvents): boolean {
 
 function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
+    tickShrine(state);
     const run = act.run!;
     state.totals.runs++;
     if (run.map) {

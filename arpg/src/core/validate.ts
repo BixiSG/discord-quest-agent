@@ -10,6 +10,7 @@ import { newTotals } from "./state";
 import { reconcileRewards } from "./sim/engine";
 import { relicRollScore } from "./game";
 import { cleanContracts } from "./contracts";
+import { BLESSING } from "./shrine";
 import { endgameOpen } from "./maps";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
@@ -180,6 +181,10 @@ export function validateState(raw: unknown): GameState {
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
+    // Shrine: known blessings with a finite end time; kept-up ones must be known.
+    s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => BLESSING[k]));
+    const shr = s.shrine && typeof s.shrine === "object" ? s.shrine : { keep: [], orbs: true };
+    s.shrine = { keep: [...new Set(strs(shr.keep, k => !!BLESSING[k]) ?? [])], orbs: shr.orbs !== false };
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;

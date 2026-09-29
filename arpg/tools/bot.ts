@@ -7,6 +7,7 @@ import { SLOTS } from "../src/core/types";
 import { deriveSheet, supportSlots } from "../src/core/character";
 import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
 import { setCompanion } from "../src/core/companions";
+import { BLESSINGS, setKeep } from "../src/core/shrine";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
@@ -70,6 +71,8 @@ export function botTune(state: GameState): void {
         if (v > petScore * 1.001) { petScore = v; petPick = id; }
     }
     if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
+    // Shrine: from level 20, keep every blessing up (spare orbs pay first).
+    if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
     // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
     for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
         const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))

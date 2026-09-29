@@ -66,9 +66,11 @@ export const MIGRATIONS: Record<number, Migration> = {
         }
         return s;
     },
-    // v6 (round 4): companions. Act companions are granted by reconcileRewards on load.
+    // v6 (round 4): companions (act companions are granted by reconcileRewards on load), the shrine.
     5: (s: any) => {
         s.companions ??= {};
+        s.blessings ??= {};
+        s.shrine ??= { keep: [], orbs: true };
         return s;
     },
 };

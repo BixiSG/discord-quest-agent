@@ -9,7 +9,7 @@ import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, u
 import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
-import { clear, fmt, h, pct } from "./dom";
+import { clear, fmt, fmtDuration, h, pct } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { drawSprite, loadSprites, spriteCanvas, spriteOf } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
@@ -23,6 +23,7 @@ import { treeView } from "./tree";
 import { atlasSig, atlasView } from "./atlas";
 import { DEFAULT_FILTER, describeRule, type FilterRule } from "../core/filter";
 import { claimContract, contractText, rerollContract, rerollCost, rewardText, type Contract } from "../core/contracts";
+import { BLESSINGS, ORB_RESERVE, bless, blessingCost, setKeep, spareOrbValue } from "../core/shrine";
 
 export interface Ctx {
     state: GameState;
@@ -55,7 +56,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${JSON.stringify(s.settings.filter)}`;
@@ -802,7 +803,7 @@ function worldView(c: Ctx): HTMLElement {
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
         h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." })));
-    root.append(push, contractBoard(c));
+    root.append(push, contractBoard(c), shrineCard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
@@ -883,6 +884,41 @@ function contractBoard(c: Ctx): HTMLElement {
                     on: { click: () => c.act(s => rerollContract(s, i)) } })));
     });
     return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
+}
+
+/** Minutes left on each blessing, what can be paid, the switches: the shrine card is rebuilt when these change. */
+function shrineSig(s: GameState): string {
+    const cost = blessingCost(s);
+    return `${BLESSINGS.map(b => Math.ceil(Math.max(0, (s.blessings[b.id] ?? 0) - s.simTo) / 60e3)).join(",")}:${s.dust >= cost}:${spareOrbValue(s) + s.dust >= cost}:${s.shrine.keep.join(",")}:${s.shrine.orbs}`;
+}
+
+const BLESS_GLYPH: Record<string, Parameters<typeof glyph>[0]> = { insight: "regen", fortune: "gem", plenty: "gear", hoard: "forge" };
+
+/** The ember shrine: an hour of a blessing per offering, kept up on its own if asked; spare orbs can pay. */
+function shrineCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const cost = blessingCost(st);
+    const spare = spareOrbValue(st);
+    const canPay = st.dust + (st.shrine.orbs ? spare : 0) >= cost;
+    const rows = h("div", { class: "contracts" });
+    for (const b of BLESSINGS) {
+        const left = Math.max(0, (st.blessings[b.id] ?? 0) - st.simTo);
+        const keep = st.shrine.keep.includes(b.id);
+        rows.append(h("div", { class: `contract bless${left ? " done" : ""}` },
+            h("span", { class: "cg" }, glyph(BLESS_GLYPH[b.id] ?? "gem", 16)),
+            h("div", { class: "grow col", style: "gap:2px;min-width:0" },
+                h("b", { text: `${b.name}: ${b.text.replace("{0}", String(b.value))}` }),
+                h("span", { class: "muted", style: "font-size:12px", text: left ? `${fmtDuration(left)} left${keep ? ", kept up" : ""}` : keep ? "Kept up: renews when it can be paid" : "Not running" })),
+            h("button", { class: `chip${keep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(keep) }, title: "Offer again on its own whenever it runs out (while it can be paid)",
+                on: { click: () => c.act(s => { setKeep(s, b.id, !keep); if (!keep && !left) return bless(s, b.id); }) } }, "Keep up"),
+            h("button", { class: "btn small", text: `+1 h`, title: `An hour of ${b.name} for ${fmt(cost)} dust${st.shrine.orbs ? " (spare orbs pay first)" : ""}`, attrs: canPay ? {} : { disabled: "" },
+                on: { click: () => c.act(s => bless(s, b.id), `${b.name} blessed`) } })));
+    }
+    const orbs = h("button", { class: `toggle${st.shrine.orbs ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.shrine.orbs) },
+        on: { click: () => c.act(s => { s.shrine.orbs = !s.shrine.orbs; }) } },
+        h("i"), h("span", null, h("b", { text: "Spare orbs pay first" }), h("small", { text: `Orbs above ${ORB_RESERVE} of a kind count at their shop price (now worth ${fmt(spare)} dust).` })));
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Ember shrine" }), h("span", { class: "num", text: `${fmt(cost)} dust / hour` })),
+        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "Blessings run on the hero's time, so they count while you are away too." }), rows, h("div", { style: "margin-top:8px" }, orbs));
 }
 
 // ---- Log -------------------------------------------------------------------

@@ -3028,6 +3028,8 @@
       codex: {},
       contracts: { list: [], seq: 0, done: 0 },
       companions: {},
+      blessings: {},
+      shrine: { keep: [], orbs: true },
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -4049,6 +4051,61 @@
     ensureContracts(s);
   }
 
+  // src/core/shrine.ts
+  var BLESSINGS = [
+    { id: "insight", name: "Insight", text: "{0}% more experience", value: 20 },
+    { id: "fortune", name: "Fortune", text: "{0}% increased item rarity", value: 40 },
+    { id: "plenty", name: "Plenty", text: "{0}% increased item quantity", value: 15 },
+    { id: "hoard", name: "Hoard", text: "{0}% more currency found", value: 30 }
+  ];
+  var BLESSING = Object.fromEntries(BLESSINGS.map((b) => [b.id, b]));
+  var BLESSING_MS = 36e5;
+  var ORB_RESERVE = 50;
+  var blessingCost = (s) => Math.round((100 + 25 * Math.pow(s.hero.level, 1.3)) / 10) * 10;
+  function blessing(s, id) {
+    const until = s.blessings?.[id] ?? 0;
+    return until > s.simTo ? BLESSING[id]?.value ?? 0 : 0;
+  }
+  function spareOrbValue(s) {
+    let v = 0;
+    for (const id of CURRENCY_ORDER) v += Math.max(0, (s.currency[id] ?? 0) - ORB_RESERVE) * CURRENCIES[id].cost;
+    return v;
+  }
+  function pay(s, cost, orbs) {
+    if ((orbs ? spareOrbValue(s) : 0) + s.dust < cost) return false;
+    let left = cost;
+    if (orbs) {
+      const kinds = CURRENCY_ORDER.filter((id) => (s.currency[id] ?? 0) > ORB_RESERVE).sort((a, b) => (s.currency[b] ?? 0) - (s.currency[a] ?? 0));
+      for (const id of kinds) {
+        const price = CURRENCIES[id].cost;
+        const n = Math.min((s.currency[id] ?? 0) - ORB_RESERVE, Math.ceil(left / price));
+        if (n <= 0) continue;
+        s.currency[id] -= n;
+        left -= n * price;
+        if (left <= 0) break;
+      }
+    }
+    if (left > 0) s.dust -= left;
+    return true;
+  }
+  function bless(s, id, orbs = s.shrine?.orbs ?? true) {
+    if (!BLESSING[id]) return "unknown blessing";
+    const cost = blessingCost(s);
+    if (!pay(s, cost, orbs)) return `needs ${cost} ember dust${orbs ? " (or spare orbs)" : ""}`;
+    s.blessings ??= {};
+    s.blessings[id] = Math.max(s.simTo, s.blessings[id] ?? 0) + BLESSING_MS;
+    return null;
+  }
+  function tickShrine(s) {
+    const keep = s.shrine?.keep;
+    if (!keep?.length) return;
+    for (const id of keep) if ((s.blessings?.[id] ?? 0) <= s.simTo) bless(s, id);
+  }
+  function setKeep(s, id, on) {
+    s.shrine ??= { keep: [], orbs: true };
+    s.shrine.keep = on ? [.../* @__PURE__ */ new Set([...s.shrine.keep, id])] : s.shrine.keep.filter((x) => x !== id);
+  }
+
   // src/core/sim/engine.ts
   var STEP_MS = 100;
   var DT = STEP_MS / 1e3;
@@ -4298,7 +4355,7 @@
     const atlas = run.map ? atlasEffects(state) : null;
     let changed0 = false;
     const eff = effectsOf(state, run);
-    const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100));
+    const xp = Math.round(monsterXp(m4.level) * d.xp * (m4.champion ? 3 : 1) * xpPenalty(hero.level, m4.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
     run.kills++;
     run.xp += xp;
     state.totals.kills++;
@@ -4310,12 +4367,12 @@
     if (m4.champion) contractEvent(state, "champions");
     if (d.boss) contractEvent(state, "bosses");
     let changed = gainXp(state, xp, ev) || changed0;
-    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
+    const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0) + blessing(state, "plenty")) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m4.champion ? 0.4 : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-      const bonus = sheet.rarity + codexRarity(state) + (eff?.rarity ?? 0) + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m4.champion ? 100 : 0) + (d.boss ? 250 : 0);
       const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
       const pin = run.map?.pinnacle && d.boss;
       const relicChance = pin && k === 0 ? 1 : (d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m4.champion ? 0.01 : 3e-3) * (1 + bonus / 200);
@@ -4327,7 +4384,7 @@
       ev.loot?.(item, r3.kept, r3.equipped);
     }
     const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m4.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100);
+    const cChance = (d.boss ? 0.6 : m4.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100);
     for (let k = 0; k < cRolls; k++) {
       if (!rng.chance(cChance)) continue;
       const cur = rng.weighted(CURRENCY_ORDER, (id) => CURRENCIES[id].drop);
@@ -4491,6 +4548,7 @@
   }
   function finishRun(state, ev) {
     const act = state.activity;
+    tickShrine(state);
     const run = act.run;
     state.totals.runs++;
     if (run.map) {
@@ -4668,9 +4726,11 @@
       }
       return s;
     },
-    // v6 (round 4): companions. Act companions are granted by reconcileRewards on load.
+    // v6 (round 4): companions (act companions are granted by reconcileRewards on load), the shrine.
     5: (s) => {
       s.companions ??= {};
+      s.blessings ??= {};
+      s.shrine ??= { keep: [], orbs: true };
       return s;
     }
   };
@@ -4908,6 +4968,9 @@
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === void 0)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]) };
+    s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => BLESSING[k]));
+    const shr = s.shrine && typeof s.shrine === "object" ? s.shrine : { keep: [], orbs: true };
+    s.shrine = { keep: [...new Set(strs(shr.keep, (k) => !!BLESSING[k]) ?? [])], orbs: shr.orbs !== false };
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
@@ -8134,7 +8197,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       case "tree":
         return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
       case "world":
-        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map((x) => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}`;
+        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map((x) => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}`;
       case "atlas":
         return atlasSig(c);
       case "log":
@@ -9095,7 +9158,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       h("i"),
       h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." }))
     );
-    root.append(push, contractBoard(c));
+    root.append(push, contractBoard(c), shrineCard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
@@ -9217,6 +9280,69 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       ));
     });
     return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
+  }
+  function shrineSig(s) {
+    const cost = blessingCost(s);
+    return `${BLESSINGS.map((b) => Math.ceil(Math.max(0, (s.blessings[b.id] ?? 0) - s.simTo) / 6e4)).join(",")}:${s.dust >= cost}:${spareOrbValue(s) + s.dust >= cost}:${s.shrine.keep.join(",")}:${s.shrine.orbs}`;
+  }
+  var BLESS_GLYPH = { insight: "regen", fortune: "gem", plenty: "gear", hoard: "forge" };
+  function shrineCard(c) {
+    const st = c.state;
+    const cost = blessingCost(st);
+    const spare = spareOrbValue(st);
+    const canPay = st.dust + (st.shrine.orbs ? spare : 0) >= cost;
+    const rows = h("div", { class: "contracts" });
+    for (const b of BLESSINGS) {
+      const left = Math.max(0, (st.blessings[b.id] ?? 0) - st.simTo);
+      const keep = st.shrine.keep.includes(b.id);
+      rows.append(h(
+        "div",
+        { class: `contract bless${left ? " done" : ""}` },
+        h("span", { class: "cg" }, glyph(BLESS_GLYPH[b.id] ?? "gem", 16)),
+        h(
+          "div",
+          { class: "grow col", style: "gap:2px;min-width:0" },
+          h("b", { text: `${b.name}: ${b.text.replace("{0}", String(b.value))}` }),
+          h("span", { class: "muted", style: "font-size:12px", text: left ? `${fmtDuration(left)} left${keep ? ", kept up" : ""}` : keep ? "Kept up: renews when it can be paid" : "Not running" })
+        ),
+        h("button", {
+          class: `chip${keep ? " on" : ""}`,
+          attrs: { role: "switch", "aria-checked": String(keep) },
+          title: "Offer again on its own whenever it runs out (while it can be paid)",
+          on: { click: () => c.act((s) => {
+            setKeep(s, b.id, !keep);
+            if (!keep && !left) return bless(s, b.id);
+          }) }
+        }, "Keep up"),
+        h("button", {
+          class: "btn small",
+          text: `+1 h`,
+          title: `An hour of ${b.name} for ${fmt(cost)} dust${st.shrine.orbs ? " (spare orbs pay first)" : ""}`,
+          attrs: canPay ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => bless(s, b.id), `${b.name} blessed`) }
+        })
+      ));
+    }
+    const orbs = h(
+      "button",
+      {
+        class: `toggle${st.shrine.orbs ? " on" : ""}`,
+        attrs: { role: "switch", "aria-checked": String(st.shrine.orbs) },
+        on: { click: () => c.act((s) => {
+          s.shrine.orbs = !s.shrine.orbs;
+        }) }
+      },
+      h("i"),
+      h("span", null, h("b", { text: "Spare orbs pay first" }), h("small", { text: `Orbs above ${ORB_RESERVE} of a kind count at their shop price (now worth ${fmt(spare)} dust).` }))
+    );
+    return h(
+      "div",
+      { class: "card" },
+      h("h3", { class: "split" }, h("span", { text: "Ember shrine" }), h("span", { class: "num", text: `${fmt(cost)} dust / hour` })),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "Blessings run on the hero's time, so they count while you are away too." }),
+      rows,
+      h("div", { style: "margin-top:8px" }, orbs)
+    );
   }
   var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
   var LOG_KINDS = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };

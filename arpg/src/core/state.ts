@@ -141,6 +141,10 @@ export interface GameState {
     contracts: ContractBoard;
     /** Companions found (v6): id -> bond (kills while out, plus duplicates). */
     companions: Record<string, number>;
+    /** Ember shrine (v6): blessing id -> simulation time it runs until. */
+    blessings: Record<string, number>;
+    /** Shrine settings (v6): blessings kept up automatically, and whether spare orbs pay first. */
+    shrine: { keep: string[]; orbs: boolean };
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */
