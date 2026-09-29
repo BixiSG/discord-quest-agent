@@ -21,6 +21,7 @@ import { forgeView } from "./forge";
 import { treeView } from "./tree";
 import { atlasSig, atlasView } from "./atlas";
 import { DEFAULT_FILTER, describeRule, type FilterRule } from "../core/filter";
+import { claimContract, contractText, rerollContract, rerollCost, rewardText, type Contract } from "../core/contracts";
 
 export interface Ctx {
     state: GameState;
@@ -53,7 +54,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${JSON.stringify(s.settings.filter)}`;
@@ -701,8 +702,8 @@ function worldView(c: Ctx): HTMLElement {
     const inMaps = st.activity.mode === "map";
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
-        h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." })));
-    root.append(push);
+        h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." })));
+    root.append(push, contractBoard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
@@ -761,6 +762,28 @@ function worldView(c: Ctx): HTMLElement {
         }
     });
     return root;
+}
+
+const CONTRACT_GLYPH: Record<Contract["kind"], Parameters<typeof glyph>[0]> = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem" };
+
+/** Three standing goals: progress, reward, Claim when done, Reroll for dust otherwise. */
+function contractBoard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const cost = rerollCost(st);
+    const rows = h("div", { class: "contracts" });
+    st.contracts.list.forEach((k, i) => {
+        const done = k.n >= k.target;
+        rows.append(h("div", { class: `contract${done ? " done" : ""}` },
+            h("span", { class: "cg" }, glyph(CONTRACT_GLYPH[k.kind], 16)),
+            h("div", { class: "grow col", style: "gap:3px;min-width:0" },
+                h("b", { text: contractText(k) }),
+                h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, (k.n / k.target) * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
+                h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k)}` })),
+            done ? h("button", { class: "btn small", text: "Claim", on: { click: () => c.act(s => claimContract(s, i), "Contract claimed") } })
+                : h("button", { class: "btn alt small", text: `Reroll ${fmt(cost)}`, title: `A different contract for ${fmt(cost)} ember dust; progress on this one is lost`, attrs: st.dust >= cost ? {} : { disabled: "" },
+                    on: { click: () => c.act(s => rerollContract(s, i)) } })));
+    });
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
 }
 
 // ---- Log -------------------------------------------------------------------

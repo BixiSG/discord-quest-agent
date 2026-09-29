@@ -11,6 +11,7 @@ import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../ga
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
 import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
+import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -117,6 +118,8 @@ function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null):
  */
 export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSteps = Infinity): boolean {
     if (now - state.simTo > MAX_OFFLINE_MS) state.simTo = now - MAX_OFFLINE_MS;
+    // A new game (or one just claimed empty) gets its contracts before it plays.
+    if ((state.contracts?.list.length ?? 0) < BOARD_SIZE) ensureContracts(state);
     let steps = 0;
     while (state.simTo + STEP_MS <= now) {
         if (steps >= maxSteps) return false;
@@ -275,6 +278,9 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m, xp);
+    contractEvent(state, "kills");
+    if (m.champion) contractEvent(state, "champions");
+    if (d.boss) contractEvent(state, "bosses");
     let changed = gainXp(state, xp, ev);
 
     // Loot (GDD: items go straight to the stash through the filter).
@@ -289,6 +295,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
         const item = (rng.chance(relicChance) && rollRelic(rng, state.nextUid, m.level)) || rollItem(rng, state.nextUid, m.level, opts);
         state.nextUid++;
+        if (item.rarity === "rare") contractEvent(state, "rares");
         const r = receiveItem(state, item);
         if (r.equipped) changed = true;
         ev.loot?.(item, r.kept, r.equipped);
@@ -466,6 +473,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     state.totals.runs++;
     if (run.map) {
         completeMap(state, run.map);
+        if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
         // Eight clean maps in a row: earlier failures are forgiven, and a capped device allows one
         // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;
@@ -481,6 +489,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         act.run = newRun(state, sheetOf(state));
         return;
     }
+    contractEvent(state, "runs");
     const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
     if (first) firstClear(state, run.zone, ev);

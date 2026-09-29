@@ -3,6 +3,7 @@
 import type { RngState } from "./rng";
 import type { Item, Slot } from "./types";
 import type { FilterRule } from "./filter";
+import type { ContractBoard } from "./contracts";
 
 export interface Hero {
     name: string;
@@ -134,6 +135,8 @@ export interface GameState {
     relics: Item[];
     /** Relic codex: relic id -> how many have dropped (v5). */
     codex: Record<string, number>;
+    /** The contract board (v5): three standing goals with rewards. */
+    contracts: ContractBoard;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */

@@ -14,6 +14,7 @@ import { deriveSheet, supportSlots } from "../core/character";
 import { baseOf, itemLabel } from "../core/items";
 import { pointsLeft, ascPointsLeft } from "../core/passives";
 import { atlasPointsLeft } from "../core/maps";
+import { claimable } from "../core/contracts";
 import type { SaveStore } from "../platform/store";
 import type { KV } from "../platform/kv";
 import { Battle } from "./battle";
@@ -611,7 +612,8 @@ export class GameWindow {
             skills: freeSupport ? ["!", "A free support slot would add damage"] : undefined,
             tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : undefined,
             atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : undefined,
-            gear: s.stashFull || s.stash.length >= s.stashCap ? ["!", "Stash is full: drops are being salvaged"] : undefined,
+            gear: s.stashFull ? ["!", "Stash is full: drops are being salvaged"] : undefined,
+            world: claimable(s) ? [String(claimable(s)), `${claimable(s)} contract${claimable(s) > 1 ? "s" : ""} to claim`] : undefined,
         };
         for (const b of this.nav.children) {
             const id = b.getAttribute("data-v") as ViewId;

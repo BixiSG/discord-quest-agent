@@ -9,6 +9,7 @@ import { DEFAULT_FILTER, type FilterRule } from "./filter";
 import { newTotals } from "./state";
 import { reconcileRewards } from "./sim/engine";
 import { relicRollScore } from "./game";
+import { cleanContracts } from "./contracts";
 import { endgameOpen } from "./maps";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
@@ -180,5 +181,6 @@ export function validateState(raw: unknown): GameState {
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
     reconcileRewards(s);
+    cleanContracts(s);
     return s;
 }

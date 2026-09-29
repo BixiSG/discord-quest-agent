@@ -2883,6 +2883,7 @@
       settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true },
       relics: [],
       codex: {},
+      contracts: { list: [], seq: 0, done: 0 },
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -3482,6 +3483,364 @@
     return rng.chance((12 + atlas.upgrade) / 100) ? base + 1 : base;
   }
 
+  // src/core/crafting.ts
+  var hasRoom = (item) => {
+    const c = countAffixes(item), m4 = MAX_AFFIXES[item.rarity];
+    return c.prefix < m4.prefix || c.suffix < m4.suffix;
+  };
+  var EFFECTS = {
+    kindling: (it, rng) => {
+      if (it.rarity !== "plain") return "needs a plain item";
+      it.rarity = "enchanted";
+      rollAffixes(rng, it);
+      return null;
+    },
+    reshaper: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      rollAffixes(rng, it);
+      return null;
+    },
+    graft: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
+      addRandomAffix(rng, it);
+      return null;
+    },
+    crownseal: (it, rng) => {
+      if (it.rarity !== "enchanted") return "needs an enchanted item";
+      it.rarity = "rare";
+      it.name = rareName(rng);
+      addRandomAffix(rng, it);
+      return null;
+    },
+    forgeheart: (it, rng) => {
+      if (it.rarity !== "plain") return "needs a plain item";
+      it.rarity = "rare";
+      rollAffixes(rng, it);
+      return null;
+    },
+    tempest: (it, rng) => {
+      if (it.rarity !== "rare") return "needs a rare item";
+      const name = it.name;
+      rollAffixes(rng, it);
+      if (name) it.name = name;
+      return null;
+    },
+    starfall: (it, rng) => {
+      if (it.rarity !== "rare") return "needs a rare item";
+      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
+      addRandomAffix(rng, it);
+      return null;
+    },
+    salt: (it) => {
+      if (it.rarity === "relic") return "relics can't be undone";
+      if (it.rarity === "plain") return "already plain";
+      it.rarity = "plain";
+      it.affixes = [];
+      delete it.name;
+      return null;
+    },
+    unmaker: (it, rng) => {
+      if (it.rarity !== "enchanted" && it.rarity !== "rare") return "needs an enchanted or rare item";
+      if (!it.affixes.length) return "no affixes";
+      it.affixes.splice(rng.int(0, it.affixes.length - 1), 1);
+      return null;
+    },
+    temper: (it, rng) => {
+      if (it.rarity === "relic") {
+        return "relics can't be tempered";
+      }
+      if (!it.affixes.length) return "no affixes";
+      for (const a of it.affixes) {
+        const t = affixOf(a).tiers[a.tier];
+        if (t) a.rolls = t.ranges.map(([lo, hi]) => rng.int(lo, hi));
+      }
+      return null;
+    }
+  };
+  function findItem(state, uid) {
+    const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
+    if (s) return { item: s };
+    for (const slot of SLOTS) {
+      const it = state.hero.equipment[slot];
+      if (it?.uid === uid) return { item: it, slot };
+    }
+    return null;
+  }
+  function applyCurrency(state, currency, uid) {
+    const eff = EFFECTS[currency];
+    if (!eff || !CURRENCIES[currency]) return "unknown currency";
+    if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const copy2 = structuredClone(found.item);
+    const rng = new Rng(hashSeed(state.seed, 25458, state.craftSeq));
+    const err = eff(copy2, rng);
+    if (err) return err;
+    state.craftSeq++;
+    copy2.crafted = true;
+    copy2.locked = true;
+    Object.assign(found.item, copy2);
+    if (!copy2.name) delete found.item.name;
+    state.currency[currency]--;
+    if (found.slot) state.hero.rev++;
+    return null;
+  }
+  var REROLLS = ["reshaper", "tempest", "temper"];
+  function craftUntilUpgrade(state, currency, uid, tries = 20) {
+    if (!REROLLS.includes(currency)) return { err: "only rerolls repeat", used: 0, upgrade: false };
+    if (!state.stash.some((x) => x.uid === uid) && !state.relics.some((x) => x.uid === uid)) return { err: "only stash items", used: 0, upgrade: false };
+    let used = 0;
+    for (; used < tries; ) {
+      const err = applyCurrency(state, currency, uid);
+      if (err) return { err: used ? null : err, used, upgrade: false };
+      used++;
+      const it = findItem(state, uid).item;
+      if (upgradeSlot(state, it)) return { err: null, used, upgrade: true };
+    }
+    return { err: null, used, upgrade: false };
+  }
+  var MAX_QUALITY = 20;
+  function honeCost(item) {
+    const b = baseOf(item);
+    if (!b.weapon && !b.defence) return null;
+    const q = item.quality ?? 0;
+    if (q >= MAX_QUALITY) return null;
+    return Math.round((20 + item.ilvl * 2) * (1 + q * 0.5));
+  }
+  function hone(state, uid) {
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const b = baseOf(found.item);
+    if (!b.weapon && !b.defence) return "only weapons and armour take quality";
+    const cost = honeCost(found.item);
+    if (cost === null) return `already at ${MAX_QUALITY}% quality`;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    found.item.quality = (found.item.quality ?? 0) + 1;
+    found.item.locked = true;
+    if (found.slot) state.hero.rev++;
+    return null;
+  }
+  var BENCH_GRAFTS = 3;
+  var benchDust = (item) => 10 + item.ilvl * 3;
+  function benchOptions(item) {
+    if (item.rarity !== "enchanted" && item.rarity !== "rare") return [];
+    const copy2 = structuredClone(item);
+    copy2.affixes = copy2.affixes.filter((a) => !a.bench);
+    return eligibleAffixes(copy2);
+  }
+  function benchCraft(state, uid, affixId) {
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const item = found.item;
+    if (item.rarity !== "enchanted" && item.rarity !== "rare") return "needs an enchanted or rare item";
+    const def2 = AFFIXES[affixId];
+    if (!def2 || !benchOptions(item).some((a) => a.id === affixId)) return "that affix doesn't fit";
+    if ((state.currency.graft ?? 0) < BENCH_GRAFTS) return `needs ${BENCH_GRAFTS} Graft`;
+    const dust = benchDust(item);
+    if (state.dust < dust) return `needs ${dust} ember dust`;
+    const rng = new Rng(hashSeed(state.seed, 1650814563, state.craftSeq));
+    const roll = rollTier(rng, def2, item.ilvl);
+    item.affixes = [...item.affixes.filter((a) => !a.bench), { ...roll, bench: true }];
+    state.currency.graft -= BENCH_GRAFTS;
+    state.dust -= dust;
+    state.craftSeq++;
+    item.crafted = true;
+    item.locked = true;
+    if (found.slot) state.hero.rev++;
+    return null;
+  }
+  function maxIlvl(state) {
+    const zones = state.world.unlocked.map((z) => ZONES[z]?.level ?? 1);
+    const maps = (state.atlas?.tiers ?? []).map((t) => mapLevel(t + 1));
+    return Math.max(1, Math.min(state.hero.level + 2, Math.max(...zones, ...maps)));
+  }
+  var forgeCost = (state) => Math.round(40 + 6 * state.hero.level);
+  function forgeRare(state, slot) {
+    const cost = forgeCost(state);
+    if (state.dust < cost) return { err: `needs ${cost} ember dust` };
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
+    let item;
+    try {
+      item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level });
+    } catch {
+      return { err: "nothing to forge for that slot" };
+    }
+    item.crafted = true;
+    const upgrade = state.settings.autoEquip && upgradeSlot(state, item);
+    if (!upgrade && state.stash.length >= state.stashCap) return { err: "stash full" };
+    state.nextUid++;
+    state.craftSeq++;
+    state.dust -= cost;
+    if (upgrade) {
+      const r3 = receiveItem(state, item);
+      if (r3.equipped) return { err: null, item, equipped: true };
+    }
+    if (state.stash.length < state.stashCap) state.stash.push(item);
+    return { err: null, item, equipped: false };
+  }
+  function forgeUntilUpgrade(state, slot, tries = 10) {
+    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
+    let made = 0;
+    for (; made < tries; ) {
+      const cost = forgeCost(state);
+      if (state.dust < cost) return { err: made ? null : `needs ${cost} ember dust`, made };
+      const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
+      let item;
+      try {
+        item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level });
+      } catch {
+        return { err: "nothing to forge for that slot", made };
+      }
+      item.crafted = true;
+      state.nextUid++;
+      state.craftSeq++;
+      state.dust -= cost;
+      made++;
+      if (upgradeSlot(state, item)) {
+        const r3 = receiveItem(state, item);
+        if (r3.equipped) return { err: null, made, item };
+      }
+      const v = salvageValue(item);
+      state.dust += v;
+      state.totals.salvaged++;
+    }
+    return { err: null, made };
+  }
+  function buyCurrency(state, currency, n = 1) {
+    const def2 = CURRENCIES[currency];
+    if (!def2) return "unknown currency";
+    const cost = def2.cost * n;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    state.currency[currency] = (state.currency[currency] ?? 0) + n;
+    return null;
+  }
+
+  // src/core/contracts.ts
+  var BOARD_SIZE = 3;
+  var KIND_TEXT = {
+    kills: (c) => `Slay ${c.target} monsters`,
+    champions: (c) => `Slay ${c.target} champions`,
+    bosses: (c) => `Defeat ${c.target} bosses`,
+    runs: (c) => `Clear ${c.target} runs on the road`,
+    maps: (c) => `Complete ${c.target} maps of tier ${c.tier ?? 1} or deeper`,
+    rares: (c) => `Find ${c.target} rare items`
+  };
+  var contractText = (c) => KIND_TEXT[c.kind](c);
+  function rewardText(c) {
+    const parts = [`${c.dust} dust`];
+    if (c.currency) parts.push(`${c.currency[1]} ${CURRENCIES[c.currency[0]]?.name ?? c.currency[0]}`);
+    if (c.extra === "relic") parts.push("a relic not in your codex");
+    if (c.extra === "maps") parts.push("3 maps");
+    if (c.extra === "sigil") parts.push("a sigil");
+    return parts.join(", ");
+  }
+  var deepest = (s) => Math.max(1, ...s.atlas?.tiers ?? []);
+  function missingRelics(s) {
+    const ilvl = maxIlvl(s);
+    return Object.values(RELICS).filter((r3) => r3.level <= ilvl && !s.codex[r3.id]).map((r3) => r3.id);
+  }
+  function rollContract(s, rng) {
+    const L = s.hero.level;
+    const endgame = endgameOpen(s);
+    const taken = new Set(s.contracts.list.map((c2) => c2.kind));
+    const kinds = ["kills", "champions", "bosses", endgame ? "maps" : "runs", "rares"].filter((k) => !taken.has(k));
+    const kind = rng.pick(kinds.length ? kinds : ["kills"]);
+    const SIZE = { kills: 1800, champions: 80, bosses: 24, runs: 36, maps: 40, rares: 12 + Math.round(L * 0.9) };
+    const size = SIZE[kind];
+    const target = Math.max(3, Math.round(size * (0.8 + rng.next() * 0.4)));
+    const c = { kind, target, n: 0, dust: Math.round((60 + 25 * L) * (0.9 + rng.next() * 0.3)) };
+    if (kind === "maps") c.tier = Math.max(1, Math.min(MAX_TIER, deepest(s) - 2));
+    const cur = rng.weighted(CURRENCY_ORDER, (id) => 1 / Math.sqrt(CURRENCIES[id].drop));
+    const rare = CURRENCIES[cur].drop < 200;
+    c.currency = [cur, rare ? 1 + Math.floor(rng.next() * 3) : 3 + Math.floor(rng.next() * 6)];
+    const r3 = rng.next();
+    if (r3 < 0.3 && missingRelics(s).length) c.extra = "relic";
+    else if (r3 < 0.5 && endgame) c.extra = rng.chance(0.5) && deepest(s) >= 6 ? "sigil" : "maps";
+    return c;
+  }
+  function ensureContracts(s) {
+    s.contracts ??= { list: [], seq: 0, done: 0 };
+    while (s.contracts.list.length < BOARD_SIZE) {
+      const rng = new Rng(hashSeed(s.seed, 1668247156, s.contracts.seq++));
+      s.contracts.list.push(rollContract(s, rng));
+    }
+  }
+  function contractEvent(s, kind, tier = 0) {
+    const b = s.contracts;
+    if (!b) return;
+    for (const c of b.list) {
+      if (c.kind !== kind || c.n >= c.target) continue;
+      if (kind === "maps" && tier < (c.tier ?? 1)) continue;
+      c.n++;
+      if (c.n >= c.target) pushLog(s, "info", `Contract done: ${contractText(c)}. Claim it on the World tab.`);
+    }
+  }
+  var claimable = (s) => s.contracts?.list.filter((c) => c.n >= c.target).length ?? 0;
+  function claimContract(s, i) {
+    const c = s.contracts?.list[i];
+    if (!c) return "no such contract";
+    if (c.n < c.target) return "not finished yet";
+    const rng = new Rng(hashSeed(s.seed, 1668047209, s.contracts.done));
+    s.dust += c.dust;
+    if (c.currency) s.currency[c.currency[0]] = (s.currency[c.currency[0]] ?? 0) + c.currency[1];
+    if (c.extra === "relic") {
+      const pool = missingRelics(s);
+      const id = pool.length ? rng.pick(pool) : null;
+      const def2 = id ? RELICS[id] : void 0;
+      if (def2) {
+        const item = { uid: s.nextUid++, base: def2.base, ilvl: Math.max(def2.level, maxIlvl(s)), rarity: "relic", affixes: [], relic: def2.id, relicRolls: def2.mods.map((m4) => rng.int(m4.range[0], m4.range[1])) };
+        receiveItem(s, item);
+        pushLog(s, "loot", `Contract reward: ${def2.name}.`);
+      } else s.dust += c.dust;
+    }
+    if (c.extra === "maps") for (let k = 0; k < 3; k++) addMap(s, rollMap(rng, s.nextUid++, Math.min(MAX_TIER, deepest(s))));
+    if (c.extra === "sigil") {
+      const open = Object.values(PINNACLES).filter((p2) => deepest(s) >= p2.minTier);
+      const p = open.length ? rng.pick(open) : void 0;
+      if (p) s.sigils[p.sigil] = (s.sigils[p.sigil] ?? 0) + 1;
+      else s.dust += c.dust;
+    }
+    s.contracts.list.splice(i, 1);
+    s.contracts.done++;
+    ensureContracts(s);
+    s.contracts.list.splice(i, 0, s.contracts.list.pop());
+    return null;
+  }
+  var rerollCost = (s) => 20 + 10 * s.hero.level;
+  function rerollContract(s, i) {
+    const c = s.contracts?.list[i];
+    if (!c) return "no such contract";
+    if (c.n >= c.target) return "claim it instead";
+    const cost = rerollCost(s);
+    if (s.dust < cost) return `needs ${cost} ember dust`;
+    s.dust -= cost;
+    s.contracts.list.splice(i, 1);
+    ensureContracts(s);
+    s.contracts.list.splice(i, 0, s.contracts.list.pop());
+    return null;
+  }
+  function cleanContracts(s) {
+    const raw = s.contracts;
+    const b = raw && typeof raw === "object" ? raw : { list: [], seq: 0, done: 0 };
+    const kinds = Object.keys(KIND_TEXT);
+    const ok = (v, min = 0) => typeof v === "number" && Number.isFinite(v) && v >= min;
+    b.list = (Array.isArray(b.list) ? b.list : []).filter((c) => c && kinds.includes(c.kind) && ok(c.target, 1) && ok(c.n) && ok(c.dust)).slice(0, BOARD_SIZE).map((c) => {
+      const out = { kind: c.kind, target: Math.round(c.target), n: Math.min(Math.round(c.n), Math.round(c.target)), dust: Math.round(c.dust) };
+      if (c.kind === "maps") out.tier = ok(c.tier, 1) ? Math.round(c.tier) : 1;
+      if (Array.isArray(c.currency) && CURRENCIES[c.currency[0]] && ok(c.currency[1], 1)) out.currency = [c.currency[0], Math.round(c.currency[1])];
+      if (c.extra === "relic" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
+      return out;
+    });
+    b.seq = ok(b.seq) ? Math.round(b.seq) : 0;
+    b.done = ok(b.done) ? Math.round(b.done) : 0;
+    s.contracts = b;
+    ensureContracts(s);
+  }
+
   // src/core/sim/engine.ts
   var STEP_MS = 100;
   var DT = STEP_MS / 1e3;
@@ -3565,6 +3924,7 @@
   }
   function advance(state, now, ev = {}, maxSteps = Infinity) {
     if (now - state.simTo > MAX_OFFLINE_MS) state.simTo = now - MAX_OFFLINE_MS;
+    if ((state.contracts?.list.length ?? 0) < BOARD_SIZE) ensureContracts(state);
     let steps = 0;
     while (state.simTo + STEP_MS <= now) {
       if (steps >= maxSteps) return false;
@@ -3736,6 +4096,9 @@
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m4, xp);
+    contractEvent(state, "kills");
+    if (m4.champion) contractEvent(state, "champions");
+    if (d.boss) contractEvent(state, "bosses");
     let changed = gainXp(state, xp, ev);
     const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0)) / 100;
     let drops = 0;
@@ -3748,6 +4111,7 @@
       const relicChance = pin && k === 0 ? 1 : (d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m4.champion ? 0.01 : 3e-3) * (1 + bonus / 200);
       const item = rng.chance(relicChance) && rollRelic(rng, state.nextUid, m4.level) || rollItem(rng, state.nextUid, m4.level, opts);
       state.nextUid++;
+      if (item.rarity === "rare") contractEvent(state, "rares");
       const r3 = receiveItem(state, item);
       if (r3.equipped) changed = true;
       ev.loot?.(item, r3.kept, r3.equipped);
@@ -3905,6 +4269,7 @@
     state.totals.runs++;
     if (run.map) {
       completeMap(state, run.map);
+      if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
       act.streak++;
       if (act.streak >= MAP_CLEAN) act.deaths = 0;
       if (act.autoCap && act.streak >= MAP_CLEAN) {
@@ -3918,6 +4283,7 @@
       act.run = newRun(state, sheetOf(state));
       return;
     }
+    contractEvent(state, "runs");
     const first = !state.world.clears[run.zone];
     state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
     if (first) firstClear(state, run.zone, ev);
@@ -4309,6 +4675,7 @@
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
     reconcileRewards(s);
+    cleanContracts(s);
     return s;
   }
 
@@ -5837,6 +6204,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .work select { flex: 1 1 140px; min-width: 0; }
 .qbar { flex: 1 1 80px; height: 8px; border: 2px solid var(--line); background: var(--paper2); position: relative; }
 .qbar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); }
+.contracts { display: flex; flex-direction: column; gap: 6px; }
+.contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
+.contract.done .muted { color: #4d4030; }
+.contract .cg { flex: none; width: 26px; height: 26px; display: grid; place-items: center; background: #1a1410; color: #ffc233; border: 2px solid var(--line); }
+.contract .meter { height: 14px; } .contract .meter i { background: var(--teal); } .contract.done .meter i { background: var(--gold); } .contract .meter span { font-size: 11px; line-height: 10px; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -6763,242 +7136,6 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return name.startsWith("%") ? `${sign}${m4.value}${name}${tags}` : `${sign}${m4.value} ${name}${tags}`;
   }
 
-  // src/core/crafting.ts
-  var hasRoom = (item) => {
-    const c = countAffixes(item), m4 = MAX_AFFIXES[item.rarity];
-    return c.prefix < m4.prefix || c.suffix < m4.suffix;
-  };
-  var EFFECTS = {
-    kindling: (it, rng) => {
-      if (it.rarity !== "plain") return "needs a plain item";
-      it.rarity = "enchanted";
-      rollAffixes(rng, it);
-      return null;
-    },
-    reshaper: (it, rng) => {
-      if (it.rarity !== "enchanted") return "needs an enchanted item";
-      rollAffixes(rng, it);
-      return null;
-    },
-    graft: (it, rng) => {
-      if (it.rarity !== "enchanted") return "needs an enchanted item";
-      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
-      addRandomAffix(rng, it);
-      return null;
-    },
-    crownseal: (it, rng) => {
-      if (it.rarity !== "enchanted") return "needs an enchanted item";
-      it.rarity = "rare";
-      it.name = rareName(rng);
-      addRandomAffix(rng, it);
-      return null;
-    },
-    forgeheart: (it, rng) => {
-      if (it.rarity !== "plain") return "needs a plain item";
-      it.rarity = "rare";
-      rollAffixes(rng, it);
-      return null;
-    },
-    tempest: (it, rng) => {
-      if (it.rarity !== "rare") return "needs a rare item";
-      const name = it.name;
-      rollAffixes(rng, it);
-      if (name) it.name = name;
-      return null;
-    },
-    starfall: (it, rng) => {
-      if (it.rarity !== "rare") return "needs a rare item";
-      if (!hasRoom(it) || !eligibleAffixes(it).length) return "no room for another affix";
-      addRandomAffix(rng, it);
-      return null;
-    },
-    salt: (it) => {
-      if (it.rarity === "relic") return "relics can't be undone";
-      if (it.rarity === "plain") return "already plain";
-      it.rarity = "plain";
-      it.affixes = [];
-      delete it.name;
-      return null;
-    },
-    unmaker: (it, rng) => {
-      if (it.rarity !== "enchanted" && it.rarity !== "rare") return "needs an enchanted or rare item";
-      if (!it.affixes.length) return "no affixes";
-      it.affixes.splice(rng.int(0, it.affixes.length - 1), 1);
-      return null;
-    },
-    temper: (it, rng) => {
-      if (it.rarity === "relic") {
-        return "relics can't be tempered";
-      }
-      if (!it.affixes.length) return "no affixes";
-      for (const a of it.affixes) {
-        const t = affixOf(a).tiers[a.tier];
-        if (t) a.rolls = t.ranges.map(([lo, hi]) => rng.int(lo, hi));
-      }
-      return null;
-    }
-  };
-  function findItem(state, uid) {
-    const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
-    if (s) return { item: s };
-    for (const slot of SLOTS) {
-      const it = state.hero.equipment[slot];
-      if (it?.uid === uid) return { item: it, slot };
-    }
-    return null;
-  }
-  function applyCurrency(state, currency, uid) {
-    const eff = EFFECTS[currency];
-    if (!eff || !CURRENCIES[currency]) return "unknown currency";
-    if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
-    const found = findItem(state, uid);
-    if (!found) return "item not found";
-    const copy2 = structuredClone(found.item);
-    const rng = new Rng(hashSeed(state.seed, 25458, state.craftSeq));
-    const err = eff(copy2, rng);
-    if (err) return err;
-    state.craftSeq++;
-    copy2.crafted = true;
-    copy2.locked = true;
-    Object.assign(found.item, copy2);
-    if (!copy2.name) delete found.item.name;
-    state.currency[currency]--;
-    if (found.slot) state.hero.rev++;
-    return null;
-  }
-  var REROLLS = ["reshaper", "tempest", "temper"];
-  function craftUntilUpgrade(state, currency, uid, tries = 20) {
-    if (!REROLLS.includes(currency)) return { err: "only rerolls repeat", used: 0, upgrade: false };
-    if (!state.stash.some((x) => x.uid === uid) && !state.relics.some((x) => x.uid === uid)) return { err: "only stash items", used: 0, upgrade: false };
-    let used = 0;
-    for (; used < tries; ) {
-      const err = applyCurrency(state, currency, uid);
-      if (err) return { err: used ? null : err, used, upgrade: false };
-      used++;
-      const it = findItem(state, uid).item;
-      if (upgradeSlot(state, it)) return { err: null, used, upgrade: true };
-    }
-    return { err: null, used, upgrade: false };
-  }
-  var MAX_QUALITY = 20;
-  function honeCost(item) {
-    const b = baseOf(item);
-    if (!b.weapon && !b.defence) return null;
-    const q = item.quality ?? 0;
-    if (q >= MAX_QUALITY) return null;
-    return Math.round((20 + item.ilvl * 2) * (1 + q * 0.5));
-  }
-  function hone(state, uid) {
-    const found = findItem(state, uid);
-    if (!found) return "item not found";
-    const b = baseOf(found.item);
-    if (!b.weapon && !b.defence) return "only weapons and armour take quality";
-    const cost = honeCost(found.item);
-    if (cost === null) return `already at ${MAX_QUALITY}% quality`;
-    if (state.dust < cost) return `needs ${cost} ember dust`;
-    state.dust -= cost;
-    found.item.quality = (found.item.quality ?? 0) + 1;
-    found.item.locked = true;
-    if (found.slot) state.hero.rev++;
-    return null;
-  }
-  var BENCH_GRAFTS = 3;
-  var benchDust = (item) => 10 + item.ilvl * 3;
-  function benchOptions(item) {
-    if (item.rarity !== "enchanted" && item.rarity !== "rare") return [];
-    const copy2 = structuredClone(item);
-    copy2.affixes = copy2.affixes.filter((a) => !a.bench);
-    return eligibleAffixes(copy2);
-  }
-  function benchCraft(state, uid, affixId) {
-    const found = findItem(state, uid);
-    if (!found) return "item not found";
-    const item = found.item;
-    if (item.rarity !== "enchanted" && item.rarity !== "rare") return "needs an enchanted or rare item";
-    const def2 = AFFIXES[affixId];
-    if (!def2 || !benchOptions(item).some((a) => a.id === affixId)) return "that affix doesn't fit";
-    if ((state.currency.graft ?? 0) < BENCH_GRAFTS) return `needs ${BENCH_GRAFTS} Graft`;
-    const dust = benchDust(item);
-    if (state.dust < dust) return `needs ${dust} ember dust`;
-    const rng = new Rng(hashSeed(state.seed, 1650814563, state.craftSeq));
-    const roll = rollTier(rng, def2, item.ilvl);
-    item.affixes = [...item.affixes.filter((a) => !a.bench), { ...roll, bench: true }];
-    state.currency.graft -= BENCH_GRAFTS;
-    state.dust -= dust;
-    state.craftSeq++;
-    item.crafted = true;
-    item.locked = true;
-    if (found.slot) state.hero.rev++;
-    return null;
-  }
-  function maxIlvl(state) {
-    const zones = state.world.unlocked.map((z) => ZONES[z]?.level ?? 1);
-    const maps = (state.atlas?.tiers ?? []).map((t) => mapLevel(t + 1));
-    return Math.max(1, Math.min(state.hero.level + 2, Math.max(...zones, ...maps)));
-  }
-  var forgeCost = (state) => Math.round(40 + 6 * state.hero.level);
-  function forgeRare(state, slot) {
-    const cost = forgeCost(state);
-    if (state.dust < cost) return { err: `needs ${cost} ember dust` };
-    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
-    const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
-    let item;
-    try {
-      item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level });
-    } catch {
-      return { err: "nothing to forge for that slot" };
-    }
-    item.crafted = true;
-    const upgrade = state.settings.autoEquip && upgradeSlot(state, item);
-    if (!upgrade && state.stash.length >= state.stashCap) return { err: "stash full" };
-    state.nextUid++;
-    state.craftSeq++;
-    state.dust -= cost;
-    if (upgrade) {
-      const r3 = receiveItem(state, item);
-      if (r3.equipped) return { err: null, item, equipped: true };
-    }
-    if (state.stash.length < state.stashCap) state.stash.push(item);
-    return { err: null, item, equipped: false };
-  }
-  function forgeUntilUpgrade(state, slot, tries = 10) {
-    const slots = slot === "ring1" || slot === "ring2" ? ["ring"] : [slot];
-    let made = 0;
-    for (; made < tries; ) {
-      const cost = forgeCost(state);
-      if (state.dust < cost) return { err: made ? null : `needs ${cost} ember dust`, made };
-      const rng = new Rng(hashSeed(state.seed, 1718579815, state.craftSeq));
-      let item;
-      try {
-        item = rollItem(rng, state.nextUid, maxIlvl(state), { rarity: "rare", slots, maxBaseLevel: state.hero.level });
-      } catch {
-        return { err: "nothing to forge for that slot", made };
-      }
-      item.crafted = true;
-      state.nextUid++;
-      state.craftSeq++;
-      state.dust -= cost;
-      made++;
-      if (upgradeSlot(state, item)) {
-        const r3 = receiveItem(state, item);
-        if (r3.equipped) return { err: null, made, item };
-      }
-      const v = salvageValue(item);
-      state.dust += v;
-      state.totals.salvaged++;
-    }
-    return { err: null, made };
-  }
-  function buyCurrency(state, currency, n = 1) {
-    const def2 = CURRENCIES[currency];
-    if (!def2) return "unknown currency";
-    const cost = def2.cost * n;
-    if (state.dust < cost) return `needs ${cost} ember dust`;
-    state.dust -= cost;
-    state.currency[currency] = (state.currency[currency] ?? 0) + n;
-    return null;
-  }
-
   // src/ui/forge.ts
   var SLOT_NAMES = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
   var forgeOpts = { until: false };
@@ -7556,7 +7693,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below${st.maps.some((m4) => m4.tier === t) ? "" : " (none in stash)"}`, attrs: { value: String(t) } }));
     tierSel.value = String(st.activity.mapTier);
     tierSel.addEventListener("change", () => c.act((s) => setMapTier(s, +tierSel.value)));
-    const deepest = Math.max(0, ...st.atlas.tiers);
+    const deepest2 = Math.max(0, ...st.atlas.tiers);
     root.append(h(
       "div",
       { class: "card col" },
@@ -7568,7 +7705,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         "Order",
         tierSel,
         h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
-        h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
+        h("span", { class: "tag", text: `Deepest: ${deepest2 ? tierName(deepest2) : "none"}` }),
         autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
         st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
       ),
@@ -7709,7 +7846,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       case "tree":
         return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
       case "world":
-        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map((x) => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}`;
       case "atlas":
         return atlasSig(c);
       case "log":
@@ -8565,9 +8702,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }) }
       },
       h("i"),
-      h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." }))
+      h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." }))
     );
-    root.append(push);
+    root.append(push, contractBoard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
@@ -8660,6 +8797,35 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       }
     });
     return root;
+  }
+  var CONTRACT_GLYPH = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem" };
+  function contractBoard(c) {
+    const st = c.state;
+    const cost = rerollCost(st);
+    const rows = h("div", { class: "contracts" });
+    st.contracts.list.forEach((k, i) => {
+      const done = k.n >= k.target;
+      rows.append(h(
+        "div",
+        { class: `contract${done ? " done" : ""}` },
+        h("span", { class: "cg" }, glyph(CONTRACT_GLYPH[k.kind], 16)),
+        h(
+          "div",
+          { class: "grow col", style: "gap:3px;min-width:0" },
+          h("b", { text: contractText(k) }),
+          h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, k.n / k.target * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
+          h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k)}` })
+        ),
+        done ? h("button", { class: "btn small", text: "Claim", on: { click: () => c.act((s) => claimContract(s, i), "Contract claimed") } }) : h("button", {
+          class: "btn alt small",
+          text: `Reroll ${fmt(cost)}`,
+          title: `A different contract for ${fmt(cost)} ember dust; progress on this one is lost`,
+          attrs: st.dust >= cost ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => rerollContract(s, i)) }
+        })
+      ));
+    });
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
   }
   var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
   var LOG_KINDS = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
@@ -9631,7 +9797,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         skills: freeSupport ? ["!", "A free support slot would add damage"] : void 0,
         tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : void 0,
         atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : void 0,
-        gear: s.stashFull || s.stash.length >= s.stashCap ? ["!", "Stash is full: drops are being salvaged"] : void 0
+        gear: s.stashFull ? ["!", "Stash is full: drops are being salvaged"] : void 0,
+        world: claimable(s) ? [String(claimable(s)), `${claimable(s)} contract${claimable(s) > 1 ? "s" : ""} to claim`] : void 0
       };
       for (const b of this.nav.children) {
         const id = b.getAttribute("data-v");
