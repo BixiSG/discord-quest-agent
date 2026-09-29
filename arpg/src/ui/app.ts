@@ -537,10 +537,15 @@ export class GameWindow {
             b.setAttribute("aria-selected", String(on));
         }
         const top = this.body.scrollTop;
+        // A rebuild must not throw keyboard focus out of the tab: it goes back to the same place.
+        const FOCUSABLE = "button, select, input, textarea, [tabindex='0']";
+        const active = this.root.activeElement as HTMLElement | null;
+        const focusAt = active && this.body.contains(active) ? [...this.body.querySelectorAll(FOCUSABLE)].indexOf(active) : -1;
         clear(this.body);
         this.body.append(renderView(this.view, this.ctx));
         pixelize(this.body);
         this.body.scrollTop = top;
+        if (focusAt >= 0) (this.body.querySelectorAll<HTMLElement>(FOCUSABLE)[focusAt])?.focus({ preventScroll: true });
     }
 
     /** Small counters on the tabs: things waiting for a decision. */

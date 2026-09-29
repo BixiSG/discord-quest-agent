@@ -220,8 +220,13 @@ function showTip(anchor: HTMLElement, content: HTMLElement): void {
 }
 function withTip(cell: HTMLElement, c: Ctx, make: () => HTMLElement): void {
     let t: number | null = null;
-    cell.addEventListener("mouseenter", () => { c.hold = true; t = window.setTimeout(() => { if (!drag) showTip(cell, make()); }, 130); });
-    cell.addEventListener("mouseleave", () => { if (t !== null) clearTimeout(t); hideTip(); if (!drag) c.hold = false; });
+    const show = () => { c.hold = true; t = window.setTimeout(() => { if (!drag) showTip(cell, make()); }, 130); };
+    const hide = () => { if (t !== null) clearTimeout(t); hideTip(); if (!drag) c.hold = false; };
+    cell.addEventListener("mouseenter", show);
+    cell.addEventListener("mouseleave", hide);
+    // Keyboard players get the same card when a slot takes focus.
+    cell.addEventListener("focus", () => { if (cell.matches(":focus-visible")) show(); });
+    cell.addEventListener("blur", hide);
 }
 
 /** What is being dragged right now: a stash item (uid) or an equipped slot. */
@@ -345,6 +350,7 @@ function gearView(c: Ctx): HTMLElement {
             cell.querySelector(".lbl")!.textContent = bow ? "Quiver" : "2-hand";
             cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
             cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+            if (!bow) cell.tabIndex = -1; // nothing can go there: not a stop for the keyboard
         }
         if (it) {
             withTip(cell, c, () => itemCard(it, c));

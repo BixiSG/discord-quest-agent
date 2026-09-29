@@ -20,7 +20,7 @@ export function forgeView(c: Ctx): HTMLElement {
     const rack = h("div", { class: "stash" });
     for (const it of items) {
         const worn = SLOTS.some(s => st.hero.equipment[s]?.uid === it.uid);
-        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : "") }, title: itemLabel(it) + (worn ? " (worn)" : ""),
+        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" }, title: itemLabel(it) + (worn ? " (worn)" : ""),
             on: { click: () => { c.sel = { uid: it.uid }; c.rerender(); } } }, itemIcon(it));
         if (worn) cell.append(h("span", { class: "worn", text: "worn" }));
         rack.append(cell);
@@ -55,7 +55,7 @@ export function forgeView(c: Ctx): HTMLElement {
     const cost = forgeCost(st);
     const smith = h("div", { class: "smith" });
     for (const slot of SLOTS) {
-        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES[slot], attrs: st.dust >= cost ? {} : { disabled: "" },
+        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES[slot], title: st.dust >= cost ? `Forge a rare ${SLOT_NAMES[slot]!.toLowerCase()} for ${fmt(cost)} dust` : `Needs ${fmt(cost)} ember dust`, attrs: st.dust >= cost ? {} : { disabled: "" },
             on: { click: () => c.act(s => { const r = forgeRare(s, slot); if (!r.err && r.item) c.sel = { uid: r.item.uid }; return r.err; }, "Forged a rare") } }));
     }
     const dust = h("div", { class: "dust" }, glyph("forge", 20), h("b", { class: "num", text: fmt(st.dust) }), h("span", { text: "ember dust" }));
@@ -64,7 +64,9 @@ export function forgeView(c: Ctx): HTMLElement {
         h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Forge a rare" }), h("span", { class: "num", text: `${fmt(cost)} dust / item level ${maxIlvl(st)}` })),
             h("div", { class: "row", style: "align-items:center;gap:12px" }, dust,
                 h("div", { class: "muted grow", style: "font-size:11px", text: "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust." })),
-            smith),
+            smith,
+            st.dust < cost ? h("div", { class: "note", style: "margin-top:10px" }, glyph("forge", 16),
+                h("span", { text: `${fmt(cost - st.dust)} more ember dust for a rare. Salvaging drops on the Gear tab (or a loot rule that salvages) makes dust.` })) : null),
         h("div", { class: "smithy" },
             h("div", { class: "card" }, h("h3", { text: "Rack" }), rack),
             anvil,

@@ -6426,7 +6426,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const worn = SLOTS.some((s) => st.hero.equipment[s]?.uid === it.uid);
       const cell = h("div", {
         class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`,
-        attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : "") },
+        attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" },
         title: itemLabel(it) + (worn ? " (worn)" : ""),
         on: { click: () => {
           c.sel = { uid: it.uid };
@@ -6479,6 +6479,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       smith.append(h("button", {
         class: "btn alt small",
         text: SLOT_NAMES[slot],
+        title: st.dust >= cost ? `Forge a rare ${SLOT_NAMES[slot].toLowerCase()} for ${fmt(cost)} dust` : `Needs ${fmt(cost)} ember dust`,
         attrs: st.dust >= cost ? {} : { disabled: "" },
         on: { click: () => c.act((s) => {
           const r3 = forgeRare(s, slot);
@@ -6501,7 +6502,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           dust,
           h("div", { class: "muted grow", style: "font-size:11px", text: "A random rare for the slot at the highest item level you have reached. Upgrades are worn at once. Currency drops from champions and bosses; the shelf sells it for dust." })
         ),
-        smith
+        smith,
+        st.dust < cost ? h(
+          "div",
+          { class: "note", style: "margin-top:10px" },
+          glyph("forge", 16),
+          h("span", { text: `${fmt(cost - st.dust)} more ember dust for a rare. Salvaging drops on the Gear tab (or a loot rule that salvages) makes dust.` })
+        ) : null
       ),
       h(
         "div",
@@ -7189,17 +7196,23 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   }
   function withTip(cell, c, make) {
     let t = null;
-    cell.addEventListener("mouseenter", () => {
+    const show = () => {
       c.hold = true;
       t = window.setTimeout(() => {
         if (!drag) showTip(cell, make());
       }, 130);
-    });
-    cell.addEventListener("mouseleave", () => {
+    };
+    const hide = () => {
       if (t !== null) clearTimeout(t);
       hideTip();
       if (!drag) c.hold = false;
+    };
+    cell.addEventListener("mouseenter", show);
+    cell.addEventListener("mouseleave", hide);
+    cell.addEventListener("focus", () => {
+      if (cell.matches(":focus-visible")) show();
     });
+    cell.addEventListener("blur", hide);
   }
   var drag = null;
   function itemCard(item, c, opts = {}) {
@@ -7332,6 +7345,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         cell.querySelector(".lbl").textContent = bow ? "Quiver" : "2-hand";
         cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
         cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+        if (!bow) cell.tabIndex = -1;
       }
       if (it) {
         withTip(cell, c, () => itemCard(it, c));
@@ -8680,10 +8694,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         b.setAttribute("aria-selected", String(on));
       }
       const top = this.body.scrollTop;
+      const FOCUSABLE = "button, select, input, textarea, [tabindex='0']";
+      const active = this.root.activeElement;
+      const focusAt = active && this.body.contains(active) ? [...this.body.querySelectorAll(FOCUSABLE)].indexOf(active) : -1;
       clear(this.body);
       this.body.append(renderView(this.view, this.ctx));
       pixelize(this.body);
       this.body.scrollTop = top;
+      if (focusAt >= 0) this.body.querySelectorAll(FOCUSABLE)[focusAt]?.focus({ preventScroll: true });
     }
     /** Small counters on the tabs: things waiting for a decision. */
     updateBadges() {
