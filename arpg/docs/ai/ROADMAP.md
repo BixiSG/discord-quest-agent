@@ -57,3 +57,13 @@ before the next phase starts.
 - [x] Install script for %LOCALAPPDATA%\DiscordQuestAgent\addons\arpg.js
 - [x] FINAL_REPORT.md + screenshots
 - [x] Review P5
+
+## Round 8 - builds past level 26, feats, errands
+Branch: `claude/nifty-gauss-gv1g8h`. Design notes: docs/ROADMAP.md, "Round 8".
+- [ ] Ascendancy nodes 7-8: the fourth trial's two points had nothing to buy
+- [ ] Late skills (six, levels 28-44) and supports (five, 28-40); supports with modifiers on the hero (Steadfast)
+- [ ] Ashfold map areas (three) and six map mods
+- [ ] Review A: background bug audit fixes + code review of the above
+- [ ] Feats, renown and titles (account-wide, kept across dawns)
+- [ ] Companion errands (idle companions fetch dust, currency, stones and maps, and grow)
+- [ ] Balance pass with the bot, review B, docs, screenshots, changelog

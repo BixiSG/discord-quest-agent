@@ -49,6 +49,11 @@ most four levels above the hero.
   (more damage, extra targets, conversion, leech). Support slots open at
   levels 1, 1, 8, 18, 32.
 - **Flask**: refills on kills, drunk automatically below half life.
+- **Ascendancy**: after the first trial the hero takes one of its calling's two
+  ascendancies. Each trial's first clear pays two points, a node each; every
+  ascendancy has eight nodes, so the four trials buy all of it. Nodes 7 and 8
+  (round 8, for the Trial of Lanterns) are a little stronger: one offence, one
+  defence.
 
 ## Items
 
