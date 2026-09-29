@@ -3,7 +3,7 @@
 
 import { ACTS, BASES, CLASSES, SKILLS, SUPPORTS, ZONES, xpToNext, slotsFor } from "../core/data";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
-import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, RARITY_RANK, buildScore } from "../core/game";
+import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore } from "../core/game";
 import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
@@ -238,111 +238,199 @@ function compareRows(now: Sheet, next: Sheet): HTMLElement {
     return el;
 }
 
+type GearFilter = "all" | "upgrades" | "weapons" | "armour" | "jewellery";
+type GearSort = "rarity" | "level" | "slot";
+/** Stash view options: kept for the session, not saved. */
+const gearOpts: { filter: GearFilter; sort: GearSort } = { filter: "all", sort: "rarity" };
+const SLOT_GROUP: Record<string, GearFilter> = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
+const SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+
+/** Upgrade checks cost a stat sheet each: remembered until the hero's sheet changes. */
+let upgradeCache = { rev: -1, level: -1, map: new Map<number, Slot | null>() };
+function upgradeOf(st: GameState, item: Item): Slot | null {
+    if (upgradeCache.rev !== st.hero.rev || upgradeCache.level !== st.hero.level) upgradeCache = { rev: st.hero.rev, level: st.hero.level, map: new Map() };
+    let v = upgradeCache.map.get(item.uid);
+    if (v === undefined) { v = upgradeSlot(st, item); upgradeCache.map.set(item.uid, v); }
+    return v;
+}
+
+function chips<T extends string>(opts: [T, string, number?][], cur: T, pick: (v: T) => void): HTMLElement {
+    const el = h("div", { class: "chips", attrs: { role: "radiogroup" } });
+    for (const [v, label, n] of opts) {
+        el.append(h("button", { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur) }, on: { click: () => pick(v) } },
+            label, n !== undefined ? h("b", { text: String(n) }) : null));
+    }
+    return el;
+}
+
 function gearView(c: Ctx): HTMLElement {
     const st = c.state;
     const eq = st.hero.equipment;
     const slots = h("div", { class: "slots" });
     for (const s of SLOTS) slots.append(itemCell(eq[s], s, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); }));
 
+    // Stash: filter chips with counts, a sort, and markers for upgrades and level-locked items.
+    const ups = new Set(st.stash.filter(it => upgradeOf(st, it)).map(it => it.uid));
+    const groupOf = (it: Item) => SLOT_GROUP[baseOf(it).slot] ?? "all";
+    const count = (f: GearFilter) => f === "all" ? st.stash.length : f === "upgrades" ? ups.size : st.stash.filter(it => groupOf(it) === f).length;
+    const shown = st.stash.filter(it => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
+    const byRarity = (a: Item, b: Item) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
+    shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b)
+        : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b)
+        : byRarity);
     const stash = h("div", { class: "stash" });
-    const sorted = [...st.stash].sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl);
-    for (const it of sorted) stash.append(itemCell(it, null, c.sel.uid === it.uid, () => { c.sel = { uid: it.uid }; c.rerender(); }));
-    for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
-
-    const detail = h("div", { class: "col" });
-    const selItem = c.sel.uid !== undefined ? st.stash.find(x => x.uid === c.sel.uid) : undefined;
-    const selSlot = c.sel.slot;
-    if (selItem) {
-        const b = baseOf(selItem);
-        const targets = slotsFor(b);
-        detail.append(itemCard(selItem, c, { compareSlot: targets.length > 1 ? (targets.find(t => !eq[t]) ?? targets[0]!) : targets[0]! }));
-        const row = h("div", { class: "row" });
-        for (const t of targets) {
-            const err = canEquip(st, selItem, t);
-            row.append(h("button", { class: "btn", text: targets.length > 1 ? `Equip (${t === "ring1" ? "left" : "right"})` : "Equip", attrs: err ? { disabled: "" } : {}, title: err ?? "",
-                on: { click: () => c.act(s => { const e = equip(s, selItem.uid, t); if (!e) c.sel = { slot: t }; return e; }) } }));
-        }
-        row.append(h("button", { class: "btn alt", text: `Salvage (+${salvageValue(selItem)} dust)`, on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
-        detail.append(row);
-    } else if (selSlot && eq[selSlot]) {
-        detail.append(itemCard(eq[selSlot]!, c));
-        detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
-    } else {
-        detail.append(h("div", { class: "card muted", text: "Pick an item to see it here. Stash items show what equipping them would change." }));
+    for (const it of shown) {
+        const cell = itemCell(it, null, c.sel.uid === it.uid, () => { c.sel = { uid: it.uid }; c.rerender(); });
+        if (ups.has(it.uid)) { cell.classList.add("upg"); cell.title += "  (upgrade)"; }
+        else if (levelReq(it) > st.hero.level) { cell.classList.add("req"); cell.title += `  (needs level ${levelReq(it)})`; }
+        stash.append(cell);
     }
+    if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
+    else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
+
+    const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
+    for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]] as const) {
+        const o = h("option", { text: label, attrs: { value: v } });
+        if (gearOpts.sort === v) o.selected = true;
+        sort.append(o);
+    }
+    sort.addEventListener("change", () => { gearOpts.sort = sort.value as GearSort; c.rerender(); });
+    const full = st.stash.length >= st.stashCap;
+    const stashCard = h("div", { class: "card" },
+        h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " down" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+        h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
+            chips<GearFilter>([["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")]],
+                gearOpts.filter, v => { gearOpts.filter = v; c.rerender(); }),
+            sort),
+        stash);
 
     const plainCount = st.stash.filter(x => x.rarity === "plain").length;
     const enchCount = st.stash.filter(x => x.rarity === "enchanted").length;
     const tools = h("div", { class: "row" },
-        h("span", { class: "tag", text: `Stash ${st.stash.length}/${st.stashCap}` }),
-        h("span", { class: "tag", style: "background:var(--gold)", text: `Ember dust ${fmt(st.dust)}` }),
+        h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
         h("button", { class: "btn alt", text: `Salvage plain (${plainCount})`, attrs: plainCount ? {} : { disabled: "" },
             on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "plain").map(x => x.uid)); c.sel = {}; }) } }),
         h("button", { class: "btn alt", text: `Salvage enchanted (${enchCount})`, attrs: enchCount ? {} : { disabled: "" },
             on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "enchanted").map(x => x.uid)); c.sel = {}; }) } }),
     );
-    return h("div", { class: "col" },
-        h("div", { class: "row", style: "align-items:flex-start;gap:14px" },
-            h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots)),
-            h("div", { class: "grow", style: "min-width:240px" }, detail)),
-        tools,
-        h("div", { class: "card" }, h("h3", { text: "Stash" }), stash),
-    );
+
+    // Detail: the picked item, what it would change, and what it would replace.
+    const detail = h("div", { class: "col side" });
+    const selItem = c.sel.uid !== undefined ? st.stash.find(x => x.uid === c.sel.uid) : undefined;
+    const selSlot = c.sel.slot;
+    if (selItem) {
+        const targets = slotsFor(baseOf(selItem));
+        const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? (targets.find(t => !eq[t]) ?? targets[0]!) : targets[0]!);
+        detail.append(itemCard(selItem, c, { compareSlot: cmp }));
+        const row = h("div", { class: "row" });
+        targets.forEach((t, i) => {
+            const err = canEquip(st, selItem, t);
+            row.append(h("button", { class: "btn", text: targets.length > 1 ? `Equip ${t === "ring1" ? "left" : "right"}` : "Equip",
+                attrs: { ...(err ? { disabled: "" } : {}), ...(i === 0 ? { "data-key": "e" } : {}) }, title: err ?? (i === 0 ? "Equip (E)" : ""),
+                on: { click: () => c.act(s => { const e = equip(s, selItem.uid, t); if (!e) c.sel = { slot: t }; return e; }) } }));
+        });
+        row.append(h("button", { class: "btn alt", text: `Salvage +${salvageValue(selItem)}`, title: "Salvage into ember dust (S)", attrs: { "data-key": "s" },
+            on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
+        detail.append(row);
+        const worn = eq[cmp];
+        if (worn) detail.append(h("div", { class: "sec", style: "margin-top:6px", text: `Now in ${SLOT_LABEL[cmp].toLowerCase()} slot` }), itemCard(worn, null));
+    } else if (selSlot && eq[selSlot]) {
+        detail.append(itemCard(eq[selSlot]!, c));
+        detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
+    } else {
+        detail.append(h("div", { class: "card hint" }, h("h3", { text: "Pick an item" }),
+            h("div", { class: "muted", text: "Stash items show what equipping them would change. A green corner marks an upgrade; faded ones need a higher level." }),
+            h("div", { class: "muted", style: "margin-top:6px", text: "Keys: E equips the picked item, S salvages it." })));
+    }
+
+    return h("div", { class: "gear" },
+        h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools),
+        detail);
 }
 
 // ---- Skills ----------------------------------------------------------------
 
+const pctDelta = (a: number, b: number) => b / Math.max(0.01, a) - 1;
+const fmtPct = (d: number) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
+
 function skillsView(c: Ctx): HTMLElement {
     const hero = c.state.hero;
     const cur = c.sheet();
-    const skills = h("div", { class: "col" });
+    // Main skill: every unlocked one shows the pack DPS it would have with the current gear and supports.
+    const skills = h("div", { class: "list" });
     for (const s of Object.values(SKILLS)) {
         const locked = s.level > hero.level;
         const on = hero.skill === s.id;
-        skills.append(h("div", { class: `skill${on ? " on" : ""}${locked ? " locked" : ""}`, on: { click: () => { if (!locked && !on) c.act(st => setSkill(st, s.id), `${s.name} selected`); } } },
-            h("div", { class: "grow" },
-                h("div", { class: "nm", text: s.name }),
-                h("div", { class: "ds", text: s.blurb }),
-                h("div", { class: "row", style: "gap:4px;margin-top:3px" }, ...s.tags.map(t => h("span", { class: "tag", text: t })))),
-            h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "active" : `${s.effectiveness}%` })));
+        let meta: HTMLElement;
+        if (locked) meta = h("span", { class: "tag", text: `level ${s.level}` });
+        else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: `${fmt(cur.skill.packDps)} dps` });
+        else {
+            const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
+            const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
+            meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "num", style: "font-weight:700", text: fmt(sh.skill.packDps) }),
+                h("span", { class: `delta ${d >= 0 ? "up" : "down"}`, text: fmtPct(d) }));
+        }
+        skills.append(h("div", { class: `li${on ? " on" : ""}${locked ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
+            title: locked ? `Unlocks at level ${s.level}` : on ? "Your main skill" : "Pack DPS with your current gear and supports",
+            on: { click: () => { if (!locked && !on) c.act(st => setSkill(st, s.id), `${s.name} selected`); } } },
+            h("div", { class: "nm", text: s.name }),
+            h("div", { class: "meta" }, meta),
+            h("div", { class: "ds", text: s.blurb }),
+            h("div", { class: "tags" }, ...s.tags.map(t => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))));
     }
 
+    // Supports: what adding, removing or swapping each one does, best first.
     const slots = supportSlots(hero.level);
-    const sups = h("div", { class: "col" });
     const active = hero.supports.slice(0, slots);
-    for (const s of Object.values(SUPPORTS)) {
+    const full = active.length >= slots;
+    const trial = (ids: string[]) => deriveSheet({ ...hero, supports: ids, rev: -1 }).skill.packDps;
+    type Row = { s: (typeof SUPPORTS)[string]; on: boolean; locked: boolean; fits: boolean; d: number | null; swap?: string };
+    const rows: Row[] = Object.values(SUPPORTS).map(s => {
         const locked = s.level > hero.level;
         const on = active.includes(s.id);
         const fits = !s.requires.length || s.requires.some(t => cur.skill.tags.includes(t));
-        let delta = "";
+        let d: number | null = null, swap: string | undefined;
         if (!locked && fits) {
-            const next = on ? active.filter(x => x !== s.id) : active.length < slots ? [...active, s.id] : null;
-            if (next) {
-                const trial = { ...hero, supports: next, rev: -1 };
-                const sh = deriveTrial(c, trial);
-                const d = sh.skill.packDps / Math.max(0.01, cur.skill.packDps) - 1;
-                delta = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(0)}% pack DPS`;
+            if (on) d = pctDelta(cur.skill.packDps, trial(active.filter(x => x !== s.id)));
+            else if (!full) d = pctDelta(cur.skill.packDps, trial([...active, s.id]));
+            else for (const out of active) {
+                // Slots full: the best single swap for this one.
+                const v = pctDelta(cur.skill.packDps, trial(active.map(x => x === out ? s.id : x)));
+                if (d === null || v > d) { d = v; swap = out; }
             }
         }
-        sups.append(h("div", { class: `skill${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, on: { click: () => {
+        return { s, on, locked, fits, d, swap };
+    });
+    const rank = (r: Row) => (r.on ? 0 : r.locked ? 3 : r.fits ? 1 : 2);
+    rows.sort((a, b) => rank(a) - rank(b) || (a.on ? (a.d ?? 0) - (b.d ?? 0) : (b.d ?? -9) - (a.d ?? -9)) || a.s.level - b.s.level);
+    const sups = h("div", { class: "list" });
+    for (const r of rows) {
+        const { s, on, locked, fits, d, swap } = r;
+        let meta: HTMLElement, tip: string;
+        if (locked) { meta = h("span", { class: "tag", text: `level ${s.level}` }); tip = `Unlocks at level ${s.level}`; }
+        else if (!fits) { meta = h("span", { class: "tag", text: "no fit" }); tip = `Needs a ${s.requires.join(" or ")} skill`; }
+        else if (on) { meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: "slotted" }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: `worth ${fmtPct(-(d ?? 0))}` })); tip = `Click to remove: ${fmtPct(d ?? 0)} pack DPS`; }
+        else {
+            const good = (d ?? 0) > 0;
+            meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
+                swap ? h("span", { class: "muted", style: "font-size:10.5px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null);
+            tip = swap ? `Click to swap out ${SUPPORTS[swap]?.name}: ${fmtPct(d ?? 0)} pack DPS` : `Click to add: ${fmtPct(d ?? 0)} pack DPS`;
+        }
+        sups.append(h("div", { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
             if (locked || !fits) return;
-            if (on) c.act(st => setSupports(st, active.filter(x => x !== s.id)));
-            else if (active.length < slots) c.act(st => setSupports(st, [...active, s.id]));
-            else c.toast("All support slots are full");
+            if (on) c.act(st => setSupports(st, active.filter(x => x !== s.id)), `${s.name} removed`);
+            else if (!full) c.act(st => setSupports(st, [...active, s.id]), `${s.name} added`);
+            else if (swap) c.act(st => setSupports(st, active.map(x => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
         } } },
-            h("div", { class: "grow" }, h("div", { class: "nm", text: s.name }), h("div", { class: "ds", text: s.blurb }),
-                s.requires.length ? h("div", { class: "ds muted", text: `Needs: ${s.requires.join(" or ")}` }) : null),
-            h("div", { class: "col", style: "align-items:flex-end;gap:2px" },
-                h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "slotted" : fits ? "add" : "no fit" }),
-                delta ? h("div", { class: delta.startsWith("+") ? "up" : "down", style: "font-size:11px", text: delta }) : null)));
+            h("div", { class: "nm", text: s.name }), h("div", { class: "meta" }, meta),
+            h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })));
     }
     const next = [1, 1, 8, 18, 32].find(l => l > hero.level);
     return h("div", { class: "grid2" },
-        h("div", { class: "card" }, h("h3", { text: "Main skill" }), skills),
-        h("div", { class: "card" }, h("h3", { text: `Supports ${active.length}/${slots}${next ? ` (next slot at level ${next})` : ""}` }), sups));
+        h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
+        h("div", null, h("div", { class: "sec" }, "Supports ", h("span", { class: "num", text: `${active.length}/${slots}` }),
+            next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null), sups));
 }
-
-function deriveTrial(_c: Ctx, hero: GameState["hero"]): Sheet { return deriveSheet(hero); }
 
 // ---- World -----------------------------------------------------------------
 
@@ -375,11 +463,31 @@ function worldView(c: Ctx): HTMLElement {
 
 // ---- Log -------------------------------------------------------------------
 
+const LOG_KINDS: Record<string, [string, string]> = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
+let logFilter = "all";
+
 function logView(c: Ctx): HTMLElement {
-    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }));
-    const kinds: Record<string, string> = { level: "LVL", loot: "LOOT", death: "DEATH", zone: "ROAD", boss: "BOSS", info: "..." };
-    for (const e of [...c.state.log].reverse()) el.append(h("div", null, h("span", { class: "tag", style: "margin-right:6px", text: kinds[e.kind] ?? e.kind }), e.text));
+    const log = c.state.log;
+    const n = (k: string) => log.filter(e => e.kind === k).length;
+    const filter = chips<string>([["all", "All", log.length], ...Object.entries(LOG_KINDS).filter(([k]) => n(k)).map(([k, [label]]) => [k, label, n(k)] as [string, string, number])],
+        logFilter, v => { logFilter = v; c.rerender(); });
+    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }), h("div", { style: "margin-bottom:8px" }, filter));
+    const now = Date.now();
+    for (const e of [...log].reverse()) {
+        if (logFilter !== "all" && e.kind !== logFilter) continue;
+        const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
+        el.append(h("div", { class: "entry" }, h("span", { class: "tag", style: `background:${color};color:#1a1410`, text: label }), h("span", { class: "grow", text: e.text }),
+            h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })));
+    }
     return el;
+}
+
+function fmtAgo(ms: number): string {
+    if (ms < 60e3) return "now";
+    const m = Math.floor(ms / 60e3);
+    if (m < 60) return `${m}m`;
+    const hh = Math.floor(m / 60);
+    return hh < 48 ? `${hh}h` : `${Math.floor(hh / 24)}d`;
 }
 
 // ---- Menu ------------------------------------------------------------------

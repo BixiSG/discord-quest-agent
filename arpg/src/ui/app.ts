@@ -10,7 +10,7 @@ import { SAVE_VERSION, SaveError, exportText, importText, unwrap, wrap, type Sav
 import { validateState } from "../core/validate";
 import type { GameState } from "../core/state";
 import { ZONES, CLASSES, SUPPORTS, xpToNext } from "../core/data";
-import { supportSlots } from "../core/character";
+import { deriveSheet, supportSlots } from "../core/character";
 import { itemLabel } from "../core/items";
 import { pointsLeft, ascPointsLeft } from "../core/passives";
 import { atlasPointsLeft } from "../core/maps";
@@ -219,11 +219,17 @@ export class GameWindow {
                 if (top && !top.querySelector(".progress")) { top.remove(); e.preventDefault(); }
                 return;
             }
+            if (e.ctrlKey || e.altKey || e.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
             const n = Number(e.key);
-            if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey && !this.frame.mini) {
+            if (n >= 1 && n <= VIEWS.length) {
                 (this.nav.children[n - 1] as HTMLElement | undefined)?.click();
                 e.preventDefault();
+                return;
             }
+            // Views mark their own shortcuts: <button data-key="e">.
+            const k = e.key.length === 1 ? e.key.toLowerCase() : "";
+            const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector<HTMLButtonElement>(`[data-key="${k}"]:not([disabled])`) : null;
+            if (hot) { hot.click(); e.preventDefault(); }
         });
         this.applyFrame();
     }
@@ -469,6 +475,7 @@ export class GameWindow {
     }
 
     private lastSigCheck = 0;
+    private supportHint = { rev: -1, level: -1, gain: false };
     private renderTab(force: boolean): void {
         if (!this.state || !this.ctx) return;
         // Signatures are cheap but not free (some stringify state): check four times a second.
@@ -492,12 +499,26 @@ export class GameWindow {
     private updateBadges(): void {
         const s = this.state!;
         const hero = s.hero;
-        const freeSupport = supportSlots(hero.level) > hero.supports.filter(id => SUPPORTS[id] && SUPPORTS[id]!.level <= hero.level).length
-            && Object.values(SUPPORTS).some(x => x.level <= hero.level && !hero.supports.includes(x.id));
+        // A free support slot only counts when something that fits would actually add DPS
+        // (a mana-starved build can lose DPS to any support). Worked out once per sheet change.
+        if (this.supportHint.rev !== hero.rev || this.supportHint.level !== hero.level) {
+            const slots = supportSlots(hero.level);
+            const active = hero.supports.filter(id => SUPPORTS[id] && SUPPORTS[id]!.level <= hero.level).slice(0, slots);
+            let gain = false;
+            if (active.length < slots) {
+                const cur = sheetOf(s).skill;
+                for (const x of Object.values(SUPPORTS)) {
+                    if (x.level > hero.level || active.includes(x.id) || (x.requires.length && !x.requires.some(t => cur.tags.includes(t)))) continue;
+                    if (deriveSheet({ ...hero, supports: [...active, x.id], rev: -1 }).skill.packDps > cur.packDps * 1.005) { gain = true; break; }
+                }
+            }
+            this.supportHint = { rev: hero.rev, level: hero.level, gain };
+        }
+        const freeSupport = this.supportHint.gain;
         const tree = Math.max(0, pointsLeft(hero)) + Math.max(0, ascPointsLeft(hero));
         const atlas = Math.max(0, atlasPointsLeft(s));
         const marks: Partial<Record<ViewId, [string, string]>> = {
-            skills: freeSupport ? ["!", "A support slot is free"] : undefined,
+            skills: freeSupport ? ["!", "A free support slot would add damage"] : undefined,
             tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : undefined,
             atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : undefined,
             gear: s.stashFull || s.stash.length >= s.stashCap ? ["!", "Stash is full: drops are being salvaged"] : undefined,

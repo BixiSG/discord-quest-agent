@@ -4572,7 +4572,46 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .zone.on { background: var(--teal); color: #1a1410; }
 .zone.on .muted { color: #16433e; }
 .zone.locked { opacity: .45; cursor: default; }
-.log div { padding: 3px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 25%, transparent); font-size: 12px; }
+.log .entry { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 25%, transparent); font-size: 12px; }
+.log .entry .tag { flex: none; min-width: 52px; text-align: center; }
+.log .when { flex: none; font-size: 10.5px; }
+
+/* section headers outside cards, flat lists, chips */
+.sec { display: flex; align-items: baseline; gap: 8px; margin: 0 0 7px; font: 700 14px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1.5px; }
+.sec .muted { font: 600 11px/1 var(--body); text-transform: none; letter-spacing: 0; }
+.card h3.split { display: flex; justify-content: space-between; align-items: baseline; }
+.card h3.split .num { font-size: 12px; letter-spacing: 0; }
+.list { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); }
+.li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; padding: 8px 10px; border-bottom: 2px solid var(--line); cursor: pointer; }
+.li:last-child { border-bottom: 0; }
+.li:hover:not(.locked):not(.on), .li:focus-visible { background: var(--paper2); outline: none; }
+.li.on { background: var(--gold); color: #1a1410; cursor: default; }
+.li.on .tag { border-color: #1a1410; }
+.li.locked { cursor: default; opacity: .5; }
+.li .nm { font: 700 15px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .4px; }
+.li .meta { grid-column: 2; grid-row: 1 / span 3; display: flex; align-items: flex-start; justify-content: flex-end; text-align: right; }
+.li .ds { grid-column: 1; font-size: 11.5px; }
+.li .tags { grid-column: 1; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.li .tags .tag { font-size: 10px; padding: 0 5px; }
+.delta { font: 700 12px/1 var(--mono); }
+.li.on .up { color: #146b2c; } .li.on .down { color: #9e1d1f; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { font: 700 12px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .8px; padding: 5px 8px 4px;
+  border: 2px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+.chip:hover:not(.on) { background: var(--paper2); }
+.chip.on { background: var(--text); color: var(--paper); }
+.chip b { font: 700 10px/1 var(--mono); margin-left: 5px; opacity: .75; }
+
+/* gear: equipped and stash on the left, the picked item stays in view on the right */
+.gear { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); gap: 14px; align-items: start; }
+.gear .side { position: sticky; top: 0; }
+.gear select { padding: 3px 6px; font-size: 12px; }
+@container win (max-width: 820px) { .gear { grid-template-columns: 1fr; } .gear .side { position: static; } }
+.cell.upg::after { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 14px 14px 0; border-color: transparent var(--green) transparent transparent; }
+.cell.upg::before { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 17px 17px 0; border-color: transparent var(--line) transparent transparent; }
+.cell.req canvas { opacity: .4; }
+.cell.req { filter: saturate(.4); }
+.hint h3 { margin-bottom: 7px; }
 .modal { position: absolute; inset: 0; background: rgba(26, 20, 16, .55); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
 .modal .card { max-width: 460px; width: 100%; max-height: 100%; overflow: auto; animation: pop .2s cubic-bezier(.2,.8,.3,1); }
 @keyframes pop { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -5760,6 +5799,31 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     el.append(h("div", { text: "Build score" }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
     return el;
   }
+  var gearOpts = { filter: "all", sort: "rarity" };
+  var SLOT_GROUP = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
+  var SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
+  var upgradeCache = { rev: -1, level: -1, map: /* @__PURE__ */ new Map() };
+  function upgradeOf(st, item) {
+    if (upgradeCache.rev !== st.hero.rev || upgradeCache.level !== st.hero.level) upgradeCache = { rev: st.hero.rev, level: st.hero.level, map: /* @__PURE__ */ new Map() };
+    let v = upgradeCache.map.get(item.uid);
+    if (v === void 0) {
+      v = upgradeSlot(st, item);
+      upgradeCache.map.set(item.uid, v);
+    }
+    return v;
+  }
+  function chips(opts, cur, pick) {
+    const el = h("div", { class: "chips", attrs: { role: "radiogroup" } });
+    for (const [v, label, n] of opts) {
+      el.append(h(
+        "button",
+        { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur) }, on: { click: () => pick(v) } },
+        label,
+        n !== void 0 ? h("b", { text: String(n) }) : null
+      ));
+    }
+    return el;
+  }
   function gearView(c) {
     const st = c.state;
     const eq = st.hero.equipment;
@@ -5768,53 +5832,65 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       c.sel = { slot: s };
       c.rerender();
     }));
+    const ups = new Set(st.stash.filter((it) => upgradeOf(st, it)).map((it) => it.uid));
+    const groupOf = (it) => SLOT_GROUP[baseOf(it).slot] ?? "all";
+    const count = (f) => f === "all" ? st.stash.length : f === "upgrades" ? ups.size : st.stash.filter((it) => groupOf(it) === f).length;
+    const shown = st.stash.filter((it) => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
+    const byRarity = (a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
+    shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b) : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b) : byRarity);
     const stash = h("div", { class: "stash" });
-    const sorted = [...st.stash].sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl);
-    for (const it of sorted) stash.append(itemCell(it, null, c.sel.uid === it.uid, () => {
-      c.sel = { uid: it.uid };
-      c.rerender();
-    }));
-    for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
-    const detail = h("div", { class: "col" });
-    const selItem = c.sel.uid !== void 0 ? st.stash.find((x) => x.uid === c.sel.uid) : void 0;
-    const selSlot = c.sel.slot;
-    if (selItem) {
-      const b = baseOf(selItem);
-      const targets = slotsFor(b);
-      detail.append(itemCard(selItem, c, { compareSlot: targets.length > 1 ? targets.find((t) => !eq[t]) ?? targets[0] : targets[0] }));
-      const row = h("div", { class: "row" });
-      for (const t of targets) {
-        const err = canEquip(st, selItem, t);
-        row.append(h("button", {
-          class: "btn",
-          text: targets.length > 1 ? `Equip (${t === "ring1" ? "left" : "right"})` : "Equip",
-          attrs: err ? { disabled: "" } : {},
-          title: err ?? "",
-          on: { click: () => c.act((s) => {
-            const e = equip(s, selItem.uid, t);
-            if (!e) c.sel = { slot: t };
-            return e;
-          }) }
-        }));
+    for (const it of shown) {
+      const cell = itemCell(it, null, c.sel.uid === it.uid, () => {
+        c.sel = { uid: it.uid };
+        c.rerender();
+      });
+      if (ups.has(it.uid)) {
+        cell.classList.add("upg");
+        cell.title += "  (upgrade)";
+      } else if (levelReq(it) > st.hero.level) {
+        cell.classList.add("req");
+        cell.title += `  (needs level ${levelReq(it)})`;
       }
-      row.append(h("button", { class: "btn alt", text: `Salvage (+${salvageValue(selItem)} dust)`, on: { click: () => c.act((s) => {
-        salvage(s, [selItem.uid]);
-        c.sel = {};
-      }) } }));
-      detail.append(row);
-    } else if (selSlot && eq[selSlot]) {
-      detail.append(itemCard(eq[selSlot], c));
-      detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act((s) => unequip(s, selSlot)) } })));
-    } else {
-      detail.append(h("div", { class: "card muted", text: "Pick an item to see it here. Stash items show what equipping them would change." }));
+      stash.append(cell);
     }
+    if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
+    else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
+    const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
+    for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]]) {
+      const o = h("option", { text: label, attrs: { value: v } });
+      if (gearOpts.sort === v) o.selected = true;
+      sort.append(o);
+    }
+    sort.addEventListener("change", () => {
+      gearOpts.sort = sort.value;
+      c.rerender();
+    });
+    const full = st.stash.length >= st.stashCap;
+    const stashCard = h(
+      "div",
+      { class: "card" },
+      h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " down" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+      h(
+        "div",
+        { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
+        chips(
+          [["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")]],
+          gearOpts.filter,
+          (v) => {
+            gearOpts.filter = v;
+            c.rerender();
+          }
+        ),
+        sort
+      ),
+      stash
+    );
     const plainCount = st.stash.filter((x) => x.rarity === "plain").length;
     const enchCount = st.stash.filter((x) => x.rarity === "enchanted").length;
     const tools = h(
       "div",
       { class: "row" },
-      h("span", { class: "tag", text: `Stash ${st.stash.length}/${st.stashCap}` }),
-      h("span", { class: "tag", style: "background:var(--gold)", text: `Ember dust ${fmt(st.dust)}` }),
+      h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
       h("button", {
         class: "btn alt",
         text: `Salvage plain (${plainCount})`,
@@ -5834,91 +5910,171 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
         }) }
       })
     );
+    const detail = h("div", { class: "col side" });
+    const selItem = c.sel.uid !== void 0 ? st.stash.find((x) => x.uid === c.sel.uid) : void 0;
+    const selSlot = c.sel.slot;
+    if (selItem) {
+      const targets = slotsFor(baseOf(selItem));
+      const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t) => !eq[t]) ?? targets[0] : targets[0]);
+      detail.append(itemCard(selItem, c, { compareSlot: cmp }));
+      const row = h("div", { class: "row" });
+      targets.forEach((t, i) => {
+        const err = canEquip(st, selItem, t);
+        row.append(h("button", {
+          class: "btn",
+          text: targets.length > 1 ? `Equip ${t === "ring1" ? "left" : "right"}` : "Equip",
+          attrs: { ...err ? { disabled: "" } : {}, ...i === 0 ? { "data-key": "e" } : {} },
+          title: err ?? (i === 0 ? "Equip (E)" : ""),
+          on: { click: () => c.act((s) => {
+            const e = equip(s, selItem.uid, t);
+            if (!e) c.sel = { slot: t };
+            return e;
+          }) }
+        }));
+      });
+      row.append(h("button", {
+        class: "btn alt",
+        text: `Salvage +${salvageValue(selItem)}`,
+        title: "Salvage into ember dust (S)",
+        attrs: { "data-key": "s" },
+        on: { click: () => c.act((s) => {
+          salvage(s, [selItem.uid]);
+          c.sel = {};
+        }) }
+      }));
+      detail.append(row);
+      const worn = eq[cmp];
+      if (worn) detail.append(h("div", { class: "sec", style: "margin-top:6px", text: `Now in ${SLOT_LABEL[cmp].toLowerCase()} slot` }), itemCard(worn, null));
+    } else if (selSlot && eq[selSlot]) {
+      detail.append(itemCard(eq[selSlot], c));
+      detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act((s) => unequip(s, selSlot)) } })));
+    } else {
+      detail.append(h(
+        "div",
+        { class: "card hint" },
+        h("h3", { text: "Pick an item" }),
+        h("div", { class: "muted", text: "Stash items show what equipping them would change. A green corner marks an upgrade; faded ones need a higher level." }),
+        h("div", { class: "muted", style: "margin-top:6px", text: "Keys: E equips the picked item, S salvages it." })
+      ));
+    }
     return h(
       "div",
-      { class: "col" },
-      h(
-        "div",
-        { class: "row", style: "align-items:flex-start;gap:14px" },
-        h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots)),
-        h("div", { class: "grow", style: "min-width:240px" }, detail)
-      ),
-      tools,
-      h("div", { class: "card" }, h("h3", { text: "Stash" }), stash)
+      { class: "gear" },
+      h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools),
+      detail
     );
   }
+  var pctDelta = (a, b) => b / Math.max(0.01, a) - 1;
+  var fmtPct = (d) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
   function skillsView(c) {
     const hero = c.state.hero;
     const cur = c.sheet();
-    const skills = h("div", { class: "col" });
+    const skills = h("div", { class: "list" });
     for (const s of Object.values(SKILLS)) {
       const locked = s.level > hero.level;
       const on = hero.skill === s.id;
+      let meta;
+      if (locked) meta = h("span", { class: "tag", text: `level ${s.level}` });
+      else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: `${fmt(cur.skill.packDps)} dps` });
+      else {
+        const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
+        const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
+        meta = h(
+          "span",
+          { class: "col", style: "gap:1px;align-items:flex-end" },
+          h("span", { class: "num", style: "font-weight:700", text: fmt(sh.skill.packDps) }),
+          h("span", { class: `delta ${d >= 0 ? "up" : "down"}`, text: fmtPct(d) })
+        );
+      }
       skills.append(h(
         "div",
-        { class: `skill${on ? " on" : ""}${locked ? " locked" : ""}`, on: { click: () => {
-          if (!locked && !on) c.act((st) => setSkill(st, s.id), `${s.name} selected`);
-        } } },
-        h(
-          "div",
-          { class: "grow" },
-          h("div", { class: "nm", text: s.name }),
-          h("div", { class: "ds", text: s.blurb }),
-          h("div", { class: "row", style: "gap:4px;margin-top:3px" }, ...s.tags.map((t) => h("span", { class: "tag", text: t })))
-        ),
-        h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "active" : `${s.effectiveness}%` })
+        {
+          class: `li${on ? " on" : ""}${locked ? " locked" : ""}`,
+          attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
+          title: locked ? `Unlocks at level ${s.level}` : on ? "Your main skill" : "Pack DPS with your current gear and supports",
+          on: { click: () => {
+            if (!locked && !on) c.act((st) => setSkill(st, s.id), `${s.name} selected`);
+          } }
+        },
+        h("div", { class: "nm", text: s.name }),
+        h("div", { class: "meta" }, meta),
+        h("div", { class: "ds", text: s.blurb }),
+        h("div", { class: "tags" }, ...s.tags.map((t) => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))
       ));
     }
     const slots = supportSlots(hero.level);
-    const sups = h("div", { class: "col" });
     const active = hero.supports.slice(0, slots);
-    for (const s of Object.values(SUPPORTS)) {
+    const full = active.length >= slots;
+    const trial = (ids) => deriveSheet({ ...hero, supports: ids, rev: -1 }).skill.packDps;
+    const rows = Object.values(SUPPORTS).map((s) => {
       const locked = s.level > hero.level;
       const on = active.includes(s.id);
       const fits = !s.requires.length || s.requires.some((t) => cur.skill.tags.includes(t));
-      let delta = "";
+      let d = null, swap;
       if (!locked && fits) {
-        const next2 = on ? active.filter((x) => x !== s.id) : active.length < slots ? [...active, s.id] : null;
-        if (next2) {
-          const trial = { ...hero, supports: next2, rev: -1 };
-          const sh = deriveTrial(c, trial);
-          const d = sh.skill.packDps / Math.max(0.01, cur.skill.packDps) - 1;
-          delta = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(0)}% pack DPS`;
+        if (on) d = pctDelta(cur.skill.packDps, trial(active.filter((x) => x !== s.id)));
+        else if (!full) d = pctDelta(cur.skill.packDps, trial([...active, s.id]));
+        else for (const out of active) {
+          const v = pctDelta(cur.skill.packDps, trial(active.map((x) => x === out ? s.id : x)));
+          if (d === null || v > d) {
+            d = v;
+            swap = out;
+          }
         }
+      }
+      return { s, on, locked, fits, d, swap };
+    });
+    const rank = (r3) => r3.on ? 0 : r3.locked ? 3 : r3.fits ? 1 : 2;
+    rows.sort((a, b) => rank(a) - rank(b) || (a.on ? (a.d ?? 0) - (b.d ?? 0) : (b.d ?? -9) - (a.d ?? -9)) || a.s.level - b.s.level);
+    const sups = h("div", { class: "list" });
+    for (const r3 of rows) {
+      const { s, on, locked, fits, d, swap } = r3;
+      let meta, tip;
+      if (locked) {
+        meta = h("span", { class: "tag", text: `level ${s.level}` });
+        tip = `Unlocks at level ${s.level}`;
+      } else if (!fits) {
+        meta = h("span", { class: "tag", text: "no fit" });
+        tip = `Needs a ${s.requires.join(" or ")} skill`;
+      } else if (on) {
+        meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: "slotted" }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: `worth ${fmtPct(-(d ?? 0))}` }));
+        tip = `Click to remove: ${fmtPct(d ?? 0)} pack DPS`;
+      } else {
+        const good = (d ?? 0) > 0;
+        meta = h(
+          "span",
+          { class: "col", style: "gap:1px;align-items:flex-end" },
+          h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
+          swap ? h("span", { class: "muted", style: "font-size:10.5px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null
+        );
+        tip = swap ? `Click to swap out ${SUPPORTS[swap]?.name}: ${fmtPct(d ?? 0)} pack DPS` : `Click to add: ${fmtPct(d ?? 0)} pack DPS`;
       }
       sups.append(h(
         "div",
-        { class: `skill${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, on: { click: () => {
+        { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
           if (locked || !fits) return;
-          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)));
-          else if (active.length < slots) c.act((st) => setSupports(st, [...active, s.id]));
-          else c.toast("All support slots are full");
+          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)), `${s.name} removed`);
+          else if (!full) c.act((st) => setSupports(st, [...active, s.id]), `${s.name} added`);
+          else if (swap) c.act((st) => setSupports(st, active.map((x) => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
         } } },
-        h(
-          "div",
-          { class: "grow" },
-          h("div", { class: "nm", text: s.name }),
-          h("div", { class: "ds", text: s.blurb }),
-          s.requires.length ? h("div", { class: "ds muted", text: `Needs: ${s.requires.join(" or ")}` }) : null
-        ),
-        h(
-          "div",
-          { class: "col", style: "align-items:flex-end;gap:2px" },
-          h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "slotted" : fits ? "add" : "no fit" }),
-          delta ? h("div", { class: delta.startsWith("+") ? "up" : "down", style: "font-size:11px", text: delta }) : null
-        )
+        h("div", { class: "nm", text: s.name }),
+        h("div", { class: "meta" }, meta),
+        h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })
       ));
     }
     const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
     return h(
       "div",
       { class: "grid2" },
-      h("div", { class: "card" }, h("h3", { text: "Main skill" }), skills),
-      h("div", { class: "card" }, h("h3", { text: `Supports ${active.length}/${slots}${next ? ` (next slot at level ${next})` : ""}` }), sups)
+      h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
+      h("div", null, h(
+        "div",
+        { class: "sec" },
+        "Supports ",
+        h("span", { class: "num", text: `${active.length}/${slots}` }),
+        next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null
+      ), sups)
     );
-  }
-  function deriveTrial(_c, hero) {
-    return deriveSheet(hero);
   }
   function worldView(c) {
     const st = c.state;
@@ -5965,11 +6121,40 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     }
     return root;
   }
+  var LOG_KINDS = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
+  var logFilter = "all";
   function logView(c) {
-    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }));
-    const kinds = { level: "LVL", loot: "LOOT", death: "DEATH", zone: "ROAD", boss: "BOSS", info: "..." };
-    for (const e of [...c.state.log].reverse()) el.append(h("div", null, h("span", { class: "tag", style: "margin-right:6px", text: kinds[e.kind] ?? e.kind }), e.text));
+    const log = c.state.log;
+    const n = (k) => log.filter((e) => e.kind === k).length;
+    const filter = chips(
+      [["all", "All", log.length], ...Object.entries(LOG_KINDS).filter(([k]) => n(k)).map(([k, [label]]) => [k, label, n(k)])],
+      logFilter,
+      (v) => {
+        logFilter = v;
+        c.rerender();
+      }
+    );
+    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }), h("div", { style: "margin-bottom:8px" }, filter));
+    const now = Date.now();
+    for (const e of [...log].reverse()) {
+      if (logFilter !== "all" && e.kind !== logFilter) continue;
+      const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
+      el.append(h(
+        "div",
+        { class: "entry" },
+        h("span", { class: "tag", style: `background:${color};color:#1a1410`, text: label }),
+        h("span", { class: "grow", text: e.text }),
+        h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })
+      ));
+    }
     return el;
+  }
+  function fmtAgo(ms) {
+    if (ms < 6e4) return "now";
+    const m4 = Math.floor(ms / 6e4);
+    if (m4 < 60) return `${m4}m`;
+    const hh = Math.floor(m4 / 60);
+    return hh < 48 ? `${hh}h` : `${Math.floor(hh / 24)}d`;
   }
   function menuView(c) {
     const st = c.state;
@@ -6346,9 +6531,17 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
           }
           return;
         }
+        if (e.ctrlKey || e.altKey || e.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
         const n = Number(e.key);
-        if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey && !this.frame.mini) {
+        if (n >= 1 && n <= VIEWS.length) {
           this.nav.children[n - 1]?.click();
+          e.preventDefault();
+          return;
+        }
+        const k = e.key.length === 1 ? e.key.toLowerCase() : "";
+        const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector(`[data-key="${k}"]:not([disabled])`) : null;
+        if (hot) {
+          hot.click();
           e.preventDefault();
         }
       });
@@ -6660,6 +6853,7 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       };
     }
     lastSigCheck = 0;
+    supportHint = { rev: -1, level: -1, gain: false };
     renderTab(force) {
       if (!this.state || !this.ctx) return;
       if (!force) {
@@ -6685,11 +6879,27 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     updateBadges() {
       const s = this.state;
       const hero = s.hero;
-      const freeSupport = supportSlots(hero.level) > hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= hero.level).length && Object.values(SUPPORTS).some((x) => x.level <= hero.level && !hero.supports.includes(x.id));
+      if (this.supportHint.rev !== hero.rev || this.supportHint.level !== hero.level) {
+        const slots = supportSlots(hero.level);
+        const active = hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= hero.level).slice(0, slots);
+        let gain = false;
+        if (active.length < slots) {
+          const cur = sheetOf(s).skill;
+          for (const x of Object.values(SUPPORTS)) {
+            if (x.level > hero.level || active.includes(x.id) || x.requires.length && !x.requires.some((t) => cur.tags.includes(t))) continue;
+            if (deriveSheet({ ...hero, supports: [...active, x.id], rev: -1 }).skill.packDps > cur.packDps * 1.005) {
+              gain = true;
+              break;
+            }
+          }
+        }
+        this.supportHint = { rev: hero.rev, level: hero.level, gain };
+      }
+      const freeSupport = this.supportHint.gain;
       const tree = Math.max(0, pointsLeft(hero)) + Math.max(0, ascPointsLeft(hero));
       const atlas = Math.max(0, atlasPointsLeft(s));
       const marks = {
-        skills: freeSupport ? ["!", "A support slot is free"] : void 0,
+        skills: freeSupport ? ["!", "A free support slot would add damage"] : void 0,
         tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : void 0,
         atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : void 0,
         gear: s.stashFull || s.stash.length >= s.stashCap ? ["!", "Stash is full: drops are being salvaged"] : void 0
