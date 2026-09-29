@@ -21,6 +21,7 @@
     ?noglyph=1      no orb glyph to borrow (the HUD falls back to its own diamond)
     ?pet=1          switch the Orbling addon on (view=addon:pet opens it); window.__orbling pokes its state
     ?arpg=1         switch Hollowmarch on (view=addon:arpg opens its card); loads ../arpg/dist/arpg.js
+    ?shipped=1      load the minified src/addons/arpg.js that ships with the agent instead
 -->
 <style>
   :root { --background-base-lower: #1e1f22; }
@@ -183,9 +184,9 @@
       const a = document.createElement("script");
       a.src = "../src/addons/pet.js";
       a.onload = () => {
-        // Built addons outside src/ (arpg/dist) load the same way the launcher's addons folder does.
+        // Hollowmarch: the readable build (arpg/dist), or with ?shipped=1 the minified copy in src/addons.
         const g = document.createElement("script");
-        g.src = "../arpg/dist/arpg.js";
+        g.src = qs.get("shipped") ? "../src/addons/arpg.js" : "../arpg/dist/arpg.js";
         const done = () => {
           const view = qs.get("view");
           if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);

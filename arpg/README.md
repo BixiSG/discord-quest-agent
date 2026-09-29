@@ -34,8 +34,6 @@ It has nothing to do with quests: it never reads quest data or orbs.
   Wandering Market (a Pedlar and a Jeweller with stock that rotates).
 - An ending: twelve echoes of the day the sun fell, three sun shards, and the
   Rekindling - relight the sun and start a new dawn, keeping the collection.
-- English, Russian and Ukrainian (the hub's language), in a pixel font with
-  Cyrillic.
 - A 129-node passive tree with keystones.
 - Endgame: maps tier 1-16 with mods, the endless Depths past tier 16, an
   atlas tree and four pinnacle bosses.
@@ -43,6 +41,13 @@ It has nothing to do with quests: it never reads quest data or orbs.
   comes from), compare deltas on every item and support.
 - English, Russian and Ukrainian, everything included (story, items, the
   chronicle, the pixel font's Cyrillic); it follows Quest Agent's language.
+
+<p align="center">
+  <img src="docs/shots/12-market.png" width="420" alt="The Wandering Market: the Pedlar's gear for your weakest slots, the Jeweller's stones, a rotation timer">
+  <img src="docs/shots/13-sockets.png" width="420" alt="The Forge with a socketed weapon on the anvil: set, swap or remove ember stones, drill another socket">
+  <img src="docs/shots/14-echoes.png" width="420" alt="The chronicle's echoes: voices from the day the sun fell, left by map bosses and pinnacles">
+  <img src="docs/shots/15-rekindling.png" width="420" alt="The Rekindling card: three sun shards gathered, ready to relight the sun">
+</p>
 
 ## Install (Windows, with Discord Quest Agent)
 
@@ -91,9 +96,13 @@ Requirements: Node 20+.
 
     cd arpg
     npm install
-    npm run check      # typecheck + 100-odd tests + build (dist/arpg.js, ASCII-checked)
+    npm run check      # typecheck + 200-odd tests + build (ASCII-checked)
     npm run balance -- 48 3 strider   # headless bot plays 3 heroes for 48 simulated hours
 
+- The build writes two files: `dist/arpg.js` (readable, for the pages below)
+  and `../src/addons/arpg.js` (minified, the one that ships with the agent). Both
+  carry the ru/uk tables packed (deflate + base64, `src/i18n/pack.ts`); add
+  `&shipped=1` to either page to run the shipped file.
 - `src/core` is the pure, deterministic game (no DOM, no clocks, seeded RNG).
   `src/ui` is the Shadow DOM window, `src/platform` the IndexedDB/KV glue.
 - Browser: `python dev/serve.py` from the repository root, then open

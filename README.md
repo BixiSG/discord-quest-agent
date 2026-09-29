@@ -193,6 +193,9 @@ Its state lives inside Discord next to the settings.
 
 <p align="center">
   <img src="arpg/docs/shots/05-hero.png" width="640" alt="Hollowmarch: the battle strip over the character sheet">
+  <br>
+  <img src="arpg/docs/shots/12-market.png" width="316" alt="Hollowmarch's Wandering Market: a Pedlar and a Jeweller with rotating stock">
+  <img src="arpg/docs/shots/15-rekindling.png" width="316" alt="Hollowmarch's ending: three sun shards and the Rekindling">
 </p>
 
 **Hollowmarch** is a small action RPG that plays itself in a window of its own. You build

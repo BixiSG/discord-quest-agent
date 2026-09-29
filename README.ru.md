@@ -204,7 +204,7 @@ Discord показывает квесты примерно за последни
 ### Дополнения: Hollowmarch, idle-экшен-RPG
 
 <p align="center">
-  <img src="arpg/docs/shots/05-hero.png" width="640" alt="Hollowmarch: полоса боя над листом персонажа">
+  <img src="arpg/docs/shots/05-hero-ru.png" width="640" alt="Hollowmarch: полоса боя над листом персонажа">
 </p>
 
 **Hollowmarch** - небольшая экшен-RPG, которая играет сама в собственном окне. Вы собираете
