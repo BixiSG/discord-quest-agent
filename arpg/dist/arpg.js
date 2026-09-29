@@ -4877,6 +4877,7 @@
   border: 2px solid #1a1410; box-shadow: 2px 2px 0 #1a1410; }
 .ctl:hover { background: var(--gold); }
 .ctl.x:hover { background: #1a1410; color: var(--ember); }
+.ctl.snd.off { background: #1a1410; color: var(--ember); }
 .ctl:active { transform: translate(2px, 2px); box-shadow: none; }
 button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
 .grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 4;
@@ -5541,8 +5542,16 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
     }
     set(on, volume = this.settings.volume) {
       this.settings = { on, volume: Math.max(0, Math.min(1, volume)) };
-      if (on) this.unlock();
-      if (this.master) this.master.gain.value = on ? this.settings.volume * 0.5 : 0;
+      if (on) {
+        this.unlock();
+        return;
+      }
+      if (this.master) {
+        this.master.gain.cancelScheduledValues(0);
+        this.master.gain.value = 0;
+      }
+      if (this.ctx?.state === "running") void this.ctx.suspend().catch(() => {
+      });
     }
     close() {
       void this.ctx?.close().catch(() => {
@@ -7279,6 +7288,11 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
           e.preventDefault();
           return;
         }
+        if (e.key === "m" || e.key === "M") {
+          this.setSound(!this.frame.sound);
+          e.preventDefault();
+          return;
+        }
         const k = e.key.length === 1 ? e.key.toLowerCase() : "";
         const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector(`[data-key="${k}"]:not([disabled])`) : null;
         if (hot) {
@@ -7348,7 +7362,8 @@ input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
       };
       setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
       setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-      setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click to mute)" : "Sound off (click to unmute)");
+      setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+      this.soundBtn.classList.toggle("off", !f.sound);
       this.refit();
     }
     saveFrame() {

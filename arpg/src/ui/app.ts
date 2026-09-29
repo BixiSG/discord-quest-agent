@@ -219,6 +219,7 @@ export class GameWindow {
                 e.preventDefault();
                 return;
             }
+            if (e.key === "m" || e.key === "M") { this.setSound(!this.frame.sound); e.preventDefault(); return; }
             // Views mark their own shortcuts: <button data-key="e">.
             const k = e.key.length === 1 ? e.key.toLowerCase() : "";
             const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector<HTMLButtonElement>(`[data-key="${k}"]:not([disabled])`) : null;
@@ -282,7 +283,8 @@ export class GameWindow {
         const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.title = title; b.setAttribute("aria-label", title); };
         setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
         setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
-        setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click to mute)" : "Sound off (click to unmute)");
+        setGlyph(this.soundBtn, f.sound ? "sound" : "mute", f.sound ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
+        this.soundBtn.classList.toggle("off", !f.sound);
         this.refit();
     }
     private saveFrame(): void { this.kv.set(UI_KEY, { ...this.frame }); }

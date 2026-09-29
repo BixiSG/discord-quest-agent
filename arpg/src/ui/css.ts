@@ -42,6 +42,7 @@ export const CSS = `
   border: 2px solid #1a1410; box-shadow: 2px 2px 0 #1a1410; }
 .ctl:hover { background: var(--gold); }
 .ctl.x:hover { background: #1a1410; color: var(--ember); }
+.ctl.snd.off { background: #1a1410; color: var(--ember); }
 .ctl:active { transform: translate(2px, 2px); box-shadow: none; }
 button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
 .grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 4;

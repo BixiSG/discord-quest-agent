@@ -39,8 +39,11 @@ export class Sound {
 
     set(on: boolean, volume = this.settings.volume): void {
         this.settings = { on, volume: Math.max(0, Math.min(1, volume)) };
-        if (on) this.unlock();
-        if (this.master) this.master.gain.value = on ? this.settings.volume * 0.5 : 0;
+        if (on) { this.unlock(); return; }
+        // Muted: silence the output and stop the audio engine itself, so nothing
+        // already scheduled (or queued by a later call) can reach the speakers.
+        if (this.master) { this.master.gain.cancelScheduledValues(0); this.master.gain.value = 0; }
+        if (this.ctx?.state === "running") void this.ctx.suspend().catch(() => {});
     }
 
     close(): void { void this.ctx?.close().catch(() => {}); this.ctx = null; this.master = null; }
