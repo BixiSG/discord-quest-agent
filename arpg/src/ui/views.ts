@@ -2,7 +2,7 @@
 // signature changes, so scroll position and selection survive sim ticks.
 
 import { marketSig, marketView } from "./market";
-import { socketRows } from "./stones";
+import { emptySockets, socketPips, socketRows } from "./stones";
 import { allShards, sunShards, SUN_PINNACLES } from "../core/echoes";
 import { chooseDawnPerk, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
 import { DAWN_PERKS, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, ECHOES, ECHO_ORDER } from "../core/data";
@@ -13,6 +13,7 @@ import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffe
 import { endgameOpen } from "../core/maps";
 import { drawPumpkin } from "./gfx/pumpkin";
 import { hint, hintsSeen } from "./hints";
+import { stoneFullName } from "../i18n/names";
 import type { Sfx } from "./sfx";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
@@ -276,6 +277,11 @@ function itemCell(item: Item | undefined, slot: Slot | null, selected: boolean, 
         attrs: { "aria-label": item ? itemName(item) : slot ? t("gear.slotEmpty", { slot: SLOT_LABEL(slot) }) : t("gear.empty"), ...(item || slot ? { role: "button", tabindex: "0" } : {}), ...(selected ? { "aria-pressed": "true" } : {}) }, on: { click: onClick } });
     if (item) cell.append(itemIcon(item));
     if (slot) { cell.dataset.slot = slot; cell.append(h("span", { class: "lbl", text: SLOT_LABEL(slot) })); }
+    const pips = item ? socketPips(item) : null;
+    if (pips) {
+        cell.append(pips);
+        cell.setAttribute("aria-label", t("gear.cellSockets", { label: cell.getAttribute("aria-label") ?? "", full: item!.sockets! - emptySockets(item!), n: item!.sockets! }));
+    }
     return cell;
 }
 
@@ -380,10 +386,32 @@ function compareRows(now: Sheet, next: Sheet): HTMLElement {
     return el;
 }
 
-type GearFilter = "all" | "upgrades" | "weapons" | "armour" | "jewellery" | "relics";
+type GearFilter = "all" | "upgrades" | "weapons" | "armour" | "jewellery" | "sockets" | "relics";
 type GearSort = "rarity" | "level" | "slot";
 /** Stash view options and marked items: kept for the session, not saved. */
-const gearOpts: { filter: GearFilter; sort: GearSort; marks: Set<number> } = { filter: "all", sort: "rarity", marks: new Set() };
+const gearOpts: { filter: GearFilter; sort: GearSort; marks: Set<number>; query: string } = { filter: "all", sort: "rarity", marks: new Set(), query: "" };
+
+/** Everything the stash search reads, in the language on screen: names, base, slot, affix and relic lines, stones. */
+function searchText(it: Item): string {
+    const b = baseOf(it);
+    return [itemName(it), baseName(b.id), SLOT_LABEL(b.slot as Slot), ...it.affixes.map(a => affixLine(a)), ...relicLines(it),
+        ...(it.stones ?? []).filter((k): k is string => !!k).map(k => stoneFullName(k))].join("\n").toLowerCase();
+}
+/** Every word of the query is in the item's text (any order). */
+const matchesQuery = (text: string, q: string) => q.trim().toLowerCase().split(/\s+/).every(w => text.includes(w));
+
+/** Shows only the stash cells that match the search, in place (typing never rebuilds the view). */
+function applySearch(grid: HTMLElement): void {
+    const q = gearOpts.query.trim();
+    let shown = 0;
+    for (const cell of grid.querySelectorAll<HTMLElement>(".cell[data-uid]")) {
+        const ok = !q || matchesQuery(cell.dataset.q ?? "", q);
+        cell.hidden = !ok;
+        if (ok) shown++;
+    }
+    for (const cell of grid.querySelectorAll<HTMLElement>(".cell.empty")) cell.hidden = !!q;
+    grid.querySelector(".nomatch")?.toggleAttribute("hidden", !q || shown > 0);
+}
 const SLOT_GROUP: Record<string, GearFilter> = { weapon: "weapons", offhand: "weapons", helmet: "armour", body: "armour", gloves: "armour", boots: "armour", belt: "jewellery", amulet: "jewellery", ring: "jewellery" };
 const SLOT_ORDER = ["weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"];
 
@@ -504,6 +532,7 @@ function gearView(c: Ctx): HTMLElement {
             if (gearOpts.marks.has(it.uid)) cell.classList.add("mark");
         }
         cell.dataset.uid = String(it.uid);
+        cell.dataset.q = searchText(it);
         // Hover a stash item: the worn piece it would replace glows on the doll.
         cell.addEventListener("mouseenter", () => {
             if (drag) return;
@@ -537,7 +566,9 @@ function gearView(c: Ctx): HTMLElement {
     const ups = new Set(st.stash.filter(it => upgradeOf(st, it)).map(it => it.uid));
     const caseUps = st.relics.filter(it => upgradeOf(st, it)).length;
     const groupOf = (it: Item) => SLOT_GROUP[baseOf(it).slot] ?? "all";
-    const count = (f: GearFilter) => f === "all" ? st.stash.length : f === "upgrades" ? ups.size : f === "relics" ? st.relics.length : st.stash.filter(it => groupOf(it) === f).length;
+    const inFilter = (it: Item, f: GearFilter) => f === "all" || (f === "upgrades" ? ups.has(it.uid) : f === "sockets" ? emptySockets(it) > 0 : groupOf(it) === f);
+    const count = (f: GearFilter) => f === "relics" ? st.relics.length : st.stash.filter(it => inFilter(it, f)).length;
+    const wornEmpty = SLOTS.filter(s => eq[s] && emptySockets(eq[s]!) > 0);
     const relicsTab = gearOpts.filter === "relics";
     const grid = h("div", { class: `stash${relicsTab ? " codex" : ""}` });
     if (relicsTab) {
@@ -565,14 +596,14 @@ function gearView(c: Ctx): HTMLElement {
             grid.append(ghost);
         }
     } else {
-        const shown = st.stash.filter(it => gearOpts.filter === "all" || (gearOpts.filter === "upgrades" ? ups.has(it.uid) : groupOf(it) === gearOpts.filter));
+        const shown = st.stash.filter(it => inFilter(it, gearOpts.filter));
         const byRarity = (a: Item, b: Item) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl;
         shown.sort(gearOpts.sort === "level" ? (a, b) => b.ilvl - a.ilvl || byRarity(a, b)
             : gearOpts.sort === "slot" ? (a, b) => SLOT_ORDER.indexOf(baseOf(a).slot) - SLOT_ORDER.indexOf(baseOf(b).slot) || byRarity(a, b)
             : byRarity);
         // A group (weapons, armour, jewellery) shows what is worn in it first, framed in gold, to compare at a glance.
         const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
-        const worn = grouped ? SLOTS.filter(s => eq[s] && groupOf(eq[s]!) === gearOpts.filter) : [];
+        const worn = gearOpts.filter === "sockets" ? wornEmpty : grouped ? SLOTS.filter(s => eq[s] && groupOf(eq[s]!) === gearOpts.filter) : [];
         if (worn.length) {
             grid.append(gridSep(t("gear.wornSep")));
             for (const s of worn) {
@@ -588,6 +619,7 @@ function gearView(c: Ctx): HTMLElement {
         if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
         if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: t("gear.stashEmpty") }));
         else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? t("gear.noUpgrades") : t("gear.noneHere") }));
+        if (shown.length) { grid.append(h("div", { class: "muted nomatch", style: "grid-column:1/-1;padding:6px 0", text: t("gear.noMatch") })); applySearch(grid); }
     }
     // Drop an equipped item anywhere on the stash to take it off.
     grid.addEventListener("dragover", e => { if (drag?.slot) { e.preventDefault(); grid.classList.add("over"); } });
@@ -615,11 +647,20 @@ function gearView(c: Ctx): HTMLElement {
             h("span", { text: st.settings.upkeep ? t("gear.fullUpkeep") : t("gear.fullNoUpkeep") }))
         : full && st.settings.upkeep ? h("div", { class: "note", style: "margin-bottom:8px" }, glyph("forge", 14),
             h("span", { text: t("gear.fullNote") })) : null;
+    // Search: filters the cells in place while typing; rebuilds wait until the field is left.
+    const search = h("input", { class: "search", attrs: { type: "search", placeholder: t("gear.search"), "aria-label": t("gear.searchAria"), spellcheck: "false" } }) as HTMLInputElement;
+    search.value = gearOpts.query;
+    search.addEventListener("input", () => { gearOpts.query = search.value; applySearch(grid); });
+    search.addEventListener("focus", () => { c.hold = true; });
+    search.addEventListener("blur", () => { c.hold = false; });
+    search.addEventListener("keydown", e => { if (e.key === "Escape" && search.value) { e.stopPropagation(); e.preventDefault(); search.value = gearOpts.query = ""; applySearch(grid); } });
+    const filters = (["all", "upgrades", "weapons", "armour", "jewellery", "sockets", "relics"] as const)
+        .filter(f => f !== "sockets" || gearOpts.filter === "sockets" || count("sockets") > 0 || wornEmpty.length > 0);
     const stashCard = h("div", { class: "card" }, head, note,
-        h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
-            chips<GearFilter>((["all", "upgrades", "weapons", "armour", "jewellery", "relics"] as const).map(f => [f, t(`gear.${f}`), count(f)] as [GearFilter, string, number]),
+        h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between;flex-wrap:wrap;gap:6px" },
+            chips<GearFilter>(filters.map(f => [f, t(`gear.${f}`), f === "sockets" ? count(f) + wornEmpty.length : count(f)] as [GearFilter, string, number]),
                 gearOpts.filter, v => { gearOpts.filter = v; c.sel = {}; c.rerender(); }),
-            relicsTab ? null : sort),
+            relicsTab ? null : h("div", { class: "row", style: "gap:6px" }, search, sort)),
         grid);
 
     // Bulk tools: salvage by kind, by age or by mark; wear every upgrade.

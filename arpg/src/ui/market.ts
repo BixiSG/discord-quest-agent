@@ -11,7 +11,7 @@ import { fmt, fmtDuration, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { glyph } from "./glyphs";
 import { itemCard, withTip, type Ctx } from "./views";
-import { stoneChip, stoneTip } from "./stones";
+import { socketPips, stoneChip, stoneTip } from "./stones";
 import { hint } from "./hints";
 import { t } from "../i18n";
 import { itemName, monsterName, stoneFullName } from "../i18n/names";
@@ -47,7 +47,7 @@ export function marketView(c: Ctx): HTMLElement {
     st.market.pedlar.forEach((o, i) => {
         const it = o.item;
         const up = !o.sold && !!upgradeSlot(st, it);
-        const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it) } }, itemIcon(it));
+        const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it) } }, itemIcon(it), socketPips(it));
         withTip(cell, c, () => { const targets = slotsFor(baseOf(it)); return itemCard(it, c, { compareSlot: upgradeSlot(st, it) ?? targets.find(x => !st.hero.equipment[x]) ?? targets[0]! }); });
         gear.append(h("div", { class: `offer${o.sold ? " sold" : ""}` }, cell,
             h("div", { class: "col grow", style: "gap:3px;min-width:0" },

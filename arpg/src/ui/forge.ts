@@ -17,7 +17,7 @@ import { itemCard, markWorn, withTip, type Ctx } from "./views";
 import { cutCost, cutStones, drillCost, drillSocket, pouchList, setStone, socketCap } from "../core/sockets";
 import { placeOf } from "../core/items";
 import { STONE_TIERS, parseStone, stoneKey } from "../core/data";
-import { stoneChip, stoneLine, stoneTip } from "./stones";
+import { socketPips, stoneChip, stoneLine, stoneTip } from "./stones";
 import { hint } from "./hints";
 import { stoneFullName } from "../i18n/names";
 import { lang, t } from "../i18n";
@@ -37,6 +37,8 @@ export function forgeView(c: Ctx): HTMLElement {
             on: { click: () => { c.sel = { uid: it.uid }; c.rerender(); } } }, itemIcon(it));
         withTip(cell, c, () => itemCard(it, null));
         if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
+        const pips = socketPips(it);
+        if (pips) cell.append(pips);
         return cell;
     };
     const group = (label: string, list: Item[], worn = false) => {

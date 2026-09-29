@@ -591,6 +591,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .card.hollow { box-shadow: 0 0 0 2px #ff7a1a inset; }
 .card.hollow h3 .pxc, .card.hollow h3 svg { color: #ff7a1a; }
 .tag.lit { background: #ff7a1a; color: #1a1410; }
+/* socket pips (bottom-right of an item cell) */
+.cell .pips { position: absolute; right: 1px; bottom: 1px; display: flex; gap: 1px; pointer-events: none; }
+.cell .pips i { width: 6px; height: 6px; border: 1px solid #1a1410; background: #f3e7d3; box-shadow: inset 1px 1px 0 rgba(0,0,0,.35); }
+.cell .pips i.full { box-shadow: inset -1px -1px 0 rgba(0,0,0,.35), 0 0 2px rgba(255,255,255,.6); }
+/* stash search */
+input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
 /* first-time hints */
 .note.hint1 { border-left-color: var(--gold); margin-bottom: 8px; }
 .note.hint1 svg { color: var(--gold); }

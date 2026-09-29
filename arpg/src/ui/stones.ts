@@ -25,6 +25,20 @@ export function stoneTip(key: string): string {
     return [stoneFullName(key), t("pouch.inWeapon", { e: stoneLine(key, "weapon") }), t("pouch.inArmour", { e: stoneLine(key, "armour") }), t("pouch.inJewel", { e: stoneLine(key, "jewel") })].join("\n");
 }
 
+/** Sockets on an item still waiting for a stone. */
+export const emptySockets = (item: Item): number => Math.max(0, (item.sockets ?? 0) - (item.stones ?? []).filter(Boolean).length);
+
+/** Socket pips for an item cell's corner: filled ones in their stone's colour. */
+export function socketPips(item: Item): HTMLElement | null {
+    if (!item.sockets) return null;
+    const el = h("span", { class: "pips", attrs: { "aria-hidden": "true" } });
+    for (let i = 0; i < item.sockets; i++) {
+        const p = item.stones?.[i] ? parseStone(item.stones[i]!) : null;
+        el.append(h("i", p ? { class: "full", style: `background:${STONES[p.id]!.color}` } : {}));
+    }
+    return el;
+}
+
 /** An item card's sockets: each stone with what it does in this item, or an empty frame. */
 export function socketRows(item: Item): HTMLElement | null {
     if (!item.sockets) return null;
