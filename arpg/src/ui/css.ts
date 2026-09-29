@@ -75,19 +75,24 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .win.creating .top, .win.creating .hudw, .win.creating .nav, .win.creating .ctl.sz, .win.creating .ctl.mn { display: none; }
 .win.creating .main { grid-template-columns: 1fr; }
 
-/* mini mode: a strip that keeps playing */
+/* mini mode: the battle itself, a strip that keeps playing; tiny buttons over it, no title bar */
 .minibox { display: none; }
 .win.mini { grid-template-rows: auto auto; min-width: 0; min-height: 0; box-shadow: 6px 6px 0 var(--line); }
-.win.mini .top, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
-.win.mini .logo { font-size: 13px; letter-spacing: 1.5px; padding: 0 8px; }
+.win.mini .main, .win.mini .grip, .win.mini .toasts, .win.mini .logo, .win.mini .who, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
+.win.mini .bar { position: absolute; top: 4px; right: 4px; z-index: 4; height: auto; padding: 0; background: none; border: 0; cursor: default; }
+.win.mini .ctls { gap: 3px; opacity: .6; transition: opacity .12s; }
+.win.mini:hover .ctls, .win.mini .ctls:focus-within { opacity: 1; }
+.win.mini .ctl { width: 20px; height: 18px; box-shadow: 1px 1px 0 #1a1410; }
+.win.mini .top, .win.mini .top.nostage { display: block; }
+.win.mini .stage { min-height: 0; cursor: move; touch-action: none; }
 .win.mini .hudw { border-bottom: 0; }
-.win.mini .minibox { display: flex; flex-direction: column; gap: 5px; padding: 5px 7px 6px; background: var(--paper2); }
-.win.mini .minibox:has(.mlast:empty):has(.mnote[hidden]):has(.mprog[hidden]) { display: none; }
-.minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
-.minibox .mlast:empty { display: none; }
-.minibox .mlast.ping { color: var(--text); animation: ping 1.8s steps(1) both; }
-@keyframes ping { 0%, 22%, 44% { background: var(--gold); color: #1a1410; } 11%, 33%, 55%, 100% { background: transparent; } }
-.minibox .mlast.ping.t-err { color: var(--red); }
+.win.mini .minibox { display: flex; flex-direction: column; align-items: stretch; gap: 3px; position: absolute; left: 4px; right: 4px; bottom: 4px; z-index: 3; }
+.minibox .mlast { display: none; }
+.minibox .mlast.ping { display: block; align-self: flex-start; max-width: 100%; padding: 3px 6px; background: rgba(10, 8, 6, .85); color: #f3e7d3;
+  font: 700 11px/1.1 var(--display); font-stretch: condensed; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 4px solid var(--gold); animation: tin .22s cubic-bezier(.2,.8,.3,1); }
+.minibox .mlast.t-relic { border-left-color: var(--r-relic); } .minibox .mlast.t-rare { border-left-color: var(--r-rare); }
+.minibox .mlast.t-road { border-left-color: var(--teal); } .minibox .mlast.t-err { border-left-color: var(--ember); }
 /* dialogs wait hidden while the window is a strip; this row brings the window back for them */
 .win.mini > .modal { display: none; }
 .mnote { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 30px; padding: 0 4px; cursor: pointer; text-align: left; color: #1a1410;
@@ -95,8 +100,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .mnote:hover { filter: drop-shadow(2px 2px 0 var(--line)) brightness(1.08); }
 .mnote b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
 .mnote span { flex: none; font: 700 10px/1 var(--mono); text-transform: uppercase; }
-.mprog { display: grid; gap: 3px; }
-.mprog span { font: 700 10px/1.1 var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mprog { display: grid; gap: 3px; padding: 3px 5px 4px; background: rgba(10, 8, 6, .85); }
+.mprog span { font: 700 10px/1.1 var(--mono); color: #f3e7d3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mprog .progress { height: 9px; border-width: 2px; }
 
 /* one column when the window is narrow */
@@ -214,10 +219,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .chip b { font: 700 10px/1 var(--mono); margin-left: 5px; opacity: .75; }
 
 /* gear: equipped and stash on the left, the picked item stays in view on the right */
-.gear { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); gap: 14px; align-items: start; }
-.gear .side { position: sticky; top: 0; }
+.gear { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 14px; align-items: start; }
 .gear select { padding: 3px 6px; font-size: 12px; }
-@container win (max-width: 820px) { .gear { grid-template-columns: 1fr; } .gear .side { position: static; } }
+@container win (max-width: 760px) { .gear { grid-template-columns: 1fr; } }
+.gpop { position: absolute; z-index: 7; width: 300px; max-width: calc(100% - 12px); animation: tipin .12s ease-out; }
+.gpop .popx { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; z-index: 1; }
+.gpop .item .name { padding-right: 32px; }
+.popacts { margin-top: 8px; padding-top: 8px; border-top: 2px dashed color-mix(in srgb, var(--line) 50%, transparent); }
+.info { width: 22px; height: 22px; padding: 0; cursor: help; border: 2px solid currentColor; background: none; color: inherit; font: 700 12px/1 var(--mono); align-self: center; }
+.info:hover, .info:focus-visible { background: var(--gold); color: #1a1410; border-color: #1a1410; }
 .cell.upg::after { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 14px 14px 0; border-color: transparent var(--green) transparent transparent; }
 .cell.upg::before { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 17px 17px 0; border-color: transparent var(--line) transparent transparent; }
 .cell.req canvas { opacity: .4; }
@@ -424,6 +434,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .orb .count { position: absolute; right: -6px; bottom: -4px; min-width: 18px; padding: 0 3px; background: #1a1410; color: #ffc233; font-size: 10px; line-height: 14px; text-align: center; }
 .btn.small { min-height: 28px; padding: 0 4px; }
 .treecv { border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; box-sizing: border-box; }
+.treewrap { position: relative; }
+.treepop { position: absolute; z-index: 3; width: 260px; max-width: calc(100% - 16px); pointer-events: none; animation: tipin .12s ease-out; }
+.treepop.pinned { pointer-events: auto; }
+.treepop h3 { font-size: 12px; }
 .smith { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .dust { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #1a1410; color: #ffc233; }
 .dust b { font-size: 18px; } .dust span { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #b5a48b; }
@@ -439,10 +453,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
 .pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
 
+/* the game's own tooltips (tips.ts) */
+.htip { position: absolute; z-index: 20; max-width: 300px; padding: 3px 6px; pointer-events: none; white-space: pre-line;
+  color: #f3e7d3; font: 12px/1.45 var(--body); border: 6px solid transparent; border-image: var(--fr-plaque) 8 fill / 6px;
+  filter: drop-shadow(3px 3px 0 #000); animation: tipin .1s ease-out; }
+
 /* states: notes, warnings, locked things */
 .tag { color: var(--text); }
 .li.on .tag, .skill.on .tag, .zone.on .tag, .stop.here .tag { background: #1a1410; color: #ffc233; border-color: #1a1410; }
-.tag.done { background: var(--teal); color: #1a1410; } .tag.here { background: var(--gold); color: #1a1410; }
+.tag.done, .tag.teal { background: var(--teal); color: #1a1410; } .tag.here, .tag.gold { background: var(--gold); color: #1a1410; } .tag.ember { background: var(--ember); color: #1a1410; }
 .note { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a1410; color: #f3e7d3; font-size: 12px; border-left: 6px solid var(--teal); }
 .note svg { color: var(--teal); flex: none; }
 .warnbar { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 5px 8px; background: var(--ember); color: #1a1410; font-size: 12px; font-weight: 700; }

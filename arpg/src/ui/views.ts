@@ -209,18 +209,11 @@ function showTip(anchor: HTMLElement, content: HTMLElement): void {
     if (!body || !anchor.isConnected) return;
     tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content);
     body.append(tipEl);
-    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
-    const w = tipEl.offsetWidth, ht = tipEl.offsetHeight;
-    let x = ar.right - br.left + body.scrollLeft + 10;
-    if (x + w > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w - 10;
-    x = Math.max(body.scrollLeft + 4, x);
-    let y = ar.top - br.top + body.scrollTop - 6;
-    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
-    tipEl.style.left = x + "px"; tipEl.style.top = y + "px";
+    placeBeside(tipEl, anchor, body);
 }
-function withTip(cell: HTMLElement, c: Ctx, make: () => HTMLElement): void {
+export function withTip(cell: HTMLElement, c: Ctx, make: () => HTMLElement): void {
     let t: number | null = null;
-    const show = () => { c.hold = true; t = window.setTimeout(() => { if (!drag) showTip(cell, make()); }, 130); };
+    const show = () => { c.hold = true; t = window.setTimeout(() => { if (!drag && !cell.classList.contains("sel")) showTip(cell, make()); }, 130); };
     const hide = () => { if (t !== null) clearTimeout(t); hideTip(); if (!drag) c.hold = false; };
     cell.addEventListener("mouseenter", show);
     cell.addEventListener("mouseleave", hide);
@@ -446,15 +439,16 @@ function gearView(c: Ctx): HTMLElement {
             on: { click: () => c.act(s => { salvage(s, s.stash.filter(x => x.rarity === "enchanted").map(x => x.uid)); c.sel = {}; }) } }),
     );
 
-    // Detail: the picked item, what it would change, and what it would replace.
-    const detail = h("div", { class: "col side" });
+    // The picked item: its card pinned beside its slot, with what it would change and its actions.
     const selItem = c.sel.uid !== undefined ? st.stash.find(x => x.uid === c.sel.uid) : undefined;
     const selSlot = c.sel.slot;
+    let pop: HTMLElement | null = null;
+    const close = h("button", { class: "x popx", text: "x", title: "Put it back (Esc)", attrs: { "aria-label": "Close", "data-esc": "" }, on: { click: () => { c.sel = {}; c.rerender(); } } });
     if (selItem) {
         const targets = slotsFor(baseOf(selItem));
         const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? (targets.find(t => !eq[t]) ?? targets[0]!) : targets[0]!);
-        detail.append(itemCard(selItem, c, { compareSlot: cmp }));
-        const row = h("div", { class: "row" });
+        const card = itemCard(selItem, c, { compareSlot: cmp });
+        const row = h("div", { class: "row popacts" });
         targets.forEach((t, i) => {
             const err = canEquip(st, selItem, t);
             row.append(h("button", { class: "btn", text: targets.length > 1 ? `Equip ${t === "ring1" ? "left" : "right"}` : "Equip",
@@ -463,20 +457,45 @@ function gearView(c: Ctx): HTMLElement {
         });
         row.append(h("button", { class: "btn alt", text: `Salvage +${salvageValue(selItem)}`, title: "Salvage into ember dust (S)", attrs: { "data-key": "s" },
             on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
-        detail.append(row);
-        const worn = eq[cmp];
-        if (worn) detail.append(h("div", { class: "sec", style: "margin-top:6px", text: `Now in ${SLOT_LABEL[cmp].toLowerCase()} slot` }), itemCard(worn, null));
+        card.append(row);
+        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(selItem) } }, card, close);
     } else if (selSlot && eq[selSlot]) {
-        detail.append(itemCard(eq[selSlot]!, c));
-        detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
-    } else {
-        detail.append(h("div", { class: "card hint" }, h("h3", { text: "Pick an item" }),
-            h("div", { class: "muted", text: "Hover an item to compare it with what you wear. Drag it onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off." }),
-            h("div", { class: "muted", style: "margin-top:6px", text: "A green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it." })));
+        const card = itemCard(eq[selSlot]!, c);
+        card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: "Back to the stash", on: { click: () => c.act(s => unequip(s, selSlot)) } })));
+        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(eq[selSlot]!) } }, card, close);
     }
 
-    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools), detail);
+    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": "How gear works" },
+        title: "Hover an item to compare it with what you wear; click it to pin its card with Equip and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nA green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it, Esc puts it back." });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), slots);
+    root.append(equipped, h("div", { class: "col" }, stashCard, tools));
+    // A click on empty space puts the picked item back.
+    root.addEventListener("click", e => {
+        if ((c.sel.uid !== undefined || c.sel.slot) && !(e.target as HTMLElement).closest(".cell, .gpop, button, select, .anvil")) { c.sel = {}; c.rerender(); }
+    });
+    if (pop) {
+        const p = pop;
+        requestAnimationFrame(() => {
+            const body = root.closest(".body") as HTMLElement | null;
+            const anchor = root.querySelector<HTMLElement>(".cell.sel");
+            if (!body || !anchor) return;
+            body.append(p);
+            placeBeside(p, anchor, body);
+        });
+    }
     return root;
+}
+
+/** Puts `el` (absolute, inside the scrolling `body`) beside `anchor`: right if it fits, else left, kept on screen. */
+function placeBeside(el: HTMLElement, anchor: HTMLElement, body: HTMLElement): void {
+    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    const w = el.offsetWidth, ht = el.offsetHeight;
+    let x = ar.right - br.left + body.scrollLeft + 10;
+    if (x + w > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w - 10;
+    x = Math.max(body.scrollLeft + 4, x);
+    let y = ar.top - br.top + body.scrollTop - 6;
+    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
+    el.style.left = x + "px"; el.style.top = y + "px";
 }
 
 // ---- Skills ----------------------------------------------------------------

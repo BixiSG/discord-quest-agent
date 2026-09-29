@@ -25,6 +25,7 @@ import { pixelize } from "./gfx/pix";
 import { loadSprites } from "./gfx/sprites";
 import { Hud, HUD_H } from "./hud";
 import { Sound, type Sfx } from "./sfx";
+import { installTips } from "./tips";
 import { VIEWS, creationView, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { itemCard } from "./views";
 
@@ -37,6 +38,8 @@ const BACKUP_MS = 5 * 60e3;
 const AUTOSAVE_MS = 20e3;
 const REPORT_MIN_MS = 60e3;
 const MINI_W = 320;
+/** The strip's battle view: 1x pixels, just tall enough for the hero and a pack. */
+const MINI_STAGE_H = 84;
 /** XP rate window for the time-to-level estimate. */
 const XP_WINDOW_MS = 10 * 60e3;
 
@@ -186,8 +189,15 @@ export class GameWindow {
             h("span", { class: "ctls" }, this.soundBtn, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x")));
         bar.addEventListener("dblclick", e => { if (!(e.target as HTMLElement).closest("button")) this.setMax(!this.frame.max); });
 
-        this.stage = h("div", { class: "stage" }, this.battle.canvas);
+        // Dialogs never open inside the strip: they wait, hidden, and a row over the strip's battle brings the window back for them.
+        this.miniLast = h("div", { class: "mlast", attrs: { "aria-live": "polite" } });
+        this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
+        this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
+        this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
+        this.stage = h("div", { class: "stage" }, this.battle.canvas, this.miniBox);
         this.top = h("div", { class: "top" }, this.stage);
+        // In the strip the battle is the handle: drag it to move, double-click for the full window.
+        this.stage.addEventListener("dblclick", e => { if (this.frame.mini && !(e.target as HTMLElement).closest("button")) this.setMini(false); });
         this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
 
         this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
@@ -200,21 +210,17 @@ export class GameWindow {
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
         const main = h("div", { class: "main" }, this.nav, this.body);
 
-        // Dialogs never open inside the strip: they wait, hidden, and a row here brings the window back for them.
-        this.miniLast = h("div", { class: "mlast" });
-        this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
-        this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
-        this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
-
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
         const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-        this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar, this.top, this.hudWrap, main, this.miniBox, this.toasts, grip);
+        this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar, this.top, this.hudWrap, main, this.toasts, grip);
         shell.append(this.win);
         this.root.append(shell);
         document.body.append(host);
 
         this.placeWindow();
+        this.tips = installTips(this.win, this.win);
         this.dragger(bar, (dx, dy, g) => { g.x += dx; g.y += dy; });
+        this.dragger(this.stage, (dx, dy, g) => { g.x += dx; g.y += dy; }, () => this.frame.mini);
         this.dragger(grip, (dx, dy, g) => { g.w += dx; g.h += dy; });
 
         this.win.tabIndex = -1;
@@ -229,7 +235,10 @@ export class GameWindow {
                 const modals = this.win.querySelectorAll(".modal");
                 const top = modals[modals.length - 1] as HTMLElement | undefined;
                 // Closing never confirms anything: the window is just dismissed (the catch-up one stays).
-                if (top && !top.querySelector(".progress")) { top.remove(); e.preventDefault(); }
+                if (top) { if (!top.querySelector(".progress")) { top.remove(); e.preventDefault(); } return; }
+                // Otherwise a pinned card in the tab (it marks its close button data-esc).
+                const esc = this.body.querySelector<HTMLElement>("[data-esc]");
+                if (esc) { esc.click(); e.preventDefault(); }
                 return;
             }
             if (e.ctrlKey || e.altKey || e.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
@@ -265,8 +274,11 @@ export class GameWindow {
         const fit = () => {
             const vw = window.innerWidth, vh = window.innerHeight;
             const g = this.geo;
-            g.w = Math.max(380, Math.min(g.w, vw - 8)); g.h = Math.max(340, Math.min(g.h, vh - 8));
-            g.x = Math.max(0, Math.min(g.x, vw - (this.frame.mini ? MINI_W : g.w))); g.y = Math.max(0, Math.min(g.y, vh - (this.frame.mini ? 120 : g.h)));
+            // Discord's own title bar (minimize, maximize, close) stays uncovered.
+            const top = this.topReserve();
+            g.w = Math.max(380, Math.min(g.w, vw - 8)); g.h = Math.max(340, Math.min(g.h, vh - top - 8));
+            g.x = Math.max(0, Math.min(g.x, vw - (this.frame.mini ? MINI_W : g.w)));
+            g.y = Math.max(top, Math.min(g.y, vh - (this.frame.mini ? MINI_STAGE_H + HUD_H + 12 : g.h)));
             // The HUD is pixel art too: whole-number scale, its logical width follows the window.
             const hudAt = (cssW: number, scale: number) => {
                 this.hud.resize(cssW / scale);
@@ -276,9 +288,12 @@ export class GameWindow {
             if (this.frame.mini) {
                 Object.assign(this.win.style, { left: g.x + "px", top: g.y + "px", width: MINI_W + "px", height: "" });
                 hudAt(MINI_W - 6, 1);
+                this.stage.style.height = MINI_STAGE_H + "px";
+                this.battle.resize(MINI_W - 6, MINI_STAGE_H);
+                Object.assign(this.battle.canvas.style, { width: MINI_W - 6 + "px", height: MINI_STAGE_H + "px" });
                 return;
             }
-            const box = this.frame.max ? { x: 8, y: 8, w: vw - 16, h: vh - 16 } : g;
+            const box = this.frame.max ? { x: 8, y: top + 8, w: vw - 16, h: vh - top - 16 } : g;
             Object.assign(this.win.style, { left: box.x + "px", top: box.y + "px", width: box.w + "px", height: box.h + "px" });
             const inner = box.w - 6;
             hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
@@ -296,14 +311,33 @@ export class GameWindow {
     }
     private refit: () => void = () => {};
 
+    private reserve = { at: -1e9, px: 0 };
+    /**
+     * How far down Discord's title bar reaches (its window buttons live there), measured
+     * from whatever sits at the top-right corner: a full-width strip under 64px tall.
+     */
+    private topReserve(): number {
+        const now = performance.now();
+        if (now - this.reserve.at < 1500) return this.reserve.px;
+        let px = 0;
+        const hit = document.elementsFromPoint(window.innerWidth - 12, 3).find(el => el !== this.host && !this.host?.contains(el));
+        for (let e: Element | null = hit ?? null; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+            const b = e.getBoundingClientRect();
+            if (b.top <= 0 && b.height > 0 && b.height <= 64 && b.width >= window.innerWidth * 0.5) { px = Math.round(b.bottom); break; }
+        }
+        this.reserve = { at: now, px };
+        return px;
+    }
+
     private applyFrame(): void {
         const f = this.frame;
         this.win.classList.toggle("mini", f.mini);
         this.win.classList.toggle("max", f.max && !f.mini);
         this.top.classList.toggle("nostage", f.stage === "off");
-        this.stageBtn.title = STAGE_TITLE[f.stage];
+        // Tooltip text goes to data-tip (the game's own tooltips), never a native title.
+        this.stageBtn.dataset.tip = STAGE_TITLE[f.stage];
         this.stageBtn.setAttribute("aria-label", STAGE_TITLE[f.stage]);
-        const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.title = title; b.setAttribute("aria-label", title); };
+        const setGlyph = (b: HTMLButtonElement, g: GlyphName, title: string) => { b.replaceChildren(glyph(g, 12)); b.removeAttribute("title"); b.dataset.tip = title; b.setAttribute("aria-label", title); };
         setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
         setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
         setGlyph(this.soundBtn, f.sfx ? "sound" : "mute", f.sfx ? "Sound on (click or M to mute)" : "Sound off (click or M to unmute)");
@@ -324,9 +358,9 @@ export class GameWindow {
     /** A short pulse on the frame, so a click on the launcher visibly finds the window. */
     private flash(): void { this.win.classList.remove("flash"); void this.win.offsetWidth; this.win.classList.add("flash"); }
 
-    private dragger(handle: HTMLElement, apply: (dx: number, dy: number, g: { x: number; y: number; w: number; h: number }) => void): void {
+    private dragger(handle: HTMLElement, apply: (dx: number, dy: number, g: { x: number; y: number; w: number; h: number }) => void, when: () => boolean = () => true): void {
         handle.addEventListener("pointerdown", e => {
-            if ((e.target as HTMLElement).closest("button") || e.button !== 0) return;
+            if ((e.target as HTMLElement).closest("button") || e.button !== 0 || !when()) return;
             // Dragging a maximized window puts it back to its own size first.
             if (this.frame.max && handle !== this.win.querySelector(".grip")) { this.frame.max = false; this.saveFrame(); this.applyFrame(); }
             if (this.frame.max) return;
@@ -461,7 +495,7 @@ export class GameWindow {
         const frame = () => {
             this.raf = requestAnimationFrame(frame);
             if (!this.state || document.hidden) return;
-            if (!this.frame.mini && this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
+            if (this.frame.mini || this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
             this.drawHud();
             if (!this.frame.mini) this.renderTab(false);
         };
@@ -517,6 +551,7 @@ export class GameWindow {
         };
     }
 
+    private tips: { busy(): boolean } = { busy: () => false };
     private lastSigCheck = 0;
     private supportHint = { rev: -1, level: -1, gain: false };
     private renderTab(force: boolean): void {
@@ -524,7 +559,7 @@ export class GameWindow {
         // Signatures are cheap but not free (some stringify state): check four times a second.
         if (!force) {
             const t = performance.now();
-            if (t - this.lastSigCheck < 250 || this.ctx.hold) return; // not under a drag or a tooltip
+            if (t - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return; // not under a drag or a tooltip
             this.lastSigCheck = t;
         }
         this.updateBadges();
@@ -581,7 +616,7 @@ export class GameWindow {
             const badge = b.querySelector(".badge") as HTMLElement;
             const m = marks[id];
             const text = m?.[0] ?? "";
-            if (badge.textContent !== text) { badge.textContent = text; badge.toggleAttribute("hidden", !m); badge.title = m?.[1] ?? ""; }
+            if (badge.textContent !== text) { badge.textContent = text; badge.toggleAttribute("hidden", !m); badge.dataset.tip = m?.[1] ?? ""; }
         }
     }
 
@@ -628,7 +663,7 @@ export class GameWindow {
             const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. `
                 + `Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
             this.hudWrap.setAttribute("aria-label", label);
-            this.hudWrap.title = label;
+            this.hudWrap.dataset.tip = label;
             if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
         }
     }
@@ -644,6 +679,7 @@ export class GameWindow {
         return `~${fmtDuration(left / rate)} to level`;
     }
 
+    private pingTimer = 0;
     toast(msg: string, kind = ""): void {
         // The strip is too small for toasts: the news goes to its event line, which flashes.
         if (this.frame.mini) {
@@ -652,6 +688,8 @@ export class GameWindow {
             this.miniLast.className = "mlast";
             void this.miniLast.offsetWidth;
             this.miniLast.className = `mlast ping${kind ? " t-" + kind : ""}`;
+            clearTimeout(this.pingTimer);
+            this.pingTimer = window.setTimeout(() => this.miniLast.classList.remove("ping"), 3200);
             return;
         }
         const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
@@ -701,7 +739,7 @@ export class GameWindow {
         this.miniNote.hidden = !top;
         if (!top) return;
         const title = top.getAttribute("aria-label") || "A message";
-        this.miniNote.title = `${title}: open the full window to read it`;
+        this.miniNote.dataset.tip = `${title}: open the full window to read it`;
         this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
     }
 
@@ -744,8 +782,8 @@ export class GameWindow {
         for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
         const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
         for (const t of r.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
-        if (r.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r.zones.join(", ")}` }));
-        if (r.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
+        if (r.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r.zones.join(", ")}` }));
+        if (r.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r.equipped.slice(-4).join(", ")}` }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;
             card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));

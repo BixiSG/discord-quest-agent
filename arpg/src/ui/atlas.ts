@@ -60,7 +60,7 @@ export function atlasView(c: Ctx): HTMLElement {
             h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
             h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
             autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
-            st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
+            st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
         tierChips(st.atlas.tiers),
         h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));
 

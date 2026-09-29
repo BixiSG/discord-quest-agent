@@ -10,6 +10,7 @@ import { frameVars } from "./gfx/frames";
 import { pixelize } from "./gfx/pix";
 import { portrait, scenery } from "./gfx/portrait";
 import { loadSprites } from "./gfx/sprites";
+import { installTips } from "./tips";
 import type { Summary } from "./app";
 
 export interface CardApi {
@@ -29,7 +30,7 @@ export interface CardActions {
 
 const CARD_CSS = `
 :host { display: block; }
-.hc { margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
+.hc { position: relative; margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
 .hc .bar { height: 30px; cursor: default; padding-right: 8px; }
 .hc .logo { font-size: 14px; }
 .hc .state { margin-left: auto; font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
@@ -106,5 +107,6 @@ export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null
     root.append(wrap);
     el.append(holder);
     pixelize(card);
+    installTips(card, card);
     return { unmount() { holder.remove(); } };
 }

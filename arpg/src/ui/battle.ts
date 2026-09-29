@@ -57,7 +57,7 @@ export class Battle {
 
     /** Logical size in scene pixels. */
     resize(w: number, h: number): void {
-        w = Math.max(200, Math.round(w)); h = Math.max(90, Math.round(h));
+        w = Math.max(200, Math.round(w)); h = Math.max(72, Math.round(h));
         if (w === this.W && h === this.H) return;
         this.W = w; this.H = h;
         this.canvas.width = w; this.canvas.height = h;

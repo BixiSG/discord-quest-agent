@@ -10,7 +10,7 @@ import { fmt, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { glyph } from "./glyphs";
-import { itemCard, type Ctx } from "./views";
+import { itemCard, withTip, type Ctx } from "./views";
 
 const SLOT_NAMES: Record<string, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring 2" };
 
@@ -20,8 +20,9 @@ export function forgeView(c: Ctx): HTMLElement {
     const rack = h("div", { class: "stash" });
     for (const it of items) {
         const worn = SLOTS.some(s => st.hero.equipment[s]?.uid === it.uid);
-        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" }, title: itemLabel(it) + (worn ? " (worn)" : ""),
+        const cell = h("div", { class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`, attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" },
             on: { click: () => { c.sel = { uid: it.uid }; c.rerender(); } } }, itemIcon(it));
+        withTip(cell, c, () => itemCard(it, null));
         if (worn) cell.append(h("span", { class: "worn", text: "worn" }));
         rack.append(cell);
     }

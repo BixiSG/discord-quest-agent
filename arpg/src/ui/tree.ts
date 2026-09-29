@@ -6,6 +6,7 @@ import { allocate, ascPointsLeft, canAllocate, canRefund, chooseAscendancy, poin
 import { h } from "./dom";
 import { modText } from "./text";
 import { textSprite } from "./gfx/pixfont";
+import { pixelize } from "./gfx/pix";
 import type { Ctx } from "./views";
 
 // Pan and zoom survive re-renders of the view.
@@ -22,12 +23,14 @@ const COLORS = { line: "#111111", taken: "#ffc233", open: "#ffffff", locked: "#9
 export function treeView(c: Ctx): HTMLElement {
     const hero = c.state.hero;
     const canvas = h("canvas", { class: "treecv", style: "width:100%;height:460px;display:block;cursor:grab;touch-action:none" });
-    const info = h("div", { class: "card", style: "min-height:92px" });
+    // Node details float next to the node (hovered, or pinned by a click) instead of under the map.
+    const info = h("div", { class: "card treepop", attrs: { hidden: "", role: "status" } });
+    const wrap = h("div", { class: "treewrap" }, canvas, info);
     const pts = pointsLeft(hero);
     const head = h("div", { class: "row" },
-        h("span", { class: "tag", style: pts > 0 ? "background:var(--gold)" : "", text: `${pts} point${pts === 1 ? "" : "s"} left` }),
+        h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: `${pts} point${pts === 1 ? "" : "s"} left` }),
         h("span", { class: "tag", text: `${hero.passives.length} taken` }),
-        h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Lit nodes can be taken." }),
+        h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
         h("span", { class: "grow" }),
         h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
         h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
@@ -111,7 +114,10 @@ export function treeView(c: Ctx): HTMLElement {
 
     function showInfo(n: PassiveNode | null): void {
         info.replaceChildren();
-        if (!n) { info.append(h("div", { class: "muted", text: "Hover a node to read it." })); return; }
+        info.hidden = !n;
+        if (!n) return;
+        const pinned = n === selected;
+        info.classList.toggle("pinned", pinned);
         const own = taken.has(n.id);
         info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
         for (const m of n.mods) info.append(h("div", { text: modText(m) }));
@@ -127,7 +133,23 @@ export function treeView(c: Ctx): HTMLElement {
             row.append(h("button", { class: "btn", text: "Take", attrs: err ? { disabled: "" } : {}, title: err ?? "", on: { click: () => c.act(s => allocate(s, n.id)) } }));
             if (err) row.append(h("span", { class: "muted", text: err }));
         }
-        info.append(row);
+        if (pinned) info.append(row);
+        else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
+        else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: "Click to pin it (refund)." }));
+        pixelize(info);
+        place(n);
+    }
+
+    /** Beside the node, on whichever side has room, inside the map. */
+    function place(n: PassiveNode): void {
+        const w = canvas.clientWidth, hh = canvas.clientHeight;
+        const [x, y] = toScreen(n, w, hh);
+        const r = radius(n) + 14, bw = info.offsetWidth, bh = info.offsetHeight, pad = canvas.clientLeft + 6;
+        let left = x + r + pad;
+        if (left + bw > w - 4) left = x - r - bw + pad;
+        left = Math.max(pad, Math.min(left, w - bw));
+        const top = Math.max(pad, Math.min(y - bh / 2 + pad, hh - bh));
+        info.style.left = Math.round(left) + "px"; info.style.top = Math.round(top) + "px";
     }
 
     const pick = (ev: PointerEvent | MouseEvent): PassiveNode | null => {
@@ -152,6 +174,8 @@ export function treeView(c: Ctx): HTMLElement {
             cam.x += dx / cam.z; cam.y += dy / cam.z;
             drag.x = e.clientX; drag.y = e.clientY;
             draw();
+            const shown = hover ?? selected;
+            if (shown && !info.hidden) place(shown);
             return;
         }
         const n = pick(e);
@@ -166,14 +190,28 @@ export function treeView(c: Ctx): HTMLElement {
         if (n && isOpen(n) && !canAllocate(hero, n.id)) { c.act(s => allocate(s, n.id)); return; }
         showInfo(n); draw();
     });
+    canvas.addEventListener("pointerleave", () => { if (!drag && hover) { hover = null; showInfo(selected); draw(); } });
     canvas.addEventListener("wheel", e => { e.preventDefault(); zoom(e.deltaY < 0 ? 1.12 : 0.89); }, { passive: false });
-    function zoom(f: number): void { cam.z = Math.max(0.25, Math.min(1.6, cam.z * f)); draw(); }
+    function zoom(f: number): void { cam.z = Math.max(0.25, Math.min(1.6, cam.z * f)); draw(); const n = hover ?? selected; if (n && !info.hidden) place(n); }
 
     showInfo(null);
     const asc = ascCard(c);
-    // Draw once the canvas is in the document and has a size.
-    requestAnimationFrame(draw);
-    return h("div", { class: "col" }, head, canvas, info, asc);
+    // The map takes the height the tab has (at least 320px); drawn once it is in the document.
+    const fitHeight = () => {
+        const body = canvas.closest(".body") as HTMLElement | null;
+        if (!body) return;
+        const want = Math.max(320, Math.round(body.clientHeight - head.offsetHeight - 44));
+        if (Math.abs(canvas.clientHeight - want) > 2) canvas.style.height = want + "px";
+        draw();
+    };
+    requestAnimationFrame(() => {
+        fitHeight();
+        const body = canvas.closest(".body");
+        if (!body) return;
+        const ro = new ResizeObserver(() => { if (!canvas.isConnected) { ro.disconnect(); return; } fitHeight(); });
+        ro.observe(body);
+    });
+    return h("div", { class: "col" }, head, wrap, asc);
 }
 
 function ascCard(c: Ctx): HTMLElement {

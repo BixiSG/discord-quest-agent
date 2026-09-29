@@ -4437,7 +4437,7 @@
     /** Logical size in scene pixels. */
     resize(w2, h2) {
       w2 = Math.max(200, Math.round(w2));
-      h2 = Math.max(90, Math.round(h2));
+      h2 = Math.max(72, Math.round(h2));
       if (w2 === this.W && h2 === this.H) return;
       this.W = w2;
       this.H = h2;
@@ -5017,19 +5017,24 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .win.creating .top, .win.creating .hudw, .win.creating .nav, .win.creating .ctl.sz, .win.creating .ctl.mn { display: none; }
 .win.creating .main { grid-template-columns: 1fr; }
 
-/* mini mode: a strip that keeps playing */
+/* mini mode: the battle itself, a strip that keeps playing; tiny buttons over it, no title bar */
 .minibox { display: none; }
 .win.mini { grid-template-rows: auto auto; min-width: 0; min-height: 0; box-shadow: 6px 6px 0 var(--line); }
-.win.mini .top, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
-.win.mini .logo { font-size: 13px; letter-spacing: 1.5px; padding: 0 8px; }
+.win.mini .main, .win.mini .grip, .win.mini .toasts, .win.mini .logo, .win.mini .who, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
+.win.mini .bar { position: absolute; top: 4px; right: 4px; z-index: 4; height: auto; padding: 0; background: none; border: 0; cursor: default; }
+.win.mini .ctls { gap: 3px; opacity: .6; transition: opacity .12s; }
+.win.mini:hover .ctls, .win.mini .ctls:focus-within { opacity: 1; }
+.win.mini .ctl { width: 20px; height: 18px; box-shadow: 1px 1px 0 #1a1410; }
+.win.mini .top, .win.mini .top.nostage { display: block; }
+.win.mini .stage { min-height: 0; cursor: move; touch-action: none; }
 .win.mini .hudw { border-bottom: 0; }
-.win.mini .minibox { display: flex; flex-direction: column; gap: 5px; padding: 5px 7px 6px; background: var(--paper2); }
-.win.mini .minibox:has(.mlast:empty):has(.mnote[hidden]):has(.mprog[hidden]) { display: none; }
-.minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
-.minibox .mlast:empty { display: none; }
-.minibox .mlast.ping { color: var(--text); animation: ping 1.8s steps(1) both; }
-@keyframes ping { 0%, 22%, 44% { background: var(--gold); color: #1a1410; } 11%, 33%, 55%, 100% { background: transparent; } }
-.minibox .mlast.ping.t-err { color: var(--red); }
+.win.mini .minibox { display: flex; flex-direction: column; align-items: stretch; gap: 3px; position: absolute; left: 4px; right: 4px; bottom: 4px; z-index: 3; }
+.minibox .mlast { display: none; }
+.minibox .mlast.ping { display: block; align-self: flex-start; max-width: 100%; padding: 3px 6px; background: rgba(10, 8, 6, .85); color: #f3e7d3;
+  font: 700 11px/1.1 var(--display); font-stretch: condensed; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 4px solid var(--gold); animation: tin .22s cubic-bezier(.2,.8,.3,1); }
+.minibox .mlast.t-relic { border-left-color: var(--r-relic); } .minibox .mlast.t-rare { border-left-color: var(--r-rare); }
+.minibox .mlast.t-road { border-left-color: var(--teal); } .minibox .mlast.t-err { border-left-color: var(--ember); }
 /* dialogs wait hidden while the window is a strip; this row brings the window back for them */
 .win.mini > .modal { display: none; }
 .mnote { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 30px; padding: 0 4px; cursor: pointer; text-align: left; color: #1a1410;
@@ -5037,8 +5042,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .mnote:hover { filter: drop-shadow(2px 2px 0 var(--line)) brightness(1.08); }
 .mnote b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 12px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
 .mnote span { flex: none; font: 700 10px/1 var(--mono); text-transform: uppercase; }
-.mprog { display: grid; gap: 3px; }
-.mprog span { font: 700 10px/1.1 var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mprog { display: grid; gap: 3px; padding: 3px 5px 4px; background: rgba(10, 8, 6, .85); }
+.mprog span { font: 700 10px/1.1 var(--mono); color: #f3e7d3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mprog .progress { height: 9px; border-width: 2px; }
 
 /* one column when the window is narrow */
@@ -5156,10 +5161,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .chip b { font: 700 10px/1 var(--mono); margin-left: 5px; opacity: .75; }
 
 /* gear: equipped and stash on the left, the picked item stays in view on the right */
-.gear { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); gap: 14px; align-items: start; }
-.gear .side { position: sticky; top: 0; }
+.gear { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 14px; align-items: start; }
 .gear select { padding: 3px 6px; font-size: 12px; }
-@container win (max-width: 820px) { .gear { grid-template-columns: 1fr; } .gear .side { position: static; } }
+@container win (max-width: 760px) { .gear { grid-template-columns: 1fr; } }
+.gpop { position: absolute; z-index: 7; width: 300px; max-width: calc(100% - 12px); animation: tipin .12s ease-out; }
+.gpop .popx { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; z-index: 1; }
+.gpop .item .name { padding-right: 32px; }
+.popacts { margin-top: 8px; padding-top: 8px; border-top: 2px dashed color-mix(in srgb, var(--line) 50%, transparent); }
+.info { width: 22px; height: 22px; padding: 0; cursor: help; border: 2px solid currentColor; background: none; color: inherit; font: 700 12px/1 var(--mono); align-self: center; }
+.info:hover, .info:focus-visible { background: var(--gold); color: #1a1410; border-color: #1a1410; }
 .cell.upg::after { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 14px 14px 0; border-color: transparent var(--green) transparent transparent; }
 .cell.upg::before { content: ""; position: absolute; right: -3px; top: -3px; border-style: solid; border-width: 0 17px 17px 0; border-color: transparent var(--line) transparent transparent; }
 .cell.req canvas { opacity: .4; }
@@ -5366,6 +5376,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .orb .count { position: absolute; right: -6px; bottom: -4px; min-width: 18px; padding: 0 3px; background: #1a1410; color: #ffc233; font-size: 10px; line-height: 14px; text-align: center; }
 .btn.small { min-height: 28px; padding: 0 4px; }
 .treecv { border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; box-sizing: border-box; }
+.treewrap { position: relative; }
+.treepop { position: absolute; z-index: 3; width: 260px; max-width: calc(100% - 16px); pointer-events: none; animation: tipin .12s ease-out; }
+.treepop.pinned { pointer-events: auto; }
+.treepop h3 { font-size: 12px; }
 .smith { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .dust { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #1a1410; color: #ffc233; }
 .dust b { font-size: 18px; } .dust span { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #b5a48b; }
@@ -5381,10 +5395,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
 .pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
 
+/* the game's own tooltips (tips.ts) */
+.htip { position: absolute; z-index: 20; max-width: 300px; padding: 3px 6px; pointer-events: none; white-space: pre-line;
+  color: #f3e7d3; font: 12px/1.45 var(--body); border: 6px solid transparent; border-image: var(--fr-plaque) 8 fill / 6px;
+  filter: drop-shadow(3px 3px 0 #000); animation: tipin .1s ease-out; }
+
 /* states: notes, warnings, locked things */
 .tag { color: var(--text); }
 .li.on .tag, .skill.on .tag, .zone.on .tag, .stop.here .tag { background: #1a1410; color: #ffc233; border-color: #1a1410; }
-.tag.done { background: var(--teal); color: #1a1410; } .tag.here { background: var(--gold); color: #1a1410; }
+.tag.done, .tag.teal { background: var(--teal); color: #1a1410; } .tag.here, .tag.gold { background: var(--gold); color: #1a1410; } .tag.ember { background: var(--ember); color: #1a1410; }
 .note { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a1410; color: #f3e7d3; font-size: 12px; border-left: 6px solid var(--teal); }
 .note svg { color: var(--teal); flex: none; }
 .warnbar { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 5px 8px; background: var(--ember); color: #1a1410; font-size: 12px; font-weight: 700; }
@@ -6137,6 +6156,70 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
   };
 
+  // src/ui/tips.ts
+  function installTips(scope, layer) {
+    let tip = null;
+    let owner = null;
+    let timer = 0;
+    const hide = () => {
+      clearTimeout(timer);
+      tip?.remove();
+      tip = null;
+      owner = null;
+    };
+    const find = (t) => t instanceof Element ? t.closest("[title], [data-tip]") : null;
+    const adopt = (el) => {
+      const t = el.getAttribute("title");
+      if (t !== null) {
+        el.removeAttribute("title");
+        if (t) {
+          el.dataset.tip = t;
+          if (!el.hasAttribute("aria-label")) el.setAttribute("aria-description", t);
+        }
+      }
+      return el.dataset.tip ?? "";
+    };
+    const show = (el, delay) => {
+      const text = adopt(el);
+      if (owner === el) return;
+      hide();
+      if (!text) return;
+      owner = el;
+      timer = window.setTimeout(() => {
+        if (owner !== el || !el.isConnected) return;
+        tip = document.createElement("div");
+        tip.className = "htip";
+        tip.setAttribute("role", "tooltip");
+        tip.textContent = el.dataset.tip ?? text;
+        layer.append(tip);
+        const lr = layer.getBoundingClientRect(), er = el.getBoundingClientRect();
+        const w2 = tip.offsetWidth, h2 = tip.offsetHeight;
+        const x = Math.max(4, Math.min(er.left - lr.left + er.width / 2 - w2 / 2, lr.width - w2 - 4));
+        let y = er.bottom - lr.top + 6;
+        if (y + h2 > lr.height - 4) y = er.top - lr.top - h2 - 6;
+        tip.style.left = Math.round(x) + "px";
+        tip.style.top = Math.round(Math.max(4, y)) + "px";
+      }, delay);
+    };
+    scope.addEventListener("pointerover", (e) => {
+      const el = find(e.target);
+      if (el && scope.contains(el)) show(el, 380);
+      else hide();
+    });
+    scope.addEventListener("pointerout", (e) => {
+      if (owner && !owner.contains(e.relatedTarget)) hide();
+    });
+    scope.addEventListener("pointerdown", hide);
+    scope.addEventListener("wheel", hide, { passive: true });
+    scope.addEventListener("focusin", (e) => {
+      const t = e.target;
+      const el = find(t);
+      if (el && t.matches(":focus-visible")) show(el, 200);
+    });
+    scope.addEventListener("focusout", hide);
+    return { busy: () => !!owner && owner.isConnected };
+  }
+
   // src/ui/gfx/itemart.ts
   function iconName(item) {
     const b = baseOf(item);
@@ -6427,12 +6510,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const cell = h("div", {
         class: `cell ${it.rarity}${c.sel.uid === it.uid ? " sel" : ""}`,
         attrs: { "aria-label": itemLabel(it) + (worn ? " (worn)" : ""), role: "button", tabindex: "0" },
-        title: itemLabel(it) + (worn ? " (worn)" : ""),
         on: { click: () => {
           c.sel = { uid: it.uid };
           c.rerender();
         } }
       }, itemIcon(it));
+      withTip(cell, c, () => itemCard(it, null));
       if (worn) cell.append(h("span", { class: "worn", text: "worn" }));
       rack.append(cell);
     }
@@ -6530,14 +6613,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   function treeView(c) {
     const hero = c.state.hero;
     const canvas = h("canvas", { class: "treecv", style: "width:100%;height:460px;display:block;cursor:grab;touch-action:none" });
-    const info = h("div", { class: "card", style: "min-height:92px" });
+    const info = h("div", { class: "card treepop", attrs: { hidden: "", role: "status" } });
+    const wrap2 = h("div", { class: "treewrap" }, canvas, info);
     const pts = pointsLeft(hero);
     const head = h(
       "div",
       { class: "row" },
-      h("span", { class: "tag", style: pts > 0 ? "background:var(--gold)" : "", text: `${pts} point${pts === 1 ? "" : "s"} left` }),
+      h("span", { class: `tag${pts > 0 ? " gold" : ""}`, text: `${pts} point${pts === 1 ? "" : "s"} left` }),
       h("span", { class: "tag", text: `${hero.passives.length} taken` }),
-      h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Lit nodes can be taken." }),
+      h("span", { class: "muted", style: "font-size:11px", text: "Drag to pan, wheel to zoom. Click a lit node to take it, any node to pin its card." }),
       h("span", { class: "grow" }),
       h("button", { class: "btn alt", text: "-", on: { click: () => zoom(0.8) } }),
       h("button", { class: "btn alt", text: "+", on: { click: () => zoom(1.25) } }),
@@ -6651,10 +6735,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
     function showInfo(n) {
       info.replaceChildren();
-      if (!n) {
-        info.append(h("div", { class: "muted", text: "Hover a node to read it." }));
-        return;
-      }
+      info.hidden = !n;
+      if (!n) return;
+      const pinned = n === selected;
+      info.classList.toggle("pinned", pinned);
       const own = taken.has(n.id);
       info.append(h("h3", { text: `${n.name}${n.kind === "notable" ? " (notable)" : n.kind === "keystone" ? " (keystone)" : ""}` }));
       for (const m4 of n.mods) info.append(h("div", { text: modText(m4) }));
@@ -6675,7 +6759,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         row.append(h("button", { class: "btn", text: "Take", attrs: err ? { disabled: "" } : {}, title: err ?? "", on: { click: () => c.act((s) => allocate(s, n.id)) } }));
         if (err) row.append(h("span", { class: "muted", text: err }));
       }
-      info.append(row);
+      if (pinned) info.append(row);
+      else if (!own && n.kind !== "start") info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: canAllocate(hero, n.id) ?? "Click to take it." }));
+      else if (own) info.append(h("div", { class: "muted", style: "margin-top:4px;font-size:11px", text: "Click to pin it (refund)." }));
+      pixelize(info);
+      place(n);
+    }
+    function place(n) {
+      const w2 = canvas.clientWidth, hh = canvas.clientHeight;
+      const [x, y] = toScreen(n, w2, hh);
+      const r3 = radius(n) + 14, bw = info.offsetWidth, bh = info.offsetHeight, pad = canvas.clientLeft + 6;
+      let left = x + r3 + pad;
+      if (left + bw > w2 - 4) left = x - r3 - bw + pad;
+      left = Math.max(pad, Math.min(left, w2 - bw));
+      const top = Math.max(pad, Math.min(y - bh / 2 + pad, hh - bh));
+      info.style.left = Math.round(left) + "px";
+      info.style.top = Math.round(top) + "px";
     }
     const pick = (ev) => {
       const rect = canvas.getBoundingClientRect();
@@ -6706,6 +6805,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         drag2.x = e.clientX;
         drag2.y = e.clientY;
         draw2();
+        const shown = hover ?? selected;
+        if (shown && !info.hidden) place(shown);
         return;
       }
       const n = pick(e);
@@ -6730,6 +6831,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       showInfo(n);
       draw2();
     });
+    canvas.addEventListener("pointerleave", () => {
+      if (!drag2 && hover) {
+        hover = null;
+        showInfo(selected);
+        draw2();
+      }
+    });
     canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
       zoom(e.deltaY < 0 ? 1.12 : 0.89);
@@ -6737,11 +6845,32 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     function zoom(f) {
       cam.z = Math.max(0.25, Math.min(1.6, cam.z * f));
       draw2();
+      const n = hover ?? selected;
+      if (n && !info.hidden) place(n);
     }
     showInfo(null);
     const asc = ascCard(c);
-    requestAnimationFrame(draw2);
-    return h("div", { class: "col" }, head, canvas, info, asc);
+    const fitHeight = () => {
+      const body = canvas.closest(".body");
+      if (!body) return;
+      const want = Math.max(320, Math.round(body.clientHeight - head.offsetHeight - 44));
+      if (Math.abs(canvas.clientHeight - want) > 2) canvas.style.height = want + "px";
+      draw2();
+    };
+    requestAnimationFrame(() => {
+      fitHeight();
+      const body = canvas.closest(".body");
+      if (!body) return;
+      const ro = new ResizeObserver(() => {
+        if (!canvas.isConnected) {
+          ro.disconnect();
+          return;
+        }
+        fitHeight();
+      });
+      ro.observe(body);
+    });
+    return h("div", { class: "col" }, head, wrap2, asc);
   }
   function ascCard(c) {
     const hero = c.state.hero;
@@ -6857,7 +6986,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
         h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
         autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
-        st.activity.autoCap ? h("span", { class: "tag", style: "background:var(--ember)", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
+        st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null
       ),
       tierChips(st.atlas.tiers),
       h("div", { class: "muted", style: "font-size:11px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
@@ -7184,22 +7313,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     if (!body || !anchor.isConnected) return;
     tipEl = h("div", { class: "tip", attrs: { role: "tooltip" } }, content);
     body.append(tipEl);
-    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
-    const w2 = tipEl.offsetWidth, ht = tipEl.offsetHeight;
-    let x = ar.right - br.left + body.scrollLeft + 10;
-    if (x + w2 > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w2 - 10;
-    x = Math.max(body.scrollLeft + 4, x);
-    let y = ar.top - br.top + body.scrollTop - 6;
-    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
-    tipEl.style.left = x + "px";
-    tipEl.style.top = y + "px";
+    placeBeside(tipEl, anchor, body);
   }
   function withTip(cell, c, make) {
     let t = null;
     const show = () => {
       c.hold = true;
       t = window.setTimeout(() => {
-        if (!drag) showTip(cell, make());
+        if (!drag && !cell.classList.contains("sel")) showTip(cell, make());
       }, 130);
     };
     const hide = () => {
@@ -7514,14 +7635,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         }) }
       })
     );
-    const detail = h("div", { class: "col side" });
     const selItem = c.sel.uid !== void 0 ? st.stash.find((x) => x.uid === c.sel.uid) : void 0;
     const selSlot = c.sel.slot;
+    let pop = null;
+    const close = h("button", { class: "x popx", text: "x", title: "Put it back (Esc)", attrs: { "aria-label": "Close", "data-esc": "" }, on: { click: () => {
+      c.sel = {};
+      c.rerender();
+    } } });
     if (selItem) {
       const targets = slotsFor(baseOf(selItem));
       const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? targets.find((t) => !eq[t]) ?? targets[0] : targets[0]);
-      detail.append(itemCard(selItem, c, { compareSlot: cmp }));
-      const row = h("div", { class: "row" });
+      const card = itemCard(selItem, c, { compareSlot: cmp });
+      const row = h("div", { class: "row popacts" });
       targets.forEach((t, i) => {
         const err = canEquip(st, selItem, t);
         row.append(h("button", {
@@ -7546,23 +7671,49 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           c.sel = {};
         }) }
       }));
-      detail.append(row);
-      const worn = eq[cmp];
-      if (worn) detail.append(h("div", { class: "sec", style: "margin-top:6px", text: `Now in ${SLOT_LABEL[cmp].toLowerCase()} slot` }), itemCard(worn, null));
+      card.append(row);
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(selItem) } }, card, close);
     } else if (selSlot && eq[selSlot]) {
-      detail.append(itemCard(eq[selSlot], c));
-      detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act((s) => unequip(s, selSlot)) } })));
-    } else {
-      detail.append(h(
-        "div",
-        { class: "card hint" },
-        h("h3", { text: "Pick an item" }),
-        h("div", { class: "muted", text: "Hover an item to compare it with what you wear. Drag it onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off." }),
-        h("div", { class: "muted", style: "margin-top:6px", text: "A green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it." })
-      ));
+      const card = itemCard(eq[selSlot], c);
+      card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: "Back to the stash", on: { click: () => c.act((s) => unequip(s, selSlot)) } })));
+      pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(eq[selSlot]) } }, card, close);
     }
-    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools), detail);
+    const help = h("button", {
+      class: "info",
+      text: "i",
+      attrs: { "aria-label": "How gear works" },
+      title: "Hover an item to compare it with what you wear; click it to pin its card with Equip and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nA green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it, Esc puts it back."
+    });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), slots);
+    root.append(equipped, h("div", { class: "col" }, stashCard, tools));
+    root.addEventListener("click", (e) => {
+      if ((c.sel.uid !== void 0 || c.sel.slot) && !e.target.closest(".cell, .gpop, button, select, .anvil")) {
+        c.sel = {};
+        c.rerender();
+      }
+    });
+    if (pop) {
+      const p = pop;
+      requestAnimationFrame(() => {
+        const body = root.closest(".body");
+        const anchor = root.querySelector(".cell.sel");
+        if (!body || !anchor) return;
+        body.append(p);
+        placeBeside(p, anchor, body);
+      });
+    }
     return root;
+  }
+  function placeBeside(el, anchor, body) {
+    const br = body.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    const w2 = el.offsetWidth, ht = el.offsetHeight;
+    let x = ar.right - br.left + body.scrollLeft + 10;
+    if (x + w2 > body.scrollLeft + body.clientWidth - 6) x = ar.left - br.left + body.scrollLeft - w2 - 10;
+    x = Math.max(body.scrollLeft + 4, x);
+    let y = ar.top - br.top + body.scrollTop - 6;
+    y = Math.max(body.scrollTop + 4, Math.min(y, body.scrollTop + body.clientHeight - ht - 6));
+    el.style.left = x + "px";
+    el.style.top = y + "px";
   }
   var pctDelta = (a, b) => b / Math.max(0.01, a) - 1;
   var fmtPct = (d) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
@@ -8094,6 +8245,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var AUTOSAVE_MS = 2e4;
   var REPORT_MIN_MS = 6e4;
   var MINI_W = 320;
+  var MINI_STAGE_H = 84;
   var XP_WINDOW_MS = 10 * 6e4;
   var STAGE_FRAC = { l: 0.42, m: 0.28 };
   var STAGE_NEXT = { m: "l", l: "off", off: "m" };
@@ -8245,8 +8397,15 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       bar2.addEventListener("dblclick", (e) => {
         if (!e.target.closest("button")) this.setMax(!this.frame.max);
       });
-      this.stage = h("div", { class: "stage" }, this.battle.canvas);
+      this.miniLast = h("div", { class: "mlast", attrs: { "aria-live": "polite" } });
+      this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
+      this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
+      this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
+      this.stage = h("div", { class: "stage" }, this.battle.canvas, this.miniBox);
       this.top = h("div", { class: "top" }, this.stage);
+      this.stage.addEventListener("dblclick", (e) => {
+        if (this.frame.mini && !e.target.closest("button")) this.setMini(false);
+      });
       this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": "Hero status" } }, this.hud.canvas);
       this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
       VIEWS.forEach((v, i) => {
@@ -8260,21 +8419,22 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
       this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
       const main = h("div", { class: "main" }, this.nav, this.body);
-      this.miniLast = h("div", { class: "mlast" });
-      this.miniNote = h("button", { class: "mnote", attrs: { hidden: "" }, on: { click: () => this.setMini(false) } });
-      this.miniProg = h("div", { class: "mprog", attrs: { hidden: "" } }, h("span"), h("div", { class: "progress" }, h("i")));
-      this.miniBox = h("div", { class: "minibox" }, this.miniProg, this.miniNote, this.miniLast);
       this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
       const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
-      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, this.hudWrap, main, this.miniBox, this.toasts, grip);
+      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, this.hudWrap, main, this.toasts, grip);
       shell.append(this.win);
       this.root.append(shell);
       document.body.append(host);
       this.placeWindow();
+      this.tips = installTips(this.win, this.win);
       this.dragger(bar2, (dx, dy, g) => {
         g.x += dx;
         g.y += dy;
       });
+      this.dragger(this.stage, (dx, dy, g) => {
+        g.x += dx;
+        g.y += dy;
+      }, () => this.frame.mini);
       this.dragger(grip, (dx, dy, g) => {
         g.w += dx;
         g.h += dy;
@@ -8292,8 +8452,16 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           if (this.frame.mini) return;
           const modals = this.win.querySelectorAll(".modal");
           const top = modals[modals.length - 1];
-          if (top && !top.querySelector(".progress")) {
-            top.remove();
+          if (top) {
+            if (!top.querySelector(".progress")) {
+              top.remove();
+              e.preventDefault();
+            }
+            return;
+          }
+          const esc = this.body.querySelector("[data-esc]");
+          if (esc) {
+            esc.click();
             e.preventDefault();
           }
           return;
@@ -8339,10 +8507,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const fit2 = () => {
         const vw = window.innerWidth, vh = window.innerHeight;
         const g2 = this.geo;
+        const top = this.topReserve();
         g2.w = Math.max(380, Math.min(g2.w, vw - 8));
-        g2.h = Math.max(340, Math.min(g2.h, vh - 8));
+        g2.h = Math.max(340, Math.min(g2.h, vh - top - 8));
         g2.x = Math.max(0, Math.min(g2.x, vw - (this.frame.mini ? MINI_W : g2.w)));
-        g2.y = Math.max(0, Math.min(g2.y, vh - (this.frame.mini ? 120 : g2.h)));
+        g2.y = Math.max(top, Math.min(g2.y, vh - (this.frame.mini ? MINI_STAGE_H + HUD_H + 12 : g2.h)));
         const hudAt = (cssW, scale) => {
           this.hud.resize(cssW / scale);
           this.hud.canvas.style.width = cssW + "px";
@@ -8351,9 +8520,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (this.frame.mini) {
           Object.assign(this.win.style, { left: g2.x + "px", top: g2.y + "px", width: MINI_W + "px", height: "" });
           hudAt(MINI_W - 6, 1);
+          this.stage.style.height = MINI_STAGE_H + "px";
+          this.battle.resize(MINI_W - 6, MINI_STAGE_H);
+          Object.assign(this.battle.canvas.style, { width: MINI_W - 6 + "px", height: MINI_STAGE_H + "px" });
           return;
         }
-        const box2 = this.frame.max ? { x: 8, y: 8, w: vw - 16, h: vh - 16 } : g2;
+        const box2 = this.frame.max ? { x: 8, y: top + 8, w: vw - 16, h: vh - top - 16 } : g2;
         Object.assign(this.win.style, { left: box2.x + "px", top: box2.y + "px", width: box2.w + "px", height: box2.h + "px" });
         const inner = box2.w - 6;
         hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
@@ -8372,16 +8544,37 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     }
     refit = () => {
     };
+    reserve = { at: -1e9, px: 0 };
+    /**
+     * How far down Discord's title bar reaches (its window buttons live there), measured
+     * from whatever sits at the top-right corner: a full-width strip under 64px tall.
+     */
+    topReserve() {
+      const now = performance.now();
+      if (now - this.reserve.at < 1500) return this.reserve.px;
+      let px = 0;
+      const hit = document.elementsFromPoint(window.innerWidth - 12, 3).find((el) => el !== this.host && !this.host?.contains(el));
+      for (let e = hit ?? null; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+        const b = e.getBoundingClientRect();
+        if (b.top <= 0 && b.height > 0 && b.height <= 64 && b.width >= window.innerWidth * 0.5) {
+          px = Math.round(b.bottom);
+          break;
+        }
+      }
+      this.reserve = { at: now, px };
+      return px;
+    }
     applyFrame() {
       const f = this.frame;
       this.win.classList.toggle("mini", f.mini);
       this.win.classList.toggle("max", f.max && !f.mini);
       this.top.classList.toggle("nostage", f.stage === "off");
-      this.stageBtn.title = STAGE_TITLE[f.stage];
+      this.stageBtn.dataset.tip = STAGE_TITLE[f.stage];
       this.stageBtn.setAttribute("aria-label", STAGE_TITLE[f.stage]);
       const setGlyph = (b, g, title) => {
         b.replaceChildren(glyph(g, 12));
-        b.title = title;
+        b.removeAttribute("title");
+        b.dataset.tip = title;
         b.setAttribute("aria-label", title);
       };
       setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
@@ -8430,9 +8623,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       void this.win.offsetWidth;
       this.win.classList.add("flash");
     }
-    dragger(handle, apply) {
+    dragger(handle, apply, when = () => true) {
       handle.addEventListener("pointerdown", (e) => {
-        if (e.target.closest("button") || e.button !== 0) return;
+        if (e.target.closest("button") || e.button !== 0 || !when()) return;
         if (this.frame.max && handle !== this.win.querySelector(".grip")) {
           this.frame.max = false;
           this.saveFrame();
@@ -8614,7 +8807,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       const frame = () => {
         this.raf = requestAnimationFrame(frame);
         if (!this.state || document.hidden) return;
-        if (!this.frame.mini && this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
+        if (this.frame.mini || this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
         this.drawHud();
         if (!this.frame.mini) this.renderTab(false);
       };
@@ -8675,13 +8868,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         storeKind: this.store.kind
       };
     }
+    tips = { busy: () => false };
     lastSigCheck = 0;
     supportHint = { rev: -1, level: -1, gain: false };
     renderTab(force) {
       if (!this.state || !this.ctx) return;
       if (!force) {
         const t = performance.now();
-        if (t - this.lastSigCheck < 250 || this.ctx.hold) return;
+        if (t - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return;
         this.lastSigCheck = t;
       }
       this.updateBadges();
@@ -8740,7 +8934,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         if (badge.textContent !== text) {
           badge.textContent = text;
           badge.toggleAttribute("hidden", !m4);
-          badge.title = m4?.[1] ?? "";
+          badge.dataset.tip = m4?.[1] ?? "";
         }
       }
     }
@@ -8798,7 +8992,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         const n = (x) => fmt(Math.floor(Math.max(0, x)));
         const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
         this.hudWrap.setAttribute("aria-label", label);
-        this.hudWrap.title = label;
+        this.hudWrap.dataset.tip = label;
         if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;
       }
     }
@@ -8812,6 +9006,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (rate <= 0) return "";
       return `~${fmtDuration(left / rate)} to level`;
     }
+    pingTimer = 0;
     toast(msg, kind = "") {
       if (this.frame.mini) {
         this.lastEvent = msg;
@@ -8819,6 +9014,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         this.miniLast.className = "mlast";
         void this.miniLast.offsetWidth;
         this.miniLast.className = `mlast ping${kind ? " t-" + kind : ""}`;
+        clearTimeout(this.pingTimer);
+        this.pingTimer = window.setTimeout(() => this.miniLast.classList.remove("ping"), 3200);
         return;
       }
       const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
@@ -8872,7 +9069,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.miniNote.hidden = !top;
       if (!top) return;
       const title = top.getAttribute("aria-label") || "A message";
-      this.miniNote.title = `${title}: open the full window to read it`;
+      this.miniNote.dataset.tip = `${title}: open the full window to read it`;
       this.miniNote.replaceChildren(glyph("log", 12), h("b", { text: title }), h("span", { text: waiting.length > 1 ? `${waiting.length} waiting - open` : "Open" }));
     }
     showCreation() {
@@ -8924,8 +9121,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
       const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
       for (const t of r3.story.slice(-3)) card.append(h("div", { class: "story", text: t }));
-      if (r3.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r3.zones.join(", ")}` }));
-      if (r3.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
+      if (r3.zones.length) card.append(h("div", { class: "tag teal", text: `New roads: ${r3.zones.join(", ")}` }));
+      if (r3.equipped.length) card.append(h("div", { class: "tag gold", text: `Equipped: ${r3.equipped.slice(-4).join(", ")}` }));
       if (r3.best.length) {
         const best = r3.best[r3.best.length - 1];
         card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
@@ -8953,7 +9150,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   // src/ui/card.ts
   var CARD_CSS = `
 :host { display: block; }
-.hc { margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
+.hc { position: relative; margin: 8px 10px 14px 4px; border: 3px solid var(--line); background: var(--paper); box-shadow: 5px 5px 0 var(--line); }
 .hc .bar { height: 30px; cursor: default; padding-right: 8px; }
 .hc .logo { font-size: 14px; }
 .hc .state { margin-left: auto; font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
@@ -9033,6 +9230,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     root.append(wrap2);
     el.append(holder);
     pixelize(card);
+    installTips(card, card);
     return { unmount() {
       holder.remove();
     } };
