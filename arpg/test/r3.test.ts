@@ -245,3 +245,17 @@ describe("relic codex", () => {
         expect(s.codex).toEqual({ lampwick: 1 });
     });
 });
+
+import { FILTER_PRESETS, groupLabel, keepItem } from "../src/core/filter";
+describe("loot filter presets and affix rules", () => {
+    it("Resist hunter keeps rare jewellery with a resistance and salvages other rares under 5 affixes", () => {
+        const g = g0();
+        g.settings.filter = structuredClone(FILTER_PRESETS.find(p => p.id === "resists")!.rules);
+        const withRes = { uid: uid++, base: "ring_iron", ilvl: 30, rarity: "rare", name: "R", affixes: [{ id: "res_fire", tier: 0, rolls: [10] }] } as Item;
+        const without = { ...withRes, uid: uid++, affixes: [{ id: "life", tier: 0, rolls: [10] }] } as Item;
+        expect(keepItem(g, withRes)).toBe(true);
+        expect(keepItem(g, without)).toBe(false);
+        expect(groupLabel("resFire")).toBe("fire resistance");
+        expect(groupLabel("aspd")).toMatch(/weapon/);
+    });
+});

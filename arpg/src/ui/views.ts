@@ -21,7 +21,7 @@ import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
 import { atlasSig, atlasView } from "./atlas";
-import { DEFAULT_FILTER, describeRule, type FilterRule } from "../core/filter";
+import { AFFIX_GROUPS, DEFAULT_FILTER, FILTER_PRESETS, describeRule, type FilterRule } from "../core/filter";
 import { claimContract, contractText, rerollContract, rerollCost, rewardText, type Contract } from "../core/contracts";
 import { BLESSINGS, ORB_RESERVE, bless, blessingCost, setKeep, spareOrbValue } from "../core/shrine";
 
@@ -1018,16 +1018,25 @@ function filterEditor(c: Ctx): HTMLElement {
     for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
     const behind = h("select", { attrs: { "aria-label": "Base level behind the hero" } });
     for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? "any base" : `base ${v}+ behind`, attrs: { value: v } }));
-    box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff, behind,
+    const group = h("select", { attrs: { "aria-label": "Has an affix" } });
+    group.append(h("option", { text: "any affix", attrs: { value: "" } }));
+    for (const g of AFFIX_GROUPS()) group.append(h("option", { text: `with ${g.label}`, attrs: { value: g.group } }));
+    box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff, behind, group,
         h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit(rs => {
             const r: FilterRule = { on: true, action: action.value as FilterRule["action"] };
             if (rarity.value) r.rarity = [rarity.value as Item["rarity"]];
             if (slot.value) r.slots = [slot.value];
             if (+minAff.value) r.minAffixes = +minAff.value;
             if (+behind.value) r.behind = +behind.value;
+            if (group.value) r.group = group.value;
             rs.push(r);
         }) } }),
         h("button", { class: "btn alt", text: "Reset", on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER)); }) } })));
+    // Presets: one click replaces the rules with a ready-made set.
+    const same = (a: FilterRule[], b: FilterRule[]) => JSON.stringify(a) === JSON.stringify(b);
+    box.append(h("div", { class: "row presets", style: "gap:4px;margin-top:4px" }, h("span", { class: "muted", style: "font-size:12px", text: "Presets:" }),
+        ...FILTER_PRESETS.map(p => h("button", { class: `chip${same(rules, p.rules) ? " on" : ""}`, text: p.name, title: p.blurb,
+            on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(p.rules)); }) } }))));
     return box;
 }
 

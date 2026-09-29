@@ -2970,6 +2970,50 @@
     { on: true, action: "salvage", rarity: ["plain", "enchanted"], behind: 10 },
     { on: false, action: "keep", rarity: ["rare"], minAffixes: 5 }
   ];
+  var FILTER_PRESETS = [
+    { id: "starter", name: "Starter", blurb: "Keep relics; salvage plain and enchanted items 10+ levels behind.", rules: DEFAULT_FILTER },
+    { id: "lean", name: "Lean", blurb: "Keep relics and rares; salvage every plain and enchanted item.", rules: [
+      { on: true, action: "keep", rarity: ["relic"] },
+      { on: true, action: "salvage", rarity: ["plain", "enchanted"] }
+    ] },
+    { id: "endgame", name: "Endgame", blurb: "Only rares with 5+ affixes and relics; everything else becomes dust.", rules: [
+      { on: true, action: "keep", rarity: ["relic"] },
+      { on: true, action: "keep", rarity: ["rare"], minAffixes: 5 },
+      { on: true, action: "salvage", rarity: ["plain", "enchanted", "rare"] }
+    ] },
+    { id: "resists", name: "Resist hunter", blurb: "Endgame, but also keep any rare jewellery with a resistance.", rules: [
+      { on: true, action: "keep", rarity: ["relic"] },
+      { on: true, action: "keep", rarity: ["rare"], slots: ["ring", "amulet", "belt"], group: "resFire" },
+      { on: true, action: "keep", rarity: ["rare"], slots: ["ring", "amulet", "belt"], group: "resCold" },
+      { on: true, action: "keep", rarity: ["rare"], slots: ["ring", "amulet", "belt"], group: "resLight" },
+      { on: true, action: "keep", rarity: ["rare"], minAffixes: 5 },
+      { on: true, action: "salvage", rarity: ["plain", "enchanted", "rare"] }
+    ] }
+  ];
+  var GROUP_NAMES = {
+    aspd: "attack speed (weapon)",
+    aspdGlobal: "attack speed",
+    crit: "critical chance (weapon)",
+    critGlobal: "critical chance",
+    physInc: "physical damage (weapon)",
+    physGlobal: "physical damage",
+    defFlat: "armour, evasion or shield (local)",
+    armourFlat: "armour (belt)",
+    spellAdd: "added damage to spells",
+    fireAdd: "added fire damage (weapon)",
+    coldAdd: "added cold damage (weapon)",
+    lightAdd: "added lightning damage (weapon)",
+    physAdd: "added physical damage (weapon)",
+    defInc: "defences",
+    leech: "life leech"
+  };
+  function groupLabel(group) {
+    if (GROUP_NAMES[group]) return GROUP_NAMES[group];
+    const a = Object.values(AFFIXES).find((x) => x.group === group);
+    if (!a) return group;
+    return a.text.replace(/\{\d\}/g, "").replace(/^Adds\s+to\s+/i, "added ").replace(/[+%]/g, "").replace(/\s+/g, " ").trim().replace(/^(to|increased)\s+/i, "").replace(/^maximum\s+/i, "maximum ");
+  }
+  var AFFIX_GROUPS = () => [...new Set(Object.values(AFFIXES).map((a) => a.group))].map((group) => ({ group, label: groupLabel(group) })).sort((a, b) => a.label.localeCompare(b.label));
   function ruleMatches(r3, item, heroLevel) {
     const b = BASES[item.base];
     if (!b) return false;
@@ -2993,7 +3037,7 @@
     if (r3.minIlvl) parts.push(`ilvl ${r3.minIlvl}+`);
     if (r3.behind) parts.push(`base ${r3.behind}+ levels behind`);
     if (r3.minAffixes) parts.push(`${r3.minAffixes}+ affixes`);
-    if (r3.group) parts.push(`with ${r3.group}`);
+    if (r3.group) parts.push(`with ${groupLabel(r3.group)}`);
     return `${r3.action === "keep" ? "Keep" : "Salvage"} ${parts.join(", ")}`;
   }
 
@@ -9574,6 +9618,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
     const behind = h("select", { attrs: { "aria-label": "Base level behind the hero" } });
     for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? "any base" : `base ${v}+ behind`, attrs: { value: v } }));
+    const group = h("select", { attrs: { "aria-label": "Has an affix" } });
+    group.append(h("option", { text: "any affix", attrs: { value: "" } }));
+    for (const g of AFFIX_GROUPS()) group.append(h("option", { text: `with ${g.label}`, attrs: { value: g.group } }));
     box2.append(h(
       "div",
       { class: "row", style: "gap:4px" },
@@ -9582,17 +9629,33 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       slot,
       minAff,
       behind,
+      group,
       h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit((rs) => {
         const r3 = { on: true, action: action.value };
         if (rarity.value) r3.rarity = [rarity.value];
         if (slot.value) r3.slots = [slot.value];
         if (+minAff.value) r3.minAffixes = +minAff.value;
         if (+behind.value) r3.behind = +behind.value;
+        if (group.value) r3.group = group.value;
         rs.push(r3);
       }) } }),
       h("button", { class: "btn alt", text: "Reset", on: { click: () => edit((rs) => {
         rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER));
       }) } })
+    ));
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    box2.append(h(
+      "div",
+      { class: "row presets", style: "gap:4px;margin-top:4px" },
+      h("span", { class: "muted", style: "font-size:12px", text: "Presets:" }),
+      ...FILTER_PRESETS.map((p) => h("button", {
+        class: `chip${same(rules, p.rules) ? " on" : ""}`,
+        text: p.name,
+        title: p.blurb,
+        on: { click: () => edit((rs) => {
+          rs.splice(0, rs.length, ...structuredClone(p.rules));
+        }) }
+      }))
     ));
     return box2;
   }
