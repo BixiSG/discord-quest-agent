@@ -4,11 +4,14 @@ Branch: `feat/pet-addon-jjbs70`, with both addons plus the launcher change.
 `main` is untouched; do not merge or push `main` until the user signs off.
 
 ## 0. Run the branch on this PC
-- [ ] Close the installed agent.
-- [ ] Check out `feat/pet-addon-jjbs70` in a working copy (e.g. `%USERPROFILE%\qa-dev`).
-- [ ] Copy `%LOCALAPPDATA%\DiscordQuestAgent\config.json` into the working copy (keeps the debug port).
-- [ ] `mkdir addons` + `copy arpg\dist\arpg.js addons\` (the launcher loads `<Root>\addons\*.js`).
-- [ ] Start with `.\Start-QuestAgent.bat -NoUpdate` (without `-NoUpdate` the updater pulls `main` over the branch).
+- [x] Close the installed agent.
+- [x] Check out `feat/pet-addon-jjbs70` in a working copy (used the repo folder itself: a new folder
+      created from Claude's tool shell, e.g. `%USERPROFILE%\qa-dev`, is invisible to the real session).
+- [x] Copy `%LOCALAPPDATA%\DiscordQuestAgent\config.json` into the working copy (keeps the debug port).
+- [x] `mkdir addons` + `copy arpg\dist\arpg.js addons\` (the launcher loads `<Root>\addons\*.js`).
+- [x] Start with `.\Start-QuestAgent.bat -NoUpdate` (without `-NoUpdate` the updater pulls `main` over the branch).
+      Started through a scheduled task so it runs in the real session; it restarted the portless
+      Discord with port 9222 and injected agent v21 with both addons registered.
 - [ ] In Discord: quest panel > Settings > Addons > switch on Orbling and Hollowmarch.
 
 ## 1. Orbling (pet, v1.7.0, `src/addons/pet.js`)
@@ -38,7 +41,8 @@ Play-feel review (user's call):
 - [ ] Localisation: only the card is in ru/uk; translate the game UI?
 
 ## 3. Installer / launcher (Windows PowerShell 5.1)
-- [ ] `powershell -NoProfile -File dev\test-addons.ps1` passes on 5.1 (it was only run on pwsh 7.4).
+- [x] `powershell -NoProfile -File dev\test-addons.ps1` passes on 5.1 (it was only run on pwsh 7.4).
+      Passed on 5.1.26100 (7/7).
 - [ ] `arpg\install\Install-Hollowmarch.bat` against a real install warns that the old launcher ignores `addons\`, then the uninstaller removes it.
 
 ## 4. Before shipping
