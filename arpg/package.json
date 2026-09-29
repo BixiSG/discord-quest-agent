@@ -8,7 +8,8 @@
     "typecheck": "tsc -p .",
     "test": "vitest run",
     "check": "tsc -p . && vitest run && node build.mjs",
-    "balance": "node tools/run-balance.mjs"
+    "balance": "node tools/run-balance.mjs",
+    "smoke": "node tools/shots.mjs /tmp/hm-shots"
   },
   "license": "MIT",
   "devDependencies": {

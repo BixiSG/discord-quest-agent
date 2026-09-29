@@ -12,22 +12,22 @@ every phase is a code review by a subagent; confirmed findings get fixed
 before the next phase starts.
 
 ## P0 - foundations
-- [ ] GDD, combat math, architecture docs (docs/GDD.md, COMBAT.md, ARCHITECTURE.md)
-- [ ] Toolchain: TypeScript strict, esbuild IIFE (ASCII-only), Vitest
-- [ ] Seeded RNG, stat/modifier engine, save envelope + migrations
-- [ ] Dev harness: plain browser page (dev/play.html) and the mock hub in dev/harness.html
+- [x] GDD, combat math, architecture docs (docs/GDD.md, COMBAT.md, ARCHITECTURE.md)
+- [x] Toolchain: TypeScript strict, esbuild IIFE (ASCII-only), Vitest
+- [x] Seeded RNG, stat/modifier engine, save envelope + migrations
+- [x] Dev harness: plain browser page (dev/play.html) and the mock hub in dev/harness.html
 - [ ] Review P0
 
 ## P1 - vertical slice
-- [ ] Content: Vanguard class, skills, supports, item bases, affixes, Act 1 zones + boss
-- [ ] Items: generation with affix tiers, rarities, item level
-- [ ] Combat sim: auto-combat over packs, deaths, flasks, boss
-- [ ] Progression: XP/levels, zone unlocks, auto-push
-- [ ] Offline progress + "while you were away" report
-- [ ] Headless balance simulator (tools/balance.ts)
-- [ ] UI: overlay window (Shadow DOM, drag/resize), launcher card, battle view,
+- [x] Content: Vanguard class, skills, supports, item bases, affixes, Act 1 zones + boss
+- [x] Items: generation with affix tiers, rarities, item level
+- [x] Combat sim: auto-combat over packs, deaths, flasks, boss
+- [x] Progression: XP/levels, zone unlocks, auto-push
+- [x] Offline progress + "while you were away" report
+- [x] Headless balance simulator (tools/balance.ts)
+- [x] UI: overlay window (Shadow DOM, drag/resize), launcher card, battle view,
       inventory/equipment, character sheet with DPS/EHP breakdown, skills
-- [ ] Saves: IndexedDB, export/import
+- [x] Saves: IndexedDB, export/import
 - [ ] Review P1
 
 ## P2 - depth

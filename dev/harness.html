@@ -20,6 +20,7 @@
     ?fast=1         the running video quest finishes in ~15 s (exercises completion)
     ?noglyph=1      no orb glyph to borrow (the HUD falls back to its own diamond)
     ?pet=1          switch the Orbling addon on (view=addon:pet opens it); window.__orbling pokes its state
+    ?arpg=1         switch Hollowmarch on (view=addon:arpg opens its card); loads ../arpg/dist/arpg.js
 -->
 <style>
   :root { --background-base-lower: #1e1f22; }
@@ -48,11 +49,12 @@
   const qs = new URLSearchParams(location.search);
   if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); localStorage.removeItem("questAgent.orbs.v1"); }
   if (qs.get("reset")) localStorage.removeItem("questAgent.addon.pet");
-  if (qs.get("lang") || qs.get("theme") || qs.get("pet")) {
+  if (qs.get("lang") || qs.get("theme") || qs.get("pet") || qs.get("arpg")) {
     const s = JSON.parse(localStorage.getItem("questAgent.settings.v1") || "{}");
     if (qs.get("lang")) s.language = qs.get("lang");
     if (qs.get("theme")) s.theme = qs.get("theme");
     if (qs.get("pet")) s.addons = { ...(s.addons || {}), pet: true };
+    if (qs.get("arpg")) s.addons = { ...(s.addons || {}), arpg: true };
     localStorage.setItem("questAgent.settings.v1", JSON.stringify(s));
   }
 
@@ -181,8 +183,15 @@
       const a = document.createElement("script");
       a.src = "../src/addons/pet.js";
       a.onload = () => {
-        const view = qs.get("view");
-        if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);
+        // Built addons outside src/ (arpg/dist) load the same way the launcher's addons folder does.
+        const g = document.createElement("script");
+        g.src = "../arpg/dist/arpg.js";
+        const done = () => {
+          const view = qs.get("view");
+          if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);
+        };
+        g.onload = g.onerror = done;
+        document.body.appendChild(g);
       };
       document.body.appendChild(a);
     };

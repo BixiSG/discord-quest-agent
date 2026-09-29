@@ -130,7 +130,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
         res[t] = Math.min(maxRes[t], resRaw[t]);
     }
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
-    const manaRegen = bag.flat("manaRegen") + mana * 0.02;
+    const manaRegen = bag.flat("manaRegen") + mana * 0.07;
 
     const skill = calcSkill(hero, bag, problems);
 
@@ -241,7 +241,7 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[]): SkillCalc 
     let targets = 1;
     if (def.shape === "area") targets = Math.max(1, Math.floor((def.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
     else if (def.shape === "projectile") targets = 1 + (def.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
-    const manaCost = Math.round(def.manaCost * (1 + 0.04 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
+    const manaCost = Math.round(def.manaCost * (1 + 0.03 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
     const pen = zeroes();
     for (const t of DAMAGE_TYPES) pen[t] = bag.flat(`pen.${t}`, ctx);
 

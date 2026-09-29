@@ -21,7 +21,7 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         stash: [], stashCap: 60, dust: 0, currency: {},
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
-        settings: { keep: "enchanted", autoEquip: true },
+        settings: { keep: "rare", autoEquip: true },
         totals: newTotals(), nextUid: 1, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
@@ -113,16 +113,23 @@ function bestSlot(state: GameState, item: Item): Slot {
     return slots.find(s => !state.hero.equipment[s]) ?? slots[0]!;
 }
 
+/** The stat sheet the hero would have with `item` in `slot` (null if it can't go there). */
+export function trialSheet(state: GameState, item: Item, slot: Slot): Sheet | null {
+    if (canEquip(state, item, slot)) return null;
+    const hero = structuredClone(state.hero);
+    const trial = { ...state, hero } as GameState;
+    putOn(trial, item, slot);
+    return deriveSheet(hero);
+}
+
 /** Would equipping this raise the build score? Returns the slot, or null. */
 export function upgradeSlot(state: GameState, item: Item): Slot | null {
     const now = buildScore(sheetOf(state));
     let best: Slot | null = null, bestScore = now * 1.02;
     for (const slot of slotsFor(baseOf(item))) {
-        if (canEquip(state, item, slot)) continue;
-        const hero = structuredClone(state.hero);
-        const trial = { ...state, hero } as GameState;
-        putOn(trial, item, slot);
-        const score = buildScore(deriveSheet(hero));
+        const sheet = trialSheet(state, item, slot);
+        if (!sheet) continue;
+        const score = buildScore(sheet);
         if (score > bestScore) { best = slot; bestScore = score; }
     }
     return best;

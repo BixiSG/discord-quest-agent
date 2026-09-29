@@ -1,64 +1,91 @@
 /* Hollowmarch - idle ARPG addon for Discord Quest Agent. Built file; edit arpg/src. */
 "use strict";
 (() => {
-  // src/core/stats.ts
-  var StatBag = class _StatBag {
-    by = /* @__PURE__ */ new Map();
-    constructor(mods = []) {
-      for (const m2 of mods) this.add(m2);
+  // src/core/rng.ts
+  function splitmix32(a) {
+    return () => {
+      a = a + 2654435769 | 0;
+      let t = a ^ a >>> 16;
+      t = Math.imul(t, 569420461);
+      t ^= t >>> 15;
+      t = Math.imul(t, 1935289751);
+      t ^= t >>> 15;
+      return t >>> 0;
+    };
+  }
+  function hashSeed(...parts) {
+    let h2 = 2166136261;
+    for (const p of parts) {
+      const sm = splitmix32((h2 ^ (p | 0)) >>> 0);
+      h2 = (sm() ^ Math.imul(h2, 16777619)) >>> 0;
     }
-    add(m2) {
-      let list2 = this.by.get(m2.stat);
-      if (!list2) this.by.set(m2.stat, list2 = []);
-      list2.push(m2);
+    return h2 >>> 0;
+  }
+  var Rng = class {
+    s;
+    constructor(seed) {
+      if (Array.isArray(seed)) {
+        this.s = [seed[0] >>> 0, seed[1] >>> 0, seed[2] >>> 0, seed[3] >>> 0];
+        return;
+      }
+      const sm = splitmix32(seed >>> 0);
+      this.s = [sm(), sm(), sm(), sm()];
+      for (let i = 0; i < 12; i++) this.u32();
     }
-    addAll(mods) {
-      for (const m2 of mods) this.add(m2);
+    /** Uniform uint32. */
+    u32() {
+      let [a, b, c, d] = this.s;
+      const t = (a + b | 0) + d | 0;
+      d = d + 1 | 0;
+      a = b ^ b >>> 9;
+      b = c + (c << 3) | 0;
+      c = c << 21 | c >>> 11;
+      c = c + t | 0;
+      this.s = [a >>> 0, b >>> 0, c >>> 0, d >>> 0];
+      return t >>> 0;
     }
-    /** Every modifier for a stat (for breakdowns). */
-    mods(stat) {
-      return this.by.get(stat) ?? [];
+    /** Uniform float in [0, 1). */
+    next() {
+      return this.u32() / 4294967296;
     }
-    static applies(m2, ctx) {
-      if (!m2.tags || m2.tags.length === 0) return true;
-      if (!ctx) return false;
-      for (const t of m2.tags) if (!ctx.has(t)) return false;
-      return true;
+    /** Uniform float in [lo, hi). */
+    range(lo, hi) {
+      return lo + (hi - lo) * this.next();
     }
-    /** Sum of flat or inc values. */
-    sum(stat, kind, ctx) {
-      let s = 0;
-      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === kind && _StatBag.applies(m2, ctx)) s += m2.value;
-      return s;
+    /** Uniform integer in [lo, hi] (inclusive). */
+    int(lo, hi) {
+      return lo + Math.floor(this.next() * (hi - lo + 1));
     }
-    /** Product of (1 + more/100). */
-    more(stat, ctx) {
-      let p = 1;
-      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === "more" && _StatBag.applies(m2, ctx)) p *= 1 + m2.value / 100;
-      return p;
+    chance(p) {
+      return p >= 1 || p > 0 && this.next() < p;
     }
-    flat(stat, ctx) {
-      return this.sum(stat, "flat", ctx);
+    pick(arr) {
+      if (!arr.length) throw new Error("pick from empty array");
+      return arr[Math.floor(this.next() * arr.length)];
     }
-    inc(stat, ctx) {
-      return this.sum(stat, "inc", ctx);
+    /** Weighted pick; returns undefined when every weight is zero. */
+    weighted(arr, weight) {
+      let total = 0;
+      for (const x of arr) total += Math.max(0, weight(x));
+      if (total <= 0) return void 0;
+      let r2 = this.next() * total;
+      for (const x of arr) {
+        r2 -= Math.max(0, weight(x));
+        if (r2 < 0) return x;
+      }
+      return arr[arr.length - 1];
     }
-    /** Increase multiplier (1 + inc/100), floored at zero. */
-    incMult(stat, ctx) {
-      return Math.max(0, 1 + this.inc(stat, ctx) / 100);
+    state() {
+      return [...this.s];
     }
-    /** Full formula. */
-    calc(stat, base = 0, ctx) {
-      return (base + this.flat(stat, ctx)) * this.incMult(stat, ctx) * this.more(stat, ctx);
-    }
-  };
-  var tagSet = (...groups) => {
-    const s = /* @__PURE__ */ new Set();
-    for (const g of groups) if (g) for (const t of g) s.add(t);
-    return s;
   };
 
   // src/core/data/scaling.ts
+  var MAX_LEVEL = 100;
+  function monsterLife(level) {
+    const l = level - 1;
+    return 20 * Math.pow(1.085, l) * (1 + 0.03 * l);
+  }
   function monsterDamage(level) {
     const l = level - 1;
     return 5 * Math.pow(1.06, l) * (1 + 0.02 * l);
@@ -66,6 +93,19 @@
   function monsterDefence(level) {
     const l = level - 1;
     return 12 + 9 * l * Math.pow(1.03, l);
+  }
+  function monsterXp(level) {
+    return 4 * Math.pow(level, 1.9) + 6;
+  }
+  function xpToNext(level) {
+    if (level >= MAX_LEVEL) return Infinity;
+    const late = level > 60 ? Math.pow(1.07, level - 60) : 1;
+    return Math.round((80 * Math.pow(level, 2.8) + 120 * level) * late);
+  }
+  function xpPenalty(heroLevel, monsterLevel) {
+    const safe = 3 + Math.floor(heroLevel / 16);
+    const d = Math.abs(heroLevel - monsterLevel) - safe;
+    return d <= 0 ? 1 : Math.pow(5 / (5 + d), 2.5);
   }
   function spellScale(level) {
     const l = level - 1;
@@ -388,18 +428,18 @@
       if (out[b.id]) throw new Error("duplicate base " + b.id);
       out[b.id] = b;
     };
-    for (const w of WEAPONS) {
+    for (const w2 of WEAPONS) {
       TIER_LEVELS.forEach((lvl, i) => {
-        const avg = weaponAvg(lvl) * w.dmg;
+        const avg = weaponAvg(lvl) * w2.dmg;
         const b = {
-          id: `${w.kind}${i + 1}`,
-          name: w.names[i],
+          id: `${w2.kind}${i + 1}`,
+          name: w2.names[i],
           slot: "weapon",
-          kind: w.kind,
+          kind: w2.kind,
           level: lvl,
-          weapon: { phys: [r(avg * (1 - w.spread / 2)), r(avg * (1 + w.spread / 2))], aps: w.aps, crit: w.crit, hands: w.hands, ranged: !!w.ranged }
+          weapon: { phys: [r(avg * (1 - w2.spread / 2)), r(avg * (1 + w2.spread / 2))], aps: w2.aps, crit: w2.crit, hands: w2.hands, ranged: !!w2.ranged }
         };
-        const imp = w.implicit?.(lvl);
+        const imp = w2.implicit?.(lvl);
         if (imp) b.implicit = imp;
         add(b);
       });
@@ -407,9 +447,9 @@
     for (const a of ARMOURS) {
       TIER_LEVELS.forEach((lvl, i) => {
         const d = defence(lvl) * a.mult;
-        const def = { armour: a.ar ? r(d * a.ar) : 0, evasion: a.ev ? r(d * a.ev) : 0, energyShield: a.es ? r(d * a.es) : 0 };
-        if (a.block) def.block = a.block;
-        add({ id: `${a.kind}_${a.slot}${i + 1}`, name: a.names[i], slot: a.slot, kind: a.kind, level: lvl, defence: def });
+        const def2 = { armour: a.ar ? r(d * a.ar) : 0, evasion: a.ev ? r(d * a.ev) : 0, energyShield: a.es ? r(d * a.es) : 0 };
+        if (a.block) def2.block = a.block;
+        add({ id: `${a.kind}_${a.slot}${i + 1}`, name: a.names[i], slot: a.slot, kind: a.kind, level: lvl, defence: def2 });
       });
     }
     const QUIVERS = ["Frayed Quiver", "Gull Quiver", "Reed Quiver", "Cliff Quiver", "Glass Quiver", "Storm Quiver", "Dawn Quiver", "Ember Quiver"];
@@ -443,6 +483,9 @@
     return out;
   }
   var BASES = build();
+  function slotsFor(b) {
+    return b.slot === "ring" ? ["ring1", "ring2"] : [b.slot];
+  }
 
   // src/core/data/affixes.ts
   var AFFIX_ILVLS = [1, 11, 22, 34, 46, 58, 70, 82];
@@ -608,8 +651,214 @@
   ];
   var AFFIXES = Object.fromEntries(list.map((a) => [a.id, a]));
   if (Object.keys(AFFIXES).length !== list.length) throw new Error("duplicate affix id");
+  var RARE_NAMES_A = ["Grim", "Salt", "Hollow", "Tide", "Dusk", "Ember", "Gloom", "Wrack", "Brine", "Storm", "Ash", "Wither", "Lantern", "Glass", "Cinder", "Mourn", "Drift", "Bone", "Rust", "Omen"];
+  var RARE_NAMES_B = ["Bite", "Song", "Ward", "Mark", "Coil", "Veil", "Fang", "Shell", "Grasp", "Knell", "Wake", "Spire", "Crest", "Wail", "Hook", "Bloom", "Scar", "Turn", "Keel", "Hush"];
+
+  // src/core/data/monsters.ts
+  var MONSTERS = {
+    drowned: {
+      id: "drowned",
+      name: "Drowned Wretch",
+      life: 1,
+      damage: 1,
+      speed: 0.9,
+      split: { phys: 1 },
+      armour: 0.6,
+      evasion: 0.3,
+      accuracy: 1,
+      xp: 1,
+      look: { shape: "tall", body: "#5f8f86", eye: "#f5e663", size: 1 }
+    },
+    crab: {
+      id: "crab",
+      name: "Shellback",
+      life: 1.4,
+      damage: 0.8,
+      speed: 0.8,
+      split: { phys: 1 },
+      armour: 2.2,
+      evasion: 0.2,
+      accuracy: 0.9,
+      xp: 1.1,
+      look: { shape: "crab", body: "#d0643a", eye: "#111111", size: 0.9 }
+    },
+    gull: {
+      id: "gull",
+      name: "Bone Gull",
+      life: 0.6,
+      damage: 0.7,
+      speed: 1.6,
+      split: { phys: 1 },
+      armour: 0.2,
+      evasion: 2,
+      accuracy: 1.2,
+      xp: 0.9,
+      look: { shape: "bird", body: "#e9e4d4", eye: "#d13b3b", size: 0.8 }
+    },
+    bogwitch: {
+      id: "bogwitch",
+      name: "Mire Hag",
+      life: 0.8,
+      damage: 1.2,
+      speed: 0.6,
+      split: { cold: 0.7, chaos: 0.3 },
+      spell: true,
+      armour: 0.3,
+      evasion: 0.6,
+      accuracy: 1,
+      xp: 1.3,
+      look: { shape: "robe", body: "#4a5a3a", eye: "#9ef26a", size: 1 }
+    },
+    eel: {
+      id: "eel",
+      name: "Lamp Eel",
+      life: 0.9,
+      damage: 1,
+      speed: 1.1,
+      split: { lightning: 0.8, phys: 0.2 },
+      armour: 0.4,
+      evasion: 1.2,
+      accuracy: 1.1,
+      xp: 1.1,
+      res: { lightning: 40 },
+      look: { shape: "blob", body: "#2f6fb8", eye: "#fff27a", size: 0.9 }
+    },
+    lampman: {
+      id: "lampman",
+      name: "Lanternless",
+      life: 1.2,
+      damage: 1.1,
+      speed: 0.8,
+      split: { fire: 0.6, phys: 0.4 },
+      armour: 1,
+      evasion: 0.5,
+      accuracy: 1,
+      xp: 1.2,
+      res: { fire: 30 },
+      look: { shape: "tall", body: "#3c3c46", eye: "#ff9a2e", size: 1.05 }
+    },
+    // ---- bosses
+    tidewarden: {
+      id: "tidewarden",
+      name: "The Tide-Warden",
+      boss: true,
+      life: 25,
+      damage: 2.4,
+      speed: 0.7,
+      split: { phys: 0.6, cold: 0.4 },
+      armour: 1.5,
+      evasion: 0.6,
+      accuracy: 1.2,
+      res: { cold: 40, fire: 20, lightning: 20, chaos: 20 },
+      xp: 18,
+      look: { shape: "giant", body: "#2c6f73", eye: "#dff7ff", size: 1.8 }
+    },
+    keeper: {
+      id: "keeper",
+      name: "Chapel Keeper",
+      boss: true,
+      life: 12,
+      damage: 1.8,
+      speed: 0.8,
+      split: { phys: 0.5, chaos: 0.5 },
+      armour: 1,
+      evasion: 0.8,
+      accuracy: 1.1,
+      res: { chaos: 30, fire: 10, cold: 10, lightning: 10 },
+      xp: 10,
+      look: { shape: "robe", body: "#6b4a7a", eye: "#ffd84a", size: 1.5 }
+    }
+  };
 
   // src/core/data/zones.ts
+  var ZONES = {
+    a1_shore: {
+      id: "a1_shore",
+      act: 1,
+      name: "The Weeping Shore",
+      level: 1,
+      packs: 6,
+      packSize: [2, 4],
+      monsters: ["drowned", "crab"],
+      champion: 0.05,
+      palette: ["#6e7f86", "#c9b98f", "#f5e663"],
+      story: "You wake in the surf with an ember where your heart was. The tide gave you back. The shore is full of others it gave back worse."
+    },
+    a1_saltmire: {
+      id: "a1_saltmire",
+      act: 1,
+      name: "Saltmire",
+      level: 3,
+      packs: 7,
+      packSize: [3, 4],
+      monsters: ["drowned", "bogwitch", "crab"],
+      champion: 0.08,
+      palette: ["#55665a", "#6f7351", "#9ef26a"],
+      story: "The salt marsh hums. Something in the reeds is singing the drowned awake."
+    },
+    a1_chapel: {
+      id: "a1_chapel",
+      act: 1,
+      name: "The Sunken Chapel",
+      level: 5,
+      packs: 7,
+      packSize: [3, 5],
+      monsters: ["drowned", "bogwitch", "lampman"],
+      champion: 0.1,
+      boss: "keeper",
+      palette: ["#3d3a4a", "#5a5566", "#ffd84a"],
+      story: "Half the chapel is under water. The keeper still rings the bell for a service no one attends."
+    },
+    a1_cliffs: {
+      id: "a1_cliffs",
+      act: 1,
+      name: "Gullwrack Cliffs",
+      level: 7,
+      packs: 8,
+      packSize: [3, 5],
+      monsters: ["gull", "crab", "drowned"],
+      champion: 0.1,
+      palette: ["#8aa0ab", "#7b6d5d", "#e9e4d4"],
+      story: "Bone gulls nest on the cliffs. They have learned that the Kindled do not stay dead, and they are patient."
+    },
+    a1_village: {
+      id: "a1_village",
+      act: 1,
+      name: "Lanternless Village",
+      level: 9,
+      packs: 8,
+      packSize: [3, 5],
+      monsters: ["lampman", "drowned", "eel"],
+      champion: 0.12,
+      palette: ["#26262e", "#3e3a36", "#ff9a2e"],
+      story: "Every lamp in the village went out the day the sun did. The villagers are still looking for a light."
+    },
+    a1_floodgate: {
+      id: "a1_floodgate",
+      act: 1,
+      name: "The Floodgate",
+      level: 11,
+      packs: 9,
+      packSize: [4, 5],
+      monsters: ["eel", "bogwitch", "lampman", "crab"],
+      champion: 0.14,
+      palette: ["#2e4a57", "#4a5f66", "#6fd3ff"],
+      story: "The great gate holds the sea back from the inland road. Someone has been opening it, a little every night."
+    },
+    a1_lock: {
+      id: "a1_lock",
+      act: 1,
+      name: "The Tide-Warden's Lock",
+      level: 13,
+      packs: 5,
+      packSize: [4, 6],
+      monsters: ["eel", "drowned", "crab"],
+      champion: 0.2,
+      boss: "tidewarden",
+      palette: ["#1f3b45", "#2c4f58", "#dff7ff"],
+      story: "The Tide-Warden was sworn to keep the gate shut. Three hundred years underwater changed what it thinks the oath means."
+    }
+  };
   var ACTS = [
     {
       id: 1,
@@ -620,16 +869,156 @@
   ];
   var ZONE_ORDER = ACTS.flatMap((a) => a.zones);
 
+  // src/core/stats.ts
+  var StatBag = class _StatBag {
+    by = /* @__PURE__ */ new Map();
+    constructor(mods = []) {
+      for (const m2 of mods) this.add(m2);
+    }
+    add(m2) {
+      let list2 = this.by.get(m2.stat);
+      if (!list2) this.by.set(m2.stat, list2 = []);
+      list2.push(m2);
+    }
+    addAll(mods) {
+      for (const m2 of mods) this.add(m2);
+    }
+    /** Every modifier for a stat (for breakdowns). */
+    mods(stat) {
+      return this.by.get(stat) ?? [];
+    }
+    static applies(m2, ctx) {
+      if (!m2.tags || m2.tags.length === 0) return true;
+      if (!ctx) return false;
+      for (const t of m2.tags) if (!ctx.has(t)) return false;
+      return true;
+    }
+    /** Sum of flat or inc values. */
+    sum(stat, kind, ctx) {
+      let s = 0;
+      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === kind && _StatBag.applies(m2, ctx)) s += m2.value;
+      return s;
+    }
+    /** Product of (1 + more/100). */
+    more(stat, ctx) {
+      let p = 1;
+      for (const m2 of this.by.get(stat) ?? []) if (m2.kind === "more" && _StatBag.applies(m2, ctx)) p *= 1 + m2.value / 100;
+      return p;
+    }
+    flat(stat, ctx) {
+      return this.sum(stat, "flat", ctx);
+    }
+    inc(stat, ctx) {
+      return this.sum(stat, "inc", ctx);
+    }
+    /** Increase multiplier (1 + inc/100), floored at zero. */
+    incMult(stat, ctx) {
+      return Math.max(0, 1 + this.inc(stat, ctx) / 100);
+    }
+    /** Full formula. */
+    calc(stat, base = 0, ctx) {
+      return (base + this.flat(stat, ctx)) * this.incMult(stat, ctx) * this.more(stat, ctx);
+    }
+  };
+  var tagSet = (...groups) => {
+    const s = /* @__PURE__ */ new Set();
+    for (const g of groups) if (g) for (const t of g) s.add(t);
+    return s;
+  };
+
   // src/core/items.ts
+  var MAX_AFFIXES = {
+    plain: { prefix: 0, suffix: 0 },
+    enchanted: { prefix: 1, suffix: 1 },
+    rare: { prefix: 3, suffix: 3 },
+    relic: { prefix: 0, suffix: 0 }
+  };
   function baseOf(item) {
     const b = BASES[item.base];
     if (!b) throw new Error("unknown base " + item.base);
     return b;
   }
+  function domainsOf(b) {
+    const d = /* @__PURE__ */ new Set([b.slot, b.kind]);
+    if (b.weapon) {
+      d.add("weapon");
+      d.add(b.weapon.ranged ? "ranged" : "melee");
+      if (b.kind === "staff" || b.kind === "wand") d.add("caster");
+    }
+    if (b.defence) {
+      if (b.defence.armour) d.add("ar");
+      if (b.defence.evasion) d.add("ev");
+      if (b.defence.energyShield) d.add("es");
+    }
+    return d;
+  }
   function affixOf(a) {
-    const def = AFFIXES[a.id];
-    if (!def) throw new Error("unknown affix " + a.id);
-    return def;
+    const def2 = AFFIXES[a.id];
+    if (!def2) throw new Error("unknown affix " + a.id);
+    return def2;
+  }
+  function countAffixes(item) {
+    let prefix = 0, suffix = 0;
+    for (const a of item.affixes) affixOf(a).type === "prefix" ? prefix++ : suffix++;
+    return { prefix, suffix };
+  }
+  function eligibleAffixes(item, type) {
+    const b = baseOf(item);
+    const dom = domainsOf(b);
+    const counts = countAffixes(item);
+    const max = MAX_AFFIXES[item.rarity];
+    const groups = new Set(item.affixes.map((a) => affixOf(a).group));
+    return Object.values(AFFIXES).filter((a) => (!type || a.type === type) && counts[a.type] < max[a.type] && !groups.has(a.group) && a.tiers[0].ilvl <= item.ilvl && a.domains.some((x) => dom.has(x)));
+  }
+  function rollTier(rng, def2, ilvl) {
+    const allowed = def2.tiers.map((t, i) => ({ t, i })).filter((x) => x.t.ilvl <= ilvl);
+    const pick = rng.weighted(allowed, (x) => Math.pow(0.62, x.i)) ?? allowed[0];
+    return { id: def2.id, tier: pick.i, rolls: pick.t.ranges.map(([lo, hi]) => rng.int(lo, hi)) };
+  }
+  function addRandomAffix(rng, item, type) {
+    const pool = eligibleAffixes(item, type);
+    const def2 = rng.weighted(pool, (a) => a.weight);
+    if (!def2) return false;
+    item.affixes.push(rollTier(rng, def2, item.ilvl));
+    return true;
+  }
+  function rareName(rng) {
+    return `${rng.pick(RARE_NAMES_A)} ${rng.pick(RARE_NAMES_B)}`;
+  }
+  function rollAffixes(rng, item) {
+    item.affixes = [];
+    if (item.rarity === "enchanted") {
+      const n = rng.chance(0.55) ? 2 : 1;
+      if (n === 2) {
+        addRandomAffix(rng, item, "prefix");
+        addRandomAffix(rng, item, "suffix");
+      } else addRandomAffix(rng, item);
+    } else if (item.rarity === "rare") {
+      const n = rng.weighted([3, 4, 5, 6], (x) => [30, 40, 20, 10][x - 3]);
+      for (let i = 0; i < n; i++) addRandomAffix(rng, item);
+      item.name = rareName(rng);
+    }
+  }
+  function pickRarity(rng, bonus = 0) {
+    const m2 = 1 + bonus / 100;
+    const rare = 0.08 * m2, ench = 0.35 * Math.sqrt(m2);
+    const r2 = rng.next();
+    if (r2 < rare) return "rare";
+    if (r2 < rare + ench) return "enchanted";
+    return "plain";
+  }
+  function pickBase(rng, ilvl, slots) {
+    const pool = Object.values(BASES).filter((b2) => b2.level <= ilvl && (!slots || slots.includes(b2.slot)));
+    const b = rng.weighted(pool, (x) => (x.slot === "weapon" ? 0.7 : 1) * (ilvl - x.level < 14 ? 3 : 1));
+    if (!b) throw new Error("no base for ilvl " + ilvl);
+    return b;
+  }
+  function rollItem(rng, uid, ilvl, opts = {}) {
+    const base = opts.base ? BASES[opts.base] : pickBase(rng, ilvl, opts.slots);
+    if (!base) throw new Error("unknown base " + opts.base);
+    const item = { uid, base: base.id, ilvl, rarity: opts.rarity ?? pickRarity(rng, opts.rarityBonus), affixes: [] };
+    rollAffixes(rng, item);
+    return item;
   }
   function rawMods(item) {
     const out = [];
@@ -637,8 +1026,8 @@
     const src = itemLabel(item);
     for (const m2 of b.implicit ?? []) out.push({ ...m2, src });
     for (const a of item.affixes) {
-      const def = affixOf(a);
-      def.mods.forEach((m2, i) => {
+      const def2 = affixOf(a);
+      def2.mods.forEach((m2, i) => {
         const mod = { stat: m2.stat, kind: m2.kind, value: a.rolls[i] ?? 0, src };
         if (m2.tags) mod.tags = m2.tags;
         out.push(mod);
@@ -688,10 +1077,21 @@
     }
     return b.name;
   }
+  function affixText(a) {
+    const def2 = affixOf(a);
+    return def2.text.replace(/\{(\d)\}/g, (_, i) => String(a.rolls[+i] ?? "?"));
+  }
+  function tierLabel(a) {
+    return affixOf(a).tiers.length - a.tier;
+  }
+  function salvageValue(item) {
+    const r2 = { plain: 1, enchanted: 3, rare: 8, relic: 20 }[item.rarity];
+    return Math.max(1, Math.round(r2 * (1 + item.ilvl / 10)));
+  }
   function levelReq(item) {
-    let req = baseOf(item).level;
-    for (const a of item.affixes) req = Math.max(req, Math.floor((affixOf(a).tiers[a.tier]?.ilvl ?? 1) * 0.8));
-    return Math.min(req, 90);
+    let req2 = baseOf(item).level;
+    for (const a of item.affixes) req2 = Math.max(req2, Math.floor((affixOf(a).tiers[a.tier]?.ilvl ?? 1) * 0.8));
+    return Math.min(req2, 90);
   }
 
   // src/core/types.ts
@@ -771,7 +1171,7 @@
       res[t] = Math.min(maxRes[t], resRaw[t]);
     }
     const lifeRegen = bag.flat("lifeRegen") + life * bag.flat("lifeRegenPct") / 100;
-    const manaRegen = bag.flat("manaRegen") + mana * 0.02;
+    const manaRegen = bag.flat("manaRegen") + mana * 0.07;
     const skill = calcSkill(hero, bag, problems);
     const ref = monsterDamage(L) * 1.5;
     const pool = life + es;
@@ -815,23 +1215,23 @@
   }
   function calcSkill(hero, heroBag, problems) {
     const L = hero.level;
-    let def = SKILLS[hero.skill];
-    if (!def || def.level > L) {
+    let def2 = SKILLS[hero.skill];
+    if (!def2 || def2.level > L) {
       problems.push("skill not available");
-      def = SKILLS.crescent;
+      def2 = SKILLS.crescent;
     }
     const weaponItem = hero.equipment.weapon;
     const wst = weaponItem && levelReq(weaponItem) <= L ? itemStats(weaponItem).weapon : void 0;
     const wkind = wst ? BASES[weaponItem.base].kind : "unarmed";
     let usable = true;
-    if (def.kind === "attack" && def.weapons && def.weapons.length && !def.weapons.includes(wkind)) {
-      problems.push(`${def.name} can't be used with ${wst ? "this weapon" : "no weapon"}`);
+    if (def2.kind === "attack" && def2.weapons && def2.weapons.length && !def2.weapons.includes(wkind)) {
+      problems.push(`${def2.name} can't be used with ${wst ? "this weapon" : "no weapon"}`);
       usable = false;
     }
     const bag = new StatBag();
     bag.addAll(allMods(heroBag));
-    for (const m2 of def.mods ?? []) bag.add(m2);
-    const tags = /* @__PURE__ */ new Set([...def.tags, def.kind]);
+    for (const m2 of def2.mods ?? []) bag.add(m2);
+    const tags = /* @__PURE__ */ new Set([...def2.tags, def2.kind]);
     const slots = supportSlots(L);
     const used = [];
     let manaMult = 1, extraTargets = 0;
@@ -839,7 +1239,7 @@
       const sup = SUPPORTS[id];
       if (!sup || sup.level > L) continue;
       if (sup.requires.length && !sup.requires.some((t) => tags.has(t))) {
-        problems.push(`${sup.name} does not support ${def.name}`);
+        problems.push(`${sup.name} does not support ${def2.name}`);
         continue;
       }
       used.push(id);
@@ -847,26 +1247,26 @@
       manaMult *= sup.manaMult;
       extraTargets += sup.targets ?? 0;
     }
-    const eff = def.effectiveness / 100 * (usable ? 1 : 0.5);
+    const eff = def2.effectiveness / 100 * (usable ? 1 : 0.5);
     const baseDmg = zeroRanges();
     let crit, speed;
-    if (def.kind === "attack") {
-      const w = wst ?? { ...UNARMED, added: {} };
-      baseDmg.phys = [w.phys[0], w.phys[1]];
+    if (def2.kind === "attack") {
+      const w2 = wst ?? { ...UNARMED, added: {} };
+      baseDmg.phys = [w2.phys[0], w2.phys[1]];
       for (const t of ELEMENTS) {
-        const a = w.added[t];
+        const a = w2.added[t];
         if (a) baseDmg[t] = [a[0], a[1]];
       }
-      crit = w.crit;
-      speed = w.aps * (def.speedMult ?? 1);
+      crit = w2.crit;
+      speed = w2.aps * (def2.speedMult ?? 1);
     } else {
       const sc = spellScale(L);
       for (const t of DAMAGE_TYPES) {
-        const d = def.damage?.[t];
+        const d = def2.damage?.[t];
         if (d) baseDmg[t] = [d[0] * sc, d[1] * sc];
       }
-      crit = def.crit ?? 6;
-      speed = 1 / (def.castTime ?? 1);
+      crit = def2.crit ?? 6;
+      speed = 1 / (def2.castTime ?? 1);
     }
     const ctx = tagSet([...tags]);
     for (const t of DAMAGE_TYPES) {
@@ -901,14 +1301,14 @@
     for (const t of DAMAGE_TYPES) hit[t] = [Math.round(hit[t][0] * 10) / 10, Math.round(hit[t][1] * 10) / 10];
     const critChance = Math.min(95, (crit + bag.flat("baseCrit", ctx)) * bag.incMult("critChance", ctx) * bag.more("critChance", ctx));
     const critMulti = 150 + bag.flat("critMulti", ctx);
-    if (def.kind === "attack") speed *= bag.incMult("attackSpeed", ctx) * bag.more("attackSpeed", ctx);
+    if (def2.kind === "attack") speed *= bag.incMult("attackSpeed", ctx) * bag.more("attackSpeed", ctx);
     else speed *= bag.incMult("castSpeed", ctx) * bag.more("castSpeed", ctx);
     const accuracy = Math.round(bag.calc("accuracy", heroBaseAccuracy(L), ctx));
-    const hc = def.kind === "spell" ? 1 : hitChance(accuracy, monsterDefence(L));
+    const hc = def2.kind === "spell" ? 1 : hitChance(accuracy, monsterDefence(L));
     let targets = 1;
-    if (def.shape === "area") targets = Math.max(1, Math.floor((def.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
-    else if (def.shape === "projectile") targets = 1 + (def.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
-    const manaCost = Math.round(def.manaCost * (1 + 0.04 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
+    if (def2.shape === "area") targets = Math.max(1, Math.floor((def2.targets ?? 3) * bag.incMult("area", ctx))) + extraTargets;
+    else if (def2.shape === "projectile") targets = 1 + (def2.targets ?? 0) + extraTargets + Math.floor(bag.flat("pierce", ctx));
+    const manaCost = Math.round(def2.manaCost * (1 + 0.03 * (L - 1)) * manaMult * bag.incMult("manaCost") * 10) / 10;
     const pen = zeroes();
     for (const t of DAMAGE_TYPES) pen[t] = bag.flat(`pen.${t}`, ctx);
     let avgHit = 0;
@@ -916,11 +1316,11 @@
     const critFactor = 1 + critChance / 100 * (critMulti / 100 - 1);
     const dps = avgHit * critFactor * speed * hc;
     return {
-      id: def.id,
-      name: def.name,
-      kind: def.kind,
-      shape: def.shape,
-      fx: def.fx,
+      id: def2.id,
+      name: def2.name,
+      kind: def2.kind,
+      shape: def2.shape,
+      fx: def2.fx,
       tags: [...tags],
       hit,
       avgHit,
@@ -959,31 +1359,11 @@
     ...DAMAGE_TYPES.flatMap((t) => [`addMin.${t}`, `addMax.${t}`, `pen.${t}`, `convert.${t}`])
   ];
 
-  // src/core/rng.ts
-  function splitmix32(a) {
-    return () => {
-      a = a + 2654435769 | 0;
-      let t = a ^ a >>> 16;
-      t = Math.imul(t, 569420461);
-      t ^= t >>> 15;
-      t = Math.imul(t, 1935289751);
-      t ^= t >>> 15;
-      return t >>> 0;
-    };
-  }
-  function hashSeed(...parts) {
-    let h = 2166136261;
-    for (const p of parts) {
-      const sm = splitmix32((h ^ (p | 0)) >>> 0);
-      h = (sm() ^ Math.imul(h, 16777619)) >>> 0;
-    }
-    return h >>> 0;
-  }
-
   // src/core/state.ts
   var newTotals = () => ({ kills: 0, deaths: 0, runs: 0, items: 0, salvaged: 0, dust: 0, simMs: 0 });
 
   // src/core/game.ts
+  var RARITY_RANK = { plain: 0, enchanted: 1, rare: 2, relic: 3 };
   var LOG_MAX = 60;
   function newGame(opts) {
     const cls = CLASSES[opts.cls];
@@ -1000,7 +1380,7 @@
       currency: {},
       world: { unlocked: ["a1_shore"], clears: {}, storySeen: [] },
       activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0 },
-      settings: { keep: "enchanted", autoEquip: true },
+      settings: { keep: "rare", autoEquip: true },
       totals: newTotals(),
       nextUid: 1,
       log: []
@@ -1021,7 +1401,2228 @@
     state.log.push({ t: state.simTo, kind, text });
     if (state.log.length > LOG_MAX) state.log.splice(0, state.log.length - LOG_MAX);
   }
+  function buildScore(s) {
+    if (s.problems.length) return 0;
+    const off = Math.sqrt(Math.max(0.01, s.skill.dps) * Math.max(0.01, s.skill.packDps));
+    const def2 = Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
+    return Math.pow(off, 0.6) * Math.pow(def2, 0.4);
+  }
+  function canEquip(state, item, slot) {
+    const b = baseOf(item);
+    if (!slotsFor(b).includes(slot)) return "wrong slot";
+    if (levelReq(item) > state.hero.level) return `needs level ${levelReq(item)}`;
+    const w2 = state.hero.equipment.weapon;
+    if (slot === "offhand" && w2) {
+      const wb = baseOf(w2);
+      if (wb.weapon?.hands === 2 && !(wb.kind === "bow" && b.kind === "quiver")) return "two-handed weapon";
+    }
+    if (b.kind === "quiver" && (!w2 || baseOf(w2).kind !== "bow")) return "needs a bow";
+    return null;
+  }
+  function putOn(state, item, slot) {
+    const eq = state.hero.equipment;
+    const off = [];
+    const prev = eq[slot];
+    if (prev) off.push(prev);
+    eq[slot] = item;
+    const b = baseOf(item);
+    if (slot === "weapon" && eq.offhand) {
+      const ob = baseOf(eq.offhand);
+      if (b.weapon?.hands === 2 && !(b.kind === "bow" && ob.kind === "quiver")) {
+        off.push(eq.offhand);
+        delete eq.offhand;
+      } else if (ob.kind === "quiver" && b.kind !== "bow") {
+        off.push(eq.offhand);
+        delete eq.offhand;
+      }
+    }
+    state.hero.rev++;
+    return off;
+  }
+  function equip(state, uid, slot) {
+    const i = state.stash.findIndex((x) => x.uid === uid);
+    if (i < 0) return "not in stash";
+    const item = state.stash[i];
+    const target = slot ?? bestSlot(state, item);
+    const err = canEquip(state, item, target);
+    if (err) return err;
+    state.stash.splice(i, 1);
+    state.stash.push(...putOn(state, item, target));
+    return null;
+  }
+  function unequip(state, slot) {
+    const it = state.hero.equipment[slot];
+    if (!it) return null;
+    if (state.stash.length >= state.stashCap) return "stash full";
+    delete state.hero.equipment[slot];
+    state.stash.push(it);
+    state.hero.rev++;
+    return null;
+  }
+  function bestSlot(state, item) {
+    const slots = slotsFor(baseOf(item));
+    return slots.find((s) => !state.hero.equipment[s]) ?? slots[0];
+  }
+  function trialSheet(state, item, slot) {
+    if (canEquip(state, item, slot)) return null;
+    const hero = structuredClone(state.hero);
+    const trial = { ...state, hero };
+    putOn(trial, item, slot);
+    return deriveSheet(hero);
+  }
+  function upgradeSlot(state, item) {
+    const now = buildScore(sheetOf(state));
+    let best = null, bestScore = now * 1.02;
+    for (const slot of slotsFor(baseOf(item))) {
+      const sheet = trialSheet(state, item, slot);
+      if (!sheet) continue;
+      const score = buildScore(sheet);
+      if (score > bestScore) {
+        best = slot;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+  function receiveItem(state, item) {
+    state.totals.items++;
+    if (state.settings.autoEquip) {
+      const slot = upgradeSlot(state, item);
+      if (slot) {
+        for (const old of putOn(state, item, slot)) stashOrSalvage(state, old);
+        pushLog(state, "loot", `Equipped a new ${BASES[item.base].name}.`);
+        return { kept: true, equipped: true };
+      }
+    }
+    return { kept: stashOrSalvage(state, item), equipped: false };
+  }
+  function stashOrSalvage(state, item) {
+    if (RARITY_RANK[item.rarity] >= RARITY_RANK[state.settings.keep] && state.stash.length < state.stashCap) {
+      state.stash.push(item);
+      return true;
+    }
+    salvageItem(state, item);
+    return false;
+  }
+  function salvageItem(state, item) {
+    const v = salvageValue(item);
+    state.dust += v;
+    state.totals.salvaged++;
+    state.totals.dust += v;
+  }
+  function salvage(state, uids) {
+    let n = 0;
+    for (const uid of uids) {
+      const i = state.stash.findIndex((x) => x.uid === uid);
+      if (i < 0) continue;
+      salvageItem(state, state.stash.splice(i, 1)[0]);
+      n++;
+    }
+    return n;
+  }
+  function setSkill(state, id) {
+    const s = SKILLS[id];
+    if (!s) return "unknown skill";
+    if (s.level > state.hero.level) return `needs level ${s.level}`;
+    state.hero.skill = id;
+    state.hero.rev++;
+    return null;
+  }
+  function setSupports(state, ids) {
+    for (const id of ids) {
+      const s = SUPPORTS[id];
+      if (!s) return "unknown support";
+      if (s.level > state.hero.level) return `${s.name} needs level ${s.level}`;
+    }
+    if (new Set(ids).size !== ids.length) return "duplicate support";
+    state.hero.supports = [...ids];
+    state.hero.rev++;
+    return null;
+  }
+  function setZone(state, id) {
+    if (!ZONES[id]) return "unknown zone";
+    if (!state.world.unlocked.includes(id)) return "locked";
+    if (state.activity.zone === id) return null;
+    state.activity.zone = id;
+    state.activity.streak = 0;
+    state.activity.deaths = 0;
+    state.activity.runIndex++;
+    state.activity.run = null;
+    return null;
+  }
+
+  // src/core/sim/engine.ts
+  var STEP_MS = 100;
+  var DT = STEP_MS / 1e3;
+  var MAX_OFFLINE_MS = 24 * 36e5;
+  var TRAVEL_S = 1.5;
+  var RESPAWN_S = 6;
+  var FLASK_MAX = 30;
+  var FLASK_COST = 10;
+  var FLASK_S = 2;
+  var flaskAmount = (level, sheet) => (40 + 14 * level) * sheet.flaskHeal;
+  function newRun(state, sheet) {
+    const z = zoneOf(state.activity.zone);
+    const rng = new Rng(hashSeed(state.seed, state.activity.runIndex));
+    const run = {
+      rng: rng.state(),
+      zone: z.id,
+      pack: 0,
+      packs: z.packs,
+      boss: !!z.boss,
+      phase: "fight",
+      timer: 0,
+      monsters: [],
+      hero: { life: sheet.life, es: sheet.es, mana: sheet.mana, flask: FLASK_MAX, flaskLeft: 0, flaskRate: 0, cd: 0.3, esDelay: 0 },
+      kills: 0,
+      xp: 0,
+      elapsed: 0
+    };
+    const prev = state.activity.run;
+    if (prev && prev.zone === z.id) run.hero.flask = prev.hero.flask;
+    spawnPack(run, z, rng);
+    run.rng = rng.state();
+    return run;
+  }
+  function zoneOf(id) {
+    const z = ZONES[id];
+    if (!z) throw new Error("unknown zone " + id);
+    return z;
+  }
+  function makeMonster(def2, level, champion, rng) {
+    const d = MONSTERS[def2];
+    const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1));
+    return { def: def2, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
+  }
+  function spawnPack(run, z, rng) {
+    run.monsters = [];
+    if (run.pack >= run.packs) {
+      if (z.boss) run.monsters.push(makeMonster(z.boss, z.level + 1, false, rng));
+      return;
+    }
+    const n = rng.int(z.packSize[0], z.packSize[1]);
+    const champ = rng.chance(z.champion);
+    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng));
+  }
+  function advance(state, now, ev = {}, maxSteps = Infinity) {
+    if (now - state.simTo > MAX_OFFLINE_MS) state.simTo = now - MAX_OFFLINE_MS;
+    let steps = 0;
+    while (state.simTo + STEP_MS <= now) {
+      if (steps >= maxSteps) return false;
+      step(state, ev);
+      state.simTo += STEP_MS;
+      state.totals.simMs += STEP_MS;
+      steps++;
+    }
+    return true;
+  }
+  function step(state, ev = {}) {
+    let sheet = sheetOf(state);
+    if (!state.activity.run) state.activity.run = newRun(state, sheet);
+    const run = state.activity.run;
+    const rng = new Rng(run.rng);
+    const h2 = run.hero;
+    const z = zoneOf(run.zone);
+    run.elapsed += DT;
+    h2.life = Math.min(sheet.life, h2.life + sheet.lifeRegen * DT);
+    h2.mana = Math.min(sheet.mana, h2.mana + sheet.manaRegen * DT);
+    if (h2.esDelay > 0) h2.esDelay -= DT;
+    else h2.es = Math.min(sheet.es, h2.es + sheet.es * 0.2 * DT);
+    if (h2.flaskLeft > 0) {
+      h2.life = Math.min(sheet.life, h2.life + h2.flaskRate * DT);
+      h2.flaskLeft -= DT;
+    }
+    switch (run.phase) {
+      case "dead":
+        run.timer -= DT;
+        if (run.timer <= 0) {
+          state.activity.runIndex++;
+          state.activity.run = newRun(state, sheet);
+        }
+        break;
+      case "travel":
+        run.timer -= DT * sheet.moveSpeed;
+        if (run.timer <= 0) {
+          spawnPack(run, z, rng);
+          run.phase = run.monsters.length ? "fight" : "done";
+        }
+        break;
+      case "done":
+        finishRun(state, ev);
+        return;
+      case "fight": {
+        h2.cd -= DT;
+        if (h2.cd <= 0) {
+          if (h2.mana >= sheet.skill.manaCost) {
+            h2.mana -= sheet.skill.manaCost;
+            sheet = heroAttack(state, run, sheet, rng, ev);
+            h2.cd += 1 / Math.max(0.1, sheet.skill.speed);
+          } else h2.cd = 0.2;
+        }
+        monstersAct(run, sheet, rng, ev);
+        if (h2.life <= 0) {
+          heroDied(state, run, ev);
+          break;
+        }
+        if (h2.flaskLeft <= 0 && h2.life < sheet.life * 0.5 && h2.flask >= FLASK_COST) {
+          h2.flask -= FLASK_COST;
+          h2.flaskLeft = FLASK_S;
+          h2.flaskRate = flaskAmount(state.hero.level, sheet) / FLASK_S;
+          ev.flask?.();
+        }
+        if (run.monsters.every((m2) => m2.life <= 0)) {
+          run.pack++;
+          const last = run.pack > run.packs || run.pack === run.packs && !run.boss;
+          run.phase = last ? "done" : "travel";
+          run.timer = TRAVEL_S;
+        }
+        break;
+      }
+    }
+    if (state.activity.run === run) run.rng = rng.state();
+  }
+  function heroAttack(state, run, sheet, rng, ev) {
+    const sk = sheet.skill;
+    const alive = [];
+    run.monsters.forEach((m2, i) => {
+      if (m2.life > 0) alive.push(i);
+    });
+    const targets = alive.slice(0, sk.targets);
+    ev.heroUse?.(sk.fx, targets);
+    let dealt = 0;
+    for (const i of targets) {
+      const m2 = run.monsters[i];
+      const d = MONSTERS[m2.def];
+      if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m2.level) * d.evasion))) {
+        ev.heroMiss?.(i);
+        continue;
+      }
+      const crit = rng.chance(sk.critChance / 100);
+      let dmg = 0;
+      for (const t of DAMAGE_TYPES) {
+        const [lo, hi] = sk.hit[t];
+        if (hi <= 0) continue;
+        let x = rng.range(lo, hi);
+        if (crit) x *= sk.critMulti / 100;
+        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m2.level) * d.armour * 0.5, x);
+        else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
+        dmg += Math.max(0, x);
+      }
+      dmg = Math.max(1, dmg);
+      m2.life -= dmg;
+      dealt += dmg;
+      ev.heroHit?.(i, dmg, crit);
+      if (m2.life <= 0) sheet = onKill(state, run, m2, sheet, rng, ev);
+    }
+    if (sk.leech > 0 && dealt > 0) {
+      const h2 = run.hero;
+      h2.life = Math.min(sheet.life, h2.life + Math.min(dealt * sk.leech / 100, sheet.life * 0.1));
+    }
+    return sheet;
+  }
+  function monstersAct(run, sheet, rng, ev) {
+    const h2 = run.hero;
+    run.monsters.forEach((m2, i) => {
+      if (m2.life <= 0 || h2.life <= 0) return;
+      const d = MONSTERS[m2.def];
+      m2.atk -= DT;
+      if (m2.atk > 0) return;
+      m2.atk += rng.range(0.85, 1.15) / d.speed;
+      if (!d.spell) {
+        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m2.level) * d.accuracy, sheet.evasion));
+        if (rng.chance(evade)) {
+          ev.monsterHit?.(i, 0, "evade");
+          return;
+        }
+      }
+      if (rng.chance(sheet.block / 100)) {
+        ev.monsterHit?.(i, 0, "block");
+        return;
+      }
+      const base = monsterDamage(m2.level) * d.damage * (m2.champion ? 1.5 : 1) * rng.range(0.8, 1.2);
+      let dmg = 0;
+      for (const t of DAMAGE_TYPES) {
+        const share = d.split[t];
+        if (!share) continue;
+        let x = base * share;
+        if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
+        else x *= 1 - sheet.res[t] / 100;
+        dmg += x;
+      }
+      dmg *= sheet.dmgTaken;
+      const fromEs = Math.min(h2.es, dmg);
+      h2.es -= fromEs;
+      h2.life -= dmg - fromEs;
+      h2.esDelay = 2;
+      ev.monsterHit?.(i, dmg, null);
+    });
+  }
+  function onKill(state, run, m2, sheet, rng, ev) {
+    const d = MONSTERS[m2.def];
+    const hero = state.hero;
+    const xp = Math.round(monsterXp(m2.level) * d.xp * (m2.champion ? 3 : 1) * xpPenalty(hero.level, m2.level) * sheet.xpGain);
+    run.kills++;
+    run.xp += xp;
+    state.totals.kills++;
+    run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
+    run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
+    ev.kill?.(m2, xp);
+    let changed = gainXp(state, xp, ev);
+    const qty = 1 + sheet.quantity / 100;
+    let drops = 0;
+    if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
+    else if (rng.chance((m2.champion ? 0.4 : 0.07) * qty)) drops = 1;
+    for (let k = 0; k < drops; k++) {
+      const bonus = sheet.rarity + (m2.champion ? 100 : 0) + (d.boss ? 250 : 0);
+      const opts = d.boss && k === 0 ? { rarity: "rare" } : { rarityBonus: bonus };
+      const item = rollItem(rng, state.nextUid++, m2.level, opts);
+      const r2 = receiveItem(state, item);
+      if (r2.equipped) changed = true;
+      ev.loot?.(item, r2.kept, r2.equipped);
+    }
+    if (d.boss) pushLog(state, "boss", `${d.name} falls.`);
+    return changed ? sheetOf(state) : sheet;
+  }
+  function gainXp(state, xp, ev = {}) {
+    const hero = state.hero;
+    if (hero.level >= MAX_LEVEL) return false;
+    hero.xp += xp;
+    let up = false;
+    while (hero.level < MAX_LEVEL && hero.xp >= xpToNext(hero.level)) {
+      hero.xp -= xpToNext(hero.level);
+      hero.level++;
+      hero.rev++;
+      up = true;
+      pushLog(state, "level", `Reached level ${hero.level}.`);
+      ev.level?.(hero.level);
+    }
+    if (hero.level >= MAX_LEVEL) hero.xp = 0;
+    return up;
+  }
+  function heroDied(state, run, ev) {
+    run.phase = "dead";
+    run.timer = RESPAWN_S;
+    run.hero.life = 0;
+    state.totals.deaths++;
+    const act = state.activity;
+    act.streak = 0;
+    act.deaths++;
+    pushLog(state, "death", `Died in ${zoneOf(run.zone).name}.`);
+    ev.death?.(run.zone);
+    if (act.autoPush && act.deaths >= 3) {
+      const i = ZONE_ORDER.indexOf(act.zone);
+      if (i > 0) {
+        const to = ZONE_ORDER[i - 1];
+        ev.zone?.(act.zone, to, "retreat");
+        pushLog(state, "zone", `Fell back to ${zoneOf(to).name}.`);
+        act.zone = to;
+        act.deaths = 0;
+      }
+    }
+  }
+  function finishRun(state, ev) {
+    const act = state.activity;
+    const run = act.run;
+    state.totals.runs++;
+    state.world.clears[run.zone] = (state.world.clears[run.zone] ?? 0) + 1;
+    act.streak++;
+    act.deaths = 0;
+    ev.runDone?.(run.zone);
+    const i = ZONE_ORDER.indexOf(run.zone);
+    const next = ZONE_ORDER[i + 1];
+    if (next && !state.world.unlocked.includes(next)) {
+      state.world.unlocked.push(next);
+      pushLog(state, "zone", `${zoneOf(next).name} is open.`);
+      ev.zone?.(run.zone, next, "unlock");
+    }
+    if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone) {
+      ev.zone?.(act.zone, next, "push");
+      pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
+      act.zone = next;
+      act.streak = 0;
+    }
+    act.runIndex++;
+    act.run = newRun(state, sheetOf(state));
+  }
+
+  // src/core/sim/report.ts
+  function startReport(state) {
+    const report = {
+      from: state.simTo,
+      to: state.simTo,
+      levelFrom: state.hero.level,
+      levelTo: state.hero.level,
+      xp: 0,
+      runs: 0,
+      kills: 0,
+      bosses: 0,
+      deaths: 0,
+      kept: 0,
+      salvaged: 0,
+      dust: state.dust,
+      equipped: [],
+      best: [],
+      zones: []
+    };
+    const events = {
+      kill: (m2, xp) => {
+        report.kills++;
+        report.xp += xp;
+        if (MONSTERS[m2.def]?.boss) report.bosses++;
+      },
+      death: () => {
+        report.deaths++;
+      },
+      runDone: () => {
+        report.runs++;
+      },
+      loot: (item, kept, equipped) => {
+        if (equipped) report.equipped.push(itemLabel(item));
+        else if (kept) report.kept++;
+        else report.salvaged++;
+        if (kept && (item.rarity === "rare" || item.rarity === "relic")) {
+          report.best.push(item);
+          if (report.best.length > 6) report.best.shift();
+        }
+      },
+      zone: (_from, to, why) => {
+        if (why === "unlock") report.zones.push(ZONES[to]?.name ?? to);
+      }
+    };
+    return {
+      report,
+      events,
+      finish(s) {
+        report.to = s.simTo;
+        report.levelTo = s.hero.level;
+        report.dust = s.dust - report.dust;
+        return report;
+      }
+    };
+  }
+
+  // src/core/save.ts
+  var SAVE_VERSION = 1;
+  var MIGRATIONS = {};
+  var SaveError = class extends Error {
+  };
+  function wrap(state, savedAt) {
+    return { game: "hollowmarch", v: SAVE_VERSION, savedAt, state };
+  }
+  function unwrap(raw, migrations = MIGRATIONS, target = SAVE_VERSION) {
+    if (!raw || typeof raw !== "object") throw new SaveError("not a save");
+    const env = raw;
+    if (env.game !== "hollowmarch") throw new SaveError("not a Hollowmarch save");
+    if (typeof env.v !== "number" || !Number.isInteger(env.v) || env.v < 1) throw new SaveError("bad save version");
+    if (env.v > target) throw new SaveError(`save is from a newer version (${env.v})`);
+    let state = env.state;
+    for (let v = env.v; v < target; v++) {
+      const m2 = migrations[v];
+      if (!m2) throw new SaveError(`no migration from version ${v}`);
+      state = m2(state);
+    }
+    return { game: "hollowmarch", v: target, savedAt: typeof env.savedAt === "number" ? env.savedAt : 0, state };
+  }
+  function exportText(env) {
+    const json = JSON.stringify(env);
+    const bytes = new TextEncoder().encode(json);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return "HM1:" + btoa(bin);
+  }
+  function importText(text) {
+    const t = text.trim();
+    if (!t.startsWith("HM1:")) throw new SaveError("not a Hollowmarch export");
+    let bin;
+    try {
+      bin = atob(t.slice(4));
+    } catch {
+      throw new SaveError("export is damaged");
+    }
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    try {
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      throw new SaveError("export is damaged");
+    }
+  }
+
+  // src/ui/battle.ts
+  var W = 320;
+  var H = 120;
+  var GROUND = 100;
+  var HERO_X = 64;
+  var Battle = class {
+    canvas;
+    g;
+    fx = [];
+    floats = [];
+    flash = /* @__PURE__ */ new Map();
+    dying = /* @__PURE__ */ new Map();
+    packKey = "";
+    heroHurt = 0;
+    lastDraw = 0;
+    travel = 0;
+    /** Set by the app while it is catching up, so bursts of events don't pile up. */
+    quiet = false;
+    constructor() {
+      this.canvas = document.createElement("canvas");
+      this.canvas.width = W;
+      this.canvas.height = H;
+      this.g = this.canvas.getContext("2d");
+    }
+    positions(state) {
+      const run = state.activity.run;
+      if (!run) return [];
+      const n = run.monsters.length;
+      if (n === 1 && MONSTERS[run.monsters[0].def]?.boss) return [[236, GROUND]];
+      return run.monsters.map((_, i) => {
+        const row = Math.floor(i / 3), col = i % 3;
+        return [178 + col * 44 + row * 22, GROUND - row * 12];
+      });
+    }
+    /** Events to hand to advance() while online. */
+    events(now, state) {
+      return {
+        heroUse: (kind, targets) => {
+          if (!this.quiet) this.pushFx({ kind, t: now(), targets });
+        },
+        heroHit: (i, dmg, crit) => {
+          if (this.quiet) return;
+          const p = this.positions(state())[i];
+          this.flash.set(i, now());
+          if (p) this.pushFloat({ x: p[0], y: p[1] - 30, text: fmtShort(dmg), color: crit ? "#ffc233" : "#ffffff", t: now(), big: crit });
+        },
+        heroMiss: (i) => {
+          if (this.quiet) return;
+          const p = this.positions(state())[i];
+          if (p) this.pushFloat({ x: p[0], y: p[1] - 30, text: "miss", color: "#9aa0a6", t: now(), big: false });
+        },
+        monsterHit: (_i, dmg, avoided) => {
+          if (this.quiet) return;
+          if (avoided) this.pushFloat({ x: HERO_X, y: GROUND - 34, text: avoided, color: "#7fd1ff", t: now(), big: false });
+          else {
+            this.heroHurt = now();
+            this.pushFloat({ x: HERO_X - 6, y: GROUND - 34, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false });
+          }
+        },
+        flask: () => {
+          if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 44, text: "+flask", color: "#3fbf5f", t: now(), big: false });
+        },
+        level: (l) => {
+          if (!this.quiet) this.pushFloat({ x: HERO_X, y: GROUND - 52, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true });
+        }
+      };
+    }
+    pushFx(f) {
+      this.fx.push(f);
+      if (this.fx.length > 12) this.fx.shift();
+    }
+    jitter = 0;
+    pushFloat(f) {
+      this.jitter = (this.jitter + 1) % 5;
+      f.x += (this.jitter - 2) * 5;
+      f.y -= this.jitter % 3 * 4;
+      this.floats.push(f);
+      if (this.floats.length > 24) this.floats.shift();
+    }
+    draw(state, sheet, now) {
+      const g = this.g;
+      const run = state.activity.run;
+      const zone = ZONES[run?.zone ?? state.activity.zone];
+      const dt = this.lastDraw ? Math.min(100, now - this.lastDraw) : 16;
+      this.lastDraw = now;
+      if (run?.phase === "travel") this.travel += dt * 0.06;
+      const key = `${state.activity.runIndex}:${run?.pack ?? 0}`;
+      if (key !== this.packKey) {
+        this.packKey = key;
+        this.flash.clear();
+        this.dying.clear();
+      }
+      this.background(zone.palette, zone.id);
+      const pos = this.positions(state);
+      if (run && (run.phase === "fight" || run.phase === "dead")) {
+        run.monsters.forEach((m2, i) => {
+          const p = pos[i];
+          if (m2.life <= 0 && !this.dying.has(i)) this.dying.set(i, now);
+          const died = this.dying.get(i);
+          const fade = died ? 1 - (now - died) / 400 : 1;
+          if (fade <= 0) return;
+          const def2 = MONSTERS[m2.def];
+          const hit = now - (this.flash.get(i) ?? -1e9) < 90;
+          g.globalAlpha = Math.max(0, fade);
+          drawMonster(g, def2, p[0], p[1] + (died ? (1 - fade) * 6 : 0), hit, m2.champion, now);
+          g.globalAlpha = 1;
+          if (!died) {
+            const w2 = def2.boss ? 40 : 22;
+            bar(g, p[0] - w2 / 2, p[1] - monsterHeight(def2) - 8, w2, 3, m2.life / m2.maxLife, m2.champion ? "#ffc233" : "#e5383b");
+          }
+        });
+        const boss = run.monsters.find((m2) => MONSTERS[m2.def]?.boss && m2.life > 0);
+        if (boss) {
+          g.fillStyle = "#111";
+          g.fillRect(90, 4, 140, 12);
+          g.fillStyle = "#fff";
+          g.font = "bold 8px monospace";
+          g.textAlign = "center";
+          g.fillText(MONSTERS[boss.def].name.toUpperCase(), 160, 13);
+        }
+      }
+      const last = this.fx[this.fx.length - 1];
+      let lunge = 0;
+      if (last && now - last.t < 160 && (last.kind === "arc" || last.kind === "stab" || last.kind === "slam")) lunge = Math.sin((now - last.t) / 160 * Math.PI) * 14;
+      const walking = run?.phase === "travel";
+      const dead = run?.phase === "dead";
+      drawHero(g, HERO_X + lunge, GROUND, CLASSES[state.hero.cls]?.color ?? "#e2543b", walking ? now : 0, now - this.heroHurt < 120, dead);
+      this.fx = this.fx.filter((f) => now - f.t < 350);
+      for (const f of this.fx) this.drawFx(f, pos, now);
+      g.textAlign = "center";
+      this.floats = this.floats.filter((f) => now - f.t < 800);
+      for (const f of this.floats) {
+        const k = (now - f.t) / 800;
+        g.font = f.big ? "bold 10px monospace" : "bold 8px monospace";
+        g.globalAlpha = 1 - k * k;
+        const y = f.y - k * 16;
+        g.fillStyle = "#111";
+        g.fillText(f.text, f.x + 1, y + 1);
+        g.fillStyle = f.color;
+        g.fillText(f.text, f.x, y);
+      }
+      g.globalAlpha = 1;
+      if (dead && run) {
+        g.fillStyle = "rgba(10,10,14,0.6)";
+        g.fillRect(0, 0, W, H);
+        g.fillStyle = "#ff5a36";
+        g.font = "bold 12px monospace";
+        g.textAlign = "center";
+        g.fillText("THE EMBER RELIGHTS", W / 2, 54);
+        g.fillStyle = "#fff";
+        g.font = "bold 8px monospace";
+        g.fillText(`back in ${Math.max(0, run.timer).toFixed(0)}s`, W / 2, 68);
+      }
+      if (run) {
+        for (let i = 0; i < run.packs + (run.boss ? 1 : 0); i++) {
+          const isBoss = run.boss && i === run.packs;
+          g.fillStyle = "#111";
+          g.fillRect(6 + i * 9, 6, 7, 7);
+          g.fillStyle = i < run.pack ? "#19b3a3" : i === run.pack ? isBoss ? "#ff5a36" : "#ffc233" : "#555";
+          g.fillRect(7 + i * 9, 7, 5, 5);
+        }
+      }
+      void sheet;
+    }
+    background(pal, seedStr) {
+      const g = this.g;
+      g.fillStyle = pal[0];
+      g.fillRect(0, 0, W, H);
+      let s = 0;
+      for (const c of seedStr) s = s * 31 + c.charCodeAt(0) >>> 0;
+      g.fillStyle = pal[2];
+      for (let i = 0; i < 14; i++) {
+        s = s * 1103515245 + 12345 >>> 0;
+        const x = s % W;
+        s = s * 1103515245 + 12345 >>> 0;
+        g.fillRect(x, s % 50 + 4, 1, 1);
+      }
+      hills(g, shade(pal[0], -0.25), 64, 18, this.travel * 0.3, 0.035);
+      hills(g, shade(pal[1], -0.35), 82, 12, this.travel * 0.6, 0.06);
+      g.fillStyle = pal[1];
+      g.fillRect(0, GROUND, W, H - GROUND);
+      g.fillStyle = "#111";
+      g.fillRect(0, GROUND, W, 2);
+      g.fillStyle = shade(pal[1], -0.2);
+      for (let x = -(this.travel * 1.2 % 24); x < W; x += 24) g.fillRect(x, GROUND + 8, 10, 2);
+    }
+    drawFx(f, pos, now) {
+      const g = this.g;
+      const k = (now - f.t) / 350;
+      const targets = f.targets.map((i) => pos[i]).filter((p) => !!p);
+      g.lineWidth = 2;
+      if (f.kind === "arc") {
+        g.strokeStyle = `rgba(255,255,255,${1 - k})`;
+        g.beginPath();
+        g.arc(HERO_X + 14, GROUND - 14, 22 + k * 20, -1.1, 0.9);
+        g.stroke();
+        g.strokeStyle = `rgba(255,90,54,${1 - k})`;
+        g.beginPath();
+        g.arc(HERO_X + 14, GROUND - 14, 18 + k * 20, -1, 0.8);
+        g.stroke();
+      } else if (f.kind === "slam") {
+        g.strokeStyle = `rgba(255,194,51,${1 - k})`;
+        g.beginPath();
+        g.ellipse(HERO_X + 30 + k * 60, GROUND, 10 + k * 90, 4 + k * 6, 0, Math.PI, 0);
+        g.stroke();
+      } else if (f.kind === "stab") {
+        for (const p of targets.slice(0, 1)) {
+          g.strokeStyle = `rgba(255,255,255,${1 - k})`;
+          g.beginPath();
+          g.moveTo(p[0] - 10, p[1] - 22);
+          g.lineTo(p[0] + 10, p[1] - 8);
+          g.stroke();
+          g.beginPath();
+          g.moveTo(p[0] + 10, p[1] - 22);
+          g.lineTo(p[0] - 10, p[1] - 8);
+          g.stroke();
+        }
+      } else if (f.kind === "bolt") {
+        const end = targets[targets.length - 1] ?? [W - 20, GROUND - 14];
+        const x = HERO_X + 10 + (end[0] - HERO_X - 10) * Math.min(1, k * 2), y = GROUND - 14 + (end[1] - 14 - GROUND + 14) * Math.min(1, k * 2);
+        g.fillStyle = "#111";
+        g.fillRect(x - 3, y - 3, 7, 7);
+        g.fillStyle = "#ffc233";
+        g.fillRect(x - 2, y - 2, 5, 5);
+      } else if (f.kind === "nova") {
+        g.strokeStyle = `rgba(143,211,255,${1 - k})`;
+        g.beginPath();
+        g.arc(HERO_X, GROUND - 12, 10 + k * 120, 0, Math.PI * 2);
+        g.stroke();
+      }
+      g.lineWidth = 1;
+    }
+  };
+  function hills(g, color, base, amp, off, freq) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(0, GROUND);
+    for (let x = 0; x <= W; x += 4) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin((x + off) * freq) * Math.cos((x + off) * freq * 0.37)));
+    g.lineTo(W, GROUND);
+    g.closePath();
+    g.fill();
+  }
+  function bar(g, x, y, w2, h2, f, color) {
+    g.fillStyle = "#111";
+    g.fillRect(x - 1, y - 1, w2 + 2, h2 + 2);
+    g.fillStyle = "#3a3a3a";
+    g.fillRect(x, y, w2, h2);
+    g.fillStyle = color;
+    g.fillRect(x, y, Math.max(0, Math.min(1, f)) * w2, h2);
+  }
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (c) => Math.max(0, Math.min(255, Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt)));
+    return "#" + [n >> 16 & 255, n >> 8 & 255, n & 255].map(f).map((c) => c.toString(16).padStart(2, "0")).join("");
+  }
+  var monsterHeight = (d) => Math.round((d.look.shape === "crab" ? 12 : d.look.shape === "bird" ? 14 : d.look.shape === "blob" ? 14 : 22) * d.look.size);
+  function box(g, x, y, w2, h2, c) {
+    g.fillStyle = "#111";
+    g.fillRect(Math.round(x) - 1, Math.round(y) - 1, Math.round(w2) + 2, Math.round(h2) + 2);
+    g.fillStyle = c;
+    g.fillRect(Math.round(x), Math.round(y), Math.round(w2), Math.round(h2));
+  }
+  function drawMonster(g, d, x, y, hit, champ, now) {
+    const s = d.look.size;
+    const body = hit ? "#ffffff" : d.look.body;
+    const dark = hit ? "#dddddd" : shade(d.look.body, -0.3);
+    const bob = Math.round(Math.sin(now / 260 + x) * 1);
+    if (champ) {
+      g.fillStyle = "rgba(255,194,51,0.35)";
+      g.fillRect(x - 14 * s, y - 26 * s, 28 * s, 28 * s);
+    }
+    switch (d.look.shape) {
+      case "tall": {
+        box(g, x - 5 * s, y - 22 * s + bob, 10 * s, 8 * s, body);
+        box(g, x - 6 * s, y - 14 * s + bob, 12 * s, 10 * s, dark);
+        box(g, x - 5 * s, y - 4 * s, 3 * s, 4 * s, dark);
+        box(g, x + 2 * s, y - 4 * s, 3 * s, 4 * s, dark);
+        box(g, x - 9 * s, y - 13 * s + bob, 3 * s, 8 * s, body);
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 4 * s, y - 19 * s + bob, 2, 2);
+        g.fillRect(x - 1 * s, y - 19 * s + bob, 2, 2);
+        break;
+      }
+      case "crab": {
+        box(g, x - 9 * s, y - 9 * s + bob, 18 * s, 7 * s, body);
+        box(g, x - 13 * s, y - 13 * s, 5 * s, 4 * s, dark);
+        box(g, x + 8 * s, y - 13 * s, 5 * s, 4 * s, dark);
+        for (let i = 0; i < 3; i++) {
+          g.fillStyle = "#111";
+          g.fillRect(x - 8 * s + i * 7 * s, y - 2, 2, 2);
+        }
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 3 * s, y - 12 * s + bob, 2, 3);
+        g.fillRect(x + 2 * s, y - 12 * s + bob, 2, 3);
+        break;
+      }
+      case "bird": {
+        const flap = Math.sin(now / 90 + x) > 0 ? -4 : 2;
+        const yy = y - 18 * s + bob * 3;
+        box(g, x - 5 * s, yy, 10 * s, 6 * s, body);
+        box(g, x - 13 * s, yy + flap, 8 * s, 3, dark);
+        box(g, x + 5 * s, yy + flap, 8 * s, 3, dark);
+        box(g, x - 8 * s, yy + 2, 3, 2, "#ffc233");
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 3 * s, yy + 1, 2, 2);
+        break;
+      }
+      case "robe": {
+        box(g, x - 4 * s, y - 22 * s + bob, 8 * s, 7 * s, dark);
+        g.fillStyle = "#111";
+        g.beginPath();
+        g.moveTo(x - 9 * s, y);
+        g.lineTo(x, y - 17 * s + bob);
+        g.lineTo(x + 9 * s, y);
+        g.closePath();
+        g.fill();
+        g.fillStyle = body;
+        g.beginPath();
+        g.moveTo(x - 8 * s, y - 1);
+        g.lineTo(x, y - 15 * s + bob);
+        g.lineTo(x + 8 * s, y - 1);
+        g.closePath();
+        g.fill();
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 2 * s, y - 19 * s + bob, 2, 2);
+        g.fillRect(x + 1 * s, y - 19 * s + bob, 2, 2);
+        break;
+      }
+      case "blob": {
+        box(g, x - 8 * s, y - 12 * s + bob, 16 * s, 12 * s + -bob, body);
+        box(g, x - 4 * s, y - 16 * s + bob, 8 * s, 4 * s, dark);
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 5 * s, y - 9 * s + bob, 3, 3);
+        g.fillRect(x + 2 * s, y - 9 * s + bob, 3, 3);
+        break;
+      }
+      case "giant": {
+        box(g, x - 7 * s, y - 34 * s + bob, 14 * s, 10 * s, dark);
+        box(g, x - 11 * s, y - 24 * s + bob, 22 * s, 16 * s, body);
+        box(g, x - 16 * s, y - 24 * s + bob, 5 * s, 14 * s, dark);
+        box(g, x + 11 * s, y - 24 * s + bob, 5 * s, 14 * s, dark);
+        box(g, x - 8 * s, y - 8 * s, 6 * s, 8 * s, dark);
+        box(g, x + 2 * s, y - 8 * s, 6 * s, 8 * s, dark);
+        g.fillStyle = d.look.eye;
+        g.fillRect(x - 4 * s, y - 30 * s + bob, 3, 2);
+        g.fillRect(x + 2 * s, y - 30 * s + bob, 3, 2);
+        break;
+      }
+    }
+  }
+  function drawHero(g, x, y, color, walk, hurt, dead) {
+    if (dead) {
+      box(g, x - 10, y - 5, 20, 5, "#555");
+      return;
+    }
+    const step2 = walk ? Math.round(Math.sin(walk / 90) * 2) : 0;
+    const skin = hurt ? "#ffd0c0" : "#f0c9a0";
+    const armour = hurt ? "#e5a0a0" : "#6b7280";
+    box(g, x - 7, y - 20, 4, 12, color);
+    box(g, x - 3, y - 5, 3, 5 + step2, armour);
+    box(g, x + 1, y - 5, 3, 5 - step2, armour);
+    box(g, x - 4, y - 16, 9, 11, armour);
+    box(g, x - 3, y - 23, 7, 7, skin);
+    box(g, x - 4, y - 25, 9, 3, armour);
+    g.fillStyle = "#ff5a36";
+    g.fillRect(x, y - 13, 2, 3);
+    g.fillStyle = "#111";
+    g.fillRect(x + 2, y - 21, 1, 2);
+    box(g, x + 6, y - 24, 2, 14, "#c9ced6");
+    box(g, x + 4, y - 11, 6, 2, "#ffc233");
+  }
+  function fmtShort(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e4) return Math.round(n / 1e3) + "k";
+    return Math.round(n).toString();
+  }
+
+  // src/ui/css.ts
+  var CSS = `
+:host { all: initial; }
+* { box-sizing: border-box; }
+.hm {
+  --paper: #fff4dc; --paper2: #ffe3a8; --card: #ffffff; --text: #111111; --muted: #5b5446; --line: #111111;
+  --ember: #ff5a36; --gold: #ffc233; --teal: #19b3a3; --blue: #3a7bff; --violet: #8b5cf6; --green: #3fbf5f; --red: #e5383b;
+  --r-plain: #d8d8d8; --r-enchanted: #5aa9ff; --r-rare: #ffd23f; --r-relic: #ff8a1f;
+  --sh: 4px 4px 0 var(--line);
+  font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--text);
+}
+.hm.dark { --paper: #2a2533; --paper2: #3a3346; --card: #342e40; --text: #f7f1e6; --muted: #bdb3a3; --line: #000000; }
+.win {
+  position: fixed; z-index: 10050; display: flex; flex-direction: column; min-width: 360px; min-height: 320px;
+  background: var(--paper); border: 3px solid var(--line); box-shadow: 8px 8px 0 var(--line); overflow: hidden;
+}
+.bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ember); border-bottom: 3px solid var(--line); cursor: move; user-select: none; touch-action: none; }
+.bar .logo { font-weight: 900; letter-spacing: 1px; font-size: 14px; color: #111; text-transform: uppercase; }
+.bar .who { flex: 1; font-weight: 700; color: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.x { cursor: pointer; background: var(--card); color: var(--text); border: 2px solid var(--line); width: 26px; height: 26px; font-weight: 900; box-shadow: 2px 2px 0 var(--line); }
+.x:hover { background: var(--gold); color: #111; }
+.grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--line) 50%, var(--line) 60%, transparent 60%, transparent 70%, var(--line) 70%, var(--line) 80%, transparent 80%); }
+.stage { position: relative; border-bottom: 3px solid var(--line); background: #111; flex: none; }
+.stage canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.hud { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; padding: 6px 8px; border-bottom: 3px solid var(--line); background: var(--paper2); flex: none; }
+.meter { position: relative; height: 16px; border: 2px solid var(--line); background: var(--card); overflow: hidden; }
+.meter i { position: absolute; left: 0; top: 0; bottom: 0; }
+.meter span { position: relative; font-size: 11px; font-weight: 800; padding-left: 4px; line-height: 12px; color: var(--text); text-shadow: 1px 1px 0 var(--paper); white-space: nowrap; }
+.tabs { display: flex; gap: 0; border-bottom: 3px solid var(--line); background: var(--paper); flex: none; overflow-x: auto; }
+.tabs button { flex: 1; min-width: 60px; padding: 6px 4px; background: transparent; border: 0; border-right: 3px solid var(--line); font-weight: 800; color: var(--text); cursor: pointer; font-size: 12px; text-transform: uppercase; }
+.tabs button:last-child { border-right: 0; }
+.tabs button.on { background: var(--gold); color: #111; }
+.tabs button:hover:not(.on) { background: var(--paper2); }
+.body { flex: 1; overflow: auto; padding: 10px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.grow { flex: 1; }
+.card { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); padding: 8px 10px; }
+.card h3 { margin: 0 0 6px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
+.btn { cursor: pointer; font: inherit; font-weight: 800; padding: 5px 10px; background: var(--gold); color: #111; border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+.btn.alt { background: var(--card); color: var(--text); }
+.btn.hot { background: var(--ember); color: #111; }
+.btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: 3px 3px 0 var(--line); }
+.tag { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 5px; border: 2px solid var(--line); background: var(--paper2); text-transform: uppercase; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; font-family: "Cascadia Mono", Consolas, "Courier New", monospace; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; }
+.kv > :nth-child(odd) { color: var(--muted); }
+.kv > :nth-child(even) { text-align: right; font-weight: 700; }
+.kv .click { cursor: pointer; text-decoration: underline dotted; }
+.big { font-size: 22px; font-weight: 900; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.slots { display: grid; grid-template-columns: repeat(4, 56px); gap: 6px; }
+.cell { position: relative; width: 56px; height: 56px; border: 3px solid var(--line); background: var(--card); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.cell canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+.cell .lbl { position: absolute; bottom: 1px; left: 2px; font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.cell.sel { outline: 3px solid var(--ember); outline-offset: 1px; }
+.cell.plain { background: var(--r-plain); } .cell.enchanted { background: var(--r-enchanted); } .cell.rare { background: var(--r-rare); } .cell.relic { background: var(--r-relic); }
+.cell.empty { background: repeating-linear-gradient(45deg, var(--paper), var(--paper) 6px, var(--paper2) 6px, var(--paper2) 12px); }
+.stash { display: grid; grid-template-columns: repeat(auto-fill, 48px); gap: 4px; }
+.stash .cell { width: 48px; height: 48px; }
+.stash .cell canvas { width: 30px; height: 30px; }
+.item { min-width: 220px; }
+.item .name { font-weight: 900; font-size: 14px; padding: 4px 6px; border: 3px solid var(--line); margin: -8px -10px 6px; }
+.item .name.plain { background: var(--r-plain); color: #111; } .item .name.enchanted { background: var(--r-enchanted); color: #111; }
+.item .name.rare { background: var(--r-rare); color: #111; } .item .name.relic { background: var(--r-relic); color: #111; }
+.item .aff { font-size: 12px; }
+.item .aff b { font-size: 9px; color: var(--muted); margin-left: 4px; }
+.item hr { border: 0; border-top: 2px dashed var(--line); margin: 6px 0; }
+.up { color: var(--green); font-weight: 800; } .down { color: var(--red); font-weight: 800; }
+.skill { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 3px solid var(--line); background: var(--card); cursor: pointer; box-shadow: 3px 3px 0 var(--line); }
+.skill.on { background: var(--gold); color: #111; }
+.skill.locked { opacity: .5; cursor: default; }
+.skill .nm { font-weight: 900; }
+.skill .ds { font-size: 11px; }
+.zone { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 3px solid var(--line); background: var(--card); cursor: pointer; margin-bottom: 6px; }
+.zone.on { background: var(--teal); color: #111; }
+.zone.locked { opacity: .45; cursor: default; }
+.log div { padding: 2px 0; border-bottom: 1px dashed var(--muted); font-size: 12px; }
+.modal { position: absolute; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
+.modal .card { max-width: 440px; width: 100%; max-height: 100%; overflow: auto; }
+input[type=text], textarea, select { font: inherit; padding: 5px 7px; border: 3px solid var(--line); background: var(--card); color: var(--text); }
+textarea { width: 100%; min-height: 70px; font-family: Consolas, monospace; font-size: 11px; }
+label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-weight: 700; }
+.toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); padding: 6px 12px; font-weight: 800; z-index: 6; pointer-events: none; }
+.progress { height: 18px; border: 3px solid var(--line); background: var(--card); } .progress i { display: block; height: 100%; background: var(--teal); }
+.story { font-style: italic; border-left: 6px solid var(--ember); padding-left: 8px; }
+`;
+
+  // src/ui/dom.ts
+  function h(tag, props = null, ...children) {
+    const el = document.createElement(tag);
+    if (props) {
+      if (props.class) el.className = props.class;
+      if (props.text !== void 0) el.textContent = String(props.text);
+      if (props.title) el.title = props.title;
+      if (props.style) el.setAttribute("style", props.style);
+      if (props.attrs) for (const [k, v] of Object.entries(props.attrs)) el.setAttribute(k, v);
+      if (props.on) for (const [k, fn] of Object.entries(props.on)) el.addEventListener(k, fn);
+    }
+    for (const c of children) if (c !== null && c !== void 0 && c !== false) el.append(typeof c === "object" ? c : String(c));
+    return el;
+  }
+  var clear = (el) => {
+    while (el.firstChild) el.removeChild(el.firstChild);
+  };
+  function fmt(n) {
+    if (!isFinite(n)) return "-";
+    const a = Math.abs(n);
+    if (a >= 1e9) return (n / 1e9).toFixed(2) + "B";
+    if (a >= 1e6) return (n / 1e6).toFixed(2) + "M";
+    if (a >= 1e4) return (n / 1e3).toFixed(1) + "k";
+    if (a >= 100 || Number.isInteger(n)) return Math.round(n).toString();
+    if (a >= 10) return n.toFixed(1);
+    return n.toFixed(2).replace(/\.?0+$/, "") || "0";
+  }
+  function fmtDuration(ms) {
+    const s = Math.floor(ms / 1e3);
+    const d = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600), mm = Math.floor(s % 3600 / 60);
+    if (d) return `${d}d ${hh}h`;
+    if (hh) return `${hh}h ${mm}m`;
+    if (mm) return `${mm}m`;
+    return `${s}s`;
+  }
+  var pct = (x, digits = 0) => (x * 100).toFixed(digits) + "%";
+
+  // src/ui/icons.ts
+  var P = { k: "#111111", a: "#c9ced6", b: "#8a5a2b", c: "#ff5a36", w: "#ffffff", g: "#ffc233", t: "#19b3a3", v: "#8b5cf6" };
+  var ICONS = {
+    sword: ["..........kk", ".........kwk", "........kwak", ".......kwak.", "......kwak..", ".....kwak...", "..k.kwak....", "..kkkak.....", "...kgk......", "..kbkkk.....", ".kbk..k.....", ".kk........."],
+    axe: ["....kkkk....", "...kaaaak...", "..kwaaaak...", "..kwaakbk...", "...kkkbk....", ".....kbk....", "....kbk.....", "....kbk.....", "...kbk......", "...kbk......", "..kbk.......", "..kk........"],
+    mace: [".....kkk....", "....kakak...", "...kawaaak..", "...kaaaaak..", "....kakak...", ".....kbk....", ".....kbk....", ".....kbk....", ".....kbk....", ".....kbk....", ".....kgk....", ".....kkk...."],
+    dagger: ["............", "........kk..", ".......kwk..", "......kwak..", ".....kwak...", "....kwak....", "..k.kak.....", "..kkgk......", "...kbk......", "..kbk.......", "..kk........", "............"],
+    greatsword: [".........kkk", "........kwak", ".......kwak.", "......kwak..", ".....kwak...", "....kwak....", "...kwak.....", ".kkkak......", ".kgggk......", "..kbk.......", ".kbk........", ".kk........."],
+    greataxe: ["...kkkkk....", "..kaaaaak...", ".kwaaaaakk..", ".kwaaakbk...", "..kaaakbk...", "...kkkbk....", ".....kbk....", "....kbk.....", "....kbk.....", "...kbk......", "...kbk......", "...kk......."],
+    staff: ["....kkk.....", "...kttk.....", "...ktwtk....", "....kttk....", "....kbk.....", "....kbk.....", "...kbk......", "...kbk......", "...kbk......", "..kbk.......", "..kbk.......", "..kk........"],
+    bow: ["...kk.......", "...kbk......", "....kbk....k", "....kbk...kw", ".....kbk.kw.", ".....kbkkw..", ".....kbkw...", ".....kbk.w..", "....kbk...w.", "....kbk....w", "...kbk......", "...kk......."],
+    wand: ["........kkk.", ".......kcwk.", ".......kcck.", "......kbkk..", ".....kbk....", "....kbk.....", "...kbk......", "..kbk.......", ".kbk........", ".kk.........", "............", "............"],
+    shield: ["kkkkkkkkkkk.", "kaaaaaaaaak.", "kaccaaaccak.", "kacccccccak.", "kaacccccaak.", "kaaacccaaak.", "kaaaacaaaak.", ".kaaaaaaak..", "..kaaaaak...", "...kaaak....", "....kkk.....", "............"],
+    buckler: ["............", "...kkkkk....", "..kbbbbbk...", ".kbbgggbbk..", ".kbgbbbgbk..", ".kbgbwbgbk..", ".kbgbbbgbk..", ".kbbgggbbk..", "..kbbbbbk...", "...kkkkk....", "............", "............"],
+    focus: ["............", "....kkkk....", "...kvvvvk...", "..kvwvvvvk..", "..kvvvvvvk..", "..kvvvvvvk..", "...kvvvvk...", "....kkkk....", "...kgggk....", "..kgggggk...", "..kkkkkkk...", "............"],
+    quiver: [".....k.k.k..", ".....kwkwk..", "....kbbbbk..", "....kbbbbk..", "...kbbcbk...", "...kbbcbk...", "..kbbcbk....", "..kbbbbk....", ".kbbbbk.....", ".kbbbk......", ".kkkk.......", "............"],
+    helmet: ["............", "...kkkkkk...", "..kaaaaaak..", ".kawaaaaaak.", ".kaaaaaaaak.", ".kakkkkkkak.", ".kak....kak.", ".kak....kak.", ".kkk....kkk.", "............", "............", "............"],
+    body: ["..kk....kk..", ".kaak..kaak.", "kaaaakkaaaak", "kaaaaaaaaaak", ".kkaaaaaakk.", "..kaaccaak..", "..kaaccaak..", "..kaaaaaak..", "..kaaaaaak..", "..kkkkkkkk..", "............", "............"],
+    gloves: ["............", "..k.k.k.....", ".kakakak....", ".kakakakk...", ".kaaaaakak..", ".kaaaaaaak..", ".kaaaaaak...", ".kaaaaak....", ".kbbbbbk....", ".kkkkkkk....", "............", "............"],
+    boots: ["............", "...kkkk.....", "...kaak.....", "...kaak.....", "...kaak.....", "...kaak.....", "...kaakkkk..", "...kaaaaaak.", "...kaaaaaak.", "...kkkkkkkk.", "............", "............"],
+    belt: ["............", "............", "............", "kkkkkkkkkkkk", "kbbbbkkkbbbk", "kbbbbkgkbbbk", "kbbbbkkkbbbk", "kkkkkkkkkkkk", "............", "............", "............", "............"],
+    amulet: ["..kkkkkkkk..", ".k........k.", ".k........k.", "..k......k..", "...k....k...", "....kkkk....", "...kggggk...", "..kgcccgk...", "..kgcwcgk...", "..kgcccgk...", "...kgggk....", "....kkk....."],
+    ring: ["............", "....kkkk....", "...kcwcck...", "....kkkk....", "...kgggk....", "..kg...gk...", "..kg...gk...", "..kg...gk...", "...kgggk....", "....kkk.....", "............", "............"]
+  };
+  var KIND_TINT = { plate: "#c9ced6", leather: "#b07b45", silk: "#b9a4ff", brigand: "#8fa3a0" };
+  var cache2 = /* @__PURE__ */ new Map();
+  function iconFor(kind, slot) {
+    const key = kind + ":" + slot;
+    let c = cache2.get(key);
+    if (!c) {
+      c = document.createElement("canvas");
+      c.width = 12;
+      c.height = 12;
+      const g = c.getContext("2d");
+      const art = ICONS[kind] ?? ICONS[slot === "ring1" || slot === "ring2" ? "ring" : slot] ?? ICONS.ring;
+      const tint = KIND_TINT[kind];
+      art.forEach((row, y) => [...row].forEach((ch, x) => {
+        if (ch === ".") return;
+        g.fillStyle = ch === "a" && tint ? tint : P[ch] ?? "#f0f";
+        g.fillRect(x, y, 1, 1);
+      }));
+      cache2.set(key, c);
+    }
+    const out = document.createElement("canvas");
+    out.width = 12;
+    out.height = 12;
+    out.getContext("2d").drawImage(c, 0, 0);
+    return out;
+  }
+
+  // src/ui/views.ts
+  var VIEWS = [
+    { id: "hero", label: "Hero" },
+    { id: "gear", label: "Gear" },
+    { id: "skills", label: "Skills" },
+    { id: "world", label: "World" },
+    { id: "log", label: "Log" },
+    { id: "menu", label: "Menu" }
+  ];
+  function viewSig(id, c) {
+    const s = c.state;
+    switch (id) {
+      case "hero":
+        return `${s.hero.rev}`;
+      case "gear":
+        return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}`;
+      case "skills":
+        return `${s.hero.rev}:${s.hero.level}`;
+      case "world":
+        return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+      case "log":
+        return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
+      case "menu":
+        return `${s.settings.keep}:${s.settings.autoEquip}:${s.totals.runs}`;
+    }
+  }
+  function renderView(id, c) {
+    switch (id) {
+      case "hero":
+        return heroView(c);
+      case "gear":
+        return gearView(c);
+      case "skills":
+        return skillsView(c);
+      case "world":
+        return worldView(c);
+      case "log":
+        return logView(c);
+      case "menu":
+        return menuView(c);
+    }
+  }
+  var TYPE_COLOR = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
+  var TYPE_NAME = { phys: "Physical", fire: "Fire", cold: "Cold", lightning: "Lightning", chaos: "Chaos" };
+  function kv(rows) {
+    const el = h("div", { class: "kv" });
+    for (const [k, v, click] of rows) {
+      const key = h("div", { text: k });
+      const val = typeof v === "string" ? h("div", { class: "num", text: v }) : v;
+      if (click) {
+        key.classList.add("click");
+        key.addEventListener("click", click);
+      }
+      el.append(key, val);
+    }
+    return el;
+  }
+  function heroView(c) {
+    const s = c.sheet();
+    const hero = c.state.hero;
+    const sk = s.skill;
+    const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
+    const breakdown = (stat, title) => () => {
+      const mods = s.bag.mods(stat);
+      const list2 = h("div", { class: "kv" });
+      for (const m2 of mods) list2.append(h("div", { text: m2.src ?? "?" }), h("div", { class: "num", text: `${m2.kind === "flat" ? "+" : ""}${m2.value}${m2.kind === "flat" ? "" : "% " + m2.kind}${m2.tags ? " [" + m2.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list2.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list2, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+    };
+    const off = h(
+      "div",
+      { class: "card" },
+      h("h3", { text: `Offence: ${sk.name}` }),
+      h("div", { class: "row" }, h("div", { class: "big num", text: fmt(sk.dps) }), h("div", { class: "muted", text: "DPS single target" })),
+      h("div", { class: "row", style: "margin-bottom:6px" }, h("div", { class: "big num", text: fmt(sk.packDps) }), h("div", { class: "muted", text: `vs packs (${sk.targets} target${sk.targets > 1 ? "s" : ""})` })),
+      kv([
+        ["Average hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")],
+        ...DAMAGE_TYPES.filter((t) => sk.hit[t][1] > 0).map((t) => [`  ${TYPE_NAME[t]}`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`]),
+        ["Critical chance", `${sk.critChance.toFixed(1)}%`, breakdown("critChance", "Critical chance")],
+        ["Critical multiplier", `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", "Critical multiplier")],
+        ["x Crit factor", critFactor.toFixed(2)],
+        [sk.kind === "attack" ? "Attacks per second" : "Casts per second", sk.speed.toFixed(2), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")],
+        ...sk.kind === "attack" ? [["Hit chance (vs same level)", pct(sk.hitChance), breakdown("accuracy", "Accuracy")]] : [],
+        ["Mana cost", fmt(sk.manaCost)],
+        ...sk.leech ? [["Life leech", `${sk.leech}%`]] : []
+      ]),
+      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: `DPS = ${fmt(sk.avgHit)} hit x ${critFactor.toFixed(2)} crit x ${sk.speed.toFixed(2)}/s${sk.kind === "attack" ? ` x ${pct(sk.hitChance)} hit` : ""}` })
+    );
+    const pool = s.life + s.es;
+    const def2 = h(
+      "div",
+      { class: "card" },
+      h("h3", { text: "Defence" }),
+      kv([
+        ["Life", fmt(s.life), breakdown("life", "Life")],
+        ["Energy shield", fmt(s.es), breakdown("energyShield", "Energy shield")],
+        ["Mana", fmt(s.mana), breakdown("mana", "Mana")],
+        ["Armour", fmt(s.armour), breakdown("armour", "Armour")],
+        ["Evasion", fmt(s.evasion), breakdown("evasion", "Evasion")],
+        ["Block", `${s.block.toFixed(0)}%`, breakdown("block", "Block")],
+        ["Life regen", `${fmt(s.lifeRegen)}/s`, breakdown("lifeRegen", "Life regeneration")],
+        ...["fire", "cold", "lightning", "chaos"].map((t) => [`${TYPE_NAME[t]} res`, h("div", { class: "num", style: s.res[t] < 0 ? "color:var(--red)" : "", text: `${s.res[t]}%${s.resRaw[t] > s.maxRes[t] ? ` (${s.resRaw[t]})` : ""}` }), breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`)])
+      ]),
+      h("h3", { style: "margin-top:8px", text: `Effective HP (pool ${fmt(pool)})` }),
+      ehpBars(s)
+    );
+    const xpNeed = xpToNext(hero.level);
+    const info = h(
+      "div",
+      { class: "card" },
+      h("h3", { text: `${hero.name} - ${CLASSES[hero.cls]?.name ?? hero.cls}` }),
+      kv([
+        ["Level", String(hero.level)],
+        ["Experience", isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)}` : "max"],
+        ["Might / Grace / Wit", `${s.str} / ${s.dex} / ${s.int}`],
+        ["Movement speed", pct(s.moveSpeed)],
+        ["Item rarity", `+${s.rarity}%`],
+        ["Flask healing", pct(s.flaskHeal)],
+        ["Build score", fmt(buildScore(s))]
+      ]),
+      ...s.problems.map((p) => h("div", { class: "tag", style: "background:var(--ember);margin-top:4px", text: p })),
+      h("div", { class: "muted", style: "margin-top:6px;font-size:11px", text: "Click an underlined stat for where it comes from." })
+    );
+    return h("div", { class: "grid2" }, off, def2, info);
+  }
+  function ehpBars(s) {
+    const max = Math.max(...DAMAGE_TYPES.map((t) => s.ehp[t]));
+    const el = h("div", { class: "col", style: "gap:3px" });
+    for (const t of DAMAGE_TYPES) {
+      const m2 = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
+      m2.append(h("i", { style: `width:${s.ehp[t] / max * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
+      el.append(m2);
+    }
+    return el;
+  }
+  var SLOT_LABEL = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
+  function itemCell(item, slot, selected, onClick) {
+    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`, title: item ? itemLabel(item) : slot ? SLOT_LABEL[slot] : "", on: { click: onClick } });
+    if (item) cell.append(iconFor(baseOf(item).kind, baseOf(item).slot));
+    if (slot) cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] }));
+    return cell;
+  }
+  function itemCard(item, c, opts = {}) {
+    const b = baseOf(item);
+    const st = itemStats(item);
+    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemLabel(item) }));
+    const lines = [];
+    if (item.rarity === "rare" || item.rarity === "relic") lines.push(b.name);
+    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : b.kind].filter(Boolean).join(" - ")}  ilvl ${item.ilvl}, needs level ${levelReq(item)}` }));
+    if (st.weapon) {
+      const w2 = st.weapon;
+      const rows = [["Physical", `${w2.phys[0]}-${w2.phys[1]}`]];
+      for (const [t, r2] of Object.entries(w2.added)) rows.push([TYPE_NAME[t], `${r2[0]}-${r2[1]}`]);
+      rows.push(["Attacks per second", w2.aps.toFixed(2)], ["Critical chance", `${w2.crit.toFixed(1)}%`], ["Hands", String(w2.hands)]);
+      card.append(kv(rows));
+    }
+    if (st.defence) {
+      const d = st.defence;
+      const rows = [];
+      if (d.armour) rows.push(["Armour", String(d.armour)]);
+      if (d.evasion) rows.push(["Evasion", String(d.evasion)]);
+      if (d.energyShield) rows.push(["Energy shield", String(d.energyShield)]);
+      if (d.block) rows.push(["Block", `${d.block}%`]);
+      card.append(kv(rows));
+    }
+    if (b.implicit?.length) {
+      card.append(h("hr"));
+      for (const m2 of b.implicit) card.append(h("div", { class: "aff", text: implicitText(m2.stat, m2.value, m2.kind, m2.tags) }));
+    }
+    if (item.affixes.length) {
+      card.append(h("hr"));
+      const sorted = [...item.affixes].sort((a, z) => affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1);
+      for (const a of sorted) card.append(h("div", { class: "aff" }, affixText(a), h("b", { text: `${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+    }
+    if (c && opts.compareSlot !== void 0) {
+      const slot = opts.compareSlot ?? slotsFor(b).find((s) => !c.state.hero.equipment[s]) ?? slotsFor(b)[0];
+      const trial = trialSheet(c.state, item, slot);
+      if (trial) {
+        card.append(h("hr"), compareRows(c.sheet(), trial));
+      } else {
+        card.append(h("hr"), h("div", { class: "down", text: canEquip(c.state, item, slot) ?? "can't equip" }));
+      }
+    }
+    return card;
+  }
+  function implicitText(stat, value, kind, tags) {
+    const names = {
+      accuracy: "accuracy",
+      critChance: "critical chance",
+      damage: "damage",
+      str: "Might",
+      dex: "Grace",
+      int: "Wit",
+      life: "maximum life",
+      mana: "maximum mana",
+      lifeRegen: "life regenerated per second",
+      "res.fire": "fire resistance",
+      "res.cold": "cold resistance",
+      "res.lightning": "lightning resistance",
+      "res.chaos": "chaos resistance",
+      armour: "armour",
+      energyShield: "energy shield",
+      flaskHeal: "flask healing",
+      "addMin.phys": "min physical damage to attacks",
+      "addMax.phys": "max physical damage to attacks"
+    };
+    const n = names[stat] ?? stat;
+    const t = tags?.length ? ` (${tags.join(", ")})` : "";
+    if (kind === "inc") return `${value}% increased ${n}${t}`;
+    return `+${value}${stat.startsWith("res.") ? "%" : ""} ${n}${t}`;
+  }
+  function compareRows(now, next) {
+    const rows = [
+      ["DPS", now.skill.dps, next.skill.dps],
+      ["Pack DPS", now.skill.packDps, next.skill.packDps],
+      ["Life", now.life, next.life],
+      ["Energy shield", now.es, next.es],
+      ["EHP physical", now.ehp.phys, next.ehp.phys],
+      ["EHP elemental", (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3]
+    ];
+    const el = h("div", { class: "kv" });
+    for (const [k, a, b] of rows) {
+      if (Math.abs(b - a) < 5e-3 * Math.max(1, a)) continue;
+      const d = b - a;
+      el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + (d / a * 100).toFixed(0) + "%" : "new"})` }));
+    }
+    const sa = buildScore(now), sb = buildScore(next);
+    el.append(h("div", { text: "Build score" }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? ((sb - sa) / sa * 100).toFixed(1) : "0"}%` }));
+    return el;
+  }
+  function gearView(c) {
+    const st = c.state;
+    const eq = st.hero.equipment;
+    const slots = h("div", { class: "slots" });
+    for (const s of SLOTS) slots.append(itemCell(eq[s], s, c.sel.slot === s && c.sel.uid === void 0, () => {
+      c.sel = { slot: s };
+      c.rerender();
+    }));
+    const stash = h("div", { class: "stash" });
+    const sorted = [...st.stash].sort((a, b) => RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity] || b.ilvl - a.ilvl);
+    for (const it of sorted) stash.append(itemCell(it, null, c.sel.uid === it.uid, () => {
+      c.sel = { uid: it.uid };
+      c.rerender();
+    }));
+    for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
+    const detail = h("div", { class: "col" });
+    const selItem = c.sel.uid !== void 0 ? st.stash.find((x) => x.uid === c.sel.uid) : void 0;
+    const selSlot = c.sel.slot;
+    if (selItem) {
+      const b = baseOf(selItem);
+      const targets = slotsFor(b);
+      detail.append(itemCard(selItem, c, { compareSlot: targets.length > 1 ? targets.find((t) => !eq[t]) ?? targets[0] : targets[0] }));
+      const row = h("div", { class: "row" });
+      for (const t of targets) {
+        const err = canEquip(st, selItem, t);
+        row.append(h("button", {
+          class: "btn",
+          text: targets.length > 1 ? `Equip (${t === "ring1" ? "left" : "right"})` : "Equip",
+          attrs: err ? { disabled: "" } : {},
+          title: err ?? "",
+          on: { click: () => c.act((s) => {
+            const e = equip(s, selItem.uid, t);
+            if (!e) c.sel = { slot: t };
+            return e;
+          }) }
+        }));
+      }
+      row.append(h("button", { class: "btn alt", text: `Salvage (+${salvageValue(selItem)} dust)`, on: { click: () => c.act((s) => {
+        salvage(s, [selItem.uid]);
+        c.sel = {};
+      }) } }));
+      detail.append(row);
+    } else if (selSlot && eq[selSlot]) {
+      detail.append(itemCard(eq[selSlot], c));
+      detail.append(h("div", { class: "row" }, h("button", { class: "btn alt", text: "Unequip", on: { click: () => c.act((s) => unequip(s, selSlot)) } })));
+    } else {
+      detail.append(h("div", { class: "card muted", text: "Pick an item to see it here. Stash items show what equipping them would change." }));
+    }
+    const plainCount = st.stash.filter((x) => x.rarity === "plain").length;
+    const enchCount = st.stash.filter((x) => x.rarity === "enchanted").length;
+    const tools = h(
+      "div",
+      { class: "row" },
+      h("span", { class: "tag", text: `Stash ${st.stash.length}/${st.stashCap}` }),
+      h("span", { class: "tag", style: "background:var(--gold)", text: `Ember dust ${fmt(st.dust)}` }),
+      h("button", {
+        class: "btn alt",
+        text: `Salvage plain (${plainCount})`,
+        attrs: plainCount ? {} : { disabled: "" },
+        on: { click: () => c.act((s) => {
+          salvage(s, s.stash.filter((x) => x.rarity === "plain").map((x) => x.uid));
+          c.sel = {};
+        }) }
+      }),
+      h("button", {
+        class: "btn alt",
+        text: `Salvage enchanted (${enchCount})`,
+        attrs: enchCount ? {} : { disabled: "" },
+        on: { click: () => c.act((s) => {
+          salvage(s, s.stash.filter((x) => x.rarity === "enchanted").map((x) => x.uid));
+          c.sel = {};
+        }) }
+      })
+    );
+    return h(
+      "div",
+      { class: "col" },
+      h(
+        "div",
+        { class: "row", style: "align-items:flex-start;gap:14px" },
+        h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots)),
+        h("div", { class: "grow", style: "min-width:240px" }, detail)
+      ),
+      tools,
+      h("div", { class: "card" }, h("h3", { text: "Stash" }), stash)
+    );
+  }
+  function skillsView(c) {
+    const hero = c.state.hero;
+    const cur = c.sheet();
+    const skills = h("div", { class: "col" });
+    for (const s of Object.values(SKILLS)) {
+      const locked = s.level > hero.level;
+      const on = hero.skill === s.id;
+      skills.append(h(
+        "div",
+        { class: `skill${on ? " on" : ""}${locked ? " locked" : ""}`, on: { click: () => {
+          if (!locked && !on) c.act((st) => setSkill(st, s.id), `${s.name} selected`);
+        } } },
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { class: "nm", text: s.name }),
+          h("div", { class: "ds", text: s.blurb }),
+          h("div", { class: "row", style: "gap:4px;margin-top:3px" }, ...s.tags.map((t) => h("span", { class: "tag", text: t })))
+        ),
+        h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "active" : `${s.effectiveness}%` })
+      ));
+    }
+    const slots = supportSlots(hero.level);
+    const sups = h("div", { class: "col" });
+    const active = hero.supports.slice(0, slots);
+    for (const s of Object.values(SUPPORTS)) {
+      const locked = s.level > hero.level;
+      const on = active.includes(s.id);
+      const fits = !s.requires.length || s.requires.some((t) => cur.skill.tags.includes(t));
+      let delta = "";
+      if (!locked && fits) {
+        const next2 = on ? active.filter((x) => x !== s.id) : active.length < slots ? [...active, s.id] : null;
+        if (next2) {
+          const trial = { ...hero, supports: next2, rev: -1 };
+          const sh = deriveTrial(c, trial);
+          const d = sh.skill.packDps / Math.max(0.01, cur.skill.packDps) - 1;
+          delta = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(0)}% pack DPS`;
+        }
+      }
+      sups.append(h(
+        "div",
+        { class: `skill${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, on: { click: () => {
+          if (locked || !fits) return;
+          if (on) c.act((st) => setSupports(st, active.filter((x) => x !== s.id)));
+          else if (active.length < slots) c.act((st) => setSupports(st, [...active, s.id]));
+          else c.toast("All support slots are full");
+        } } },
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { class: "nm", text: s.name }),
+          h("div", { class: "ds", text: s.blurb }),
+          s.requires.length ? h("div", { class: "ds muted", text: `Needs: ${s.requires.join(" or ")}` }) : null
+        ),
+        h(
+          "div",
+          { class: "col", style: "align-items:flex-end;gap:2px" },
+          h("div", { class: "tag", text: locked ? `lvl ${s.level}` : on ? "slotted" : fits ? "add" : "no fit" }),
+          delta ? h("div", { class: delta.startsWith("+") ? "up" : "down", style: "font-size:11px", text: delta }) : null
+        )
+      ));
+    }
+    const next = [1, 1, 8, 18, 32].find((l) => l > hero.level);
+    return h(
+      "div",
+      { class: "grid2" },
+      h("div", { class: "card" }, h("h3", { text: "Main skill" }), skills),
+      h("div", { class: "card" }, h("h3", { text: `Supports ${active.length}/${slots}${next ? ` (next slot at level ${next})` : ""}` }), sups)
+    );
+  }
+  function deriveTrial(_c, hero) {
+    return deriveSheet(hero);
+  }
+  function worldView(c) {
+    const st = c.state;
+    const root = h("div", { class: "col" });
+    root.append(h(
+      "div",
+      { class: "row" },
+      h(
+        "label",
+        { class: "chk" },
+        (() => {
+          const i = h("input", { attrs: { type: "checkbox" } });
+          i.checked = st.activity.autoPush;
+          i.addEventListener("change", () => c.act((s) => {
+            s.activity.autoPush = i.checked;
+          }));
+          return i;
+        })(),
+        "Auto-push: move on after 3 clean clears, fall back after 3 deaths"
+      )
+    ));
+    for (const act of ACTS) {
+      const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: act.intro }));
+      for (const id of act.zones) {
+        const z = ZONES[id];
+        const open = st.world.unlocked.includes(id);
+        const on = st.activity.zone === id;
+        const clears = st.world.clears[id] ?? 0;
+        const row = h(
+          "div",
+          { class: `zone${on ? " on" : ""}${open ? "" : " locked"}`, on: { click: () => {
+            if (open && !on) c.act((s) => setZone(s, id), `Travelling to ${z.name}`);
+          } } },
+          h("div", { class: "tag", text: `L${z.level}` }),
+          h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: z.name }), open && z.story ? h("div", { class: "muted", style: "font-size:11px", text: z.story }) : null),
+          z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
+          h("div", { class: "tag", text: open ? `${clears} clears` : "locked" })
+        );
+        card.append(row);
+      }
+      root.append(card);
+    }
+    return root;
+  }
+  function logView(c) {
+    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }));
+    const kinds = { level: "LVL", loot: "LOOT", death: "DEATH", zone: "ROAD", boss: "BOSS", info: "..." };
+    for (const e of [...c.state.log].reverse()) el.append(h("div", null, h("span", { class: "tag", style: "margin-right:6px", text: kinds[e.kind] ?? e.kind }), e.text));
+    return el;
+  }
+  function menuView(c) {
+    const st = c.state;
+    const keep = h("select");
+    for (const [v, label] of [["plain", "Keep everything"], ["enchanted", "Keep enchanted and better"], ["rare", "Keep rares only"]]) {
+      const o = h("option", { text: label, attrs: { value: v } });
+      if (st.settings.keep === v) o.selected = true;
+      keep.append(o);
+    }
+    keep.addEventListener("change", () => c.act((s) => {
+      s.settings.keep = keep.value;
+    }));
+    const auto = h("input", { attrs: { type: "checkbox" } });
+    auto.checked = st.settings.autoEquip;
+    auto.addEventListener("change", () => c.act((s) => {
+      s.settings.autoEquip = auto.checked;
+    }));
+    const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
+    const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
+    const t = st.totals;
+    return h(
+      "div",
+      { class: "grid2" },
+      h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: "Loot" }),
+        h("div", { class: "row" }, "Filter", keep),
+        h("label", { class: "chk" }, auto, "Equip upgrades automatically"),
+        h("div", { class: "muted", style: "font-size:11px", text: "Items the filter drops are salvaged into ember dust." })
+      ),
+      h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: "Save" }),
+        h("div", { class: "muted", style: "font-size:11px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
+        h(
+          "div",
+          { class: "row" },
+          h("button", { class: "btn", text: "Export", on: { click: () => {
+            out.value = c.exportSave();
+            out.select();
+          } } }),
+          h("button", { class: "btn alt", text: "Copy", on: { click: () => {
+            out.select();
+            void navigator.clipboard?.writeText(out.value).then(() => c.toast("Copied"), () => c.toast("Select and copy it by hand"));
+          } } })
+        ),
+        out,
+        inp,
+        h("div", { class: "row" }, h("button", { class: "btn alt", text: "Import", on: { click: () => {
+          void c.importSave(inp.value).then((e) => c.toast(e ?? "Save loaded"));
+        } } }))
+      ),
+      h("div", { class: "card" }, h("h3", { text: "Totals" }), kv([
+        ["Runs", fmt(t.runs)],
+        ["Kills", fmt(t.kills)],
+        ["Deaths", fmt(t.deaths)],
+        ["Items found", fmt(t.items)],
+        ["Salvaged", fmt(t.salvaged)],
+        ["Time simulated", `${(t.simMs / 36e5).toFixed(1)} h`]
+      ])),
+      h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: "Danger" }),
+        h("button", { class: "btn hot", text: "Start a new hero", on: { click: () => {
+          const close = c.modal(h(
+            "div",
+            { class: "card col" },
+            h("h3", { text: "Start over?" }),
+            h("div", { text: "This deletes the current hero. Export first if you want to keep it." }),
+            h(
+              "div",
+              { class: "row" },
+              h("button", { class: "btn hot", text: "Delete and start over", on: { click: () => {
+                close();
+                c.resetGame();
+              } } }),
+              h("button", { class: "btn alt", text: "Cancel", on: { click: () => close() } })
+            )
+          ));
+        } } })
+      )
+    );
+  }
+  function creationView(onStart) {
+    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name" } });
+    let cls = Object.keys(CLASSES)[0];
+    const list2 = h("div", { class: "col" });
+    const draw = () => {
+      clear(list2);
+      for (const k of Object.values(CLASSES)) list2.append(h(
+        "div",
+        { class: `skill${k.id === cls ? " on" : ""}`, on: { click: () => {
+          cls = k.id;
+          draw();
+        } } },
+        h(
+          "div",
+          { class: "grow" },
+          h("div", { class: "nm", text: k.name }),
+          h("div", { class: "ds", text: k.blurb }),
+          h("div", { class: "ds muted", text: `Might ${k.str} / Grace ${k.dex} / Wit ${k.int}. Starts with ${SKILLS[k.startSkill].name} and a ${BASES[k.startWeapon].name}.` })
+        )
+      ));
+    };
+    draw();
+    return h(
+      "div",
+      { class: "col", style: "max-width:520px;margin:0 auto" },
+      h("div", { class: "card story", text: "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead." }),
+      h(
+        "div",
+        { class: "card col" },
+        h("h3", { text: "Name your Kindled" }),
+        name,
+        h("h3", { text: "Choose a calling" }),
+        list2,
+        h("button", { class: "btn hot", text: "Wake up", on: { click: () => onStart(name.value.replace(/[^\x20-\x7e]/g, "").trim().slice(0, 20) || "Ashling", cls) } })
+      )
+    );
+  }
+
+  // src/ui/app.ts
+  var GEO_KEY = "hollowmarch.window";
+  var AUTOSAVE_MS = 2e4;
+  var REPORT_MIN_MS = 6e4;
+  var GameWindow = class {
+    constructor(store2, hooks = {}) {
+      this.store = store2;
+      this.hooks = hooks;
+    }
+    store;
+    hooks;
+    host = null;
+    root;
+    win;
+    body;
+    hud;
+    tabs;
+    who;
+    battle = new Battle();
+    state = null;
+    view = "hero";
+    sig = "";
+    timer = null;
+    raf = null;
+    lastSave = 0;
+    busy = false;
+    ctx;
+    stopKeys = null;
+    onUnload = () => {
+      void this.save();
+    };
+    get isOpen() {
+      return !!this.host;
+    }
+    async open() {
+      if (this.host) {
+        this.win.style.display = "";
+        return;
+      }
+      this.build();
+      window.addEventListener("pagehide", this.onUnload);
+      const loaded = await this.load();
+      if (!this.host) return;
+      if (!loaded) {
+        this.showCreation();
+        return;
+      }
+      await this.catchUp();
+      this.startLoop();
+    }
+    async close() {
+      if (!this.host) return;
+      this.stopLoop();
+      await this.save();
+      window.removeEventListener("pagehide", this.onUnload);
+      if (this.stopKeys) for (const k of ["keydown", "keyup", "keypress"]) this.host.removeEventListener(k, this.stopKeys);
+      this.host.remove();
+      this.host = null;
+      this.state = null;
+      this.hooks.onClose?.();
+    }
+    // ---- frame ----------------------------------------------------------------
+    build() {
+      const host = document.createElement("div");
+      host.id = "hollowmarch-root";
+      this.host = host;
+      this.root = host.attachShadow({ mode: "open" });
+      const style = document.createElement("style");
+      style.textContent = CSS;
+      this.root.append(style);
+      this.stopKeys = (e) => e.stopPropagation();
+      for (const k of ["keydown", "keyup", "keypress"]) host.addEventListener(k, this.stopKeys);
+      const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
+      this.who = h("span", { class: "who" });
+      const bar2 = h(
+        "div",
+        { class: "bar" },
+        h("span", { class: "logo", text: "Hollowmarch" }),
+        this.who,
+        h("button", { class: "x", text: "x", title: "Close (progress keeps counting while closed)", on: { click: () => void this.close() } })
+      );
+      this.hud = h("div", { class: "hud" });
+      this.tabs = h("div", { class: "tabs" });
+      this.body = h("div", { class: "body" });
+      const stage = h("div", { class: "stage" }, this.battle.canvas);
+      const grip = h("div", { class: "grip" });
+      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, stage, this.hud, this.tabs, this.body, grip);
+      shell.append(this.win);
+      this.root.append(shell);
+      document.body.append(host);
+      this.placeWindow(stage);
+      this.dragger(bar2, (dx, dy, g) => {
+        g.x += dx;
+        g.y += dy;
+      });
+      this.dragger(grip, (dx, dy, g) => {
+        g.w += dx;
+        g.h += dy;
+      });
+      for (const v of VIEWS) {
+        this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id }, on: { click: () => {
+          this.view = v.id;
+          this.sig = "";
+          this.ctx && (this.ctx.sel = {});
+          this.renderTab(true);
+        } } }));
+      }
+    }
+    geo = { x: 80, y: 60, w: 760, h: 620 };
+    placeWindow(stage) {
+      try {
+        const g = JSON.parse(localStorage.getItem(GEO_KEY) ?? "null");
+        if (g && typeof g.x === "number") this.geo = g;
+      } catch {
+      }
+      const fit = () => {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const g = this.geo;
+        g.w = Math.max(360, Math.min(g.w, vw - 8));
+        g.h = Math.max(320, Math.min(g.h, vh - 8));
+        g.x = Math.max(0, Math.min(g.x, vw - g.w));
+        g.y = Math.max(0, Math.min(g.y, vh - g.h));
+        Object.assign(this.win.style, { left: g.x + "px", top: g.y + "px", width: g.w + "px", height: g.h + "px" });
+        stage.style.height = Math.round(Math.min(g.w * H / W, g.h * 0.36)) + "px";
+      };
+      fit();
+      this.refit = fit;
+    }
+    refit = () => {
+    };
+    dragger(handle, apply) {
+      handle.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("button")) return;
+        e.preventDefault();
+        handle.setPointerCapture(e.pointerId);
+        let lx = e.clientX, ly = e.clientY;
+        const move = (ev) => {
+          apply(ev.clientX - lx, ev.clientY - ly, this.geo);
+          lx = ev.clientX;
+          ly = ev.clientY;
+          this.refit();
+        };
+        const up = () => {
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", up);
+          handle.removeEventListener("pointercancel", up);
+          try {
+            localStorage.setItem(GEO_KEY, JSON.stringify(this.geo));
+          } catch {
+          }
+        };
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+        handle.addEventListener("pointercancel", up);
+      });
+    }
+    // ---- persistence --------------------------------------------------------
+    async load() {
+      for (const key of ["main", "backup"]) {
+        try {
+          const raw = await this.store.get(key);
+          if (!raw) continue;
+          const env = unwrap(raw);
+          this.state = env.state;
+          return true;
+        } catch (e) {
+          console.warn(`[Hollowmarch] save "${key}" unusable:`, e);
+        }
+      }
+      return false;
+    }
+    async save() {
+      const s = this.state;
+      if (!s) return;
+      this.lastSave = Date.now();
+      try {
+        const prev = await this.store.get("main");
+        if (prev) await this.store.put("backup", prev);
+        await this.store.put("main", wrap(s, Date.now()));
+      } catch (e) {
+        console.warn("[Hollowmarch] save failed:", e);
+      }
+      this.hooks.summary?.(summaryOf(s));
+    }
+    // ---- catch-up and loop --------------------------------------------------
+    async catchUp() {
+      const s = this.state;
+      const away = Date.now() - s.simTo;
+      if (away < STEP_MS) return;
+      this.busy = true;
+      const rep = startReport(s);
+      const bar2 = h("i", { style: "width:0%" });
+      const label = h("div", { class: "muted", text: "" });
+      const closeModal = away > 2e3 ? this.modal(h("div", { class: "card col" }, h("h3", { text: "While you were away" }), label, h("div", { class: "progress" }, bar2))) : () => {
+      };
+      const from = s.simTo, target = Date.now();
+      this.battle.quiet = true;
+      while (!advance(s, target, rep.events, 25e3)) {
+        const f = (s.simTo - from) / Math.max(1, target - from);
+        bar2.style.width = (f * 100).toFixed(1) + "%";
+        label.textContent = `Replaying ${fmtDuration(target - from)}... ${(f * 100).toFixed(0)}%`;
+        await new Promise((r2) => setTimeout(r2, 0));
+        if (!this.host) return;
+      }
+      this.battle.quiet = false;
+      closeModal();
+      this.busy = false;
+      const report = rep.finish(s);
+      if (away >= REPORT_MIN_MS) this.showReport(report);
+      await this.save();
+    }
+    startLoop() {
+      this.makeCtx();
+      this.sig = "";
+      this.renderTab(true);
+      const ev = this.battle.events(() => performance.now(), () => this.state);
+      this.timer = window.setInterval(() => {
+        if (!this.state || this.busy) return;
+        if (Date.now() - this.state.simTo > 3e4) {
+          void this.catchUp();
+          return;
+        }
+        advance(this.state, Date.now(), ev, 50);
+        if (Date.now() - this.lastSave > AUTOSAVE_MS) void this.save();
+      }, STEP_MS);
+      const frame = () => {
+        this.raf = requestAnimationFrame(frame);
+        if (!this.state || document.hidden) return;
+        this.battle.draw(this.state, sheetOf(this.state), performance.now());
+        this.drawHud();
+        this.renderTab(false);
+      };
+      this.raf = requestAnimationFrame(frame);
+    }
+    stopLoop() {
+      if (this.timer !== null) clearInterval(this.timer);
+      if (this.raf !== null) cancelAnimationFrame(this.raf);
+      this.timer = this.raf = null;
+    }
+    // ---- UI -----------------------------------------------------------------
+    makeCtx() {
+      const self = this;
+      this.ctx = {
+        get state() {
+          return self.state;
+        },
+        sheet: () => sheetOf(this.state),
+        act: (fn, ok) => {
+          const err = fn(this.state);
+          if (typeof err === "string") this.toast(err);
+          else if (ok) this.toast(ok);
+          this.sig = "";
+          this.renderTab(true);
+          void this.save();
+        },
+        toast: (m2) => this.toast(m2),
+        modal: (el) => this.modal(el),
+        sel: {},
+        rerender: () => {
+          this.sig = "";
+          this.renderTab(true);
+        },
+        exportSave: () => exportText(wrap(this.state, Date.now())),
+        importSave: async (text) => {
+          try {
+            const env = unwrap(importText(text));
+            this.state = env.state;
+            this.ctx.sel = {};
+            await this.catchUp();
+            await this.save();
+            this.sig = "";
+            this.renderTab(true);
+            return null;
+          } catch (e) {
+            return e instanceof SaveError ? e.message : "could not read that save";
+          }
+        },
+        resetGame: () => {
+          this.stopLoop();
+          this.state = null;
+          void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation());
+        },
+        storeKind: this.store.kind
+      };
+    }
+    renderTab(force) {
+      if (!this.state || !this.ctx) return;
+      const sig = this.view + ":" + viewSig(this.view, this.ctx);
+      if (!force && sig === this.sig) return;
+      this.sig = sig;
+      for (const b of this.tabs.querySelectorAll("button")) b.classList.toggle("on", b.getAttribute("data-v") === this.view);
+      const top = this.body.scrollTop;
+      clear(this.body);
+      this.body.append(renderView(this.view, this.ctx));
+      this.body.scrollTop = top;
+    }
+    hudEls = {};
+    drawHud() {
+      const s = this.state;
+      const sh = sheetOf(s);
+      const run = s.activity.run;
+      if (!this.hud.childElementCount) {
+        for (const k of ["life", "es", "mana", "flask", "xp", "zone"]) {
+          const fill = h("i"), text = h("span");
+          this.hud.append(h("div", { class: "meter" }, fill, text));
+          this.hudEls[k] = { fill, text };
+        }
+      }
+      const set = (k, f, color, text) => {
+        const e = this.hudEls[k];
+        e.fill.style.width = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
+        e.fill.style.background = color;
+        if (e.text.textContent !== text) e.text.textContent = text;
+      };
+      const hh = run?.hero;
+      const n = (x) => fmt(Math.floor(Math.max(0, x)));
+      set("life", hh ? hh.life / sh.life : 1, "#e5383b", `Life ${n(hh?.life ?? sh.life)} / ${n(sh.life)}`);
+      set("es", sh.es ? (hh?.es ?? sh.es) / sh.es : 0, "#7fd1ff", sh.es ? `Shield ${n(hh?.es ?? sh.es)} / ${n(sh.es)}` : "No energy shield");
+      set("mana", hh ? hh.mana / sh.mana : 1, "#3a7bff", `Mana ${n(hh?.mana ?? sh.mana)} / ${n(sh.mana)}`);
+      set("flask", (hh?.flask ?? 30) / 30, "#3fbf5f", `Flask ${Math.floor(hh?.flask ?? 30)} / 30`);
+      const need = xpToNext(s.hero.level);
+      set("xp", isFinite(need) ? s.hero.xp / need : 1, "#ffc233", `Level ${s.hero.level}  ${isFinite(need) ? (s.hero.xp / need * 100).toFixed(1) + "%" : "max"}`);
+      const z = ZONES[s.activity.zone];
+      const packs = run ? run.packs + (run.boss ? 1 : 0) : 1;
+      set("zone", run ? run.pack / packs : 0, "#19b3a3", `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
+      const free = supportSlots(s.hero.level) > s.hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= s.hero.level).length && Object.values(SUPPORTS).some((x) => x.level <= s.hero.level && !s.hero.supports.includes(x.id));
+      const skillsTab = this.tabs.querySelector('[data-v="skills"]');
+      if (skillsTab && skillsTab.textContent !== (free ? "Skills !" : "Skills")) skillsTab.textContent = free ? "Skills !" : "Skills";
+      const who = `${s.hero.name}, level ${s.hero.level} ${CLASSES[s.hero.cls]?.name ?? ""}  |  ${fmt(sh.skill.packDps)} pack DPS`;
+      if (this.who.textContent !== who) this.who.textContent = who;
+    }
+    toast(msg) {
+      const t = h("div", { class: "toast", text: msg });
+      this.win.append(t);
+      setTimeout(() => t.remove(), 2200);
+    }
+    modal(content) {
+      const m2 = h("div", { class: "modal" }, content);
+      this.win.append(m2);
+      return () => m2.remove();
+    }
+    showCreation() {
+      clear(this.body);
+      clear(this.hud);
+      this.hudEls = {};
+      this.who.textContent = "A new Kindled";
+      this.body.append(creationView(async (name, cls) => {
+        this.state = newGame({ name, cls, now: Date.now(), seed: Math.random() * 2 ** 32 >>> 0 });
+        await this.save();
+        this.startLoop();
+      }));
+    }
+    showReport(r2) {
+      const rows = [
+        ["Time away", fmtDuration(r2.to - r2.from)],
+        ["Runs cleared", fmt(r2.runs)],
+        ["Monsters slain", fmt(r2.kills)],
+        ["Bosses", fmt(r2.bosses)],
+        ["Deaths", fmt(r2.deaths)],
+        ["Levels", r2.levelTo > r2.levelFrom ? `${r2.levelFrom} -> ${r2.levelTo}` : `${r2.levelTo} (no change)`],
+        ["Experience", fmt(r2.xp)],
+        ["Items kept", fmt(r2.kept)],
+        ["Salvaged", fmt(r2.salvaged)],
+        ["Ember dust", `+${fmt(r2.dust)}`]
+      ];
+      const kvEl = h("div", { class: "kv" });
+      for (const [k, v] of rows) kvEl.append(h("div", { text: k }), h("div", { class: "num", text: v }));
+      const card = h("div", { class: "card col" }, h("h3", { text: "While you were away" }), kvEl);
+      if (r2.zones.length) card.append(h("div", { class: "tag", style: "background:var(--teal)", text: `New roads: ${r2.zones.join(", ")}` }));
+      if (r2.equipped.length) card.append(h("div", { class: "tag", style: "background:var(--gold)", text: `Equipped: ${r2.equipped.slice(-4).join(", ")}` }));
+      if (r2.best.length) {
+        const best = r2.best[r2.best.length - 1];
+        card.append(h("div", { class: "muted", text: "Best find:" }), itemCard(best, null));
+      }
+      const close = this.modal(card);
+      card.append(h("button", { class: "btn", text: "Back to it", on: { click: () => close() } }));
+    }
+  };
+  function summaryOf(s) {
+    const need = xpToNext(s.hero.level);
+    return { name: s.hero.name, cls: s.hero.cls, level: s.hero.level, zone: s.activity.zone, savedAt: Date.now(), xpFrac: isFinite(need) ? s.hero.xp / need : 1 };
+  }
+
+  // src/ui/card.ts
+  var CARD_CSS = `
+:host { all: initial; display: block; }
+.c { font: 13px/1.35 "Segoe UI", system-ui, sans-serif; color: #111; background: #fff4dc; border: 3px solid #111; box-shadow: 5px 5px 0 #111; margin: 8px 10px 14px 4px; }
+.top { background: #ff5a36; border-bottom: 3px solid #111; padding: 6px 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; display: flex; justify-content: space-between; }
+.in { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.hero { font-weight: 900; font-size: 16px; }
+.muted { color: #5b5446; font-size: 12px; }
+.xp { height: 10px; border: 2px solid #111; background: #fff; } .xp i { display: block; height: 100%; background: #ffc233; }
+button { cursor: pointer; font: inherit; font-weight: 900; padding: 8px 12px; background: #ffc233; color: #111; border: 3px solid #111; box-shadow: 3px 3px 0 #111; text-transform: uppercase; }
+button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #111; }
+button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
+.dark .c { background: #2a2533; color: #f7f1e6; } .dark .muted { color: #bdb3a3; }
+`;
+  function mountCard(el, api, summary, isOpen, onOpen) {
+    const holder = document.createElement("div");
+    const root = holder.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = CARD_CSS;
+    root.append(style);
+    const wrap2 = h("div", { class: api.theme() === "dark" ? "dark" : "" });
+    const inner = h("div", { class: "in" });
+    const c = h("div", { class: "c" }, h("div", { class: "top" }, h("span", { text: api.t("title") }), h("span", { text: "idle arpg" })), inner);
+    if (summary) {
+      const zone = ZONES[summary.zone]?.name ?? summary.zone;
+      inner.append(
+        h("div", { class: "hero", text: `${summary.name}` }),
+        h("div", { class: "muted", text: api.t("card.line", { level: summary.level, cls: CLASSES[summary.cls]?.name ?? summary.cls, zone }) }),
+        h("div", { class: "xp" }, h("i", { style: `width:${Math.round(summary.xpFrac * 100)}%` })),
+        h("div", { class: "muted", text: api.t("card.away", { time: fmtDuration(Math.max(0, Date.now() - summary.savedAt)) }) })
+      );
+    } else {
+      inner.append(h("div", { text: api.t("card.new") }));
+    }
+    inner.append(h("button", { text: isOpen ? api.t("card.focus") : summary ? api.t("card.play") : api.t("card.start"), on: { click: onOpen } }));
+    inner.append(h("div", { class: "muted", text: api.t("card.hint") }));
+    wrap2.append(c);
+    root.append(wrap2);
+    el.append(holder);
+    return { unmount() {
+      holder.remove();
+    } };
+  }
+
+  // src/platform/store.ts
+  var DB = "hollowmarch";
+  var STORE = "saves";
+  function req(r2) {
+    return new Promise((res, rej) => {
+      r2.onsuccess = () => res(r2.result);
+      r2.onerror = () => rej(r2.error);
+    });
+  }
+  async function openStore() {
+    try {
+      if (typeof indexedDB === "undefined") throw new Error("no indexedDB");
+      const open = indexedDB.open(DB, 1);
+      open.onupgradeneeded = () => {
+        if (!open.result.objectStoreNames.contains(STORE)) open.result.createObjectStore(STORE);
+      };
+      const db = await req(open);
+      const tx = (mode) => db.transaction(STORE, mode).objectStore(STORE);
+      return {
+        kind: "indexeddb",
+        get: (key) => req(tx("readonly").get(key)),
+        put: async (key, value) => {
+          await req(tx("readwrite").put(value, key));
+        },
+        del: async (key) => {
+          await req(tx("readwrite").delete(key));
+        }
+      };
+    } catch (e) {
+      console.warn("[Hollowmarch] IndexedDB unavailable, progress will not persist:", e);
+      return memoryStore();
+    }
+  }
+  function memoryStore() {
+    const m2 = /* @__PURE__ */ new Map();
+    return {
+      kind: "memory",
+      get: async (key) => structuredClone(m2.get(key)),
+      put: async (key, value) => {
+        m2.set(key, structuredClone(value));
+      },
+      del: async (key) => {
+        m2.delete(key);
+      }
+    };
+  }
 
   // src/main.ts
-  globalThis.__hollowmarch = { newGame, sheetOf };
+  var ID = "arpg";
+  var ICON = "M12 1.5c1.7 3.1 4.6 4.9 4.6 8.9a4.6 4.6 0 0 1-9.2 0c0-1.9.8-3.2 1.9-4.3.2 1.4.9 2.4 2.2 2.8-.6-2.6-.2-5 .5-7.4ZM4 17h16v2.5H4ZM7 21h10v1.5H7Z";
+  var STRINGS = {
+    "arpg.title": "Hollowmarch",
+    "arpg.desc": "An idle action RPG. Build a hero, it fights on its own; time away is replayed when you come back.",
+    "arpg.card.line": "Level {level} {cls} in {zone}",
+    "arpg.card.away": "Last seen {time} ago. The road kept going.",
+    "arpg.card.new": "The sun went out. You woke up anyway.",
+    "arpg.card.play": "Open the game",
+    "arpg.card.start": "Start a hero",
+    "arpg.card.focus": "Game is open",
+    "arpg.card.hint": "Opens in its own window. Nothing runs while it is closed; progress is replayed on open."
+  };
+  var storePromise = null;
+  var game = null;
+  var hub = null;
+  var refreshCard = null;
+  var store = () => storePromise ??= openStore();
+  async function openGame() {
+    if (!game) {
+      game = new GameWindow(await store(), {
+        summary: (s) => {
+          hub?.save(s);
+          refreshCard?.();
+        },
+        theme: () => hub?.theme() === "light" ? "light" : hub ? "dark" : "light",
+        onClose: () => {
+          refreshCard?.();
+          if (!hub) showOpener();
+        }
+      });
+    }
+    await game.open();
+    refreshCard?.();
+  }
+  var def = {
+    id: ID,
+    version: 1,
+    icon: ICON,
+    strings: STRINGS,
+    init(api) {
+      hub = api;
+    },
+    mount(el, api) {
+      hub = api;
+      let view = null;
+      const draw = () => {
+        view?.unmount();
+        const saved = api.load();
+        view = mountCard(el, api, saved && typeof saved.level === "number" ? saved : null, !!game?.isOpen, () => void openGame());
+      };
+      draw();
+      refreshCard = draw;
+      return { unmount() {
+        view?.unmount();
+        if (refreshCard === draw) refreshCard = null;
+      } };
+    },
+    destroy() {
+      void game?.close();
+      game = null;
+      hub = null;
+    }
+  };
+  function showOpener() {
+    const b = document.createElement("button");
+    b.textContent = "Open Hollowmarch";
+    b.setAttribute("style", "position:fixed;left:16px;bottom:16px;z-index:10049;font:900 14px Segoe UI,sans-serif;padding:10px 16px;background:#ffc233;border:3px solid #111;box-shadow:4px 4px 0 #111;cursor:pointer");
+    b.addEventListener("click", () => {
+      b.remove();
+      void openGame();
+    });
+    document.body.append(b);
+  }
+  var w = window;
+  if (w.__questAgent || w.__questAgentAddons) {
+    const queue = w.__questAgentAddons ?? (w.__questAgentAddons = []);
+    queue.push(def);
+  } else {
+    void openGame();
+  }
+  w.__hollowmarch = { open: openGame, close: () => game?.close(), get game() {
+    return game;
+  } };
 })();
