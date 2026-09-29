@@ -5875,10 +5875,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.globe(22, 24, 19, d.lifeMax ? d.life / d.lifeMax : 0, d.dead ? "#5a2a2a" : "#e5383b", "#9e1d1f", "#ff8a8c", now, 0);
       if (d.esMax > 0) this.ring(22, 24, 21, d.es / d.esMax, "#7fd1ff");
       this.globe(W2 - 22, 24, 19, d.manaMax ? d.mana / d.manaMax : 0, "#3a7bff", "#1f47a8", "#9dbbff", now, 1.7);
-      const lifeTxt = fmt(Math.floor(Math.max(0, d.life)));
-      drawText(g, lifeTxt, 22, 20, CREAM, "center");
+      if (d.dead) {
+        drawText(g, "DEAD", 22, 17, "#ff8a8c", "center");
+        drawText(g, `${Math.max(0, Math.ceil(d.respawn ?? 0))}S`, 22, 27, CREAM, "center");
+      } else drawText(g, fmt(Math.floor(Math.max(0, d.life))), 22, 20, CREAM, "center");
       drawText(g, fmt(Math.floor(Math.max(0, d.mana))), W2 - 22, 20, CREAM, "center");
-      if (d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
+      if (!d.dead && d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
       const cx = Math.round(W2 / 2), row = 12;
       this.flask(cx - 36, row, d.flaskMax ? d.flask / d.flaskMax : 0);
       this.skill(cx - 14, row, d);
@@ -7545,7 +7547,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("div", { class: "muted", style: "margin-top:6px", text: "A green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it." })
       ));
     }
-    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: `${st.hero.name} - equipped` }), slots), stashCard, tools), detail);
+    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools), detail);
     return root;
   }
   var pctDelta = (a, b) => b / Math.max(0.01, a) - 1;
@@ -7994,7 +7996,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     g.beginPath();
     g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2);
     g.fill();
-    drawSprite(g, hc.idle, frame, SCENE_W / 2, ground);
+    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, "LOADING", SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
   }
   function creationView(onStart) {
     const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
@@ -8758,7 +8760,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         zone: z.name,
         zoneLevel: z.level,
         packDps: sh.skill.packDps,
-        dead: run?.phase === "dead"
+        dead: run?.phase === "dead",
+        respawn: run?.phase === "dead" ? run.timer : 0
       }, now);
       const wk = `${z.id}|${z.palette.join()}`;
       if (wk !== this.whereKey) {
@@ -8775,7 +8778,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (now - this.ariaAt > 1e3) {
         this.ariaAt = now;
         const n = (x) => fmt(Math.floor(Math.max(0, x)));
-        const label = `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
+        const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
         this.hudWrap.setAttribute("aria-label", label);
         this.hudWrap.title = label;
         if (this.miniLast.textContent !== this.lastEvent) this.miniLast.textContent = this.lastEvent;

@@ -600,7 +600,7 @@ export class GameWindow {
             flask: hh?.flask ?? 30, flaskMax: 30, level: s.hero.level, xpFrac: xpF, eta: eta.replace(/^~/, "~ "),
             ready: run?.phase === "fight" ? (now - this.lastUse) / (1000 / speed) : 1,
             skillName: sh.skill.name, weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
-            zone: z.name, zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead",
+            zone: z.name, zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead", respawn: run?.phase === "dead" ? run.timer : 0,
         }, now);
 
         const wk = `${z.id}|${z.palette.join()}`;
@@ -620,7 +620,7 @@ export class GameWindow {
         if (now - this.ariaAt > 1000) {
             this.ariaAt = now;
             const n = (x: number) => fmt(Math.floor(Math.max(0, x)));
-            const label = `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. `
+            const label = (run?.phase === "dead" ? `Dead: back in ${Math.ceil(run.timer)} seconds. ` : "") + `Life ${n(life)} of ${n(sh.life)}${sh.es ? `, energy shield ${n(es)} of ${n(sh.es)}` : ""}, mana ${n(mana)} of ${n(sh.mana)}, flask ${Math.floor(hh?.flask ?? 30)} of 30. `
                 + `Level ${s.hero.level}, ${(xpF * 100).toFixed(1)}% experience${eta ? ` (${eta})` : ""}. ${z.name}, area level ${z.level}. ${fmt(sh.skill.packDps)} pack DPS.`;
             this.hudWrap.setAttribute("aria-label", label);
             this.hudWrap.title = label;

@@ -15,6 +15,7 @@ import { HERO_CAST } from "./gfx/cast";
 import { glyph } from "./glyphs";
 import { portrait, scenery } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
+import { drawText } from "./gfx/pixfont";
 import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
@@ -468,7 +469,7 @@ function gearView(c: Ctx): HTMLElement {
             h("div", { class: "muted", style: "margin-top:6px", text: "A green corner marks an upgrade; faded items need a higher level. Keys: E equips the picked item, S salvages it." })));
     }
 
-    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: `${st.hero.name} - equipped` }), slots), stashCard, tools), detail);
+    root.append(h("div", { class: "col" }, h("div", { class: "card" }, h("h3", { text: "Equipped" }), slots), stashCard, tools), detail);
     return root;
 }
 
@@ -771,7 +772,8 @@ function callingScene(cls: string, bg: HTMLCanvasElement, into: HTMLCanvasElemen
     const ground = SCENE_H - Math.max(6, Math.round(SCENE_H * 0.12));
     g.fillStyle = "rgba(0,0,0,.35)";
     g.beginPath(); g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2); g.fill();
-    drawSprite(g, hc.idle, frame, SCENE_W / 2, ground);
+    // The art may not be in yet (a first open): say so rather than show an empty stage.
+    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, "LOADING", SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
 }
 
 /** Character creation: the three callings side by side, each in its own scenery; the picked one breathes. */

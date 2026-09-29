@@ -15,6 +15,8 @@ export interface HudData {
     /** 0..1: how far through the current attack/cast the hero is (1 = ready). */
     ready: number; skillName: string; weaponKind: string | null; spell: boolean;
     zone: string; zoneLevel: number; packDps: number; dead: boolean;
+    /** Seconds until the ember relights, while dead. */
+    respawn?: number;
 }
 
 const INK = "#1a1410", CREAM = "#f3e7d3", GOLD = "#ffc233";
@@ -56,10 +58,13 @@ export class Hud {
         this.globe(22, 24, 19, d.lifeMax ? d.life / d.lifeMax : 0, d.dead ? "#5a2a2a" : "#e5383b", "#9e1d1f", "#ff8a8c", now, 0);
         if (d.esMax > 0) this.ring(22, 24, 21, d.es / d.esMax, "#7fd1ff");
         this.globe(W - 22, 24, 19, d.manaMax ? d.mana / d.manaMax : 0, "#3a7bff", "#1f47a8", "#9dbbff", now, 1.7);
-        const lifeTxt = fmt(Math.floor(Math.max(0, d.life)));
-        drawText(g, lifeTxt, 22, 20, CREAM, "center");
+        // Dead: the globe says so (the battle view may be hidden or folded away).
+        if (d.dead) {
+            drawText(g, "DEAD", 22, 17, "#ff8a8c", "center");
+            drawText(g, `${Math.max(0, Math.ceil(d.respawn ?? 0))}S`, 22, 27, CREAM, "center");
+        } else drawText(g, fmt(Math.floor(Math.max(0, d.life))), 22, 20, CREAM, "center");
         drawText(g, fmt(Math.floor(Math.max(0, d.mana))), W - 22, 20, CREAM, "center");
-        if (d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
+        if (!d.dead && d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
 
         // Centre group: flask, skill, level.
         const cx = Math.round(W / 2), row = 12;
