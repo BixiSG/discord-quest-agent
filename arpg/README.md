@@ -15,9 +15,15 @@ It has nothing to do with quests: it never reads quest data or orbs.
 - Three callings (Vanguard, Strider, Arcanist), 15 skills, 14 supports.
 - Three acts, 21 zones plus three trials, 9 bosses, story beats, six
   ascendancies.
-- Items: 300+ bases, 44 affixes with 8 tiers, rares, 10 relics (uniques).
-- Crafting: 10 currencies, a forge that turns ember dust into rares, and an
-  ordered loot filter.
+- Items: 300+ bases, 44 affixes with 8 tiers, rares, 26 relics (uniques) with
+  a relic case and a codex.
+- A stash that looks after itself: upkeep swaps out the least-worth item for
+  a better drop, locks keep what you want, bulk salvage, room for dust.
+- Crafting: 10 currencies, hone (quality) and bench (a chosen affix), a forge
+  that turns ember dust into rares (or keeps forging until one is an
+  upgrade), and an ordered loot filter.
+- A contract board: three standing goals that pay dust, currency, missing
+  relics, maps or sigils.
 - A 129-node passive tree with keystones.
 - Endgame: maps tier 1-16 with mods, the endless Depths past tier 16, an
   atlas tree and four pinnacle bosses.
@@ -51,7 +57,8 @@ an agent that has not been updated yet ignores the folder.
   line, and a report or story beat waits behind a row that brings the full
   window back. Tab, Enter and Space work on item slots and list rows.
 - Tabs carry a counter when something waits for you: unspent passive or
-  atlas points, a free support slot, a full stash. The strip under the battle
+  atlas points, a free support slot, a stash upkeep can't make room in, a
+  finished contract. The strip under the battle
   estimates the time to the next level from the last few minutes.
 - In Quest Agent, Settings > Addons can give Hollowmarch its own button in
   Discord's title bar. It opens the game, then works like a taskbar button:
@@ -60,9 +67,11 @@ an agent that has not been updated yet ignores the folder.
   the last save (up to 24 hours), so the hero is never "paused".
 - Auto-push moves on after three clean clears, falls back after three deaths,
   visits trials once the hero out-levels them, and in maps lowers the tier
-  after repeated deaths.
-- Ember dust comes from salvage. Spend it at the Forge on currency or on a
-  fresh rare for a slot.
+  after two failed maps and raises it again after eight clean ones.
+- Gear: shift-click stash items to mark them for salvage; L locks the picked
+  item. The Relics chip shows the relic case and the codex.
+- Ember dust comes from salvage. Spend it at the Forge on currency, honing,
+  the bench, a fresh rare for a slot, or more stash room.
 
 ## Development
 

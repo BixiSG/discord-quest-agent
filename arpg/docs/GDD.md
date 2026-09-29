@@ -71,6 +71,26 @@ Loot goes straight to the stash (no pick-up). The loot filter decides what
 is kept and what is salvaged into **ember dust**, which buys crafting
 currency at the forge.
 
+### Keeping the stash moving (round 3)
+
+An idle hero finds thousands of items a day, so the stash has to look after
+itself:
+
+- **Upkeep** (on by default): a keeper that meets a full stash replaces the
+  least-worth item there if it is worth more (item level and base level,
+  then rarity, affix count, quality). Upkeep never takes a locked item or an
+  upgrade. Gear that auto-equip takes off meets the loot filter like a drop.
+- **Locks**: a locked item is never salvaged by upkeep, auto-equip or bulk
+  salvage. Working an item at the Forge (currency, hone, bench) locks it.
+- **Relic case**: relics live outside the stash, the better-rolled copy of
+  each; a worse copy is salvaged. The **codex** counts every relic found and
+  gives +1% item rarity per different relic.
+- Level-ups wear stash upgrades: items that needed the level, or that the
+  grown build now prefers.
+- Bulk tools: Equip upgrades, Salvage outdated (bases 10+ levels behind),
+  plain, enchanted, or the items marked with shift-click.
+- Stash room costs dust: +10 slots per purchase, 60 up to 150.
+
 ## Crafting currency (P2)
 
 | name | effect |
@@ -85,6 +105,31 @@ currency at the forge.
 | Salt of Undoing | strip every affix, back to plain |
 | Unmaker | remove one random affix |
 | Temper Oil | reroll the numbers, keep the affixes |
+
+## The Forge beyond currency (round 3)
+
+Dust and currency pile up late, so the Forge has sinks that scale:
+
+- **Hone**: quality 0-20 on a weapon or armour piece, +1% increased local
+  physical damage or defences per point, dust per point rising with the item
+  level and the quality already there.
+- **Bench**: add a chosen affix (a random tier the item level allows) to an
+  enchanted or rare item with room, for 3 Graft and dust. One benched affix
+  per item; benching again replaces it.
+- **Forge until upgrade**: up to 10 rares for a slot, stopping at the first
+  one worth wearing; misses are salvaged on the spot.
+- **Reroll until upgrade**: Reshaper, Tempest Shard or Temper Oil on a stash
+  item again and again (up to 20) until it beats what is worn.
+
+## Contracts (round 3)
+
+Three standing goals on the World tab: slay monsters, champions or bosses,
+clear runs (maps in the endgame, from a tier near the deepest cleared), find
+rares. They fill in while the hero plays, sized to about half an hour each at
+any stage, and pay dust scaled to the level plus currency weighted towards
+the rarer orbs; some add a relic the codex is missing, three maps or a sigil.
+A finished contract waits to be claimed; one you don't want can be rerolled
+for dust.
 
 ## World
 
@@ -101,8 +146,12 @@ currency at the forge.
 
 Dying ends the run and costs a short respawn wait. In maps it also costs the
 map and 3% of the XP towards the next level. Auto-push drops back one zone
-after three deaths in a row (in maps: caps the device a tier lower until five
-clean maps), and visits each open trial once the hero is two levels above it.
+after three deaths in a row, and visits each open trial once the hero is two
+levels above it. In maps, two failed maps without eight clean ones between
+them cap the device a tier lower; eight clean maps in a row raise the cap one
+tier. With only deeper maps held, the device dampens one to the cap rather
+than run it deep (it used to ignore the cap then, and the hero died on a
+loop).
 
 ## Idle rules
 

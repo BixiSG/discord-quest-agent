@@ -97,33 +97,35 @@ Findings from a bot run (`tools/_probe.ts`, Vanguard, 48 h, bot spends passives 
   cap after 3 deaths, then after 5 clean maps jumps straight back to the top tier (the loop noted above).
 - 10 relics for 100 levels; nothing to collect or aim for between pinnacles.
 
-Plan, in order (each step: tests where it is core, `npm run check`, a commit):
-1. [ ] Orbling window (hub + pet.js). Hub: an addon with `window: { w, h }` opens in a floating
-   window of its own (`.qb-aw`): title bar with icon, name and status, drag, close, Esc, position kept,
-   clamped under Discord's title bar, light/dark, remounted on language/theme change. Its panel header
-   button, title-bar button and switch-on all open that window instead of a panel view; `visible()`
-   means the window is open. pet.js: `window`, CSS scoped to the window. CHANGELOG 1.7.0 wording.
-2. [ ] Stash upkeep (core, save v5). Items can be locked (never auto-salvaged, skipped by bulk
-   salvage). With upkeep on (default), a keeper that meets a full stash replaces the least-worth
-   unlocked, non-relic, non-upgrade stash item if that one is worth less (item level + rarity weight),
-   else it is salvaged as now. Gear that auto-equip takes off goes through the filter + upkeep instead
-   of being forced into the stash. Level-ups re-check the stash for upgrades that were level-locked.
-3. [ ] Stash room for dust: +10 slots per purchase, 60 -> 150, escalating price (dust sink).
-4. [ ] Bulk tools: Salvage outdated (base 10+ levels behind, not locked/relic/upgrade), Equip all
-   upgrades, a mark mode (shift-click marks cells, Salvage marked), lock toggle (L key).
-5. [ ] Forge sinks: Hone (quality 0-20 on an item: +1% local damage/defence per point, dust),
-   Bench (add a chosen affix to an item with room: Graft + dust; one benched affix per item, a new one
-   replaces it), Forge until upgrade (up to 10 tries, misses salvaged).
-6. [ ] Map auto-push steps the cap up one tier per 5 clean maps instead of jumping to the top.
-   Re-run the probe: deaths per hour late should drop well below today's.
-7. [ ] Content: ~14 more relics (every slot, levels 30-80, build-enabling mods from existing stats),
-   and a Relic codex (every relic seen, how many, best roll) with a small bonus per relic found
-   (+1% item rarity each). Codex shown in the Gear tab.
-8. [ ] UI for 2-7: Gear (lock badge, marks, bulk buttons, buy room, codex), Forge (hone/bench panels,
-   forge x10), Menu (upkeep switch, filter "behind" choice). Harness shots as one small JPEG sheet.
-9. [ ] If there is room: Contracts board (3 rotating goals, currency/dust rewards).
-10. [ ] Docs (GDD, arpg README, CHANGELOG), build copied to `addons\`, live reload only if the game
-    window is closed in Discord.
+Done (each step: tests where it is core, `npm run check`, a commit; 128 tests):
+1. [x] Orbling window (hub + pet.js): `window: { w, h }` addons open in a floating hub window
+   (`.qb-aw`, z 10002, drag, Esc, position in `SETTINGS.winPos`, under Discord's title bar,
+   remount on theme/language); header button, title-bar button and switch-on open it.
+2. [x] Stash upkeep, locks, relic case (best copy per relic, off-stash), codex (+1% rarity per
+   relic), level-ups wear stash upgrades. Save v5 (moves stash relics into the case).
+3. [x] Stash room for dust (+10 per purchase, 60 -> 150, 250 dust rising x2.2).
+4. [x] Bulk tools: Equip upgrades, Salvage outdated/plain/enchanted/marked (shift-click), lock (L).
+5. [x] Forge: Hone (quality 0-20), Bench (chosen affix, 3 Graft + dust), Forge until upgrade,
+   Reroll until upgrade; worked items lock.
+6. [x] Maps: the device dampens deeper maps to the auto-push cap (it ignored the cap when only
+   deeper maps were held - the real cause of the death loop); 2 failed maps lower the cap, 8
+   clean raise it one tier. Bot Vanguard at 48 h: level 79 (was 71), half the deaths.
+7. [x] 16 more relics (26 total), codex in the Gear tab's Relics chip.
+8. [x] UI for all of it (Gear, Forge, Menu upkeep switch, filter "base N+ behind", away report
+   lists swaps and new relics). Checked in headless Chrome against bot saves.
+9. [x] Contract board on the World tab (3 goals, ~20-35 min each, dust + currency, sometimes a
+   missing relic / 3 maps / a sigil; reroll for dust; World tab counter).
+10. [x] Docs (GDD, arpg README). `tools/probe.ts` prints a long-run health report.
+    Build copied to `addonsrpg.js`; NOT live yet: the game was open (mini strip) in Discord,
+    so no reload. The user's real save (v4, level 29) was read over CDP and run through the v5
+    migration offline: fine (4 relics to the case, upkeep swapping, 2 h sim in 235 ms).
+
+Open for the user:
+- [ ] Reload Discord (or restart it) to get round 3 live: new quest-agent.js (Orbling window),
+      pet.js and arpg.js load together on the next inject.
+- [ ] Late unwearable keepers: at level ~72 upkeep fills the stash with drops that need 74+
+      (they are worth the most). Harmless (wearable upgrades are equipped on drop) but a worth
+      penalty for items far above the hero's level is an option.
 
 ## 4. Before shipping
 - [ ] Fix whatever sections 1-3 turn up; for Hollowmarch run `cd arpg && npm install && npm run check`.
