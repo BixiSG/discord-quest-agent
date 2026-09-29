@@ -9,7 +9,7 @@ import { xpToNext } from "../src/core/data";
 describe("scouting a pinnacle", () => {
     it("fights on a copy: a fresh hero loses every time and nothing in the real state changes", () => {
         const g = newGame({ name: "T", cls: "vanguard", now: 0, seed: 41 });
-        g.world.clears.a3_sunfall = 1;
+        g.world.clears.a4_lamphouse = 1;
         const before = JSON.stringify(g);
         const r = scoutPinnacle(g, "drownedsun", 2);
         expect(r).toEqual({ wins: 0, trials: 2, seconds: 0 });

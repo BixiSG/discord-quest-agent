@@ -42,7 +42,7 @@ describe("contract board", () => {
     it("a relic reward is one the codex is missing", () => {
         const g = g0();
         g.hero.level = 80;
-        g.world.unlocked.push("a3_sunfall");
+        g.world.unlocked.push("a4_lamphouse");
         ensureContracts(g);
         const c = g.contracts.list[0]!;
         c.extra = "relic"; c.n = c.target;

@@ -899,7 +899,7 @@ const UI: Record<string, string> = {
     "err.noAscPoints": "no ascendancy points",
     "err.noAtlasPoints": "no atlas points",
     "err.nodeBefore": "take the node before it first",
-    "err.sunfallFirst": "clear the Sunfall first",
+    "err.ashfoldFirst": "clear Ashfold first",
     "err.badTier": "bad tier",
     "err.unknownPinnacle": "unknown pinnacle",
     "err.needsSigils": "needs {n} {sigil}s",

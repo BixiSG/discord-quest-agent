@@ -109,11 +109,41 @@ export const ZONES: Record<string, ZoneDef> = {
     a3_sunfall: { id: "a3_sunfall", act: 3, name: "The Sunfall", level: 41, packs: 6, packSize: [5, 6], monsters: ["sunpriest", "ashwalker", "hound"], champion: 0.25, boss: "lastdawn",
         palette: ["#120c0c", "#3a1a10", "#ffffff"],
         story: "At the bottom lies what is left of the sun. It is not dead. It is waiting for someone to carry it back up.",
-        bossText: "The Last Dawn goes quiet in your hands. Past the crater, the Cinderlands stretch on forever. Maps will lead you there." },
+        bossText: "The Last Dawn goes quiet in your hands. Past the crater a stair runs down to Ashfold, the last town in the March that never let its lanterns go out." },
     a3_trial: { id: "a3_trial", act: 3, name: "Trial of Embers", level: 36, packs: 4, packSize: [5, 6], monsters: ["hound", "magmacrab", "ashwalker"], champion: 0.3, boss: "emberjudge", trial: true,
         palette: ["#2a1410", "#6a2a1a", "#ffe066"],
         story: "The priests' old proving ground. Nobody has passed it since the fall.",
         bossText: "The proving fire dies down. Whatever you are becoming, the ember approves." },
+
+    // ---- Act 4: Ashfold
+    a4_stair: { id: "a4_stair", act: 4, name: "The Crater Stair", level: 42, packs: 9, packSize: [4, 6], monsters: ["risen", "ashwalker", "cinderbat"], champion: 0.18,
+        palette: ["#2a1e2a", "#4a3a3a", "#ffb000"],
+        story: "Steps cut into the crater's far wall, worn smooth by people climbing up to wait for the sun. Some of them are still climbing." },
+    a4_gate: { id: "a4_gate", act: 4, name: "Ashfold Gate", level: 43, packs: 9, packSize: [4, 6], monsters: ["watchman", "risen", "hound"], champion: 0.18,
+        palette: ["#1a2a33", "#2a3040", "#ffd84a"],
+        story: "Ashfold never closed its gate. There was always one more traveller who might be carrying the sun." },
+    a4_lanes: { id: "a4_lanes", act: 4, name: "The Lantern Lanes", level: 44, packs: 9, packSize: [4, 6], monsters: ["widow", "lanternghost", "watchman"], champion: 0.19, boss: "nightwatch",
+        palette: ["#18222a", "#2a3a4a", "#ffb000"],
+        story: "A lantern behind every shutter, every one of them lit. Three hundred years of oil. Nobody here remembers why.",
+        bossText: "The Night Watch lowers its lamp. \"All's well,\" it says, to no one, and falls quiet at last." },
+    a4_square: { id: "a4_square", act: 4, name: "The Market Square", level: 46, packs: 10, packSize: [4, 6], monsters: ["smith", "widow", "elder", "lanternghost"], champion: 0.2,
+        palette: ["#2a2a33", "#4a4040", "#ffc233"],
+        story: "The stalls are set out for a market day that never came. The hollow townsfolk still mind them." },
+    a4_belfry: { id: "a4_belfry", act: 4, name: "The Belfry", level: 47, packs: 10, packSize: [4, 6], monsters: ["lanternghost", "risen", "cinderbat"], champion: 0.2, boss: "mayor",
+        palette: ["#1c1a26", "#3a3a4a", "#b9a4ff"],
+        story: "The bell was to ring the day the sun came back. The Mayor has held the rope ever since.",
+        bossText: "The Mayor lets go of the rope. The bell does not ring. He seems relieved." },
+    a4_undercroft: { id: "a4_undercroft", act: 4, name: "The Undercroft", level: 49, packs: 10, packSize: [5, 6], monsters: ["risen", "lanternghost", "elder", "bleached"], champion: 0.22,
+        palette: ["#12141a", "#2a2a30", "#9ef26a"],
+        story: "Under the town, the oil for three hundred years of lanterns, and the lamplighters who fetched it." },
+    a4_lamphouse: { id: "a4_lamphouse", act: 4, name: "The Lamphouse", level: 50, packs: 7, packSize: [5, 6], monsters: ["lanternghost", "smith", "watchman"], champion: 0.25, boss: "lamplighter",
+        palette: ["#140c14", "#3a1a2a", "#ffb000"],
+        story: "Every lantern in Ashfold was lit from one flame. The Lamplighter still carries it, and it has never gone out.",
+        bossText: "The Lamplighter hands you the flame. \"Carry it to them,\" it says. Past Ashfold, the Cinderlands stretch on forever. Maps will lead you there." },
+    a4_trial: { id: "a4_trial", act: 4, name: "Trial of Lanterns", level: 47, packs: 4, packSize: [5, 6], monsters: ["watchman", "widow", "lanternghost"], champion: 0.3, boss: "nightwatch", trial: true,
+        palette: ["#101820", "#243040", "#ffd84a"],
+        story: "The lamplighters' test: walk the lanes with one lantern and bring it back still lit.",
+        bossText: "Your lantern is still lit. The watch lets you pass." },
 };
 
 export const ACTS: ActDef[] = [
@@ -125,11 +155,14 @@ export const ACTS: ActDef[] = [
         outro: "The Regent is gone and the Barrens are nobody's now. North, the sky is the colour of ash." },
     { id: 3, name: "The Sunfall", zones: ["a3_ashroad", "a3_emberwood", "a3_rim", "a3_molten", "a3_bellcourt", "a3_heart", "a3_sunfall"], trial: "a3_trial",
         intro: "The crater where the sun came down. Every ember started here.",
-        outro: "You hold what is left of the sun. It is not enough to light the March. Not yet. The Cinderlands wait beyond the crater." },
+        outro: "You hold what is left of the sun. It is not enough to light the March. Not yet. A stair runs down the far side of the crater, and at its foot, lights." },
+    { id: 4, name: "Ashfold", zones: ["a4_stair", "a4_gate", "a4_lanes", "a4_square", "a4_belfry", "a4_undercroft", "a4_lamphouse"], trial: "a4_trial",
+        intro: "The last town in the March, where the lanterns never went out.",
+        outro: "Ashfold's flame is yours now. Beyond the town, the Cinderlands: where the pieces of the sun were scattered, and the things that took them wait." },
 ];
 
 /** The main road in play order (trials are side zones). */
 export const ZONE_ORDER: string[] = ACTS.flatMap(a => a.zones);
 
 /** The zone after which a trial opens. */
-export const TRIAL_AFTER: Record<string, string> = { a1_trial: "a1_chapel", a2_trial: "a2_oasis", a3_trial: "a3_bellcourt" };
+export const TRIAL_AFTER: Record<string, string> = { a1_trial: "a1_chapel", a2_trial: "a2_oasis", a3_trial: "a3_bellcourt", a4_trial: "a4_square" };

@@ -363,12 +363,13 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
 function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng, ev: SimEvents = {}): void {
     const d = MONSTERS[m.def]!;
     const inMap = !!run.map && !run.map.pinnacle;
-    const act3 = !run.map && ZONES[run.zone]?.act === 3;
-    if (!inMap && !act3) return;
+    // The last act drops a few maps ahead of the Cinderlands.
+    const lastAct = !run.map && ZONES[run.zone]?.act === ACTS.length;
+    if (!inMap && !lastAct) return;
     const atlas = atlasEffects(state);
     const tier = inMap ? run.map!.tier : 0;
     const base = d.boss ? 0.6 : m.champion ? 0.06 : 0.012;
-    const chance = base * (act3 ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
+    const chance = base * (lastAct ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
     if (rng.chance(chance)) {
         const map = rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas));
         if (hollowNight(state) && rng.chance(LANTERN.litMaps)) map.lit = true;

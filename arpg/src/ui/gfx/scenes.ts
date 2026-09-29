@@ -25,6 +25,9 @@ export const SETS: Record<string, SceneSet> = {
     forest: { sky: "#b8792f", ground: "#2a1d14", edge: "#6b4a26", layers: [{ sprite: "bg.forest.0", parallax: 0.1, drop: 4 }, { sprite: "bg.forest.1", parallax: 0.3, drop: 4 }, { sprite: "bg.forest.2", parallax: 0.6, drop: 6 }] },
     dusk: { sky: "#8a5f8a", ground: "#20182a", edge: "#4a3552", layers: [{ sprite: "bg.dusk.0", parallax: 0.02, drop: 10 }, { sprite: "bg.dusk.1", parallax: 0.08, drop: 4 }, { sprite: "bg.dusk.2", parallax: 0.18, drop: 4 }, { sprite: "bg.dusk.3", parallax: 0.35, drop: 4 }, { sprite: "bg.dusk.4", parallax: 0.65, drop: 8 }] },
     castle: { sky: "#101f26", ground: "#0c171c", edge: "#284a4a", layers: [{ sprite: "bg.castle.0", parallax: 0.2, drop: 14 }] },
+    ashfold: { sky: "#28383f", ground: "#10141a", edge: "#2a3440", layers: [{ sprite: "bg.ashfold.sky", parallax: 0, drop: 0 }, { sprite: "bg.ashfold.clouds", parallax: 0.02, drop: 0 },
+        { sprite: "bg.ashfold.0", parallax: 0.06, drop: 6 }, { sprite: "bg.ashfold.1", parallax: 0.15, drop: -14 }, { sprite: "bg.ashfold.2", parallax: 0.35, drop: 4 }] },
+    square: { sky: "#1c2630", ground: "#141418", edge: "#3a3a44", layers: [{ sprite: "bg.square.0", parallax: 0.1, drop: 40 }, { sprite: "bg.square.1", parallax: 0.4, drop: 24 }] },
     desert: { sky: "#e8b48a", ground: "#6e2a28", edge: "#a8584a", layers: [{ sprite: "bg.desert.0", parallax: 0.05, drop: 16 }, { sprite: "bg.desert.1", parallax: 0.15, drop: 16 }, { sprite: "bg.desert.2", parallax: 0.3, drop: 16 }, { sprite: "bg.desert.3", parallax: 0.55, drop: 16 }] },
 };
 
@@ -35,6 +38,8 @@ const ZONE_SET: Record<string, string> = {
     a2_spire: "castle", a2_throne: "castle", a2_trial: "desert",
     a3_ashroad: "dusk", a3_emberwood: "forest", a3_rim: "dusk", a3_molten: "desert", a3_bellcourt: "castle",
     a3_heart: "dusk", a3_sunfall: "cemetery", a3_trial: "castle",
+    a4_stair: "dusk", a4_gate: "ashfold", a4_lanes: "ashfold", a4_square: "square", a4_belfry: "castle",
+    a4_undercroft: "cemetery", a4_lamphouse: "ashfold", a4_trial: "ashfold",
 };
 const ROTATION = ["swamp", "cemetery", "forest", "dusk", "desert", "castle"];
 

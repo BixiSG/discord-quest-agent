@@ -8,7 +8,7 @@ import { validateState } from "../src/core/validate";
 import type { GameState, MapItem } from "../src/core/state";
 
 const g0 = () => newGame({ name: "E", cls: "arcanist", now: 0, seed: 21 });
-const endgame = () => { const g = g0(); g.world.clears.a3_sunfall = 1; g.hero.level = 70; g.hero.rev++; return g; };
+const endgame = () => { const g = g0(); g.world.clears.a4_lamphouse = 1; g.hero.level = 70; g.hero.rev++; return g; };
 const map = (uid: number, tier: number, mods: string[] = []): MapItem => ({ uid, tier, area: "saltflats", mods, rarity: mods.length ? "enchanted" : "plain" });
 function finish(g: GameState) { step(g); g.activity.run!.phase = "done"; step(g); }
 
@@ -28,9 +28,9 @@ describe("endgame content", () => {
 });
 
 describe("maps", () => {
-    it("only after the Sunfall; runs consume maps, highest first, Outskirts when empty", () => {
+    it("only after Ashfold; runs consume maps, highest first, Outskirts when empty", () => {
         const locked = g0();
-        expect(setMapMode(locked, true)).toMatch(/Sunfall/);
+        expect(setMapMode(locked, true)).toMatch(/Ashfold/);
         const g = endgame();
         g.maps.push(map(900, 3), map(901, 5), map(902, 1));
         expect(setMapMode(g, true)).toBeNull();

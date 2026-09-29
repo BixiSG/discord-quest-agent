@@ -247,6 +247,16 @@ spent, reported as wins, time and a verdict (ready, risky, not yet).
 - **Act 1 - The Drowned Road** (P1): six zones and the boss, the Tide-Warden.
 - **Act 2 - The Glass Barrens**, **Act 3 - The Sunfall** (P3), each with
   story text between zones and an ascendancy trial.
+- **Act 4 - Ashfold** (round 7): the last town of the March, where the
+  lamplighters kept every lantern lit for three hundred years so the sun could
+  find its way back, and went hollow doing it. Seven zones (levels 42-50),
+  the Trial of Lanterns, three bosses (the Night Watch, the Mayor Who Waited,
+  the Lamplighter), two relics (the Lamplighter's Hook, the Watch Coat) and
+  the companion Wick. Its monsters are the hollow townsfolk, risen bones and
+  lantern ghosts; casters' spells burst on the hero (dark bolt, fire bomb,
+  spark). The Lamplighter opens the Cinderlands; heroes who were past the
+  Sunfall before Act 4 keep their maps (save v8, `endgame:early`), and a new
+  dawn walks through Ashfold again.
 - **The Cinderlands** (P4): the endgame. Maps are tiers 1-16 with random
   mods (monster life, damage, extra elements, player curses). Mods raise
   loot quantity and rarity. Completing a tier grants atlas points. Past

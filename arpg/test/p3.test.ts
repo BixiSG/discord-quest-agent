@@ -16,8 +16,8 @@ function finishRun(g: GameState): void {
 }
 
 describe("acts, trials, ascendancies", () => {
-    it("content: three acts, each with a trial off the main road", () => {
-        expect(ACTS.length).toBe(3);
+    it("content: four acts, each with a trial off the main road", () => {
+        expect(ACTS.length).toBe(4);
         for (const a of ACTS) {
             expect(ZONES[a.trial]?.trial).toBe(true);
             expect(ZONE_ORDER).not.toContain(a.trial);

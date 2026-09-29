@@ -59,6 +59,8 @@ const list: CompanionDef[] = [
         bonus: { stat: "castSpeed", kind: "inc", per: 0.5, text: "{0}% increased cast speed" }, sprite: "mon.skull", hover: 10, fps: 10, scale: 0.5 },
     { id: "whisperskull", name: "Whispering Skull", blurb: "It tells you what the dead learned. Some of it is useful.", where: "Map bosses", level: 50,
         bonus: { stat: "xpGain", kind: "inc", per: 0.5, text: "{0}% increased experience gained" }, sprite: "mon.skull2", tint: "#b9a4ff", strength: 0.4, hover: 8, fps: 8, scale: 0.5 },
+    { id: "wick", name: "Wick", blurb: "A lamplighter's flame that followed you out of Ashfold. It burns brighter when you hit hard.", where: "Act 4: the Lamplighter", level: 50,
+        bonus: { stat: "critMulti", kind: "flat", per: 1, text: "+{0}% critical multiplier" }, sprite: "mon.lantern", tint: "#ffb000", strength: 0.3, hover: 10, fps: 8, scale: 0.5 },
     { id: "pumpkinwisp", name: "Pumpkin Wisp", blurb: "A lantern that would not be snuffed. It grins at whatever you are fighting.", where: "Hollow Night (October): lantern-touched monsters", level: 1, season: "hollownight",
         bonus: { stat: "damage", kind: "inc", per: 0.5, text: "{0}% increased damage" }, sprite: "fx.orb", tint: "#ff7a1a", strength: 0.6, hover: 12, fps: 10, overlay: "pumpkin" },
 ];
@@ -66,7 +68,7 @@ const list: CompanionDef[] = [
 export const COMPANIONS: Record<string, CompanionDef> = Object.fromEntries(list.map(c => [c.id, c]));
 export const COMPANION_ORDER = list.map(c => c.id);
 /** The companion each act boss gives on its first clear. */
-export const ACT_COMPANION: Record<number, string> = { 1: "saltcrab", 2: "dunepup", 3: "ashpup" };
+export const ACT_COMPANION: Record<number, string> = { 1: "saltcrab", 2: "dunepup", 3: "ashpup", 4: "wick" };
 
 /** The bonus at a level, as a modifier (rounded to one decimal). */
 export function companionMod(id: string, level: number): Mod | null {

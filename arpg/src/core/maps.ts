@@ -12,7 +12,11 @@ import { crownFalls, dawnOf } from "./dawn";
 import type { DamageType, Mod } from "./types";
 
 /** The endgame opens once the Sunfall is cleared. */
-export const endgameOpen = (state: GameState) => !!state.world.clears.a3_sunfall;
+/**
+ * The Cinderlands (maps) open once Ashfold's Lamplighter falls (Act 4, round 7). Heroes who were
+ * past the Sunfall before Act 4 existed keep their maps (save v8 marks them "endgame:early").
+ */
+export const endgameOpen = (state: GameState) => !!state.world.clears.a4_lamphouse || !!state.world.rewards?.includes("endgame:early");
 
 export function atlasEffects(state: GameState): AtlasEffects {
     const e = emptyAtlas();
@@ -46,7 +50,7 @@ export function takeAtlas(state: GameState, id: string): string | null {
 
 /** Switch between story zones and maps. The current run finishes first only if it is a zone run. */
 export function setMapMode(state: GameState, on: boolean): string | null {
-    if (on && !endgameOpen(state)) return "clear the Sunfall first";
+    if (on && !endgameOpen(state)) return "clear Ashfold first";
     const act = state.activity;
     if ((act.mode === "map") === on) return null;
     act.mode = on ? "map" : "zone";
@@ -68,7 +72,7 @@ export function queuePinnacle(state: GameState, id: string): string | null {
     const p = PINNACLES[id];
     if (!p) return "unknown pinnacle";
     if ((state.sigils[p.sigil] ?? 0) < p.cost) return `needs ${p.cost} ${p.sigilName}s`;
-    if (!endgameOpen(state)) return "clear the Sunfall first";
+    if (!endgameOpen(state)) return "clear Ashfold first";
     if (id === "hollowcrown" && dawnOf(state) < CROWN_DAWN) return "the Hollow Crown answers only from the second dawn";
     state.activity.pinnacle = id;
     if (state.activity.mode !== "map") setMapMode(state, true);

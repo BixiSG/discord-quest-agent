@@ -18,6 +18,8 @@ packs them into `src/ui/gfx/atlas.gen.ts`. The raw packs are not committed:
 | Parallax Mountain at Dusk | Luis Zuno (ansimuz) | CC0 | https://opengameart.org/content/mountain-at-dusk-background |
 | Rocky desert landscape | Emcee Flesher | CC0 | https://opengameart.org/content/rocky-desert-landscape-layered-looping |
 | Dungeon Crawl 32x32 tiles | Dungeon Crawl Stone Soup tile artists (maintained by Chris Hamons) | CC0 | https://opengameart.org/content/dungeon-crawl-32x32-tiles |
+| Gothicvania Town | Luis Zuno (ansimuz) | "Public domain and free to use on whatever you want" (artwork) | https://opengameart.org/content/gothicvania-town |
+| Gothicvania Magic Pack 9 | Luis Zuno (ansimuz) | CC0 | https://opengameart.org/content/gothicvania-magic-pack-9 |
 
 The Gothicvania packs also ship music by Pascal Belisle under a
 credit-required license; none of it is used here.

@@ -20,6 +20,8 @@ const ZIPS = {
     forest: "parallax_forest_pack.zip",
     mountain: "parallax_mountain_pack.zip",
     crawl: "crawl-tiles%20Oct-5-2010.zip",
+    town: "gothicvania-town-files.zip",
+    magic9: "magic_pack_9_files.zip",
 };
 const FILES = { desert: ["rocky-far-mountains_0.png", "rocky-nowater-far_0.png", "rocky-nowater-mid_0.png", "rocky-nowater-close_0.png"] };
 

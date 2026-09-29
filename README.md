@@ -200,7 +200,7 @@ Its state lives inside Discord next to the settings.
 
 **Hollowmarch** is a small action RPG that plays itself in a window of its own. You build
 the hero - gear with random affixes, a passive tree, skills and supports, an ascendancy, a
-companion at its side - and it clears the road through three acts into an endless map
+companion at its side - and it clears the road through four acts into an endless map
 endgame. Nothing runs while the window is closed: the time away is replayed through the same
 simulation when you open it, with a "while you were away" report. Fold it into a mini strip
 to keep the fight in a corner, or give it its own button in Discord's title bar.

@@ -67,6 +67,12 @@ const list: RelicDef[] = [
     { id: "lastember", name: "The Last Ember", base: "amulet_ember", level: 76, weight: 20, flavour: "When it goes out, so does the March.",
         mods: [r("damage", "inc", [25, 35], "{0}% increased damage"), r("attackSpeed", "inc", [8, 10], "{0}% increased attack speed"), r("castSpeed", "inc", [8, 10], "{0}% increased cast speed"), r("life", "inc", [8, 10], "{0}% increased maximum life")] },
 
+    // ---- Act 4: Ashfold
+    { id: "lamplighterhook", name: "The Lamplighter's Hook", base: "staff5", level: 44, weight: 60, flavour: "For reaching the lanterns nobody else could. Then for other things.",
+        mods: [r("addMin.fire", "flat", [10, 16], "Adds {0} min fire damage to spells", ["spell"]), r("addMax.fire", "flat", [24, 36], "Adds {0} max fire damage to spells", ["spell"]), r("castSpeed", "inc", [10, 15], "{0}% increased cast speed"), r("lifeRegenPct", "flat", [1, 1], "Regenerate {0}% of life per second")] },
+    { id: "watchcoat", name: "The Watch Coat", base: "brigand_body5", level: 46, weight: 55, flavour: "Three hundred years of night shifts. It does not want you to sleep either.",
+        mods: [r("local.defInc", "inc", [100, 140], "{0}% increased armour and evasion"), r("life", "flat", [60, 90], "+{0} to maximum life"), r("res.cold", "flat", [20, 30], "+{0}% cold resistance"), r("res.chaos", "flat", [15, 25], "+{0}% chaos resistance")] },
+
     // ---- seasonal: Hollow Night (October), from lantern-touched monsters and lantern contracts
     { id: "hollowgrin", name: "The Hollow Grin", base: "leather_helmet1", level: 1, weight: 0, season: "hollownight", flavour: "Carved for the night the sun did not come back. It kept the candle anyway.",
         mods: [r("itemRarity", "inc", [15, 25], "{0}% increased rarity of items found"), r("xpGain", "inc", [4, 8], "{0}% increased experience gained"), r("res.fire", "flat", [15, 25], "+{0}% fire resistance"), r("lifeOnKill", "flat", [4, 10], "{0} life gained on kill")] },

@@ -26,6 +26,9 @@ export const W = 320, H = 120;
 interface Fx { kind: string; t: number; targets: number[] }
 interface Float { x: number; y: number; text: string; color: string; t: number; big: boolean }
 interface Burst { x: number; y: number; t: number; big: boolean }
+/** A monster's spell effect bursting on the hero. */
+interface Impact { sprite: string; t: number }
+const IMPACT_FRAME_MS = 55;
 
 /** How long a one-shot animation (attack, hurt) plays, in ms. */
 const HERO_ATTACK_MS = 380, MON_ATTACK_MS = 520, HURT_MS = 220, DEATH_FX_MS = 540;
@@ -40,6 +43,7 @@ export class Battle {
     private dying = new Map<number, number>();
     /** Monster index -> when it last attacked (for its attack animation). */
     private monAtk = new Map<number, number>();
+    private impacts: Impact[] = [];
     private packKey = "";
     private heroHurt = 0;
     private heroAtk = -1e9;
@@ -102,6 +106,8 @@ export class Battle {
             monsterHit: (i, dmg, avoided) => {
                 if (this.quiet) return;
                 this.monAtk.set(i, now());
+                const fx = MONSTER_CAST[state().activity.run?.monsters[i]?.def ?? ""]?.castFx;
+                if (fx && !avoided && this.impacts.length < 4) this.impacts.push({ sprite: fx, t: now() });
                 if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 56, text: t(avoided === "evade" ? "battle.evade" : "battle.block"), color: "#7fd1ff", t: now(), big: false });
                 else { this.heroHurt = now(); this.pushFloat({ x: this.HERO_X - 6, y: this.GROUND - 56, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false }); }
             },
@@ -161,10 +167,11 @@ export class Battle {
                     const name = attacking ? cast.attack! : cast.sprite;
                     const fr = spriteOf(name);
                     if (fr) {
-                        shadow(g, p[0], p[1], Math.max(10, Math.round(fr.w * 0.5)), hover);
-                        if (m.champion) ring(g, p[0], p[1], Math.max(12, Math.round(fr.w * 0.55)), now);
+                        const sc = cast.scale ?? 1;
+                        shadow(g, p[0], p[1], Math.max(10, Math.round(fr.w * 0.5 * sc)), hover);
+                        if (m.champion) ring(g, p[0], p[1], Math.max(12, Math.round(fr.w * 0.55 * sc)), now);
                         const f = attacking ? ((now - at!) / MON_ATTACK_MS) * fr.n : now / (1000 / (cast.fps ?? 8)) + i * 1.7;
-                        box = drawSprite(g, name, f, p[0], p[1] - hover, { left: true, flash: hit, tint: m.champion ? "#ffc233" : m.lantern ? LANTERN_TINT : cast.tint, strength: m.champion ? 0.3 : m.lantern ? 0.35 : cast.strength });
+                        box = drawSprite(g, name, f, p[0], p[1] - hover, { left: true, flash: hit, scale: cast.scale ?? 1, tint: m.champion ? "#ffc233" : m.lantern ? LANTERN_TINT : cast.tint, strength: m.champion ? 0.3 : m.lantern ? 0.35 : cast.strength });
                     }
                 }
                 if (!box) {
@@ -232,6 +239,10 @@ export class Battle {
             const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? (BASES[wItem.base]?.kind ?? "sword") : "none", shield: !!state.hero.equipment.offhand };
             drawHero(g, this.HERO_X + lunge, G, look, walking ? now : 0, now - this.heroHurt < 120, !!dead);
         }
+
+        // Monster spells bursting on the hero.
+        this.impacts = this.impacts.filter(im => (now - im.t) / IMPACT_FRAME_MS < (spriteOf(im.sprite)?.n ?? 0));
+        for (const im of this.impacts) drawSprite(g, im.sprite, (now - im.t) / IMPACT_FRAME_MS, this.HERO_X, G);
 
         // Skill effects.
         this.fx = this.fx.filter(f => now - f.t < 350);

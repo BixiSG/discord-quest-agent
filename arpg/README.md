@@ -13,8 +13,8 @@ It has nothing to do with quests: it never reads quest data or orbs.
 ## What is in it
 
 - Three callings (Vanguard, Strider, Arcanist), 15 skills, 14 supports.
-- Three acts, 21 zones plus three trials, 9 bosses, story beats, six
-  ascendancies.
+- Four acts, 28 zones plus four trials, 12 bosses, story beats, six
+  ascendancies. Act 4 is Ashfold, the lantern town before the maps.
 - Items: 300+ bases, 44 affixes with 8 tiers, rares, 26 relics (uniques) with
   a relic case and a codex.
 - A stash that looks after itself: upkeep swaps out the least-worth item for

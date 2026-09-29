@@ -13,7 +13,7 @@ import type { Item } from "../src/core/types";
 
 const shardsHeld = () => {
     const g = newGame({ name: "Ash", cls: "vanguard", now: 0, seed: 71 });
-    g.hero.level = 80; g.dust = 5e5; g.world.clears.a3_sunfall = 1;
+    g.hero.level = 80; g.dust = 5e5; g.world.clears.a4_lamphouse = 1;
     for (const p of Object.keys(PINNACLES)) g.pinnacleKills[p] = 1;
     return g;
 };
@@ -118,8 +118,8 @@ describe("pinnacles enrage", () => {
 describe("the Hollow Crown", () => {
     const atDawn = (n: number) => {
         const g = shardsHeld();
-        for (let i = 0; i < n; i++) { for (const p of Object.keys(PINNACLES)) g.pinnacleKills[p] = 1; g.world.clears.a3_sunfall = 1; relightSun(g); chooseDawnPerk(g, ["brightember", "steadyflame", "firstlight"][i]!); }
-        g.world.clears.a3_sunfall = 1; g.hero.level = 80;
+        for (let i = 0; i < n; i++) { for (const p of Object.keys(PINNACLES)) g.pinnacleKills[p] = 1; g.world.clears.a4_lamphouse = 1; relightSun(g); chooseDawnPerk(g, ["brightember", "steadyflame", "firstlight"][i]!); }
+        g.world.clears.a4_lamphouse = 1; g.hero.level = 80;
         g.sigils.hollow_sigil = 4;
         return g;
     };

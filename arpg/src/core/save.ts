@@ -2,7 +2,7 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -80,6 +80,13 @@ export const MIGRATIONS: Record<number, Migration> = {
         s.settings.autoStones ??= true;
         s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
         s.echoes ??= [];
+        return s;
+    },
+    // v8 (round 7): Act 4 (Ashfold) now stands between the Sunfall and the maps. A hero already
+    // past the Sunfall keeps the Cinderlands; Act 4 opens for them as a road of its own.
+    7: (s: any) => {
+        s.world.rewards ??= [];
+        if ((s.world.clears?.a3_sunfall ?? 0) > 0 && !s.world.rewards.includes("endgame:early")) s.world.rewards.push("endgame:early");
         return s;
     },
 };
