@@ -8,7 +8,7 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 
 - Addons: Settings > Addons lists optional extras, each off until you switch it on.
 - A switched-on addon can have its own button in Discord's title bar, next to the quest agent's: one click opens it (Settings > Addons, the row under the addon).
-- The first addon is Orbling, a pixel pet in its own window: drag it by its title bar, it stays where you put it, and Esc closes it. Every orb quest the agent finishes drops food for it, and claiming rewards makes it celebrate. Hatch it, name it, raise it through four stages to one of five adult forms.
+- The first addon is Orbling, a pixel pet in its own window: drag it by its title bar, it stays where you put it, it comes back after Discord restarts if it was open, and Esc closes it. Every orb quest the agent finishes drops food for it, and claiming rewards makes it celebrate. Hatch it, name it, raise it through four stages to one of five adult forms.
 - Needs drain slowly by the clock and it sleeps at night; it never dies. Play with a ball or the 20-second Orb catch game, open a daily gift for a streak, collect hats, and send grown Orblings on an adventure into an album.
 - A pink dot on the title-bar button when it needs something, and an optional reminder at most every 8 hours, never at night.
 - Hovering Orbling's button says how it is doing (hungry, asleep, a gift is waiting), a line under its needs says which one runs low next, and an option lets it eat quest food on its own when hungry.

@@ -10329,6 +10329,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     });
   }
   var generation = 0;
+  var REOPEN = "reopen";
+  var tearingDown = false;
   async function doOpen() {
     const gen = generation;
     if (!game) {
@@ -10345,6 +10347,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         },
         theme: () => hub?.theme() === "light" ? "light" : hub ? "dark" : "light",
         onClose: () => {
+          if (!tearingDown) kv2.del(REOPEN);
           refreshCard?.();
           if (standalone) showOpener();
         },
@@ -10352,6 +10355,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       });
     }
     await game.open();
+    if (game?.isOpen) (hub ? hubKV(hub) : localKV()).set(REOPEN, true);
     refreshCard?.();
   }
   var def = {
@@ -10361,7 +10365,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     strings: STRINGS,
     init(api) {
       hub = api;
-      generation++;
+      const gen = ++generation;
+      if (hubKV(api).get(REOPEN) === true) setTimeout(() => {
+        if (gen === generation && hub === api && !game?.isOpen) void openGame();
+      }, 1500);
     },
     /** The hub's title-bar button works like a taskbar button: opens the game, then folds it to mini mode and back. */
     launch(api) {
@@ -10394,7 +10401,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     destroy() {
       const g = game, gen = ++generation;
       game = null;
+      tearingDown = true;
       void (g ? g.close() : Promise.resolve()).finally(() => {
+        tearingDown = false;
         if (gen === generation) {
           hub = null;
           refreshCard = null;

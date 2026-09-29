@@ -54,6 +54,10 @@ function openGame(): Promise<void> {
 
 /** Bumped by destroy(): anything started before it must not act afterwards. */
 let generation = 0;
+/** Hub key: the window was open (a reload or restart brings it back; closing it by hand clears this). */
+const REOPEN = "reopen";
+/** Set while destroy() closes the window: switching the addon off is not the player closing the game. */
+let tearingDown = false;
 
 async function doOpen(): Promise<void> {
     const gen = generation;
@@ -64,11 +68,12 @@ async function doOpen(): Promise<void> {
         game = new GameWindow(st, kv, {
             summary: (s: Summary) => { if (hub) { const o = (hub.load() as Record<string, unknown> | null) ?? {}; hub.save({ ...o, summary: s }); } refreshCard?.(); },
             theme: () => (hub?.theme() === "light" ? "light" : hub ? "dark" : "light"),
-            onClose: () => { refreshCard?.(); if (standalone) showOpener(); },
+            onClose: () => { if (!tearingDown) kv.del(REOPEN); refreshCard?.(); if (standalone) showOpener(); },
             onMini: () => refreshCard?.(),
         });
     }
     await game.open();
+    if (game?.isOpen) (hub ? hubKV(hub) : localKV()).set(REOPEN, true);
     refreshCard?.();
 }
 
@@ -77,7 +82,12 @@ const def = {
     version: 1,
     icon: ICON,
     strings: STRINGS,
-    init(api: HubApi) { hub = api; generation++; },
+    init(api: HubApi) {
+        hub = api;
+        const gen = ++generation;
+        // Open when Discord reloaded or restarted: come back (in the strip if it was folded).
+        if (hubKV(api).get(REOPEN) === true) setTimeout(() => { if (gen === generation && hub === api && !game?.isOpen) void openGame(); }, 1500);
+    },
     /** The hub's title-bar button works like a taskbar button: opens the game, then folds it to mini mode and back. */
     launch(api: HubApi) { hub = api; if (game?.isOpen) void game.toggle(); else void openGame(); },
     mount(el: HTMLElement, api: HubApi) {
@@ -102,7 +112,9 @@ const def = {
         // unless the addon was switched back on meanwhile (a newer generation).
         const g = game, gen = ++generation;
         game = null;
-        void (g ? g.close() : Promise.resolve()).finally(() => { if (gen === generation) { hub = null; refreshCard = null; } });
+        // Switched off, or the agent re-injected: not the player closing the window, so REOPEN stays.
+        tearingDown = true;
+        void (g ? g.close() : Promise.resolve()).finally(() => { tearingDown = false; if (gen === generation) { hub = null; refreshCard = null; } });
     },
 };
 

@@ -474,6 +474,7 @@
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
         winPos: {},          // addon id -> { x, y } of its own window, after it was dragged
+        winOpen: {},         // addon id -> its window was open (reopened after a reload or restart)
         reminded: [],        // quest ids already warned about an expiring reward
         goal: 0              // orbs being saved up for (Stats view)
     };
@@ -500,7 +501,7 @@
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
             if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
-            for (const field of ["addons", "pins"]) {
+            for (const field of ["addons", "pins", "winOpen"]) {
                 const m = s[field];
                 if (m && typeof m === "object") for (const [k, v] of Object.entries(m)) if (typeof v === "boolean" && /^[a-z][a-z0-9-]{1,23}$/.test(k)) SETTINGS[field][k] = v;
             }
@@ -747,12 +748,14 @@
     function registerAddon(def) {
         try {
             if (!def || typeof def !== "object" || !ADDON_ID.test(def.id ?? "") || typeof def.mount !== "function") return false;
-            if (ADDONS.has(def.id)) stopAddon(def.id); // injected again (development): the new one replaces it
+            if (ADDONS.has(def.id)) stopAddon(def.id, true); // injected again (development): the new one replaces it
             for (const [k, v] of Object.entries(def.strings ?? {})) if (k.startsWith(def.id + ".") && typeof v === "string") EN[k] = v;
             const a = { id: def.id, def, listeners: {}, live: false, view: null, attention: false, win: windowSpec(def), aw: null };
             a.api = addonApi(a);
             ADDONS.set(def.id, a);
             if (SETTINGS.addons[def.id] === true) startAddon(def.id);
+            // Its window was open when Discord reloaded or closed: bring it back where it was.
+            if (a.win && a.live && SETTINGS.winOpen[def.id] === true) setTimeout(() => { if (ADDONS.get(def.id) === a && a.live && !a.aw) openAddonWindow(a); }, 800);
             UI.sig = null; UI.addonSig = null; installPins(); refreshUI();
             return true;
         } catch (e) { console.warn("[QuestAgent] Addon rejected:", e); return false; }
@@ -768,10 +771,11 @@
         try { a.view.unmount?.(); } catch (e) { /* ignore */ }
         a.view = null;
     }
-    function stopAddon(id) {
+    /** keepWin: a teardown (re-injection, the agent stopping), not the user: its window reopens next time. */
+    function stopAddon(id, keepWin) {
         const a = ADDONS.get(id);
         if (!a) return;
-        closeAddonWindow(a, true);
+        closeAddonWindow(a, true, keepWin);
         unmountAddonView(a);
         if (a.live) { try { a.def.destroy?.(); } catch (e) { /* ignore */ } }
         a.live = false; a.listeners = {}; a.attention = false; a.status = "";
@@ -856,7 +860,7 @@
         for (const a of ADDONS.values()) {
             const aw = a.aw;
             if (!aw) continue;
-            if (!aw.el.isConnected) { closeAddonWindow(a, true); continue; } // taken off the page from outside
+            if (!aw.el.isConnected) { closeAddonWindow(a, true, true); continue; } // taken off the page from outside
             const lang = currentLang(), key = lang + "|" + a.status;
             if (aw.key !== key) {
                 aw.key = key;
@@ -881,7 +885,7 @@
     function openAddonWindow(a) {
         if (!a?.live || !a.win) return;
         if (a.aw?.el.isConnected) { a.aw.el.focus({ preventScroll: true }); return; }
-        if (a.aw) closeAddonWindow(a, true);
+        if (a.aw) closeAddonWindow(a, true, true);
         ensureStyle();
         document.getElementById("qb-aw-" + a.id)?.remove();
         const el = document.createElement("div");
@@ -943,13 +947,16 @@
         window.removeEventListener("resize", onWindowResize);
         window.addEventListener("resize", onWindowResize);
         el.focus({ preventScroll: true });
+        if (SETTINGS.winOpen[a.id] !== true) { SETTINGS.winOpen[a.id] = true; saveSettings(); }
         UI.addonSig = null; refreshUI(); // its header button shows it open
     }
-    /** Close (and unmount) an addon's window. quiet: the caller redraws the HUD itself. */
-    function closeAddonWindow(a, quiet) {
+    /** Close (and unmount) an addon's window. quiet: the caller redraws the HUD itself.
+     *  keepOpen: a teardown, not the user closing it, so it reopens after the next inject. */
+    function closeAddonWindow(a, quiet, keepOpen) {
         const aw = a?.aw;
         if (!aw) return;
         a.aw = null;
+        if (!keepOpen && SETTINGS.winOpen[a.id]) { delete SETTINGS.winOpen[a.id]; saveSettings(); }
         unmountAddonView(a);
         try { aw.ro?.disconnect(); } catch (e) { /* ignore */ }
         if (aw.raf) cancelAnimationFrame(aw.raf);
@@ -2797,7 +2804,7 @@
     }
 
     function removeUI() {
-        for (const a of ADDONS.values()) { closeAddonWindow(a, true); unmountAddonView(a); }
+        for (const a of ADDONS.values()) { closeAddonWindow(a, true, true); unmountAddonView(a); }
         for (const el of document.querySelectorAll(".qb-aw")) el.remove();
         window.removeEventListener("resize", onWindowResize);
         try { UI.observer?.disconnect(); } catch (e) { /* ignore */ }
@@ -2833,7 +2840,7 @@
         disarmTimer();
         clearInterval(historyTimer);
         for (const t of state.tasks.values()) t.ctl.cancel("agent stopped");
-        for (const id of ADDONS.keys()) stopAddon(id);
+        for (const id of ADDONS.keys()) stopAddon(id, true);
         try { if (onQuestsRefresh) FluxDispatcher.unsubscribe("QUESTS_FETCH_CURRENT_QUESTS_SUCCESS", onQuestsRefresh); } catch (e) { /* ignore */ }
         removeUI();
         try { storageFrame?.remove(); } catch (e) { /* ignore */ }
