@@ -78,7 +78,8 @@ export function atlasView(c: Ctx): HTMLElement {
         if (thumb) thumb.className = "mthumb";
         list.append(h("div", { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
             thumb,
-            h("div", { class: "grow" }, h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m.rarity]};color:#1a1410`, text: tierName(m.tier) }), h("b", { text: mapLabel(m) })),
+            h("div", { class: "grow" }, h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m.rarity]};color:#1a1410`, text: tierName(m.tier) }), h("b", { text: mapLabel(m) }),
+                    m.lit ? h("span", { class: "tag lit", title: t("hollow.litTip"), text: t("hollow.lit") }) : null),
                 m.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m.mods.map(id => mapModText(id)).join(" / ") }) : null)));
     }
     if (!maps.length) list.append(h("div", { class: "muted", text: t("atlas.noMaps") }));

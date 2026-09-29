@@ -69,7 +69,7 @@ function rollStock(s: GameState): void {
         pedlar.push({ item, price: gearPrice(s, item) });
     }
     // Sometimes a relic the codex is missing, in place of one rare.
-    const missing = Object.values(RELICS).filter(r => r.level <= ilvl && !s.codex[r.id]);
+    const missing = Object.values(RELICS).filter(r => r.level <= ilvl && !r.season && !s.codex[r.id]);
     if (missing.length && rng.chance(0.25) && pedlar.length) {
         const def = rng.pick(missing);
         const item: Item = { uid: s.nextUid++, base: def.base, ilvl, rarity: "relic", affixes: [], relic: def.id, relicRolls: def.mods.map(x => rng.int(x.range[0], x.range[1])) };

@@ -64,7 +64,7 @@ export function petKill(state: GameState): boolean {
  */
 export function rollCompanionDrop(state: GameState, rng: Rng, level: number, chance: number): string | null {
     if (!rng.chance(chance)) return null;
-    const pool = COMPANION_ORDER.filter(id => COMPANIONS[id]!.level <= level);
+    const pool = COMPANION_ORDER.filter(id => COMPANIONS[id]!.level <= level && !COMPANIONS[id]!.season);
     if (!pool.length) return null;
     const unfound = pool.filter(id => state.companions?.[id] === undefined);
     const id = unfound.length && rng.chance(0.7) ? rng.pick(unfound) : rng.pick(pool);
@@ -74,4 +74,4 @@ export function rollCompanionDrop(state: GameState, rng: Rng, level: number, cha
 
 /** Companions the hero could still find at this level (contract rewards). */
 export const missingCompanions = (state: GameState, level: number) =>
-    COMPANION_ORDER.filter(id => COMPANIONS[id]!.level <= level && state.companions?.[id] === undefined);
+    COMPANION_ORDER.filter(id => COMPANIONS[id]!.level <= level && !COMPANIONS[id]!.season && state.companions?.[id] === undefined);

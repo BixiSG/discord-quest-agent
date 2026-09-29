@@ -136,7 +136,7 @@ export function relicOf(item: Item): RelicDef | undefined {
 
 /** A relic that can drop at this item level, or null when none can. */
 export function rollRelic(rng: Rng, uid: number, ilvl: number): Item | null {
-    const pool = Object.values(RELICS).filter(r => r.level <= ilvl);
+    const pool = Object.values(RELICS).filter(r => r.level <= ilvl && !r.season);
     const def = rng.weighted(pool, r => r.weight);
     if (!def) return null;
     return { uid, base: def.base, ilvl, rarity: "relic", affixes: [], relic: def.id, relicRolls: def.mods.map(m => rng.int(m.range[0], m.range[1])) };

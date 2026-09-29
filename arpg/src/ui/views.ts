@@ -9,6 +9,9 @@ import { DAWN_PERKS, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, ECHOES, ECHO_ORDER } fr
 import { dawnTitle, echoText, echoWho, perkName, perkText, pinName, storyText } from "../i18n/names";
 import { ACTS, AFFIXES, ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, CURRENCIES, PASSIVES, RELICS, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, xpToNext, slotsFor, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
+import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffed } from "../core/season";
+import { endgameOpen } from "../core/maps";
+import { drawPumpkin } from "./gfx/pumpkin";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
@@ -66,7 +69,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== undefined ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map(k => s.hero.equipment[k]).find(x => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
@@ -202,7 +205,8 @@ function petArt(def: CompanionDef, size = 1): HTMLElement {
     const g = cv.getContext("2d")!;
     g.imageSmoothingEnabled = false;
     // Feet at the anchor: place it so the whole frame lands on the canvas.
-    drawSprite(g, def.sprite, 0, fr.f === 1 ? fr.w - fr.ax : fr.ax, fr.ay, def.tint ? { tint: def.tint, strength: def.strength ?? 0.4 } : {});
+    const box = drawSprite(g, def.sprite, 0, fr.f === 1 ? fr.w - fr.ax : fr.ax, fr.ay, def.tint ? { tint: def.tint, strength: def.strength ?? 0.4 } : {});
+    if (box && def.overlay === "pumpkin") drawPumpkin(g, fr.w / 2, Math.round(box.y + box.h / 2 + 5), 0);
     cv.style.width = fr.w * size + "px";
     cv.style.height = fr.h * size + "px";
     return cv;
@@ -553,7 +557,7 @@ function gearView(c: Ctx): HTMLElement {
             else ghost.append(h("span", { class: "q", text: "?" }));
             withTip(ghost, c, () => h("div", { class: "card item" },
                 h("div", { class: "name relic", text: seen ? relicName(def.id) : t("gear.unknownRelic") }),
-                h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : t("gear.dropsFrom", { n: def.level }) }),
+                h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : def.season ? t("hollow.onlyTip") : t("gear.dropsFrom", { n: def.level }) }),
                 seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(def.id) }) : null));
             grid.append(ghost);
         }
@@ -828,7 +832,9 @@ function worldView(c: Ctx): HTMLElement {
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
         h("i"), h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") })));
-    root.append(push, contractBoard(c), shrineCard(c));
+    root.append(push);
+    if (hollowNight(st)) root.append(hollowCard(c));
+    root.append(contractBoard(c), shrineCard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
@@ -890,7 +896,26 @@ function worldView(c: Ctx): HTMLElement {
     return root;
 }
 
-const CONTRACT_GLYPH: Record<Contract["kind"], Parameters<typeof glyph>[0]> = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem" };
+const CONTRACT_GLYPH: Record<Contract["kind"], Parameters<typeof glyph>[0]> = { kills: "skills", champions: "chaos", bosses: "atlas", runs: "world", maps: "atlas", rares: "gem", lanterns: "pumpkin" };
+
+/** The Hollow Night card changes with the lanterns snuffed and its two finds (empty outside October). */
+const hollowSig = (s: GameState) => (hollowNight(s) ? `${lanternsSnuffed(s)}:${hollowNightsLeft(s)}:${!!s.codex[HOLLOW_RELIC]}:${s.companions[HOLLOW_PET] !== undefined}` : "");
+
+/** Hollow Night (October): what it is, the nights left, lanterns snuffed and its two finds. */
+function hollowCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const find = (name: string, found: boolean) => h("div", { class: "row", style: "gap:8px" },
+        h("span", { class: `tag${found ? " done" : ""}`, text: found ? t("hollow.found") : t("hollow.notYet") }), h("span", { text: name }));
+    return h("div", { class: "card hollow" },
+        h("h3", { class: "split" }, h("span", { class: "row", style: "gap:6px" }, glyph("pumpkin", 16), h("span", { text: t("hollow.title") })),
+            h("span", { class: "num", text: tn("hollow.nights", hollowNightsLeft(st)) })),
+        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("hollow.blurb") }),
+        kv([[t("hollow.snuffed"), fmt(lanternsSnuffed(st))]]),
+        h("div", { class: "col", style: "gap:4px;margin-top:6px" },
+            find(relicName(HOLLOW_RELIC), !!st.codex[HOLLOW_RELIC]),
+            find(companionName(HOLLOW_PET), st.companions[HOLLOW_PET] !== undefined)),
+        endgameOpen(st) ? h("div", { class: "muted", style: "font-size:12px;margin-top:8px", text: t("hollow.litMaps") }) : null);
+}
 
 /** Three standing goals: progress, reward, Claim when done, Reroll for dust otherwise. */
 function contractBoard(c: Ctx): HTMLElement {

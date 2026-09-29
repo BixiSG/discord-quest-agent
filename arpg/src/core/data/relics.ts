@@ -3,7 +3,11 @@
 import type { Mod } from "../types";
 
 export interface RelicMod { stat: Mod["stat"]; kind: Mod["kind"]; range: [number, number]; tags?: string[]; text: string }
-export interface RelicDef { id: string; name: string; base: string; level: number; mods: RelicMod[]; flavour: string; weight: number }
+export interface RelicDef {
+    id: string; name: string; base: string; level: number; mods: RelicMod[]; flavour: string; weight: number;
+    /** Found only during this seasonal event (season.ts), never in the usual drop pools. */
+    season?: string;
+}
 
 const r = (stat: Mod["stat"], kind: Mod["kind"], range: [number, number], text: string, tags?: string[]): RelicMod => (tags ? { stat, kind, range, text, tags } : { stat, kind, range, text });
 
@@ -62,6 +66,10 @@ const list: RelicDef[] = [
         mods: [r("local.physInc", "inc", [200, 260], "{0}% increased physical damage"), r("critMulti", "flat", [40, 60], "+{0}% critical multiplier"), r("area", "inc", [25, 35], "{0}% increased area of effect"), r("leech", "flat", [1, 2], "{0}% of damage leeched as life")] },
     { id: "lastember", name: "The Last Ember", base: "amulet_ember", level: 76, weight: 20, flavour: "When it goes out, so does the March.",
         mods: [r("damage", "inc", [25, 35], "{0}% increased damage"), r("attackSpeed", "inc", [8, 10], "{0}% increased attack speed"), r("castSpeed", "inc", [8, 10], "{0}% increased cast speed"), r("life", "inc", [8, 10], "{0}% increased maximum life")] },
+
+    // ---- seasonal: Hollow Night (October), from lantern-touched monsters and lantern contracts
+    { id: "hollowgrin", name: "The Hollow Grin", base: "leather_helmet1", level: 1, weight: 0, season: "hollownight", flavour: "Carved for the night the sun did not come back. It kept the candle anyway.",
+        mods: [r("itemRarity", "inc", [15, 25], "{0}% increased rarity of items found"), r("xpGain", "inc", [4, 8], "{0}% increased experience gained"), r("res.fire", "flat", [15, 25], "+{0}% fire resistance"), r("lifeOnKill", "flat", [4, 10], "{0} life gained on kill")] },
 ];
 
 export const RELICS: Record<string, RelicDef> = Object.fromEntries(list.map(x => [x.id, x]));

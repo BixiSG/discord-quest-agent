@@ -37,6 +37,8 @@ export interface MonsterState {
     champion: boolean;
     /** Seconds until its next attack. */
     atk: number;
+    /** Hollow Night: carries a lantern (tougher, worth more; season.ts). */
+    lantern?: boolean;
 }
 
 export interface MapItem {
@@ -45,6 +47,8 @@ export interface MapItem {
     area: string;
     mods: string[];
     rarity: "plain" | "enchanted" | "rare";
+    /** Dropped during Hollow Night: more lanterns inside, more items (season.ts). */
+    lit?: boolean;
 }
 
 /** What a map run is: set at run start from the consumed map (or a pinnacle). */
@@ -54,6 +58,7 @@ export interface RunMap {
     mods: string[];
     level: number;
     pinnacle?: string;
+    lit?: boolean;
 }
 
 export interface RunState {
@@ -162,6 +167,10 @@ export interface GameState {
     market: MarketState;
     /** Echoes found (v7): lore pages from map bosses and pinnacles. */
     echoes: string[];
+    /** The player's UTC offset in minutes, recorded by the UI: seasonal events follow the local calendar. */
+    tz?: number;
+    /** Seasonal tallies: "hollownight2026" -> lanterns snuffed that October. */
+    events?: Record<string, number>;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */

@@ -587,6 +587,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .dawncard .shards { display: flex; align-items: center; gap: 6px; }
 .dawncard .shard { color: var(--muted); opacity: .45; } .dawncard .shard.on { color: #ffc233; opacity: 1; filter: drop-shadow(0 0 3px #ffc233); }
 .tag.dawn { background: #ffc233; color: #1a1410; border-color: #1a1410; }
+/* Hollow Night (October) */
+.card.hollow { box-shadow: 0 0 0 2px #ff7a1a inset; }
+.card.hollow h3 .pxc, .card.hollow h3 svg { color: #ff7a1a; }
+.tag.lit { background: #ff7a1a; color: #1a1410; }
 .perks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
 .perk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
   border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }

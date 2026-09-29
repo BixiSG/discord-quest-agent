@@ -193,6 +193,28 @@ passive point, a world 15% tougher and 20% richer, and one of ten perks (kept
 for every dawn after). The Hollow Crown, which ate the light, is the optional
 fight beyond.
 
+## Hollow Night (October, round 6)
+
+A seasonal event on the player's own calendar: October 1-31, local date. The
+core has no clock, so the date is simulation time plus the UTC offset the UI
+records (`state.tz`); offline replay lives through the same dates, and the
+event draws RNG only while it is on (every other day plays as before).
+
+- One monster in twenty carries a lantern (a jack-o'-lantern over its head,
+  pumpkin tint): 50% more life, double experience, a 30% drop chance with
+  +100% rarity. Not at pinnacles.
+- Maps that drop during the event are lantern-lit three times in ten: one
+  monster in five carries a lantern, +40% item quantity.
+- Each lantern snuffed: 1 in 1200 for **The Hollow Grin** (a level-1 hood relic:
+  rarity, experience, fire resistance, life on kill), 1 in 2500 for the
+  **Pumpkin Wisp** (companion: 0.5% increased damage per level). Both are
+  seasonal: never in the usual relic, market, boss or contract pools.
+- The contract board offers one lantern contract at a time (50 + 0.6 per level
+  lanterns); it pays dust, currency and a keepsake: the Grin, else the Wisp,
+  else double dust. Unfinished lantern contracts leave the board in November.
+- The World tab shows a Hollow Night card (nights left, lanterns snuffed, the
+  two finds); the quest-panel card carries a ribbon; a story beat opens it.
+
 ## Pinnacles: scouting (round 4)
 
 The Atlas can scout a pinnacle: five fights on a copy of the hero, nothing

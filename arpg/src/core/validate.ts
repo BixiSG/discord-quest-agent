@@ -219,6 +219,13 @@ export function validateState(raw: unknown): GameState {
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
+    // Hollow Night: lantern flags are plain booleans; the UTC offset within a day; tallies by year.
+    for (const m of act.run?.monsters ?? []) if (m.lantern !== true) delete m.lantern;
+    if (act.run?.map && act.run.map.lit !== true) delete act.run.map.lit;
+    for (const m of s.maps) if (m.lit !== true) delete m.lit;
+    if (typeof s.tz === "number" && Number.isFinite(s.tz)) s.tz = Math.max(-840, Math.min(840, Math.round(s.tz))); else delete s.tz;
+    s.events = Object.fromEntries(Object.entries(counts(s.events)).filter(([k]) => /^hollownight\d{4}$/.test(k)).map(([k, v]) => [k, Math.floor(v)]));
+    if (!Object.keys(s.events).length) delete s.events;
     // Echoes (v7): known, once each.
     s.echoes = [...new Set(strs(s.echoes, id => !!ECHOES[id]) ?? [])];
     // Stone pouch (v7): known stones, whole counts.

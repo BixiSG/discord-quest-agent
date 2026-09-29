@@ -13,8 +13,13 @@ import { loadSprites } from "./gfx/sprites";
 import { installTips } from "./tips";
 import { loadPixelFont } from "./gfx/webfont";
 import type { Summary } from "./app";
-import { setLang, t } from "../i18n";
+import { setLang, t, tn } from "../i18n";
 import { className, zoneName } from "../i18n/names";
+import { hollowForced, HOLLOW_MONTH } from "../core/season";
+import { glyph } from "./glyphs";
+
+/** Hollow Night by the wall clock (the card has no game state to ask). */
+const hollowOn = () => hollowForced() ?? new Date().getMonth() + 1 === HOLLOW_MONTH;
 
 export interface CardApi {
     t(key: string, params?: Record<string, unknown>): string;
@@ -54,6 +59,8 @@ const CARD_CSS = `
 .hc .hint { font-size: 12px; color: var(--muted); }
 .hc.new .chero { grid-template-columns: 1fr; }
 .hc.new .pic canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; }
+.hc .hollow { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #1a1410; color: #ff7a1a; font: 700 12px/1.1 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
+.hc .hollow .n { margin-left: auto; color: #ffd84a; }
 `;
 
 export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null, status: CardStatus, act: CardActions): { unmount(): void } {
@@ -109,6 +116,10 @@ export function mountCard(el: HTMLElement, api: CardApi, summary: Summary | null
         h("button", { class: "btn", text: api.t("card.show"), on: { click: () => act.open() } }),
         h("button", { class: "btn alt", text: api.t("card.fold"), on: { click: () => act.mini(true) } }));
     else acts.append(h("button", { class: "btn", text: api.t("card.unfold"), on: { click: () => act.mini(false) } }));
+    if (hollowOn()) {
+        const d = new Date(), left = d.getMonth() + 1 === HOLLOW_MONTH ? 32 - d.getDate() : 31;
+        inner.prepend(h("div", { class: "hollow" }, glyph("pumpkin", 14), h("span", { text: t("hollow.title") }), h("span", { class: "n", text: tn("hollow.nights", left) })));
+    }
     inner.append(acts, h("div", { class: "hint", text: status === "closed" ? api.t("card.hint") : api.t("card.hintOpen") }));
 
     wrap.append(card);

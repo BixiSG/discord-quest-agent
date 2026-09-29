@@ -6,6 +6,7 @@ import { pushLog } from "./game";
 import { ref } from "../i18n/refs";
 import type { GameState, MapItem, RunMap } from "./state";
 import { pinnacleEcho } from "./echoes";
+import { LANTERN } from "./season";
 import type { DamageType, Mod } from "./types";
 
 /** The endgame opens once the Sunfall is cleared. */
@@ -156,7 +157,7 @@ export function startMapRun(state: GameState): RunMap {
         // With only deeper maps held, the device dampens one to the cap rather than ignore it
         // (every map dropped deep again, and the hero died there on a loop).
         const tier = want > 0 ? Math.min(pick.tier, want) : pick.tier;
-        return { tier, area: pick.area, mods: [...pick.mods], level: mapLevel(tier) };
+        return { tier, area: pick.area, mods: [...pick.mods], level: mapLevel(tier), ...(pick.lit ? { lit: true } : {}) };
     }
     return { tier: 0, area: "cinderfield", mods: [], level: mapLevel(0) };
 }
@@ -205,6 +206,7 @@ export function mapEffects(m: RunMap, atlas: AtlasEffects): MapEffects {
     }
     // The Depths reward their danger.
     if (m.tier > MAX_TIER) { e.quantity += (m.tier - MAX_TIER) * 3; e.rarity += (m.tier - MAX_TIER) * 4; }
+    if (m.lit) e.quantity += LANTERN.litQty;
     effCache.set(m, e);
     return e;
 }

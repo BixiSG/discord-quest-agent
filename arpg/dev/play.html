@@ -12,6 +12,7 @@
   Query: ?reset=1 deletes the save first; ?away=<minutes> pretends you were gone;
   ?lang=ru|uk|en picks the language (default: the browser's); ?shipped=1 loads the
   minified file that ships with the agent (src/addons/arpg.js) instead.
+  ?hollow=1 forces Hollow Night (the October event) on, ?hollow=0 off.
 -->
 <style>
   body { margin: 0; height: 100vh; background: #313338; color: #dbdee1; font: 14px "Segoe UI", sans-serif; }
@@ -23,7 +24,12 @@
 <script nonce="play">
 (() => {
   const qs = new URLSearchParams(location.search);
-  const boot = () => { const s = document.createElement("script"); s.src = qs.get("shipped") ? "../../src/addons/arpg.js" : "../dist/arpg.js"; document.body.appendChild(s); };
+  const boot = () => {
+    const s = document.createElement("script");
+    s.src = qs.get("shipped") ? "../../src/addons/arpg.js" : "../dist/arpg.js";
+    if (qs.has("hollow")) s.onload = () => window.__hollowmarch.hollowNight(qs.get("hollow") === "1");
+    document.body.appendChild(s);
+  };
   if (qs.get("reset")) { const r = indexedDB.deleteDatabase("hollowmarch"); r.onsuccess = r.onerror = r.onblocked = boot; return; }
   const away = Number(qs.get("away"));
   if (away > 0) {

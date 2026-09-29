@@ -15,6 +15,10 @@ import { monsterName } from "../i18n/names";
 import { drawSprite, loadSprites, spriteOf, tileLayer } from "./gfx/sprites";
 import { setFor } from "./gfx/scenes";
 import { HERO_CAST, MONSTER_CAST } from "./gfx/cast";
+import { drawPumpkin } from "./gfx/pumpkin";
+
+/** Hollow Night: lantern-touched monsters glow pumpkin orange (champions keep their gold). */
+const LANTERN_TINT = "#ff7a1a";
 
 /** Default logical size; resize() changes it. */
 export const W = 320, H = 120;
@@ -160,7 +164,7 @@ export class Battle {
                         shadow(g, p[0], p[1], Math.max(10, Math.round(fr.w * 0.5)), hover);
                         if (m.champion) ring(g, p[0], p[1], Math.max(12, Math.round(fr.w * 0.55)), now);
                         const f = attacking ? ((now - at!) / MON_ATTACK_MS) * fr.n : now / (1000 / (cast.fps ?? 8)) + i * 1.7;
-                        box = drawSprite(g, name, f, p[0], p[1] - hover, { left: true, flash: hit, tint: m.champion ? "#ffc233" : cast.tint, strength: m.champion ? 0.3 : cast.strength });
+                        box = drawSprite(g, name, f, p[0], p[1] - hover, { left: true, flash: hit, tint: m.champion ? "#ffc233" : m.lantern ? LANTERN_TINT : cast.tint, strength: m.champion ? 0.3 : m.lantern ? 0.35 : cast.strength });
                     }
                 }
                 if (!box) {
@@ -171,7 +175,9 @@ export class Battle {
                 g.globalAlpha = 1;
                 if (!died && !def.boss) {
                     const w = Math.max(16, Math.min(40, Math.round(box.w * 0.6)));
-                    bar(g, Math.round(p[0] - w / 2), box.y - 5, w, 2, m.life / m.maxLife, m.champion ? "#ffc233" : "#e5383b");
+                    bar(g, Math.round(p[0] - w / 2), box.y - 5, w, 2, m.life / m.maxLife, m.champion ? "#ffc233" : m.lantern ? "#ff8a1f" : "#e5383b");
+                    // The lantern it carries bobs over its head.
+                    if (m.lantern) drawPumpkin(g, p[0], box.y - 7 + Math.round(Math.sin(now / 300 + i) * 1.5), now + i * 211);
                 }
             }
             const boss = run.monsters.find(m => MONSTERS[m.def]?.boss && m.life > 0);
@@ -199,8 +205,9 @@ export class Battle {
             const lift = (pet.hover ?? 0) + (pet.hover ? Math.round(Math.sin(now / 320) * 2) : 0);
             shadow(g, px, G, pet.hover ? 5 : 7, pet.hover ?? 0);
             const fps = (pet.fps ?? 8) * (walking ? 1.5 : 1);
-            drawSprite(g, pet.sprite, dead ? 0 : (now * fps) / 1000, px, G - lift - hop,
+            const pb = drawSprite(g, pet.sprite, dead ? 0 : (now * fps) / 1000, px, G - lift - hop,
                 { scale: pet.scale ?? 1, ...(dead ? { tint: "#1a1410", strength: 0.5 } : pet.tint ? { tint: pet.tint, strength: pet.strength ?? 0.4 } : {}) });
+            if (pb && pet.overlay === "pumpkin") drawPumpkin(g, px, Math.round(pb.y + pb.h / 2 + 5), now);
         }
         if (hc && spriteOf(hc.idle)) {
             const hurt = now - this.heroHurt < HURT_MS;

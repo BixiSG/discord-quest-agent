@@ -18,6 +18,7 @@ import { addStone, autoSetStones, rollSockets, rollStone } from "../sockets";
 import { tickMarket } from "../market";
 import { pinnacleEcho, rollMapEcho } from "../echoes";
 import { dawnEffects, hasPerk } from "../dawn";
+import { LANTERN, hollowNight, lanternKill, lanternRate, tickSeason, touch } from "../season";
 import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
 
@@ -74,7 +75,7 @@ export function newRun(state: GameState, sheet: Sheet): RunState {
     if (map) run.map = map;
     const prev = act.run;
     if (prev && prev.zone === z.id) run.hero.flask = prev.hero.flask;
-    spawnPack(run, z, rng, effectsOf(state, run));
+    spawnPack(run, z, rng, effectsOf(state, run), lanternRate(state, run));
     run.rng = rng.state();
     return run;
 }
@@ -112,7 +113,8 @@ function makeMonster(def: string, level: number, champion: boolean, rng: Rng, ef
     return { def, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
 }
 
-function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null): void {
+/** A pack (or the boss); `lantern` is the share of monsters that carry a Hollow Night lantern. */
+function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null, lantern = 0): void {
     run.monsters = [];
     if (run.pack >= run.packs) {
         if (z.boss) {
@@ -124,7 +126,11 @@ function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null):
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
     const champ = rng.chance(z.champion);
-    for (let i = 0; i < n; i++) run.monsters.push(makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng, eff));
+    for (let i = 0; i < n; i++) {
+        const m = makeMonster(rng.pick(z.monsters), z.level, champ && i === 0, rng, eff);
+        if (lantern > 0 && rng.chance(lantern)) touch(m);
+        run.monsters.push(m);
+    }
 }
 
 /**
@@ -135,6 +141,7 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
     if (now - state.simTo > MAX_OFFLINE_MS) state.simTo = now - MAX_OFFLINE_MS;
     // A new game (or one just claimed empty) gets its contracts before it plays.
     if ((state.contracts?.list.length ?? 0) < BOARD_SIZE) ensureContracts(state);
+    tickSeason(state, ev);
     let steps = 0;
     while (state.simTo + STEP_MS <= now) {
         if (steps >= maxSteps) return false;
@@ -173,7 +180,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
         case "travel":
             run.timer -= DT * sheet.moveSpeed;
             if (run.timer <= 0) {
-                spawnPack(run, z, rng, eff);
+                spawnPack(run, z, rng, eff, lanternRate(state, run));
                 run.phase = run.monsters.length ? "fight" : "done";
             }
             break;
@@ -288,7 +295,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     const atlas = run.map ? atlasEffects(state) : null;
     let changed0 = false;
     const eff = effectsOf(state, run);
-    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
+    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
     run.kills++; run.xp += xp;
     state.totals.kills++;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
@@ -304,9 +311,9 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0) + blessing(state, "plenty")) / 100;
     let drops = 0;
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
-    else if (rng.chance((m.champion ? 0.4 : 0.07) * qty)) drops = 1;
+    else if (rng.chance((m.champion ? 0.4 : m.lantern ? LANTERN.drop : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-        const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : 0) + (d.boss ? 250 : 0);
+        const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : m.lantern ? LANTERN.rarity : 0) + (d.boss ? 250 : 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
         const pin = run.map?.pinnacle && d.boss;
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));
@@ -341,6 +348,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
         pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
+    if (m.lantern && lanternKill(state, rng, m.level, ev)) changed = true;
     return changed ? runSheet(state) : sheet;
 }
 
@@ -355,7 +363,9 @@ function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng
     const base = d.boss ? 0.6 : m.champion ? 0.06 : 0.012;
     const chance = base * (act3 ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
     if (rng.chance(chance)) {
-        if (addMap(state, rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas)))) state.totals.maps = (state.totals.maps ?? 0) + 1;
+        const map = rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas));
+        if (hollowNight(state) && rng.chance(LANTERN.litMaps)) map.lit = true;
+        if (addMap(state, map)) state.totals.maps = (state.totals.maps ?? 0) + 1;
     }
     if (inMap && d.boss) { const echo = rollMapEcho(state, rng); if (echo) ev.echo?.(echo); }
     if (inMap && d.boss && tier > 0) {
@@ -516,6 +526,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     const act = state.activity;
     tickShrine(state);
     tickMarket(state);
+    tickSeason(state, ev);
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;

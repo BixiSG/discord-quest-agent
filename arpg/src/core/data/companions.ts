@@ -22,6 +22,10 @@ export interface CompanionDef {
     where: string;
     /** Monster level it can drop from (bosses and map bosses). */
     level: number;
+    /** Found only during this seasonal event (season.ts), never from bosses or contracts otherwise. */
+    season?: string;
+    /** Drawn over the sprite (battle, collection): a jack-o'-lantern face. */
+    overlay?: "pumpkin";
 }
 
 export const COMPANION_MAX_LEVEL = 20;
@@ -55,6 +59,8 @@ const list: CompanionDef[] = [
         bonus: { stat: "castSpeed", kind: "inc", per: 0.5, text: "{0}% increased cast speed" }, sprite: "mon.skull", hover: 10, fps: 10, scale: 0.5 },
     { id: "whisperskull", name: "Whispering Skull", blurb: "It tells you what the dead learned. Some of it is useful.", where: "Map bosses", level: 50,
         bonus: { stat: "xpGain", kind: "inc", per: 0.5, text: "{0}% increased experience gained" }, sprite: "mon.skull2", tint: "#b9a4ff", strength: 0.4, hover: 8, fps: 8, scale: 0.5 },
+    { id: "pumpkinwisp", name: "Pumpkin Wisp", blurb: "A lantern that would not be snuffed. It grins at whatever you are fighting.", where: "Hollow Night (October): lantern-touched monsters", level: 1, season: "hollownight",
+        bonus: { stat: "damage", kind: "inc", per: 0.5, text: "{0}% increased damage" }, sprite: "fx.orb", tint: "#ff7a1a", strength: 0.6, hover: 12, fps: 10, overlay: "pumpkin" },
 ];
 
 export const COMPANIONS: Record<string, CompanionDef> = Object.fromEntries(list.map(c => [c.id, c]));

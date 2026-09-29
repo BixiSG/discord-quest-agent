@@ -487,6 +487,7 @@ const UI: Record<string, string> = {
     "contract.runs": "Clear {n} run on the road|Clear {n} runs on the road",
     "contract.maps": "Complete {n} map of tier {tier} or deeper|Complete {n} maps of tier {tier} or deeper",
     "contract.rares": "Find {n} rare item|Find {n} rare items",
+    "contract.lanterns": "Snuff {n} lantern-touched monster|Snuff {n} lantern-touched monsters",
     "contracts.title": "Contract board",
     "contracts.done": "{n} done",
     "contracts.reward": "Reward: {text}",
@@ -500,6 +501,7 @@ const UI: Record<string, string> = {
     "reward.companion": "a companion you haven't met",
     "reward.maps": "3 maps",
     "reward.sigil": "a sigil",
+    "reward.hollow": "a Hollow Night keepsake",
     "shrine.title": "Ember shrine",
     "shrine.cost": "{cost} dust / hour",
     "shrine.note": "Blessings run on the hero's time, so they count while you are away too.",
@@ -599,6 +601,8 @@ const UI: Record<string, string> = {
     "log.petLevel": "{pet} reached level {level}.",
     "log.contractDone": "Contract done: {goal}. Claim it on the World tab.",
     "log.contractRelic": "Contract reward: {relic}.",
+    "log.hollowBegins": "Hollow Night: lanterns burn in the March until the last night of October.",
+    "log.lanternRelic": "A lantern gutters out and leaves {relic} behind.",
     "log.pinOpens": "The way to {pin} opens.",
     "log.pinDefeated": "{pin} is defeated: +{n} atlas point.|{pin} is defeated: +{n} atlas points.",
     "log.sunRises": "The sun rises over the March.",
@@ -910,6 +914,20 @@ const UI: Record<string, string> = {
     "err.exportDamaged": "export is damaged",
     "err.saveUnreadable": "could not read that save",
     "err.saveBroken": "the save is damaged ({what})",
+
+    // ---- Hollow Night (October)
+    "hollow.story": "Every October the March remembers the night the sun went out, and lights lanterns against it. This year something took the lanterns. Monsters carry them now, grinning: tougher, brighter, worth twice the lesson. Snuff enough of them and one may leave its grin with you, or follow you home.",
+    "hollow.title": "Hollow Night",
+    "hollow.nights": "{n} night left|{n} nights left",
+    "hollow.blurb": "Until the last night of October some monsters carry a lantern: half again as tough, double experience, better loot.",
+    "hollow.snuffed": "Lanterns snuffed",
+    "hollow.found": "found",
+    "hollow.notYet": "not yet",
+    "hollow.litMaps": "Maps may drop lantern-lit: a lantern in every fifth monster, +40% item quantity.",
+    "hollow.lit": "Lantern-lit",
+    "hollow.litTip": "Lantern-lit: one monster in five carries a lantern; +40% item quantity.",
+    "hollow.only": "Hollow Night only",
+    "hollow.onlyTip": "Found only during Hollow Night, in October.",
 };
 
 export const EN: Readonly<Record<string, string>> = { ...content(), ...UI };

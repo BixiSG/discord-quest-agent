@@ -39,6 +39,9 @@ It has nothing to do with quests: it never reads quest data or orbs.
   atlas tree and four pinnacle bosses.
 - Character sheet with DPS and EHP breakdowns (click a stat to see where it
   comes from), compare deltas on every item and support.
+- Hollow Night every October (the player's calendar): lantern-touched
+  monsters, lantern-lit maps, a lantern contract, a seasonal relic and the
+  Pumpkin Wisp.
 - English, Russian and Ukrainian, everything included (story, items, the
   chronicle, the pixel font's Cyrillic); it follows Quest Agent's language.
 

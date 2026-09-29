@@ -7,6 +7,7 @@ import { mountCard, type CardStatus } from "./ui/card";
 import { openStore, type SaveStore } from "./platform/store";
 import { hubKV, localKV } from "./platform/kv";
 import { setLang, t } from "./i18n";
+import { forceHollowNight } from "./core/season";
 
 const ID = "arpg";
 const ICON = "M12 1.5c1.7 3.1 4.6 4.9 4.6 8.9a4.6 4.6 0 0 1-9.2 0c0-1.9.8-3.2 1.9-4.3.2 1.4.9 2.4 2.2 2.8-.6-2.6-.2-5 .5-7.4ZM4 17h16v2.5H4ZM7 21h10v1.5H7Z";
@@ -144,4 +145,4 @@ if (!standalone) {
 } else {
     void openGame();
 }
-w.__hollowmarch = { open: openGame, close: () => game?.close(), get game() { return game; } };
+w.__hollowmarch = { open: openGame, close: () => game?.close(), get game() { return game; }, hollowNight: forceHollowNight };

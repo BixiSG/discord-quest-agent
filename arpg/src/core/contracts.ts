@@ -3,6 +3,7 @@
 // relic the codex is missing, maps or a sigil. A finished contract waits to be
 // claimed; claiming (or paying to reroll) puts a new one in its place. New
 // contracts come from a seeded RNG, so they are deterministic like the rest.
+// During Hollow Night the board may also ask for lanterns snuffed (season.ts).
 
 import { CURRENCIES, CURRENCY_ORDER, MAX_TIER, PINNACLES, RELICS } from "./data";
 import { endgameOpen, addMap, rollMap } from "./maps";
@@ -12,9 +13,10 @@ import { ref } from "../i18n/refs";
 import { contractGoal } from "../i18n/names";
 import { Rng, hashSeed } from "./rng";
 import { grantCompanion, missingCompanions } from "./companions";
+import { HOLLOW_PET, HOLLOW_RELIC, LANTERN, hollowNight, hollowRelic } from "./season";
 import type { GameState } from "./state";
 
-export type ContractKind = "kills" | "champions" | "bosses" | "runs" | "maps" | "rares";
+export type ContractKind = "kills" | "champions" | "bosses" | "runs" | "maps" | "rares" | "lanterns";
 
 export interface Contract {
     kind: ContractKind;
@@ -24,15 +26,18 @@ export interface Contract {
     tier?: number;
     dust: number;
     currency?: [string, number];
-    /** An extra: a relic the codex is missing, a companion not found yet, a few maps, or a sigil. */
-    extra?: "relic" | "companion" | "maps" | "sigil";
+    /**
+     * An extra: a relic the codex is missing, a companion not found yet, a few maps, a sigil, or
+     * (lantern contracts) a Hollow Night keepsake: the Hollow Grin, else the Pumpkin Wisp.
+     */
+    extra?: "relic" | "companion" | "maps" | "sigil" | "hollow";
 }
 
 export interface ContractBoard { list: Contract[]; seq: number; done: number }
 
 export const BOARD_SIZE = 3;
 
-const KINDS: ContractKind[] = ["kills", "champions", "bosses", "runs", "maps", "rares"];
+const KINDS: ContractKind[] = ["kills", "champions", "bosses", "runs", "maps", "rares", "lanterns"];
 
 /** What a contract asks, in English ("Slay 1800 monsters"); the UI uses i18n/names contractGoal. */
 export const contractText = (c: Contract) => contractGoal(c.kind, c.target, c.tier, "en");
@@ -50,6 +55,7 @@ export function rewardText(c: Contract, s?: GameState): string {
     if (c.extra === "companion") parts.push("a companion you haven't met");
     if (c.extra === "maps") parts.push("3 maps");
     if (c.extra === "sigil") parts.push("a sigil");
+    if (c.extra === "hollow") parts.push("a Hollow Night keepsake");
     return parts.join(", ");
 }
 
@@ -59,7 +65,7 @@ const deepest = (s: GameState) => Math.max(1, ...(s.atlas?.tiers ?? []));
 /** Relics that can drop at the hero's item level and are not in the codex yet. */
 function missingRelics(s: GameState): string[] {
     const ilvl = maxIlvl(s);
-    return Object.values(RELICS).filter(r => r.level <= ilvl && !s.codex[r.id]).map(r => r.id);
+    return Object.values(RELICS).filter(r => r.level <= ilvl && !r.season && !s.codex[r.id]).map(r => r.id);
 }
 
 function rollContract(s: GameState, rng: Rng): Contract {
@@ -67,10 +73,12 @@ function rollContract(s: GameState, rng: Rng): Contract {
     const endgame = endgameOpen(s);
     const taken = new Set(s.contracts.list.map(c => c.kind));
     const kinds: ContractKind[] = (["kills", "champions", "bosses", endgame ? "maps" : "runs", "rares"] as ContractKind[]).filter(k => !taken.has(k));
-    const kind: ContractKind = rng.pick(kinds.length ? kinds : ["kills" as ContractKind]);
+    // Hollow Night: one lantern contract at a time, offered half the time a slot opens.
+    const lantern = hollowNight(s) && !taken.has("lanterns") && rng.chance(0.5);
+    const kind: ContractKind = lantern ? "lanterns" : rng.pick(kinds.length ? kinds : ["kills" as ContractKind]);
     // Sized to take roughly half an hour of play at any stage.
     // Rares come faster as item rarity grows with the hero.
-    const SIZE: Record<ContractKind, number> = { kills: 1800, champions: 80, bosses: 24, runs: 36, maps: 40, rares: 12 + Math.round(L * 0.9) };
+    const SIZE: Record<ContractKind, number> = { kills: 1800, champions: 80, bosses: 24, runs: 36, maps: 40, rares: 12 + Math.round(L * 0.9), lanterns: LANTERN.contract + Math.round(L * LANTERN.contractPerLevel) };
     const size = SIZE[kind];
     const target = Math.max(3, Math.round(size * (0.8 + rng.next() * 0.4)));
     const c: Contract = { kind, target, n: 0, dust: Math.round((60 + 25 * L) * (0.9 + rng.next() * 0.3)) };
@@ -79,6 +87,7 @@ function rollContract(s: GameState, rng: Rng): Contract {
     const cur = rng.weighted(CURRENCY_ORDER, id => 1 / Math.sqrt(CURRENCIES[id]!.drop))!;
     const rare = CURRENCIES[cur]!.drop < 200;
     c.currency = [cur, rare ? 1 + Math.floor(rng.next() * 3) : 3 + Math.floor(rng.next() * 6)];
+    if (kind === "lanterns") { c.extra = "hollow"; return c; }
     const r = rng.next();
     if (r < 0.3 && missingRelics(s).length) c.extra = "relic";
     else if (r < 0.4 && missingCompanions(s, maxIlvl(s)).length) c.extra = "companion";
@@ -133,6 +142,13 @@ export function claimContract(s: GameState, i: number): string | null {
         if (pool.length) grantCompanion(s, rng.pick(pool));
         else s.dust += dust;
     }
+    if (c.extra === "hollow") {
+        if (!s.codex[HOLLOW_RELIC]) {
+            receiveItem(s, hollowRelic(s, rng, maxIlvl(s)));
+            pushLog(s, "loot", "log.contractRelic", { relic: ref.relic(HOLLOW_RELIC) });
+        } else if (s.companions?.[HOLLOW_PET] === undefined) grantCompanion(s, HOLLOW_PET);
+        else s.dust += dust; // both found already: double dust instead
+    }
     if (c.extra === "maps") for (let k = 0; k < 3; k++) addMap(s, rollMap(rng, s.nextUid++, Math.min(MAX_TIER, deepest(s))));
     if (c.extra === "sigil") {
         const open = Object.values(PINNACLES).filter(p => deepest(s) >= p.minTier);
@@ -175,7 +191,7 @@ export function cleanContracts(s: GameState): void {
             const out: Contract = { kind: c.kind, target: Math.round(c.target), n: Math.min(Math.round(c.n), Math.round(c.target)), dust: Math.round(c.dust) };
             if (c.kind === "maps") out.tier = ok(c.tier, 1) ? Math.round(c.tier!) : 1;
             if (Array.isArray(c.currency) && CURRENCIES[c.currency[0]] && ok(c.currency[1], 1)) out.currency = [c.currency[0], Math.round(c.currency[1])];
-            if (c.extra === "relic" || c.extra === "companion" || c.extra === "maps" || c.extra === "sigil") out.extra = c.extra;
+            if (c.extra === "relic" || c.extra === "companion" || c.extra === "maps" || c.extra === "sigil" || c.extra === "hollow") out.extra = c.extra;
             return out;
         });
     b.seq = ok(b.seq) ? Math.round(b.seq) : 0;

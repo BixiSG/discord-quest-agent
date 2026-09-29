@@ -465,6 +465,7 @@ export class GameWindow {
         const [miniLabel, miniBar] = [this.miniProg.firstElementChild as HTMLElement, this.miniProg.querySelector("i") as HTMLElement];
         this.miniProg.hidden = !shown;
         const from = s.simTo, target = Date.now();
+        stampTz(s);
         this.battle.quiet = true;
         while (!advance(s, target, rep.events, 25000)) {
             const f = (s.simTo - from) / Math.max(1, target - from);
@@ -530,6 +531,7 @@ export class GameWindow {
             if (!this.state || this.busy) return;
             // A long gap (sleep, throttled background tab) is replayed quietly, with a report.
             if (Date.now() - this.state.simTo > 30e3) { void this.catchUp(); return; }
+            stampTz(this.state);
             advance(this.state, Date.now(), ev, 50);
             if (Date.now() - this.lastSave > AUTOSAVE_MS) void this.save();
         }, STEP_MS);
@@ -880,6 +882,9 @@ export class GameWindow {
         card.append(h("button", { class: "btn", text: t("report.back"), on: { click: () => close() } }));
     }
 }
+
+/** The player's UTC offset for the core's calendar (Hollow Night follows the local date). */
+function stampTz(s: GameState): void { s.tz = -new Date().getTimezoneOffset(); }
 
 export function summaryOf(s: GameState): Summary {
     const need = xpToNext(s.hero.level);
