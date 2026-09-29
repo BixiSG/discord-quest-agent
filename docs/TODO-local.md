@@ -139,20 +139,34 @@ Follow-up loop (2026-09-29 afternoon):
 User: Orbling and Hollowmarch are two separate projects (no crossover), but a pet idea is good for
 Hollowmarch on its own. Pushing stays off until the user says so (standing "don't push yet").
 
-Plan, in order:
-1. [ ] Companions: Hollowmarch's own pets. Nine creatures of the March (small CC0 sprites already in
-   the atlas, tinted), one at the hero's side in battle; each gives one bonus that grows with its
-   level (bond from kills, level 1-20). Act bosses give one each on the first clear (also for old
-   saves), bosses and map bosses rarely drop one, contracts can pay one; a duplicate adds bond.
-   Hero tab card: the active one, level, bonus, the collection (unfound ones as silhouettes). Save v6.
-2. [ ] Late economy: currency exchange at the Forge (10 of a common orb -> 1 of the next rarer) and an
-   ember shrine (dust for a timed blessing: experience, rarity or quantity), priced by level.
-3. [ ] Pinnacles: a readiness estimate (the hero's DPS and EHP against the boss) on the Atlas tab; the
-   bot only queues a pinnacle when ready.
-4. [ ] Loot filter: affix-group rules in the editor ("keep rings with fire resistance") and presets.
-5. [ ] Release prep without pushing: CHANGELOG bullets for Hollowmarch, AGENT_VERSION 22, fresh
-   README shots, a PR description ready to use.
-6. [ ] Localisation (ru/uk) of the game UI, if there is room (a string table).
+Done (148 tests; each step committed):
+1. [x] Companions: nine, baby-sized CC0 sprites behind the hero, bond levels 1-20, act bosses give
+   one each (also to old saves), rare boss/map/pinnacle drops, contract reward. Hero-tab card. Save v6.
+2. [x] Ember shrine on the World tab: Insight/Fortune/Plenty/Hoard for an hour, priced by level,
+   spare orbs (above 50 of a kind) pay first, Keep up. Bot run: orb piles gone, level 76 at 24 h.
+3. [x] Pinnacle scout (five fights on a copy of the hero) on the Atlas; the bot only queues when a
+   scout wins 2 of 3. Map auto-push back-off (the clean streak to climb doubles per drop until a
+   level-up): late deaths halved, level 80-83 at 24-32 h. All callings now land at 76-80 in 24 h.
+4. [x] Loot filter: affix rules with readable names, presets (Starter, Lean, Endgame, Resist hunter).
+5. [x] Release prep, nothing pushed: Hollowmarch ships with the agent (build also writes
+   `src/addons/arpg.js`; off until switched on), AGENT_VERSION 22, CHANGELOG/README (en/ru) sections,
+   arpg README install text, shots retaken. Fix found on the way: contracts pay dust by the claim level.
+6. [ ] Localisation (ru/uk): running as a background job in its own worktree (i18n tables, Cyrillic
+   glyphs for the pixel font, all UI, log and content texts). To review and merge.
+
+Live (13:10): the branch agent's console window was closed around 12:45 (its scheduled task ended
+with a Ctrl+C-style exit, as in the morning), and Vencord Watch then started the installed agent
+(v1.4.3, attach-only). A Discord reload would bring that old agent back (no addons), so round 4
+was hot-swapped instead: the built arpg.js evaluated into the running page (the hub replaces the
+addon, the game reopened itself in the strip). The save is v6: level 35, Salt Crab out, Dune Pup
+found. The page still runs the branch agent injected at 12:32 until the next reload/restart.
+
+Release checklist (for when the user says go):
+- [ ] Merge the localisation branch (after review), rebuild, `npm run check`, harness pass.
+- [ ] PR from `feat/pet-addon-jjbs70` to `main` (title: "1.7.0: addons hub - Orbling and
+      Hollowmarch"); VERSION already 1.7.0; the updater ships on merge.
+- [ ] After merge: the installed agent here is v1.4.3 - updating it (or keeping the branch agent
+      running) is what gets 1.7.0 onto this PC.
 
 ## Next updates (roadmap, 2026-09-29)
 
