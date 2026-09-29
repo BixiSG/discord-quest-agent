@@ -16,10 +16,16 @@
 // Frames of a sprite are trimmed to their common bounding box, so they stay
 // aligned. Each sprite records its anchor: the middle of its feet in frame 0
 // (ax, ay), which the game puts on the ground.
+//
+// The atlas ships as an 8-bit palette PNG: the packs share a few hundred
+// colours, so the rarest ones are folded into their nearest neighbour until
+// 255 remain (no new colours are made), plus one transparent entry. That is
+// about half the size of the full-colour PNG for no visible change.
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deflateSync, constants as zc } from "node:zlib";
 import pngjs from "pngjs";
 
 const { PNG } = pngjs;
@@ -156,8 +162,89 @@ for (const c of order) {
 const atlas = new PNG({ width: ATLAS_W, height: cy + rowH });
 atlas.data.fill(0);
 for (const p of placed) for (let j = 0; j < p.fr.h; j++) atlas.data.set(p.fr.px.subarray(j * p.fr.w * 4, (j + 1) * p.fr.w * 4), ((p.y + j) * ATLAS_W + p.x) * 4);
-const b64 = PNG.sync.write(atlas, { colorType: 6, deflateLevel: 9 }).toString("base64");
+const pal = palettePng(atlas);
+const b64 = pal.png.toString("base64");
 const sorted = Object.fromEntries(Object.keys(table).sort().map(k => [k, table[k]]));
 writeFileSync(OUT, HEADER + `export const FRAMES: Record<string, Frame> = ${JSON.stringify(sorted, null, 0).replace(/\},"/g, '},\n  "')};\n`
     + `export const ATLAS_PNG = "data:image/png;base64,${b64}";\n`);
-console.log(`atlas ${ATLAS_W}x${cy + rowH}, ${cuts.length} sprites, ${placed.length} frames, ${(b64.length / 1024).toFixed(0)} KiB base64`);
+console.log(`atlas ${ATLAS_W}x${cy + rowH}, ${cuts.length} sprites, ${placed.length} frames, ${pal.colours} of ${pal.source} colours, ${(b64.length / 1024).toFixed(0)} KiB base64`);
+
+/**
+ * RGBA image -> 8-bit palette PNG. Alpha must be all-or-nothing (the packer's
+ * outline pass makes it so; soft-alpha backgrounds are flattened at 50%).
+ * Palette entry 0 is transparent. Above 255 colours, the colour with the
+ * smallest (pixels x distance to its nearest neighbour) is folded into that
+ * neighbour, repeatedly: frequent colours stay exact, rare near-duplicates go.
+ */
+function palettePng(img) {
+    const { width: w, height: h, data } = img;
+    const index = new Map(), R = [], G = [], B = [], cnt = [];
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 128) continue;
+        const k = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+        let c = index.get(k);
+        if (c === undefined) { c = R.length; index.set(k, c); R.push(data[i]); G.push(data[i + 1]); B.push(data[i + 2]); cnt.push(0); }
+        cnt[c]++;
+    }
+    const n = R.length;
+    // "Redmean": a cheap distance closer to what the eye sees than plain RGB.
+    const dist = (a, b) => {
+        const rm = (R[a] + R[b]) / 2, dr = R[a] - R[b], dg = G[a] - G[b], db = B[a] - B[b];
+        return (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+    };
+    const alive = new Uint8Array(n).fill(1), into = new Int32Array(n).fill(-1);
+    const near = new Int32Array(n), nearD = new Float64Array(n);
+    const findNear = i => {
+        let best = -1, bd = Infinity;
+        for (let j = 0; j < n; j++) if (j !== i && alive[j]) { const d = dist(i, j); if (d < bd) { bd = d; best = j; } }
+        near[i] = best; nearD[i] = bd;
+    };
+    for (let i = 0; i < n; i++) findNear(i);
+    for (let left = n; left > 255; left--) {
+        let pick = -1, cost = Infinity;
+        for (let i = 0; i < n; i++) if (alive[i] && cnt[i] * nearD[i] < cost) { cost = cnt[i] * nearD[i]; pick = i; }
+        const to = near[pick];
+        alive[pick] = 0; into[pick] = to; cnt[to] += cnt[pick];
+        for (let i = 0; i < n; i++) if (alive[i] && near[i] === pick) findNear(i);
+    }
+    const slot = new Int32Array(n);
+    const plte = [0, 0, 0];
+    let next = 1;
+    for (let i = 0; i < n; i++) if (alive[i]) { slot[i] = next++; plte.push(R[i], G[i], B[i]); }
+    const final = i => { while (into[i] >= 0) i = into[i]; return slot[i]; };
+    const raw = Buffer.alloc((w + 1) * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const p = (y * w + x) * 4;
+        if (data[p + 3] < 128) continue;
+        raw[y * (w + 1) + 1 + x] = final(index.get((data[p] << 16) | (data[p + 1] << 8) | data[p + 2]));
+    }
+    // Filter 0 on every row (right for palette images); keep the smaller of two deflate strategies.
+    const z = [zc.Z_DEFAULT_STRATEGY, zc.Z_FILTERED].map(strategy => deflateSync(raw, { level: 9, memLevel: 9, strategy }))
+        .reduce((a, b) => (b.length < a.length ? b : a));
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 3;
+    const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        chunk("IHDR", ihdr), chunk("PLTE", Buffer.from(plte)), chunk("tRNS", Buffer.from([0])), chunk("IDAT", z), chunk("IEND", Buffer.alloc(0))]);
+    return { png, colours: next - 1, source: n };
+}
+
+function chunk(type, body) {
+    const out = Buffer.alloc(12 + body.length);
+    out.writeUInt32BE(body.length, 0);
+    out.write(type, 4, "latin1");
+    body.copy(out, 8);
+    out.writeUInt32BE(crc(out.subarray(4, 8 + body.length)), 8 + body.length);
+    return out;
+}
+
+// var: this runs from the top-level code above, before a let here would exist.
+var CRC_TABLE = null;
+function crc(buf) {
+    if (!CRC_TABLE) {
+        CRC_TABLE = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; CRC_TABLE[n] = c >>> 0; }
+    }
+    let c = 0xffffffff;
+    for (const b of buf) c = CRC_TABLE[(c ^ b) & 255] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+}
