@@ -72,8 +72,8 @@ Play-feel review (user's call):
 - [x] Quest-panel card in the game's look, with closed / playing / in-the-strip states and
       Show / Fold / Full window actions (ru/uk strings). Creation screen with class portraits.
 - [x] Atlas as an 8-bit palette PNG: build 1.2 MB -> 610 KiB.
-- [ ] Live check in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord). Discord was not
-      running during the UI states pass: the build is copied to `addons\`, not yet seen live.
+- [ ] Live look in Discord: the build is deployed (copied to the checkout's `addons` folder, Discord
+      reloaded over CDP, agent re-injected it). The card, strip and dialogs still need a look there.
 - [ ] Balance note from the bot saves: map auto-push drops the tier after 3 deaths, then after 5
       clean maps goes straight back to the top tier and dies 3 more times (each death costs the map
       and 3% of a level). Stepping the cap up one tier at a time would stop that loop. Not changed.
