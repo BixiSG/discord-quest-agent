@@ -222,6 +222,8 @@ export class GameWindow {
         this.win.addEventListener("keydown", e => {
             const t = e.target as HTMLElement;
             if (t.closest("input, textarea, select")) return;
+            // Rows and item slots drawn as divs act like buttons from the keyboard too.
+            if ((e.key === "Enter" || e.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") { t.click(); e.preventDefault(); return; }
             if (e.key === "Escape") {
                 if (this.frame.mini) return; // dialogs are hidden in the strip
                 const modals = this.win.querySelectorAll(".modal");

@@ -1,8 +1,9 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
-import { ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, tierName } from "../core/data";
+import { ACTS, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, ZONES, tierName } from "../core/data";
 import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
+import { glyph } from "./glyphs";
 import { MAP_DEATH_XP } from "../core/sim/engine";
 import type { Ctx } from "./views";
 import { scenery } from "./gfx/portrait";
@@ -20,10 +21,24 @@ export function atlasSig(c: Ctx): string {
 export function atlasView(c: Ctx): HTMLElement {
     const st = c.state;
     if (!endgameOpen(st)) {
-        return h("div", { class: "card col" }, h("h3", { text: "The Cinderlands" }),
+        // Locked: what opens it, how far the hero is, and a glimpse of what waits.
+        const gate = ZONES.a3_sunfall!;
+        const pic = scenery(gate, 240, 80);
+        pic.className = "gate-pic";
+        const acts = h("div", { class: "gate-acts" }, ...ACTS.map(a => {
+            const done = !!st.world.clears[a.zones[a.zones.length - 1]!];
+            const here = a.zones.includes(st.activity.zone) || a.trial === st.activity.zone;
+            return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: `Act ${a.id}${done ? ": cleared" : here ? ": here" : ""}` });
+        }));
+        return h("div", { class: "card col atlas-locked" }, h("h3", { text: "The Cinderlands" }),
+            h("div", { class: "gate" }, pic, h("span", { class: "lock" }, glyph("block", 22))),
             h("div", { class: "story", text: "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it." }),
-            h("div", { class: "muted", text: "Maps also drop in Act 3 once you get there; keep them for later." }),
-            h("div", { class: "tag", text: `${st.maps.length} maps collected` }));
+            h("div", { class: "row" }, h("span", { class: "sub", style: "margin:0", text: "Opens after" }), h("b", { text: `${gate.name} (area level ${gate.level})` }),
+                h("span", { class: "muted", text: `the hero is level ${st.hero.level}` })),
+            acts,
+            h("div", { class: "sub", style: "margin:4px 0 0", text: `Then ${MAX_TIER} map tiers and the endless Depths` }),
+            tierChips([]),
+            h("div", { class: "muted", text: st.maps.length ? `${st.maps.length} map${st.maps.length === 1 ? "" : "s"} already found and kept for later.` : "Maps start to drop in Act 3; they are kept for later." }));
     }
     const root = h("div", { class: "col" });
 

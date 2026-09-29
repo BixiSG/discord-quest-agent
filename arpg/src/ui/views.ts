@@ -190,7 +190,8 @@ function ehpBars(s: Sheet): HTMLElement {
 const SLOT_LABEL: Record<Slot, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
 
 function itemCell(item: Item | undefined, slot: Slot | null, selected: boolean, onClick: () => void): HTMLElement {
-    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`, attrs: { "aria-label": item ? itemLabel(item) : slot ? SLOT_LABEL[slot] : "empty" }, on: { click: onClick } });
+    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
+        attrs: { "aria-label": item ? itemLabel(item) : slot ? `${SLOT_LABEL[slot]}: empty` : "empty", ...(item || slot ? { role: "button", tabindex: "0" } : {}), ...(selected ? { "aria-pressed": "true" } : {}) }, on: { click: onClick } });
     if (item) cell.append(itemIcon(item));
     if (slot) { cell.dataset.slot = slot; cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] })); }
     return cell;
@@ -332,9 +333,18 @@ function gearView(c: Ctx): HTMLElement {
     const art = hc ? spriteCanvas(hc.idle) : null;
     if (art) { art.className = "figart"; art.style.width = art.width * 3 + "px"; art.style.height = art.height * 3 + "px"; fig.append(art); }
     doll.append(fig);
+    const wb = eq.weapon ? baseOf(eq.weapon) : null;
     for (const s of SLOTS) {
         const it = eq[s];
         const cell = itemCell(it, s, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); });
+        // An empty off-hand says why when the weapon decides what fits there.
+        if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
+            const bow = wb.kind === "bow";
+            cell.classList.add(bow ? "only" : "blocked");
+            cell.querySelector(".lbl")!.textContent = bow ? "Quiver" : "2-hand";
+            cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
+            cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+        }
         if (it) {
             withTip(cell, c, () => itemCard(it, c));
             cell.draggable = true;
@@ -393,6 +403,7 @@ function gearView(c: Ctx): HTMLElement {
     stash.addEventListener("dragleave", () => stash.classList.remove("over"));
     stash.addEventListener("drop", e => { e.preventDefault(); const s = drag?.slot; endDrag(); if (s) c.act(x => unequip(x, s)); });
     if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
+    if (!st.stash.length) stash.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
     else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
 
     const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
@@ -404,7 +415,9 @@ function gearView(c: Ctx): HTMLElement {
     sort.addEventListener("change", () => { gearOpts.sort = sort.value as GearSort; c.rerender(); });
     const full = st.stash.length >= st.stashCap;
     const stashCard = h("div", { class: "card" },
-        h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " down" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+        h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+        full ? h("div", { class: "warnbar", attrs: { role: "status" } }, glyph("forge", 14),
+            h("span", { text: "Stash full: new drops are salvaged into dust. Salvage or equip something to make room." })) : null,
         h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
             chips<GearFilter>([["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")]],
                 gearOpts.filter, v => { gearOpts.filter = v; c.rerender(); }),
@@ -568,17 +581,32 @@ function skillsView(c: Ctx): HTMLElement {
 
 // ---- World -----------------------------------------------------------------
 
+/** Cleared acts the player opened again this session (the rest stay folded). */
+const openActs = new Set<number>();
+
 function worldView(c: Ctx): HTMLElement {
     const st = c.state;
     const root = h("div", { class: "col", style: "gap:14px" });
+    const inMaps = st.activity.mode === "map";
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
         h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." })));
     root.append(push);
+    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
         if (!act.zones.some(z => st.world.unlocked.includes(z))) continue;
         const done = !!st.world.clears[act.zones[act.zones.length - 1]!];
+        const current = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
+        // A finished act folds to one line unless the hero is in it or the player opened it.
+        if (done && !current && !openActs.has(act.id)) {
+            const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
+            root.append(h("div", { class: "card act folded" },
+                h("h3", { text: `Act ${act.id} - ${act.name}` }),
+                h("div", { class: "row" }, h("span", { class: "tag done", text: "Cleared" }), h("span", { class: "muted grow", text: `${act.zones.length} places, ${fmt(total)} clears. Open it to go back and farm.` }),
+                    h("button", { class: "btn alt small", text: "Open road", on: { click: () => { openActs.add(act.id); c.rerender(); } } }))));
+            continue;
+        }
         const road = h("div", { class: "road" });
         const stop = (id: string, n: string) => {
             const z = ZONES[id]!;
@@ -608,8 +636,19 @@ function worldView(c: Ctx): HTMLElement {
         root.append(h("div", { class: "card act" },
             h("h3", { text: `Act ${act.id} - ${act.name}` }),
             h("div", { class: "story muted", text: done ? act.outro : act.intro }),
-            road, trial));
+            road, trial,
+            done && !current ? h("div", { class: "row", style: "justify-content:flex-end;margin-top:8px" },
+                h("button", { class: "btn alt small", text: "Fold road", on: { click: () => { openActs.delete(act.id); c.rerender(); } } })) : null));
     }
+    // Opening the tab lands on the hero's stop, not the top of Act 1.
+    requestAnimationFrame(() => {
+        const here = root.querySelector<HTMLElement>(".stop.here");
+        const body = root.closest(".body") as HTMLElement | null;
+        if (here && body && body.scrollTop === 0) {
+            const top = here.getBoundingClientRect().top - body.getBoundingClientRect().top;
+            if (top > body.clientHeight - 60) body.scrollTop = top - 80;
+        }
+    });
     return root;
 }
 
@@ -695,8 +734,8 @@ function filterEditor(c: Ctx): HTMLElement {
         on.addEventListener("change", () => edit(rs => { rs[i]!.on = on.checked; }));
         box.append(h("div", { class: "row", style: "gap:4px;flex-wrap:nowrap" }, on,
             h("span", { class: "grow", style: `font-size:12px;${r.on ? "" : "opacity:.5"}`, text: describeRule(r) }),
-            h("button", { class: "x", text: "^", title: "Move up", on: { click: () => edit(rs => { if (i > 0) [rs[i - 1], rs[i]] = [rs[i]!, rs[i - 1]!]; }) } }),
-            h("button", { class: "x", text: "x", title: "Delete", on: { click: () => edit(rs => { rs.splice(i, 1); }) } })));
+            h("button", { class: "x", text: "^", title: "Move up", attrs: i === 0 ? { disabled: "", "aria-label": "Move up" } : { "aria-label": "Move up" }, on: { click: () => edit(rs => { if (i > 0) [rs[i - 1], rs[i]] = [rs[i]!, rs[i - 1]!]; }) } }),
+            h("button", { class: "x", text: "x", title: "Delete", attrs: { "aria-label": `Delete rule: ${describeRule(r)}` }, on: { click: () => edit(rs => { rs.splice(i, 1); }) } })));
     });
     const action = h("select");
     for (const a of ["keep", "salvage"]) action.append(h("option", { text: a, attrs: { value: a } }));

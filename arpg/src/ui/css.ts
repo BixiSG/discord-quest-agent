@@ -23,7 +23,7 @@ export const CSS = `
 
 /* ---- frame ---- */
 .win {
-  position: fixed; z-index: 10050; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);
+  position: fixed; z-index: 10050; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
   min-width: 380px; min-height: 340px; background: var(--paper); border: 3px solid var(--line);
   box-shadow: 8px 8px 0 var(--line); overflow: hidden; container: win / inline-size;
 }
@@ -190,7 +190,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 /* section headers outside cards, flat lists, chips */
 .sec { display: flex; align-items: baseline; gap: 8px; margin: 0 0 7px; font: 700 14px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1.5px; }
 .sec .muted { font: 600 11px/1 var(--body); text-transform: none; letter-spacing: 0; }
-.card h3.split { display: flex; justify-content: space-between; align-items: baseline; }
+.card h3.split { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: baseline; }
 .card h3.split .num { font-size: 12px; letter-spacing: 0; }
 .list { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); }
 .li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; padding: 8px 10px; border-bottom: 2px solid var(--line); cursor: pointer; }
@@ -384,13 +384,15 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
 
 /* skills: the socket bar */
 .links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
-.link { width: 22px; height: 6px; background: #1a1410; border-top: 2px solid #6b5d4b; }
+.links { flex-wrap: nowrap; }
+@container win (max-width: 640px) { .links { flex-wrap: wrap; } }
+.link { flex: 0 1 18px; min-width: 8px; height: 6px; background: #1a1410; border-top: 2px solid #6b5d4b; }
 .hm.dark .link { background: #000; border-top-color: #4a3d31; }
 .link.off { opacity: .3; }
-.sock { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px 4px; font: inherit; color: var(--text);
+.sock { flex: 1 1 0; min-width: 66px; max-width: 104px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px 4px; font: inherit; color: var(--text);
   border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
 button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
-.sock.main { width: 120px; border-image-source: var(--fr-gold); color: #1a1410; }
+.sock.main { flex-grow: 1.3; max-width: 128px; border-image-source: var(--fr-gold); color: #1a1410; }
 .sock b { font: 700 11px/1.1 var(--display); font-stretch: condensed; letter-spacing: .6px; text-transform: uppercase; text-align: center;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sock.main b { font-size: 13px; }
@@ -437,6 +439,30 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
 .pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
 
+/* states: notes, warnings, locked things */
+.tag { color: var(--text); }
+.li.on .tag, .skill.on .tag, .zone.on .tag, .stop.here .tag { background: #1a1410; color: #ffc233; border-color: #1a1410; }
+.tag.done { background: var(--teal); color: #1a1410; } .tag.here { background: var(--gold); color: #1a1410; }
+.note { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a1410; color: #f3e7d3; font-size: 12px; border-left: 6px solid var(--teal); }
+.note svg { color: var(--teal); flex: none; }
+.warnbar { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 5px 8px; background: var(--ember); color: #1a1410; font-size: 12px; font-weight: 700; }
+.warnbar svg { flex: none; }
+.card > h3 .num.full { color: var(--ember); }
+.stash-note { grid-column: 1 / -1; padding: 4px 0 6px; font-size: 12px; }
+.cell.blocked, .cell.only { cursor: default; }
+.cell.blocked { border-image-source: var(--fr-empty); background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--line) 22%, transparent) 5px 7px); background-clip: padding-box; }
+.cell.blocked .lbl, .cell.only .lbl { display: block; color: var(--muted); }
+.cell[role="button"]:focus-visible { outline: 3px dashed var(--ember); outline-offset: 1px; }
+.x:disabled { opacity: .35; cursor: default; }
+.x:disabled:hover { background: var(--card); color: var(--text); }
+.act.folded .row { flex-wrap: nowrap; }
+.act.folded .muted { font-size: 12px; }
+.atlas-locked { gap: 10px; }
+.gate { position: relative; line-height: 0; border: 2px solid var(--line); background: #1a1410; }
+.gate-pic { display: block; width: 100%; height: auto; max-height: 150px; object-fit: cover; image-rendering: pixelated; filter: saturate(.55) brightness(.9); }
+.gate .lock { color: #ffc233; }
+.gate-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* creation: three callings in their scenery */
 .create { max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .create .sec { margin: 4px 0 0; }
@@ -464,5 +490,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .log .lg { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: #1a1410; border: 2px solid var(--line); }
 .log .entry.k-death .grow { color: var(--red); } .hm.dark .log .entry.k-death .grow { color: #ff8a8c; }
 .log .entry.k-level .grow, .log .entry.k-boss .grow { font-weight: 700; }
+/* narrow window, after the rules above it overrides: every tab fits the icon row, sockets keep their names */
+@container win (max-width: 640px) {
+  .nav button { display: flex; justify-content: center; align-items: center; flex: 1 1 0; min-width: 0; padding: 9px 0; }
+  .nav .badge { position: absolute; right: 1px; top: 1px; margin: 0; min-width: 14px; height: 13px; line-height: 9px; }
+  .sock { min-width: 84px; }
+}
+.portrait-frame { text-align: center; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;

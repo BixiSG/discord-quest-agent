@@ -4965,7 +4965,7 @@
 
 /* ---- frame ---- */
 .win {
-  position: fixed; z-index: 10050; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);
+  position: fixed; z-index: 10050; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
   min-width: 380px; min-height: 340px; background: var(--paper); border: 3px solid var(--line);
   box-shadow: 8px 8px 0 var(--line); overflow: hidden; container: win / inline-size;
 }
@@ -5132,7 +5132,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 /* section headers outside cards, flat lists, chips */
 .sec { display: flex; align-items: baseline; gap: 8px; margin: 0 0 7px; font: 700 14px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1.5px; }
 .sec .muted { font: 600 11px/1 var(--body); text-transform: none; letter-spacing: 0; }
-.card h3.split { display: flex; justify-content: space-between; align-items: baseline; }
+.card h3.split { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; align-items: baseline; }
 .card h3.split .num { font-size: 12px; letter-spacing: 0; }
 .list { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); }
 .li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; padding: 8px 10px; border-bottom: 2px solid var(--line); cursor: pointer; }
@@ -5326,13 +5326,15 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
 
 /* skills: the socket bar */
 .links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
-.link { width: 22px; height: 6px; background: #1a1410; border-top: 2px solid #6b5d4b; }
+.links { flex-wrap: nowrap; }
+@container win (max-width: 640px) { .links { flex-wrap: wrap; } }
+.link { flex: 0 1 18px; min-width: 8px; height: 6px; background: #1a1410; border-top: 2px solid #6b5d4b; }
 .hm.dark .link { background: #000; border-top-color: #4a3d31; }
 .link.off { opacity: .3; }
-.sock { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px 4px; font: inherit; color: var(--text);
+.sock { flex: 1 1 0; min-width: 66px; max-width: 104px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px 4px; font: inherit; color: var(--text);
   border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
 button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
-.sock.main { width: 120px; border-image-source: var(--fr-gold); color: #1a1410; }
+.sock.main { flex-grow: 1.3; max-width: 128px; border-image-source: var(--fr-gold); color: #1a1410; }
 .sock b { font: 700 11px/1.1 var(--display); font-stretch: condensed; letter-spacing: .6px; text-transform: uppercase; text-align: center;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sock.main b { font-size: 13px; }
@@ -5379,6 +5381,30 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pin-frame { flex: none; width: 92px; display: grid; place-items: end center; padding: 4px; border: 2px solid var(--line); overflow: hidden; }
 .pin-art { image-rendering: pixelated; max-width: 84px; max-height: 90px; object-fit: contain; }
 
+/* states: notes, warnings, locked things */
+.tag { color: var(--text); }
+.li.on .tag, .skill.on .tag, .zone.on .tag, .stop.here .tag { background: #1a1410; color: #ffc233; border-color: #1a1410; }
+.tag.done { background: var(--teal); color: #1a1410; } .tag.here { background: var(--gold); color: #1a1410; }
+.note { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a1410; color: #f3e7d3; font-size: 12px; border-left: 6px solid var(--teal); }
+.note svg { color: var(--teal); flex: none; }
+.warnbar { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 5px 8px; background: var(--ember); color: #1a1410; font-size: 12px; font-weight: 700; }
+.warnbar svg { flex: none; }
+.card > h3 .num.full { color: var(--ember); }
+.stash-note { grid-column: 1 / -1; padding: 4px 0 6px; font-size: 12px; }
+.cell.blocked, .cell.only { cursor: default; }
+.cell.blocked { border-image-source: var(--fr-empty); background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--line) 22%, transparent) 5px 7px); background-clip: padding-box; }
+.cell.blocked .lbl, .cell.only .lbl { display: block; color: var(--muted); }
+.cell[role="button"]:focus-visible { outline: 3px dashed var(--ember); outline-offset: 1px; }
+.x:disabled { opacity: .35; cursor: default; }
+.x:disabled:hover { background: var(--card); color: var(--text); }
+.act.folded .row { flex-wrap: nowrap; }
+.act.folded .muted { font-size: 12px; }
+.atlas-locked { gap: 10px; }
+.gate { position: relative; line-height: 0; border: 2px solid var(--line); background: #1a1410; }
+.gate-pic { display: block; width: 100%; height: auto; max-height: 150px; object-fit: cover; image-rendering: pixelated; filter: saturate(.55) brightness(.9); }
+.gate .lock { color: #ffc233; }
+.gate-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* creation: three callings in their scenery */
 .create { max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .create .sec { margin: 4px 0 0; }
@@ -5406,6 +5432,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .log .lg { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: #1a1410; border: 2px solid var(--line); }
 .log .entry.k-death .grow { color: var(--red); } .hm.dark .log .entry.k-death .grow { color: #ff8a8c; }
 .log .entry.k-level .grow, .log .entry.k-boss .grow { font-weight: 700; }
+/* narrow window, after the rules above it overrides: every tab fits the icon row, sockets keep their names */
+@container win (max-width: 640px) {
+  .nav button { display: flex; justify-content: center; align-items: center; flex: 1 1 0; min-width: 0; padding: 9px 0; }
+  .nav .badge { position: absolute; right: 1px; top: 1px; margin: 0; min-width: 14px; height: 13px; line-height: 9px; }
+  .sock { min-width: 84px; }
+}
+.portrait-frame { text-align: center; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -6760,13 +6793,31 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   function atlasView(c) {
     const st = c.state;
     if (!endgameOpen(st)) {
+      const gate = ZONES.a3_sunfall;
+      const pic = scenery(gate, 240, 80);
+      pic.className = "gate-pic";
+      const acts = h("div", { class: "gate-acts" }, ...ACTS.map((a) => {
+        const done = !!st.world.clears[a.zones[a.zones.length - 1]];
+        const here = a.zones.includes(st.activity.zone) || a.trial === st.activity.zone;
+        return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: `Act ${a.id}${done ? ": cleared" : here ? ": here" : ""}` });
+      }));
       return h(
         "div",
-        { class: "card col" },
+        { class: "card col atlas-locked" },
         h("h3", { text: "The Cinderlands" }),
+        h("div", { class: "gate" }, pic, h("span", { class: "lock" }, glyph("block", 22))),
         h("div", { class: "story", text: "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it." }),
-        h("div", { class: "muted", text: "Maps also drop in Act 3 once you get there; keep them for later." }),
-        h("div", { class: "tag", text: `${st.maps.length} maps collected` })
+        h(
+          "div",
+          { class: "row" },
+          h("span", { class: "sub", style: "margin:0", text: "Opens after" }),
+          h("b", { text: `${gate.name} (area level ${gate.level})` }),
+          h("span", { class: "muted", text: `the hero is level ${st.hero.level}` })
+        ),
+        acts,
+        h("div", { class: "sub", style: "margin:4px 0 0", text: `Then ${MAX_TIER} map tiers and the endless Depths` }),
+        tierChips([]),
+        h("div", { class: "muted", text: st.maps.length ? `${st.maps.length} map${st.maps.length === 1 ? "" : "s"} already found and kept for later.` : "Maps start to drop in Act 3; they are kept for later." })
       );
     }
     const root = h("div", { class: "col" });
@@ -7101,7 +7152,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   }
   var SLOT_LABEL = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
   function itemCell(item, slot, selected, onClick) {
-    const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`, attrs: { "aria-label": item ? itemLabel(item) : slot ? SLOT_LABEL[slot] : "empty" }, on: { click: onClick } });
+    const cell = h("div", {
+      class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
+      attrs: { "aria-label": item ? itemLabel(item) : slot ? `${SLOT_LABEL[slot]}: empty` : "empty", ...item || slot ? { role: "button", tabindex: "0" } : {}, ...selected ? { "aria-pressed": "true" } : {} },
+      on: { click: onClick }
+    });
     if (item) cell.append(itemIcon(item));
     if (slot) {
       cell.dataset.slot = slot;
@@ -7262,12 +7317,20 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       fig.append(art);
     }
     doll.append(fig);
+    const wb = eq.weapon ? baseOf(eq.weapon) : null;
     for (const s of SLOTS) {
       const it = eq[s];
       const cell = itemCell(it, s, c.sel.slot === s && c.sel.uid === void 0, () => {
         c.sel = { slot: s };
         c.rerender();
       });
+      if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
+        const bow = wb.kind === "bow";
+        cell.classList.add(bow ? "only" : "blocked");
+        cell.querySelector(".lbl").textContent = bow ? "Quiver" : "2-hand";
+        cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
+        cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+      }
       if (it) {
         withTip(cell, c, () => itemCard(it, c));
         cell.draggable = true;
@@ -7354,6 +7417,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (s) c.act((x) => unequip(x, s));
     });
     if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) stash.append(h("div", { class: "cell empty" }));
+    if (!st.stash.length) stash.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
     else if (!shown.length) stash.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
     const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
     for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]]) {
@@ -7369,7 +7433,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const stashCard = h(
       "div",
       { class: "card" },
-      h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " down" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+      h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })),
+      full ? h(
+        "div",
+        { class: "warnbar", attrs: { role: "status" } },
+        glyph("forge", 14),
+        h("span", { text: "Stash full: new drops are salvaged into dust. Salvage or equip something to make room." })
+      ) : null,
       h(
         "div",
         { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
@@ -7621,9 +7691,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       ), sups)
     ));
   }
+  var openActs = /* @__PURE__ */ new Set();
   function worldView(c) {
     const st = c.state;
     const root = h("div", { class: "col", style: "gap:14px" });
+    const inMaps = st.activity.mode === "map";
     const push = h(
       "button",
       {
@@ -7637,10 +7709,31 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." }))
     );
     root.append(push);
+    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
       if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
       const done = !!st.world.clears[act.zones[act.zones.length - 1]];
+      const current = !inMaps && (act.zones.includes(st.activity.zone) || act.trial === st.activity.zone);
+      if (done && !current && !openActs.has(act.id)) {
+        const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
+        root.append(h(
+          "div",
+          { class: "card act folded" },
+          h("h3", { text: `Act ${act.id} - ${act.name}` }),
+          h(
+            "div",
+            { class: "row" },
+            h("span", { class: "tag done", text: "Cleared" }),
+            h("span", { class: "muted grow", text: `${act.zones.length} places, ${fmt(total)} clears. Open it to go back and farm.` }),
+            h("button", { class: "btn alt small", text: "Open road", on: { click: () => {
+              openActs.add(act.id);
+              c.rerender();
+            } } })
+          )
+        ));
+        continue;
+      }
       const road = h("div", { class: "road" });
       const stop = (id, n) => {
         const z = ZONES[id];
@@ -7688,9 +7781,25 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("h3", { text: `Act ${act.id} - ${act.name}` }),
         h("div", { class: "story muted", text: done ? act.outro : act.intro }),
         road,
-        trial
+        trial,
+        done && !current ? h(
+          "div",
+          { class: "row", style: "justify-content:flex-end;margin-top:8px" },
+          h("button", { class: "btn alt small", text: "Fold road", on: { click: () => {
+            openActs.delete(act.id);
+            c.rerender();
+          } } })
+        ) : null
       ));
     }
+    requestAnimationFrame(() => {
+      const here = root.querySelector(".stop.here");
+      const body = root.closest(".body");
+      if (here && body && body.scrollTop === 0) {
+        const top = here.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        if (top > body.clientHeight - 60) body.scrollTop = top - 80;
+      }
+    });
     return root;
   }
   var LOG_GLYPH = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
@@ -7835,10 +7944,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         { class: "row", style: "gap:4px;flex-wrap:nowrap" },
         on,
         h("span", { class: "grow", style: `font-size:12px;${r3.on ? "" : "opacity:.5"}`, text: describeRule(r3) }),
-        h("button", { class: "x", text: "^", title: "Move up", on: { click: () => edit((rs) => {
+        h("button", { class: "x", text: "^", title: "Move up", attrs: i === 0 ? { disabled: "", "aria-label": "Move up" } : { "aria-label": "Move up" }, on: { click: () => edit((rs) => {
           if (i > 0) [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]];
         }) } }),
-        h("button", { class: "x", text: "x", title: "Delete", on: { click: () => edit((rs) => {
+        h("button", { class: "x", text: "x", title: "Delete", attrs: { "aria-label": `Delete rule: ${describeRule(r3)}` }, on: { click: () => edit((rs) => {
           rs.splice(i, 1);
         }) } })
       ));
@@ -8158,6 +8267,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.win.addEventListener("keydown", (e) => {
         const t = e.target;
         if (t.closest("input, textarea, select")) return;
+        if ((e.key === "Enter" || e.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") {
+          t.click();
+          e.preventDefault();
+          return;
+        }
         if (e.key === "Escape") {
           if (this.frame.mini) return;
           const modals = this.win.querySelectorAll(".modal");
