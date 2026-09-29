@@ -4434,6 +4434,7 @@
       hero.level++;
       hero.rev++;
       up = true;
+      if (state.activity.capBackoff) state.activity.capBackoff = 0;
       pushLog(state, "level", `Reached level ${hero.level}.`);
       ev.level?.(hero.level);
     }
@@ -4456,6 +4457,7 @@
       if (act.autoPush && act.deaths >= MAP_FAILS && run.map.tier > 1 && !run.map.pinnacle) {
         act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
         act.deaths = 0;
+        act.capBackoff = Math.min(3, (act.capBackoff ?? 0) + 1);
         pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
       }
       return;
@@ -4556,7 +4558,7 @@
       if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
       act.streak++;
       if (act.streak >= MAP_CLEAN) act.deaths = 0;
-      if (act.autoCap && act.streak >= MAP_CLEAN) {
+      if (act.autoCap && act.streak >= MAP_CLEAN << (act.capBackoff ?? 0)) {
         act.autoCap++;
         act.streak = 0;
         if (act.autoCap > Math.max(0, ...state.maps.map((m4) => m4.tier))) act.autoCap = 0;
@@ -4945,6 +4947,7 @@
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
     act.autoCap = Number.isInteger(act.autoCap) && act.autoCap > 0 ? act.autoCap : 0;
+    act.capBackoff = Number.isInteger(act.capBackoff) ? Math.max(0, Math.min(3, act.capBackoff)) : 0;
     act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
     if (act.pinnacle !== void 0 && !PINNACLES[act.pinnacle]) delete act.pinnacle;
     if (act.run?.map) {
@@ -6546,6 +6549,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pet.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; } .pet.on span:last-child { color: #4d4030; }
 .pet.unknown { cursor: default; opacity: .6; } .pet.unknown .q { font: 700 22px/1 var(--display); color: var(--muted); }
 .pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
+.scout { margin-top: 4px; padding: 2px 6px; display: inline-block; font: 700 12px/1.3 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--line); }
+.scout.ok { background: var(--green); color: #1a1410; } .scout.mid { background: var(--gold); color: #1a1410; } .scout.bad { background: var(--ember); color: #1a1410; }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
@@ -7993,6 +7998,39 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return card;
   }
 
+  // src/core/scout.ts
+  var LIMIT_S = 15 * 60;
+  function scoutPinnacle(state, id, trials = 5) {
+    const p = PINNACLES[id];
+    if (!p) return { wins: 0, trials: 0, seconds: 0 };
+    let wins = 0, secs = 0;
+    for (let i = 0; i < trials; i++) {
+      const s = structuredClone(state);
+      s.sigils[p.sigil] = p.cost;
+      s.activity.pinnacle = id;
+      s.activity.mode = "map";
+      s.activity.run = null;
+      s.activity.autoPush = false;
+      s.activity.runIndex = state.activity.runIndex + 1e3 + i * 7919;
+      let result = null;
+      const ev = { death: () => {
+        result ??= "loss";
+      }, runDone: () => {
+        result ??= "win";
+      } };
+      const t0 = s.simTo;
+      for (let k = 0; k < LIMIT_S * (1e3 / STEP_MS) && !result; k++) {
+        step(s, ev);
+        s.simTo += STEP_MS;
+      }
+      if (result === "win") {
+        wins++;
+        secs += (s.simTo - t0) / 1e3;
+      }
+    }
+    return { wins, trials, seconds: wins ? Math.round(secs / wins) : 0 };
+  }
+
   // src/ui/atlas.ts
   var MAP_CRAFTS = ["kindling", "reshaper", "graft", "crownseal", "forgeheart", "tempest", "starfall", "salt"];
   var RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare: "var(--r-rare)" };
@@ -8152,18 +8190,40 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           h("div", { class: "nm", text: p.name }),
           h("div", { class: "ds", text: p.text }),
           h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
-          h("button", {
-            class: "btn hot",
-            style: "margin-top:6px",
-            text: queued ? "Next run" : `Challenge (${have}/${p.cost})`,
-            attrs: have >= p.cost && !queued ? {} : { disabled: "" },
-            on: { click: () => c.act((s) => queuePinnacle(s, p.id), `${p.name} is next`) }
-          })
+          scoutLine(c, p.id),
+          h(
+            "div",
+            { class: "row", style: "margin-top:6px;gap:6px" },
+            h("button", {
+              class: "btn hot",
+              text: queued ? "Next run" : `Challenge (${have}/${p.cost})`,
+              attrs: have >= p.cost && !queued ? {} : { disabled: "" },
+              on: { click: () => c.act((s) => queuePinnacle(s, p.id), `${p.name} is next`) }
+            }),
+            h("button", {
+              class: "btn alt",
+              text: "Scout",
+              title: "Fight it five times on a copy of your hero (nothing is spent) to see the odds",
+              on: { click: () => {
+                scouted.set(scoutKey(st, p.id), scoutPinnacle(st, p.id, 5));
+                c.rerender();
+              } }
+            })
+          )
         )
       ));
     }
     root.append(h("div", { class: "card col" }, h("h3", { text: "Pinnacles" }), pins));
     return root;
+  }
+  var scouted = /* @__PURE__ */ new Map();
+  var scoutKey = (st, id) => `${id}:${st.hero.rev}:${st.hero.level}`;
+  function scoutLine(c, id) {
+    const r3 = scouted.get(scoutKey(c.state, id));
+    if (!r3) return null;
+    const odds = r3.wins / Math.max(1, r3.trials);
+    const verdict = odds >= 0.8 ? "ready" : odds >= 0.4 ? "risky" : "not yet";
+    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: `Scouted: won ${r3.wins} of ${r3.trials}${r3.wins ? `, about ${r3.seconds} s each` : ""} - ${verdict}` });
   }
   function tierChips(done) {
     const row = h("div", { class: "ladder", attrs: { "aria-label": `Tiers cleared: ${done.length} of ${MAX_TIER}` } });

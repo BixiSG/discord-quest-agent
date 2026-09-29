@@ -8,6 +8,7 @@ import { deriveSheet, supportSlots } from "../src/core/character";
 import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
 import { setCompanion } from "../src/core/companions";
 import { BLESSINGS, setKeep } from "../src/core/shrine";
+import { scoutPinnacle } from "../src/core/scout";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
 import type { GameState, Hero } from "../src/core/state";
@@ -85,7 +86,11 @@ export function botTune(state: GameState): void {
     if (endgameOpen(state)) {
         setMapMode(state, true);
         for (const id of Object.keys(ATLAS)) if (!canTakeAtlas(state, id)) takeAtlas(state, id);
-        for (const p of Object.values(PINNACLES)) if (!state.activity.pinnacle && (state.sigils[p.sigil] ?? 0) >= p.cost) queuePinnacle(state, p.id);
+        // Pinnacles only when a scout says the hero wins most fights (like a careful player).
+        for (const p of Object.values(PINNACLES)) {
+            if (state.activity.pinnacle || (state.sigils[p.sigil] ?? 0) < p.cost) continue;
+            if (scoutPinnacle(state, p.id, 3).wins >= 2) queuePinnacle(state, p.id);
+        }
     }
     void sheetOf(state);
 }

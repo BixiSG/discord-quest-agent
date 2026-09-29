@@ -155,6 +155,7 @@ export function validateState(raw: unknown): GameState {
     if (act.mode !== "map" || !endgameOpen(s)) act.mode = "zone";
     if (!endgameOpen(s)) delete act.pinnacle;
     act.autoCap = Number.isInteger(act.autoCap) && act.autoCap! > 0 ? act.autoCap : 0;
+    act.capBackoff = Number.isInteger(act.capBackoff) ? Math.max(0, Math.min(3, act.capBackoff!)) : 0;
     act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
     if (act.pinnacle !== undefined && !PINNACLES[act.pinnacle]) delete act.pinnacle;
     if (act.run?.map) {

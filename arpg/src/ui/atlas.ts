@@ -1,6 +1,8 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
 import { ACTS, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, ZONES, tierName } from "../core/data";
+import { scoutPinnacle, type Scout } from "../core/scout";
+import type { GameState } from "../core/state";
 import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
 import { glyph } from "./glyphs";
@@ -117,11 +119,27 @@ export function atlasView(c: Ctx): HTMLElement {
             art ? h("div", { class: "pin-frame", style: `background:${p.palette[0]}` }, art) : null,
             h("div", { class: "grow" }, h("div", { class: "nm", text: p.name }), h("div", { class: "ds", text: p.text }),
                 h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
-                h("button", { class: "btn hot", style: "margin-top:6px", text: queued ? "Next run" : `Challenge (${have}/${p.cost})`, attrs: have >= p.cost && !queued ? {} : { disabled: "" },
-                    on: { click: () => c.act(s => queuePinnacle(s, p.id), `${p.name} is next`) } }))));
+                scoutLine(c, p.id),
+                h("div", { class: "row", style: "margin-top:6px;gap:6px" },
+                    h("button", { class: "btn hot", text: queued ? "Next run" : `Challenge (${have}/${p.cost})`, attrs: have >= p.cost && !queued ? {} : { disabled: "" },
+                        on: { click: () => c.act(s => queuePinnacle(s, p.id), `${p.name} is next`) } }),
+                    h("button", { class: "btn alt", text: "Scout", title: "Fight it five times on a copy of your hero (nothing is spent) to see the odds",
+                        on: { click: () => { scouted.set(scoutKey(st, p.id), scoutPinnacle(st, p.id, 5)); c.rerender(); } } })))));
     }
     root.append(h("div", { class: "card col" }, h("h3", { text: "Pinnacles" }), pins));
     return root;
+}
+
+/** Scout results, valid while the hero's sheet is unchanged. */
+const scouted = new Map<string, Scout>();
+const scoutKey = (st: GameState, id: string) => `${id}:${st.hero.rev}:${st.hero.level}`;
+
+function scoutLine(c: Ctx, id: string): HTMLElement | null {
+    const r = scouted.get(scoutKey(c.state, id));
+    if (!r) return null;
+    const odds = r.wins / Math.max(1, r.trials);
+    const verdict = odds >= 0.8 ? "ready" : odds >= 0.4 ? "risky" : "not yet";
+    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: `Scouted: won ${r.wins} of ${r.trials}${r.wins ? `, about ${r.seconds} s each` : ""} - ${verdict}` });
 }
 
 /** The tier ladder: one rung per tier, lit once cleared. */

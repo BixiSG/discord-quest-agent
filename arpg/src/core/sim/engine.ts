@@ -361,6 +361,7 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         hero.level++;
         hero.rev++;
         up = true;
+        if (state.activity.capBackoff) state.activity.capBackoff = 0; // stronger now: map auto-push may climb sooner
         pushLog(state, "level", `Reached level ${hero.level}.`);
         ev.level?.(hero.level);
     }
@@ -388,6 +389,8 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
         if (act.autoPush && act.deaths >= MAP_FAILS && run.map.tier > 1 && !run.map.pinnacle) {
             act.autoCap = Math.min(act.autoCap || Infinity, run.map.tier - 1);
             act.deaths = 0;
+            // Each fall back doubles the clean streak needed to climb again (until the next level-up).
+            act.capBackoff = Math.min(3, (act.capBackoff ?? 0) + 1);
             pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
         }
         return;
@@ -501,7 +504,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;
         if (act.streak >= MAP_CLEAN) act.deaths = 0;
-        if (act.autoCap && act.streak >= MAP_CLEAN) {
+        if (act.autoCap && act.streak >= MAP_CLEAN << (act.capBackoff ?? 0)) {
             act.autoCap++;
             act.streak = 0;
             if (act.autoCap > Math.max(0, ...state.maps.map(m => m.tier))) act.autoCap = 0;

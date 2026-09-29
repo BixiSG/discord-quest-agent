@@ -560,6 +560,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pet.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; } .pet.on span:last-child { color: #4d4030; }
 .pet.unknown { cursor: default; opacity: .6; } .pet.unknown .q { font: 700 22px/1 var(--display); color: var(--muted); }
 .pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
+.scout { margin-top: 4px; padding: 2px 6px; display: inline-block; font: 700 12px/1.3 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--line); }
+.scout.ok { background: var(--green); color: #1a1410; } .scout.mid { background: var(--gold); color: #1a1410; } .scout.bad { background: var(--ember); color: #1a1410; }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }

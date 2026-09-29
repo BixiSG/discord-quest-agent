@@ -112,6 +112,8 @@ export interface GameState {
         mapTier: number;
         /** A lower cap set by auto-push after deaths; 0 = none. Cleared after clean maps. */
         autoCap?: number;
+        /** Times the cap came down since the last level-up (0-3): the clean streak to climb is 8 << this. */
+        capBackoff?: number;
         /** A pinnacle fight to run next. */
         pinnacle?: string;
     };
