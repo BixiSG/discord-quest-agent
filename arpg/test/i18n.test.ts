@@ -60,6 +60,12 @@ describe("string tables", () => {
             expect([...bad]).toEqual([]);
         });
     }
+    it("each Cyrillic table keeps to its own alphabet (Ukrainian is not Russian respelled)", () => {
+        // Letters only one of the two languages has: ы э ъ ё are Russian, і ї є ґ Ukrainian.
+        const ruOnly = /[ыэъёЫЭЪЁ]/, ukOnly = /[іїєґІЇЄҐ]/;
+        expect(Object.entries(TABLES.uk).filter(([, v]) => ruOnly.test(v)).map(([k]) => k)).toEqual([]);
+        expect(Object.entries(TABLES.ru).filter(([, v]) => ukOnly.test(v)).map(([k]) => k)).toEqual([]);
+    });
     it("English plural strings have one|other forms and no key is empty", () => {
         for (const [k, v] of Object.entries(EN)) {
             expect(v.length, k).toBeGreaterThan(0);
