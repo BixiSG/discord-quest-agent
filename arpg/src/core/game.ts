@@ -4,7 +4,7 @@
 import { returnStones } from "./sockets";
 import { dawnOf, hasPerk } from "./dawn";
 import { deriveSheet, type Sheet } from "./character";
-import { CLASSES, DAWN_DUST, RELICS, SKILLS, SUPPORTS, ZONES, slotsFor } from "./data";
+import { CLASSES, DAWN_DUST, RELICS, SKILLS, SUPPORTS, ZONES, betterLow, slotsFor } from "./data";
 import { baseOf, levelReq, salvageValue } from "./items";
 import { logLine } from "../i18n/names";
 import { ref } from "../i18n/refs";
@@ -170,7 +170,8 @@ export function relicRollScore(item: Item): number {
     def.mods.forEach((m, i) => {
         const [lo, hi] = m.range;
         if (hi === lo) return;
-        sum += ((item.relicRolls?.[i] ?? lo) - lo) / (hi - lo);
+        const v = ((item.relicRolls?.[i] ?? lo) - lo) / (hi - lo);
+        sum += betterLow(m) ? 1 - v : v;
         n++;
     });
     return n ? sum / n : 1;

@@ -4,8 +4,8 @@
 import { CURRENCIES, ZONES, mapLevel } from "./data";
 import { receiveItem, upgradeSlot } from "./game";
 import { Rng, hashSeed } from "./rng";
-import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, rollAffixes, rollTier, salvageValue } from "./items";
-import { AFFIXES, type AffixDef } from "./data";
+import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, relicOf, rollAffixes, rollTier, salvageValue } from "./items";
+import { AFFIXES, betterLow, type AffixDef, type RelicDef } from "./data";
 import type { GameState } from "./state";
 import type { Item, Slot } from "./types";
 import { SLOTS } from "./types";
@@ -171,6 +171,51 @@ export function benchCraft(state: GameState, uid: number, affixId: string): stri
     state.dust -= dust;
     state.craftSeq++;
     item.crafted = true;
+    item.locked = true;
+    if (found.slot) state.hero.rev++;
+    return null;
+}
+
+// ---- temper (relics) -----------------------------------------------------------
+
+/** The rolls of a relic that can still get better. */
+function temperOpen(item: Item, def: RelicDef): number[] {
+    return def.mods.flatMap((m, i) => {
+        const v = item.relicRolls?.[i] ?? m.range[0];
+        return (betterLow(m) ? v > m.range[0] : v < m.range[1]) ? [i] : [];
+    });
+}
+
+/** Ember dust to temper a relic once more; null when it isn't a relic or every roll is at its best. */
+export function temperCost(item: Item): number | null {
+    const def = relicOf(item);
+    if (!def || !temperOpen(item, def).length) return null;
+    return Math.round((200 * Math.max(20, item.ilvl) * Math.pow(1.4, item.tempered ?? 0)) / 10) * 10;
+}
+
+/**
+ * Temper, the late dust sink: one roll of a relic (a random one of those with
+ * room) is rolled again between where it is and its best, so it never gets
+ * worse. Each temper of that relic costs 40% more; the relic locks.
+ */
+export function temperRelic(state: GameState, uid: number): string | null {
+    const found = findItem(state, uid);
+    if (!found) return "item not found";
+    const item = found.item;
+    const def = relicOf(item);
+    if (!def) return "only relics can be tempered";
+    const open = temperOpen(item, def);
+    if (!open.length) return "every roll is at its best";
+    const cost = temperCost(item)!;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    const rng = new Rng(hashSeed(state.seed, 0x74656d70, state.craftSeq));
+    const i = rng.pick(open), m = def.mods[i]!;
+    item.relicRolls ??= def.mods.map(x => x.range[0]);
+    const cur = item.relicRolls[i]!;
+    item.relicRolls[i] = betterLow(m) ? rng.int(m.range[0], cur - 1) : rng.int(cur + 1, m.range[1]);
+    state.dust -= cost;
+    state.craftSeq++;
+    item.tempered = (item.tempered ?? 0) + 1;
     item.locked = true;
     if (found.slot) state.hero.rev++;
     return null;

@@ -58,6 +58,8 @@ export interface Item {
     locked?: boolean;
     /** Honed quality, 0-20: percent increased local damage (weapons) or defences (armour). */
     quality?: number;
+    /** Relics: how many times tempered (each temper costs more). */
+    tempered?: number;
     /** Sockets (round 5): how many, and the ember stone in each ("ruby:2") or null. */
     sockets?: number;
     stones?: (string | null)[];

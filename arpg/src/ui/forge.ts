@@ -4,7 +4,7 @@
 // orbs on a shelf.
 
 import { CURRENCIES, CURRENCY_ORDER } from "../core/data";
-import { applyCurrency, benchCraft, benchDust, benchOptions, BENCH_GRAFTS, buyCurrency, craftUntilUpgrade, findItem, forgeCost, forgeRare, forgeUntilUpgrade, hone, honeCost, MAX_QUALITY, maxIlvl, REROLLS } from "../core/crafting";
+import { applyCurrency, benchCraft, benchDust, benchOptions, BENCH_GRAFTS, buyCurrency, craftUntilUpgrade, findItem, forgeCost, forgeRare, forgeUntilUpgrade, hone, honeCost, MAX_QUALITY, maxIlvl, REROLLS, temperCost, temperRelic } from "../core/crafting";
 import { setLocked } from "../core/game";
 import { baseOf } from "../core/items";
 import { SLOTS, type Item } from "../core/types";
@@ -21,7 +21,7 @@ import { STONE_TIERS, parseStone, stoneKey } from "../core/data";
 import { socketPips, stoneChip, stoneLine, stoneTip } from "./stones";
 import { hint } from "./hints";
 import { stoneFullName } from "../i18n/names";
-import { lang, t } from "../i18n";
+import { lang, t, tn } from "../i18n";
 import { affixTemplate, currencyBlurb, currencyName, itemName } from "../i18n/names";
 
 const SLOT_NAMES = (slot: string) => t(`slot.${slot}`);
@@ -90,6 +90,14 @@ export function forgeView(c: Ctx): HTMLElement {
                 h("button", { class: "btn small", text: t(benched ? "forge.benchReplace" : "forge.benchAdd", { n: BENCH_GRAFTS, dust: fmt(dust) }), attrs: ok ? {} : { disabled: "" },
                     title: [t("forge.benchTip"), benched ? t("forge.benchTipReplace") : "", t("forge.benchHave", { n: grafts })].filter(Boolean).join(" "),
                     on: { click: () => c.act(s => benchCraft(s, it.uid, pick.value), t("forge.benched")) } })));
+        }
+        // Relics: temper one roll toward its best.
+        if (it.relic) {
+            const tc = temperCost(it);
+            work.append(h("div", { class: "wrow" }, h("b", { text: t("forge.temper") }),
+                h("span", { class: "muted grow", style: "font-size:12px", text: it.tempered ? tn("forge.tempered", it.tempered) : t("forge.temperNote") }),
+                h("button", { class: "btn small", text: tc === null ? t("forge.temperMax") : t("forge.temperBtn", { cost: fmt(tc) }), title: t("forge.temperTip"),
+                    attrs: tc !== null && st.dust >= tc ? {} : { disabled: "" }, on: { click: () => c.act(s => temperRelic(s, it.uid), t("forge.temperedToast")) } })));
         }
         // Sockets: drill one more, set or pry out each stone.
         const dc = drillCost(it);

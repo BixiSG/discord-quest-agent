@@ -73,3 +73,6 @@ const list: RelicDef[] = [
 ];
 
 export const RELICS: Record<string, RelicDef> = Object.fromEntries(list.map(x => [x.id, x]));
+
+/** A relic roll that is better low (a downside such as more mana cost); every other roll is better high. */
+export const betterLow = (m: RelicMod) => m.stat === "manaCost";

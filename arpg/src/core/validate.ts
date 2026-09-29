@@ -54,6 +54,10 @@ function checkItem(it: unknown): Item {
         i.stones = Array.isArray(i.stones) ? i.stones.map(k => (typeof k === "string" && parseStone(k) ? k : null)) : [];
         fitStones(i);
     }
+    if (i.tempered !== undefined) {
+        const n = i.rarity === "relic" && Number.isFinite(i.tempered) ? Math.max(0, Math.round(i.tempered)) : 0;
+        if (n) i.tempered = n; else delete i.tempered;
+    }
     if (i.quality !== undefined) {
         const q = Number.isFinite(i.quality) ? Math.max(0, Math.min(20, Math.round(i.quality))) : 0;
         if (q) i.quality = q; else delete i.quality;
