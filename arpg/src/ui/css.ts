@@ -337,5 +337,36 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
 .meter span { position: relative; display: block; padding-left: 6px; font: 700 11px/14px var(--mono); color: #f3e7d3; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
 .tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
 .stat, .attr { min-width: 0; } .stat b, .stat span, .attr b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* world: each act is a road of stops with their scenery */
+.toggle { display: flex; align-items: center; gap: 10px; padding: 4px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; align-self: flex-start; }
+.toggle i { flex: none; position: relative; width: 38px; height: 20px; background: #1a1410; border: 2px solid var(--line); }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: #6b5d4b; transition: left .12s; }
+.toggle.on i::after { left: 20px; background: #19b3a3; }
+.toggle b { display: block; font: 700 13px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1px; }
+.toggle small { color: var(--muted); font-size: 11px; }
+.act .story { margin-bottom: 12px; }
+.road { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
+.path { width: 18px; height: 4px; background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 7px); }
+.path.dim { opacity: .35; }
+.stop { width: 132px; display: flex; flex-direction: column; gap: 4px; padding: 3px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.stop:hover:not(.locked):not(.here) { filter: brightness(1.07); transform: translateY(-1px); }
+.stop.here { border-image-source: var(--fr-teal); color: #1a1410; }
+.stop.here .meta span:not(.tag) { color: #16433e; }
+.stop.locked { cursor: default; opacity: .6; }
+.stop.locked .thumb { filter: grayscale(1) brightness(.45); }
+.stop .pic { position: relative; line-height: 0; border: 2px solid var(--line); background: #1a1410; }
+.stop .thumb { width: 100%; image-rendering: pixelated; }
+.stop b { font: 700 12.5px/1.15 var(--display); font-stretch: condensed; letter-spacing: .4px; text-transform: uppercase; }
+.stop .meta { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--muted); }
+.num-badge { position: absolute; left: 0; top: 0; min-width: 16px; padding: 2px 3px; background: #1a1410; color: #ffc233; font: 700 10px/1 var(--mono); text-align: center; line-height: 12px; }
+.flag { position: absolute; right: 0; top: 0; padding: 2px 5px; font: 700 10px/12px var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #1a1410; }
+.flag.boss { background: var(--ember); } .flag.trial { background: var(--violet); color: #fff; }
+.hero-mark { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); image-rendering: pixelated; }
+.lock { position: absolute; inset: 0; display: grid; place-items: center; color: #f3e7d3; }
+.trialrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed color-mix(in srgb, var(--line) 40%, transparent); }
+.stop.trial:not(.here) { border-image-source: var(--fr-sunk); }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;

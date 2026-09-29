@@ -13,7 +13,7 @@ import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
 import { glyph } from "./glyphs";
-import { portrait } from "./gfx/portrait";
+import { portrait, scenery } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
 import { modText } from "./text";
 import { forgeView } from "./forge";
@@ -52,7 +52,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
         case "atlas": return atlasSig(c);
         case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
         case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${JSON.stringify(s.settings.filter)}`;
@@ -547,27 +547,45 @@ function skillsView(c: Ctx): HTMLElement {
 
 function worldView(c: Ctx): HTMLElement {
     const st = c.state;
-    const root = h("div", { class: "col" });
-    root.append(h("div", { class: "row" },
-        h("label", { class: "chk" }, (() => { const i = h("input", { attrs: { type: "checkbox" } }); i.checked = st.activity.autoPush; i.addEventListener("change", () => c.act(s => { s.activity.autoPush = i.checked; })); return i; })(),
-            "Auto-push: move on after 3 clean clears, fall back after 3 deaths")));
+    const root = h("div", { class: "col", style: "gap:14px" });
+    const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
+        on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
+        h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." })));
+    root.append(push);
+    const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
         if (!act.zones.some(z => st.world.unlocked.includes(z))) continue;
         const done = !!st.world.clears[act.zones[act.zones.length - 1]!];
-        const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: done ? act.outro : act.intro }));
-        for (const id of [...act.zones, act.trial]) {
+        const road = h("div", { class: "road" });
+        const stop = (id: string, n: string) => {
             const z = ZONES[id]!;
             const open = st.world.unlocked.includes(id);
-            const on = st.activity.zone === id;
+            const here = st.activity.mode === "zone" && st.activity.zone === id;
             const clears = st.world.clears[id] ?? 0;
-            const row = h("div", { class: `zone${on ? " on" : ""}${open ? "" : " locked"}`, on: { click: () => { if (open && !on) c.act(s => setZone(s, id), `Travelling to ${z.name}`); } } },
-                h("div", { class: "tag", text: `L${z.level}` }),
-                h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: z.name }), open && z.story ? h("div", { class: "muted", style: "font-size:11px", text: z.story }) : null),
-                z.trial ? h("div", { class: "tag", style: "background:var(--violet);color:#fff", text: "trial" }) : z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
-                h("div", { class: "tag", text: open ? `${clears} clears` : "locked" }));
-            card.append(row);
-        }
-        root.append(card);
+            const thumb = scenery(z, 112, 62);
+            thumb.className = "thumb";
+            const el = h("button", { class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
+                attrs: { "aria-label": `${z.name}, area level ${z.level}${open ? `, ${clears} clears` : ", locked"}` },
+                title: open ? (z.story ?? z.name) : "Not reached yet",
+                on: { click: () => { if (open && !here) c.act(s => setZone(s, id), `Travelling to ${z.name}`); } } },
+                h("div", { class: "pic" }, thumb,
+                    h("span", { class: "num-badge", text: n }),
+                    z.boss ? h("span", { class: "flag boss", text: "Boss" }) : z.trial ? h("span", { class: "flag trial", text: "Trial" }) : null,
+                    here && hc ? (() => { const a = spriteCanvas(hc.idle); if (a) a.className = "hero-mark"; return a; })() : null,
+                    open ? null : h("span", { class: "lock" }, glyph("block", 18))),
+                h("b", { text: z.name }),
+                h("span", { class: "meta" }, h("span", { class: "tag", text: `L${z.level}` }), h("span", { text: open ? `${clears} clear${clears === 1 ? "" : "s"}` : "locked" })));
+            return el;
+        };
+        act.zones.forEach((id, i) => {
+            if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
+            road.append(stop(id, String(i + 1)));
+        });
+        const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: "Off the road" }), stop(act.trial, "T"));
+        root.append(h("div", { class: "card act" },
+            h("h3", { text: `Act ${act.id} - ${act.name}` }),
+            h("div", { class: "story muted", text: done ? act.outro : act.intro }),
+            road, trial));
     }
     return root;
 }

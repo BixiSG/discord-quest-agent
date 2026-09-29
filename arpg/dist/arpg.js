@@ -5269,6 +5269,37 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
 .meter span { position: relative; display: block; padding-left: 6px; font: 700 11px/14px var(--mono); color: #f3e7d3; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
 .tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
 .stat, .attr { min-width: 0; } .stat b, .stat span, .attr b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* world: each act is a road of stops with their scenery */
+.toggle { display: flex; align-items: center; gap: 10px; padding: 4px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; align-self: flex-start; }
+.toggle i { flex: none; position: relative; width: 38px; height: 20px; background: #1a1410; border: 2px solid var(--line); }
+.toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: #6b5d4b; transition: left .12s; }
+.toggle.on i::after { left: 20px; background: #19b3a3; }
+.toggle b { display: block; font: 700 13px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1px; }
+.toggle small { color: var(--muted); font-size: 11px; }
+.act .story { margin-bottom: 12px; }
+.road { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
+.path { width: 18px; height: 4px; background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 7px); }
+.path.dim { opacity: .35; }
+.stop { width: 132px; display: flex; flex-direction: column; gap: 4px; padding: 3px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.stop:hover:not(.locked):not(.here) { filter: brightness(1.07); transform: translateY(-1px); }
+.stop.here { border-image-source: var(--fr-teal); color: #1a1410; }
+.stop.here .meta span:not(.tag) { color: #16433e; }
+.stop.locked { cursor: default; opacity: .6; }
+.stop.locked .thumb { filter: grayscale(1) brightness(.45); }
+.stop .pic { position: relative; line-height: 0; border: 2px solid var(--line); background: #1a1410; }
+.stop .thumb { width: 100%; image-rendering: pixelated; }
+.stop b { font: 700 12.5px/1.15 var(--display); font-stretch: condensed; letter-spacing: .4px; text-transform: uppercase; }
+.stop .meta { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--muted); }
+.num-badge { position: absolute; left: 0; top: 0; min-width: 16px; padding: 2px 3px; background: #1a1410; color: #ffc233; font: 700 10px/1 var(--mono); text-align: center; line-height: 12px; }
+.flag { position: absolute; right: 0; top: 0; padding: 2px 5px; font: 700 10px/12px var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; color: #1a1410; }
+.flag.boss { background: var(--ember); } .flag.trial { background: var(--violet); color: #fff; }
+.hero-mark { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); image-rendering: pixelated; }
+.lock { position: absolute; inset: 0; display: grid; place-items: center; color: #f3e7d3; }
+.trialrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 2px dashed color-mix(in srgb, var(--line) 40%, transparent); }
+.stop.trial:not(.here) { border-image-source: var(--fr-sunk); }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
@@ -5983,17 +6014,18 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
   }
 
   // src/ui/gfx/portrait.ts
-  function portrait(zone, cls, w2 = 150, h2 = 112) {
+  var cache4 = /* @__PURE__ */ new Map();
+  function paint(zone, w2, h2, cls) {
     const c = document.createElement("canvas");
     c.width = w2;
     c.height = h2;
     const g = c.getContext("2d");
     g.imageSmoothingEnabled = false;
-    const G2 = h2 - 14;
+    const G2 = h2 - Math.max(6, Math.round(h2 * 0.12));
     const set = setFor(zone.id, zone.name);
     g.fillStyle = set.sky;
     g.fillRect(0, 0, w2, h2);
-    set.layers.forEach((l, i) => tileLayer(g, l.sprite, w2, G2 + (l.drop ?? 0), 40 + i * 37));
+    set.layers.forEach((l, i) => tileLayer(g, l.sprite, w2, G2 + (l.drop ?? 0), 40 + i * 37 + zone.id.length * 13 % 60));
     g.globalAlpha = 0.12;
     g.fillStyle = zone.palette[0];
     g.fillRect(0, 0, w2, G2);
@@ -6004,7 +6036,7 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
     g.fillRect(0, G2, w2, 1);
     g.fillStyle = "#111";
     g.fillRect(0, G2 + 1, w2, 1);
-    const hc = HERO_CAST[cls];
+    const hc = cls ? HERO_CAST[cls] : null;
     if (hc && spriteOf(hc.idle)) {
       g.fillStyle = "rgba(0,0,0,.35)";
       g.beginPath();
@@ -6013,6 +6045,25 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
       drawSprite(g, hc.idle, 0, Math.round(w2 / 2), G2);
     }
     return c;
+  }
+  function copy(src) {
+    const c = document.createElement("canvas");
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext("2d").drawImage(src, 0, 0);
+    return c;
+  }
+  function portrait(zone, cls, w2 = 150, h2 = 112) {
+    return paint(zone, w2, h2, cls);
+  }
+  function scenery(zone, w2, h2) {
+    const key = `${zone.id}|${zone.name}|${w2}x${h2}`;
+    let c = cache4.get(key);
+    if (!c) {
+      c = paint(zone, w2, h2, null);
+      if (spriteOf(setFor(zone.id, zone.name).layers[0].sprite)) cache4.set(key, c);
+    }
+    return copy(c);
   }
 
   // src/ui/text.ts
@@ -6169,14 +6220,14 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
     if ((state.currency[currency] ?? 0) <= 0) return `no ${CURRENCIES[currency].name} left`;
     const found = findItem(state, uid);
     if (!found) return "item not found";
-    const copy = structuredClone(found.item);
+    const copy2 = structuredClone(found.item);
     const rng = new Rng(hashSeed(state.seed, 25458, state.craftSeq));
-    const err = eff(copy, rng);
+    const err = eff(copy2, rng);
     if (err) return err;
     state.craftSeq++;
-    copy.crafted = true;
-    Object.assign(found.item, copy);
-    if (!copy.name) delete found.item.name;
+    copy2.crafted = true;
+    Object.assign(found.item, copy2);
+    if (!copy2.name) delete found.item.name;
     state.currency[currency]--;
     if (found.slot) state.hero.rev++;
     return null;
@@ -6725,7 +6776,7 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
       case "tree":
         return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
       case "world":
-        return `${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
+        return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}`;
       case "atlas":
         return atlasSig(c);
       case "log":
@@ -7381,46 +7432,73 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
   }
   function worldView(c) {
     const st = c.state;
-    const root = h("div", { class: "col" });
-    root.append(h(
-      "div",
-      { class: "row" },
-      h(
-        "label",
-        { class: "chk" },
-        (() => {
-          const i = h("input", { attrs: { type: "checkbox" } });
-          i.checked = st.activity.autoPush;
-          i.addEventListener("change", () => c.act((s) => {
-            s.activity.autoPush = i.checked;
-          }));
-          return i;
-        })(),
-        "Auto-push: move on after 3 clean clears, fall back after 3 deaths"
-      )
-    ));
+    const root = h("div", { class: "col", style: "gap:14px" });
+    const push = h(
+      "button",
+      {
+        class: `toggle${st.activity.autoPush ? " on" : ""}`,
+        attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
+        on: { click: () => c.act((s) => {
+          s.activity.autoPush = !s.activity.autoPush;
+        }) }
+      },
+      h("i"),
+      h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths, take trials when out-levelled." }))
+    );
+    root.append(push);
+    const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
       if (!act.zones.some((z) => st.world.unlocked.includes(z))) continue;
       const done = !!st.world.clears[act.zones[act.zones.length - 1]];
-      const card = h("div", { class: "card" }, h("h3", { text: `Act ${act.id}: ${act.name}` }), h("div", { class: "story muted", style: "margin-bottom:8px", text: done ? act.outro : act.intro }));
-      for (const id of [...act.zones, act.trial]) {
+      const road = h("div", { class: "road" });
+      const stop = (id, n) => {
         const z = ZONES[id];
         const open = st.world.unlocked.includes(id);
-        const on = st.activity.zone === id;
+        const here = st.activity.mode === "zone" && st.activity.zone === id;
         const clears = st.world.clears[id] ?? 0;
-        const row = h(
-          "div",
-          { class: `zone${on ? " on" : ""}${open ? "" : " locked"}`, on: { click: () => {
-            if (open && !on) c.act((s) => setZone(s, id), `Travelling to ${z.name}`);
-          } } },
-          h("div", { class: "tag", text: `L${z.level}` }),
-          h("div", { class: "grow" }, h("div", { style: "font-weight:800", text: z.name }), open && z.story ? h("div", { class: "muted", style: "font-size:11px", text: z.story }) : null),
-          z.trial ? h("div", { class: "tag", style: "background:var(--violet);color:#fff", text: "trial" }) : z.boss ? h("div", { class: "tag", style: "background:var(--ember)", text: "boss" }) : null,
-          h("div", { class: "tag", text: open ? `${clears} clears` : "locked" })
+        const thumb = scenery(z, 112, 62);
+        thumb.className = "thumb";
+        const el = h(
+          "button",
+          {
+            class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
+            attrs: { "aria-label": `${z.name}, area level ${z.level}${open ? `, ${clears} clears` : ", locked"}` },
+            title: open ? z.story ?? z.name : "Not reached yet",
+            on: { click: () => {
+              if (open && !here) c.act((s) => setZone(s, id), `Travelling to ${z.name}`);
+            } }
+          },
+          h(
+            "div",
+            { class: "pic" },
+            thumb,
+            h("span", { class: "num-badge", text: n }),
+            z.boss ? h("span", { class: "flag boss", text: "Boss" }) : z.trial ? h("span", { class: "flag trial", text: "Trial" }) : null,
+            here && hc ? (() => {
+              const a = spriteCanvas(hc.idle);
+              if (a) a.className = "hero-mark";
+              return a;
+            })() : null,
+            open ? null : h("span", { class: "lock" }, glyph("block", 18))
+          ),
+          h("b", { text: z.name }),
+          h("span", { class: "meta" }, h("span", { class: "tag", text: `L${z.level}` }), h("span", { text: open ? `${clears} clear${clears === 1 ? "" : "s"}` : "locked" }))
         );
-        card.append(row);
-      }
-      root.append(card);
+        return el;
+      };
+      act.zones.forEach((id, i) => {
+        if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
+        road.append(stop(id, String(i + 1)));
+      });
+      const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: "Off the road" }), stop(act.trial, "T"));
+      root.append(h(
+        "div",
+        { class: "card act" },
+        h("h3", { text: `Act ${act.id} - ${act.name}` }),
+        h("div", { class: "story muted", text: done ? act.outro : act.intro }),
+        road,
+        trial
+      ));
     }
     return root;
   }
