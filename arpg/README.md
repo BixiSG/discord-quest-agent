@@ -46,6 +46,10 @@ an agent that has not been updated yet ignores the folder.
   view (normal, large, hidden), fold the game into a mini strip that keeps
   playing, maximize and close. Keys: 1-9 switch tabs, Esc closes a dialog.
 - Sound is off until you turn it on with the speaker button (or M).
+- Folded into the mini strip, the game never opens a dialog inside it: the
+  catch-up shows its progress in the strip, news goes to the strip's event
+  line, and a report or story beat waits behind a row that brings the full
+  window back. Tab, Enter and Space work on item slots and list rows.
 - Tabs carry a counter when something waits for you: unspent passive or
   atlas points, a free support slot, a full stash. The strip under the battle
   estimates the time to the next level from the last few minutes.

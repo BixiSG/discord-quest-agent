@@ -61,11 +61,22 @@ Play-feel review (user's call):
       Crawl item icons, Gear paper doll with hover-compare and drag and drop, Hero character sheet,
       Skills socket bar, World act roads with scenery, Forge smithy with currency orbs, Tree as an
       ember constellation, Atlas ladder and map thumbnails, Log journal icons, Menu switches.
-- [ ] UI states pass (user, 2026-09-29): every tab and feature must handle its states well. Found live:
-      the "While you were away" catch-up dialog opens inside the mini strip and is cut off.
-- [ ] The Hollowmarch card in the quest panel restyled to match; creation screen with class portraits.
-- [ ] Shrink the atlas (palette quantisation) - the build is about 1.2 MB.
-- [ ] Live check of each iteration in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord).
+- [x] UI states pass (user, 2026-09-29). Mini strip: dialogs wait hidden behind a strip row that
+      brings the window back, replay progress and toasts live in the strip, Esc is inert. Creation:
+      no stage/mini buttons. Narrow/small windows: grid can't outgrow the window, all 9 tabs in the
+      icon row, flexible skill sockets. Dead: HUD globe reads DEAD + seconds. Gear: stash-full bar,
+      empty-stash text, 2-hand/Quiver off-hand. World: cleared acts fold, map-mode note, opens on
+      the hero. Atlas before endgame: gate, act progress, dark ladder. Forge: dust-needed note.
+      Tags readable on gold/teal rows. Keyboard: slots/rack focusable, focus tooltips, focus kept
+      across rebuilds. Sound now starts off (old saved "on" ignored).
+- [x] Quest-panel card in the game's look, with closed / playing / in-the-strip states and
+      Show / Fold / Full window actions (ru/uk strings). Creation screen with class portraits.
+- [x] Atlas as an 8-bit palette PNG: build 1.2 MB -> 610 KiB.
+- [ ] Live check in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord). Discord was not
+      running during the UI states pass: the build is copied to `addons\`, not yet seen live.
+- [ ] Balance note from the bot saves: map auto-push drops the tier after 3 deaths, then after 5
+      clean maps goes straight back to the top tier and dies 3 more times (each death costs the map
+      and 3% of a level). Stepping the cap up one tier at a time would stop that loop. Not changed.
 
 ## 4. Before shipping
 - [ ] Fix whatever sections 1-3 turn up; for Hollowmarch run `cd arpg && npm install && npm run check`.
