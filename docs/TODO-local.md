@@ -61,6 +61,8 @@ Play-feel review (user's call):
       Crawl item icons, Gear paper doll with hover-compare and drag and drop, Hero character sheet,
       Skills socket bar, World act roads with scenery, Forge smithy with currency orbs, Tree as an
       ember constellation, Atlas ladder and map thumbnails, Log journal icons, Menu switches.
+- [ ] UI states pass (user, 2026-09-29): every tab and feature must handle its states well. Found live:
+      the "While you were away" catch-up dialog opens inside the mini strip and is cut off.
 - [ ] The Hollowmarch card in the quest panel restyled to match; creation screen with class portraits.
 - [ ] Shrink the atlas (palette quantisation) - the build is about 1.2 MB.
 - [ ] Live check of each iteration in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord).
