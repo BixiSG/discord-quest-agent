@@ -3628,13 +3628,15 @@
     fresh.totals = s.totals;
     fresh.stashCap = s.stashCap;
     fresh.craftSeq = s.craftSeq;
+    if (s.tz !== void 0) fresh.tz = s.tz;
+    if (s.events) fresh.events = s.events;
     if (heir) {
       heir.locked = true;
       fresh.stash.push(heir);
     }
     const echoPoints = Math.floor((s.echoes?.length ?? 0) / ECHOES_PER_POINT);
     fresh.atlas.points = echoPoints;
-    fresh.world.rewards = Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`);
+    fresh.world.rewards = [...Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`), ...s.world.rewards.filter((r3) => r3.startsWith("season:"))];
     for (const k of Object.keys(s)) delete s[k];
     Object.assign(s, fresh);
     pushLog(s, "info", heir ? "log.sunRisesHeir" : "log.sunRises");

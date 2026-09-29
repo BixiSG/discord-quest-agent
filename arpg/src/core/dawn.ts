@@ -58,11 +58,14 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     fresh.totals = s.totals;
     fresh.stashCap = s.stashCap;
     fresh.craftSeq = s.craftSeq;
+    // The calendar goes on: the player's UTC offset, seasonal tallies and which events were announced.
+    if (s.tz !== undefined) fresh.tz = s.tz;
+    if (s.events) fresh.events = s.events;
     if (heir) { heir.locked = true; fresh.stash.push(heir); }
     // Echo atlas points stay earned.
     const echoPoints = Math.floor((s.echoes?.length ?? 0) / ECHOES_PER_POINT);
     fresh.atlas.points = echoPoints;
-    fresh.world.rewards = Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`);
+    fresh.world.rewards = [...Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`), ...s.world.rewards.filter(r => r.startsWith("season:"))];
     for (const k of Object.keys(s) as (keyof GameState)[]) delete (s as unknown as Record<string, unknown>)[k];
     Object.assign(s, fresh);
     pushLog(s, "info", heir ? "log.sunRisesHeir" : "log.sunRises");

@@ -91,3 +91,15 @@ describe("relighting the sun", () => {
         void receiveItem;
     });
 });
+
+describe("the calendar across a dawn", () => {
+    it("keeps the UTC offset, the Hollow Night tallies and the announced-event marks", () => {
+        const g = shardsHeld();
+        g.tz = 180; g.events = { hollownight2026: 42 }; g.world.rewards.push("season:hollownight2026");
+        expect(relightSun(g)).toBeNull();
+        expect(g.tz).toBe(180);
+        expect(g.events).toEqual({ hollownight2026: 42 });
+        expect(g.world.rewards).toContain("season:hollownight2026");
+        expect(g.world.rewards.some(r => r.startsWith("act:"))).toBe(false);
+    });
+});
