@@ -697,6 +697,7 @@ function placeBeside(el: HTMLElement, anchor: HTMLElement, body: HTMLElement): v
 // ---- Skills ----------------------------------------------------------------
 
 const pctDelta = (a: number, b: number) => b / Math.max(0.01, a) - 1;
+
 const fmtPct = (d: number) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
 
 function skillsView(c: Ctx): HTMLElement {
@@ -797,6 +798,8 @@ function skillsView(c: Ctx): HTMLElement {
         }
     });
     const bar = h("div", { class: "card socketbar" }, h("h3", { text: t("skills.links") }), links);
+    // A label whose word doesn't fit its socket whole (long Russian and Ukrainian names) drops to the small size.
+    requestAnimationFrame(() => { for (const b of links.querySelectorAll<HTMLElement>(".sock b")) if (b.scrollWidth > b.clientWidth + 1) b.classList.add("long"); });
     return h("div", { class: "col", style: "gap:14px" }, bar, h("div", { class: "grid2" },
         h("div", null, h("div", { class: "sec", text: t("skills.mainSkill") }), skills),
         h("div", null, h("div", { class: "sec" }, t("skills.supports") + " ", h("span", { class: "num", text: `${active.length}/${slots}` }),

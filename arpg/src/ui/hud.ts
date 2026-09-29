@@ -180,7 +180,11 @@ const clamp01 = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v))
 /** Trim text to fit a width in pixel-font pixels. */
 function fit(text: string, max: number): string {
     if (textWidth(text) + 2 <= max) return text;
+    // "AREA - TIER 3" that doesn't fit shows the area whole rather than a cut tier.
+    const head = text.split(" - ")[0]!;
+    if (head !== text) return fit(head, max);
     let t = text;
     while (t.length > 1 && textWidth(t + ".") + 2 > max) t = t.slice(0, -1);
-    return t.trimEnd() + ".";
+    // A cut right after a word keeps no dangling separator ("SALT FLATS - ." reads "SALT FLATS.").
+    return t.replace(/[\s\-:,]+$/, "") + ".";
 }
