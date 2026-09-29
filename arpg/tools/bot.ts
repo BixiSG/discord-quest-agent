@@ -1,8 +1,9 @@
 // A simple player for the balance simulator: picks the best skill and
-// supports, and spends passive points greedily by build score.
+// supports, spends passive points greedily by build score, and invests dust
+// the way an engaged player would (market upgrades, hone, drill, stones, forge).
 
 import { RARITY_RANK, buildScore, salvage, setSkill, setSupports, sheetOf } from "../src/core/game";
-import { forgeCost, forgeRare } from "../src/core/crafting";
+import { forgeCost, forgeRare, hone, honeCost, temperCost, temperRelic } from "../src/core/crafting";
 import { SLOTS } from "../src/core/types";
 import { deriveSheet, supportSlots } from "../src/core/character";
 import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
@@ -12,7 +13,8 @@ import { scoutPinnacle } from "../src/core/scout";
 import { buyGear, tickMarket } from "../src/core/market";
 import { chooseDawnPerk, perksToPick, relightSun } from "../src/core/dawn";
 import { allShards } from "../src/core/echoes";
-import { autoSetStones, cutStones } from "../src/core/sockets";
+import { autoSetStones, cutStones, drillCost, drillSocket } from "../src/core/sockets";
+import { baseOf } from "../src/core/items";
 import { upgradeSlot } from "../src/core/game";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
 import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode } from "../src/core/passives";
@@ -79,14 +81,35 @@ export function botTune(state: GameState): void {
     if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
     // Shrine: from level 20, keep every blessing up (spare orbs pay first).
     if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
-    // Dawns: relight as soon as all four shards are held; perks in a fixed order.
+    // Dawns: relight as soon as all three shards are held; perks in a fixed order.
     if (allShards(state)) relightSun(state);
     for (const id of ["firstlight", "brightember", "steadyflame", "keeneye", "oldroads", "warmhands", "longmemory", "deeppockets", "stonefinder", "tradersmark"]) if (perksToPick(state)) chooseDawnPerk(state, id);
     // Market: buy what would be worn at once (keeping a reserve for the shrine); cut stones up.
     tickMarket(state);
     state.market.pedlar.forEach((o, i) => { if (!o.sold && state.dust >= o.price * 2 && upgradeSlot(state, o.item)) buyGear(state, i); });
     for (const k of Object.keys(state.stones)) while ((state.stones[k] ?? 0) >= 3 && !cutStones(state, k)) { /* cut */ }
+    // Hone and drill worn gear that isn't about to be replaced (base within 12 levels of the hero),
+    // the cheapest step first, keeping a reserve for the forge.
+    for (let n = 0; n < 60; n++) {
+        let pick: { cost: number; act: () => void } | null = null;
+        for (const s of SLOTS) {
+            const it = hero.equipment[s];
+            if (!it) continue;
+            const tc = temperCost(it);
+            if (tc !== null && (!pick || tc < pick.cost)) pick = { cost: tc, act: () => temperRelic(state, it.uid) };
+            if (baseOf(it).level < hero.level - 12) continue;
+            const hc = honeCost(it), dc = drillCost(it);
+            if (hc !== null && (!pick || hc < pick.cost)) pick = { cost: hc, act: () => hone(state, it.uid) };
+            if (dc !== null && (!pick || dc < pick.cost)) pick = { cost: dc, act: () => drillSocket(state, it.uid) };
+        }
+        if (!pick || state.dust - pick.cost < forgeCost(state) * 3) break;
+        pick.act();
+    }
     autoSetStones(state);
+    // Honing locks a piece; once it is off and 10+ levels behind, let it go like any old gear.
+    const stale = state.stash.filter(x => x.locked && x.quality && baseOf(x).level <= hero.level - 10 && !upgradeSlot(state, x));
+    for (const x of stale) delete x.locked;
+    salvage(state, stale.map(x => x.uid));
     // Spend dust like a player would: forge rares for the weakest slots (up to 20 per tune).
     for (let n = 0; n < 20 && state.dust >= forgeCost(state) * 3; n++) {
         const worst = SLOTS.map(s => ({ s, v: hero.equipment[s] ? (RARITY_RANK[hero.equipment[s]!.rarity] * 100 + hero.equipment[s]!.ilvl) : -1 }))

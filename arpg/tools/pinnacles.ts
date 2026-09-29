@@ -1,8 +1,10 @@
 // Pinnacle check: fights each pinnacle three times on a copy of a saved hero
 // and prints win/death, time and boss life left. "invest" first hones and
 // drills every worn piece and fills the sockets with Radiant stones (what an
-// engaged player could reach). Usage:
-//   node tools/run-ts.mjs tools/pinnacles.ts <HM1 export file> [invest]
+// engaged player could reach). "dawn=N" puts the hero N dawns on (the world
+// tougher, one perk per dawn: damage, life, then the rest), "level=N" sets the
+// level (passives are not re-spent). Usage:
+//   node tools/run-ts.mjs tools/pinnacles.ts <HM1 export file> [invest] [dawn=N] [level=N]
 // (make one with tools/make-save.ts)
 
 import { readFileSync } from "node:fs";
@@ -16,7 +18,11 @@ import { hone, honeCost } from "../src/core/crafting";
 import { addStone, autoSetStones, drillCost, drillSocket } from "../src/core/sockets";
 import { STONE_ORDER } from "../src/core/data";
 const s0 = validateState(unwrap<any>(importText(readFileSync(process.argv[2]!, "utf8"))).state);
-if (process.argv[3] === "invest") {
+const arg = (k: string) => process.argv.slice(3).find(a => a.startsWith(k + "="))?.split("=")[1];
+const dawn = Number(arg("dawn") ?? 0), level = Number(arg("level") ?? 0);
+if (dawn > 0) { s0.hero.dawn = { level: dawn, perks: ["brightember", "steadyflame", "firstlight", "keeneye", "oldroads"].slice(0, dawn) }; s0.hero.rev++; }
+if (level > 0) { s0.hero.level = level; s0.hero.rev++; }
+if (process.argv.includes("invest")) {
   // An engaged player: every piece honed to 20, drilled to its cap, and the best Radiant stone per socket.
   s0.dust = 1e9;
   for (const k of SLOTS) { const it = s0.hero.equipment[k]; if (!it) continue; while (honeCost(it) !== null) hone(s0, it.uid); while (drillCost(it) !== null) drillSocket(s0, it.uid); }
@@ -25,7 +31,7 @@ if (process.argv[3] === "invest") {
   s0.hero.rev++;
 }
 const sh = sheetOf(s0);
-console.log(`hero L${s0.hero.level} dps ${Math.round(sh.skill.dps)} life ${Math.round(sh.life)} es ${Math.round(sh.es)} ehp ${JSON.stringify(Object.fromEntries(Object.entries(sh.ehp).map(([k, v]) => [k, Math.round(v as number)])))}`);
+console.log(`hero L${s0.hero.level} D${dawn} dps ${Math.round(sh.skill.dps)} life ${Math.round(sh.life)} es ${Math.round(sh.es)} ehp ${JSON.stringify(Object.fromEntries(Object.entries(sh.ehp).map(([k, v]) => [k, Math.round(v as number)])))}`);
 for (const p of Object.values(PINNACLES)) {
   const d = MONSTERS[p.boss]!;
   let res: string[] = [];
