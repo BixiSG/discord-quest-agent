@@ -10,6 +10,8 @@ import { setCompanion } from "../src/core/companions";
 import { BLESSINGS, setKeep } from "../src/core/shrine";
 import { scoutPinnacle } from "../src/core/scout";
 import { buyGear, tickMarket } from "../src/core/market";
+import { chooseDawnPerk, perksToPick, relightSun } from "../src/core/dawn";
+import { allShards } from "../src/core/echoes";
 import { autoSetStones, cutStones } from "../src/core/sockets";
 import { upgradeSlot } from "../src/core/game";
 import { canTakeAtlas, endgameOpen, queuePinnacle, setMapMode, takeAtlas } from "../src/core/maps";
@@ -77,6 +79,9 @@ export function botTune(state: GameState): void {
     if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
     // Shrine: from level 20, keep every blessing up (spare orbs pay first).
     if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
+    // Dawns: relight as soon as all four shards are held; perks in a fixed order.
+    if (allShards(state)) relightSun(state);
+    for (const id of ["firstlight", "brightember", "steadyflame", "keeneye", "oldroads", "warmhands", "longmemory", "deeppockets", "stonefinder", "tradersmark"]) if (perksToPick(state)) chooseDawnPerk(state, id);
     // Market: buy what would be worn at once (keeping a reserve for the shrine); cut stones up.
     tickMarket(state);
     state.market.pedlar.forEach((o, i) => { if (!o.sold && state.dust >= o.price * 2 && upgradeSlot(state, o.item)) buyGear(state, i); });

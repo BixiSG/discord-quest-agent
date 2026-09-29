@@ -40,12 +40,13 @@ for (let t = start, next = every; t < start + hours * HOUR;) {
         const behind = g.stash.filter(it => baseOf(it).level < g.hero.level - 10).length;
         const locked = g.stash.filter(it => levelReq(it) > g.hero.level).length;
         const cur = Object.entries(g.currency).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${k} ${v}`).join(", ");
-        console.log(`${((t - start) / HOUR).toFixed(0)}h L${g.hero.level} ${g.activity.mode === "map" ? `maps (cap ${g.activity.autoCap || "-"}, xp cap ${autoXpCap(g)})` : g.activity.zone}`
+        console.log(`${((t - start) / HOUR).toFixed(0)}h D${g.hero.dawn?.level ?? 0} L${g.hero.level} ${g.activity.mode === "map" ? `maps (cap ${g.activity.autoCap || "-"}, xp cap ${autoXpCap(g)})` : g.activity.zone}`
             + ` | stash ${g.stash.length}/${g.stashCap} (behind ${behind}, need level ${locked}) case ${g.relics.length} codex ${Object.keys(g.codex).length}`
             + ` | swapped ${g.totals.swapped ?? 0} dust ${Math.round(g.dust)} | ${cur}`);
         console.log(`    deaths ${g.totals.deaths}: ${Object.entries(deaths).map(([k, v]) => `${k}:${v}`).join(" ") || "none"}`);
         const worn = Object.values(g.hero.equipment).flatMap(x => x?.stones ?? []);
         console.log(`    stones: pouch ${Object.values(g.stones ?? {}).reduce((a, b) => a + b, 0)} (${Object.entries(g.stones ?? {}).map(([k, v]) => `${k}x${v}`).join(" ")}), worn ${worn.filter(Boolean).length}/${worn.length} [${worn.join(",")}] market seq ${g.market?.seq ?? 0}`);
+        console.log(`    pinnacle kills ${JSON.stringify(g.pinnacleKills)} sigils ${JSON.stringify(g.sigils)} echoes ${g.echoes?.length ?? 0}`);
         for (const k in deaths) delete deaths[k];
     }
 }

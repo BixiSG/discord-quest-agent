@@ -1,4 +1,4 @@
-// The Rekindling (round 5): with all four sun shards the hero can relight the
+// The Rekindling (round 5): with the three sun shards the hero can relight the
 // sun. The March starts again one dawn later - a new hero on the shore - but
 // what the hero has *collected* carries over: the relic case and codex,
 // companions and their bond, echoes, the stone pouch, bought stash room,
@@ -28,7 +28,7 @@ export function heirloomCandidates(s: GameState): Item[] {
  * its reference). `cls` picks the calling for the new dawn (default: the same).
  */
 export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string } = {}): string | null {
-    if (!allShards(s)) return "needs all four sun shards";
+    if (!allShards(s)) return "needs the three sun shards";
     const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
     const dawn = dawnOf(s) + 1;
     const heir = opts.heirloom !== undefined ? heirloomCandidates(s).find(x => x.uid === opts.heirloom) : undefined;

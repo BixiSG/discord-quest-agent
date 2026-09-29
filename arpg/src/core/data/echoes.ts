@@ -45,5 +45,5 @@ export const MAP_ECHOES = list.filter(e => !e.pinnacle).map(e => e.id);
 /** An atlas point for every this many echoes found. */
 export const ECHOES_PER_POINT = 3;
 
-/** What the hero hears when all four shards are held (the choice to relight the sun). */
-export const SHARDS_TEXT = "Four pieces of the sun, still warm, and the ember in your chest beating in time with them. Put them together and the March might see a morning. The ember would have to go into the fire too.";
+/** What the hero hears when all three shards are held (the choice to relight the sun). */
+export const SHARDS_TEXT = "Three pieces of the sun, still warm, and the ember in your chest beating in time with them. Put them together and the March might see a morning. The ember would have to go into the fire too.";

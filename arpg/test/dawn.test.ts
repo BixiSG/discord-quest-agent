@@ -17,7 +17,7 @@ const shardsHeld = () => {
 };
 
 describe("relighting the sun", () => {
-    it("needs all four shards", () => {
+    it("needs the three sun shards (the Hollow Crown is optional)", () => {
         const g = newGame({ name: "Ash", cls: "vanguard", now: 0, seed: 71 });
         expect(relightSun(g)).toMatch(/shards/);
     });

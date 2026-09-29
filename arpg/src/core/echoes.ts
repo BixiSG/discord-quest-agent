@@ -3,13 +3,18 @@
 // Every third echo is worth an atlas point, granted through the rewards
 // ledger so it is never paid twice.
 
-import { ECHOES, ECHOES_PER_POINT, MAP_ECHOES, PINNACLES } from "./data";
+import { ECHOES, ECHOES_PER_POINT, MAP_ECHOES } from "./data";
 import type { Rng } from "./rng";
 import type { GameState } from "./state";
 
-/** Sun shards held: one per pinnacle ever killed. */
-export const sunShards = (s: GameState) => Object.values(PINNACLES).filter(p => (s.pinnacleKills[p.id] ?? 0) > 0).map(p => p.id);
-export const allShards = (s: GameState) => sunShards(s).length === Object.keys(PINNACLES).length;
+/**
+ * The three who each took a piece of the sun. The Hollow Crown took none - it
+ * ate the light - so its fight is the optional one beyond the Rekindling.
+ */
+export const SUN_PINNACLES = ["drownedsun", "glasschoir", "ashenking"];
+/** Sun shards held: one per sun pinnacle ever killed. */
+export const sunShards = (s: GameState) => SUN_PINNACLES.filter(id => (s.pinnacleKills[id] ?? 0) > 0);
+export const allShards = (s: GameState) => sunShards(s).length === SUN_PINNACLES.length;
 
 /** Adds an echo if new; pays the atlas points it completes. Returns true if it was new. */
 export function grantEcho(s: GameState, id: string): boolean {
