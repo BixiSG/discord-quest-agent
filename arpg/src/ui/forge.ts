@@ -13,6 +13,11 @@ import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { glyph } from "./glyphs";
 import { itemCard, markWorn, withTip, type Ctx } from "./views";
+import { cutCost, cutStones, drillCost, drillSocket, pouchList, setStone, socketCap } from "../core/sockets";
+import { placeOf } from "../core/items";
+import { STONE_TIERS, parseStone, stoneKey } from "../core/data";
+import { stoneChip, stoneLine, stoneTip } from "./stones";
+import { stoneFullName } from "../i18n/names";
 import { lang, t } from "../i18n";
 import { affixTemplate, currencyBlurb, currencyName, itemName } from "../i18n/names";
 
@@ -81,6 +86,25 @@ export function forgeView(c: Ctx): HTMLElement {
                     title: [t("forge.benchTip"), benched ? t("forge.benchTipReplace") : "", t("forge.benchHave", { n: grafts })].filter(Boolean).join(" "),
                     on: { click: () => c.act(s => benchCraft(s, it.uid, pick.value), t("forge.benched")) } })));
         }
+        // Sockets: drill one more, set or pry out each stone.
+        const dc = drillCost(it);
+        const srow = h("div", { class: "wrow sockwork" }, h("b", { text: t("forge.sockets") }));
+        if (!it.sockets) srow.append(h("span", { class: "muted grow", style: "font-size:12px", text: t("forge.noSockets") }));
+        const place = placeOf(it);
+        for (let i = 0; i < (it.sockets ?? 0); i++) {
+            const cur = it.stones?.[i] ?? null;
+            const pick = h("select", { attrs: { "aria-label": t("forge.setStone") } });
+            pick.append(h("option", { text: cur ? stoneFullName(cur) : t("forge.setStone"), attrs: { value: "" } }));
+            for (const { key, n } of pouchList(st)) pick.append(h("option", { text: `${stoneFullName(key)} x${n} - ${stoneLine(key, place)}`, attrs: { value: key } }));
+            pick.addEventListener("change", () => { if (pick.value) c.act(s => setStone(s, it.uid, i, pick.value)); });
+            const chip = stoneChip(cur, 16);
+            if (cur) chip.dataset.tip = t("forge.here", { effect: stoneLine(cur, place) });
+            srow.append(h("span", { class: "sock1" }, chip, pick,
+                cur ? h("button", { class: "x", text: "x", title: t("forge.pry"), attrs: { "aria-label": t("forge.pry") }, on: { click: () => c.act(s => setStone(s, it.uid, i, null)) } }) : null));
+        }
+        srow.append(h("button", { class: "btn alt small", text: dc === null ? t("forge.socketsFull") : t("forge.drill", { cost: fmt(dc) }), title: t("forge.drillTip", { n: socketCap(it) }),
+            attrs: dc !== null && st.dust >= dc ? {} : { disabled: "" }, on: { click: () => c.act(s => drillSocket(s, it.uid)) } }));
+        work.append(srow);
         work.append(h("div", { class: "wrow" }, h("b", { text: t("forge.keep") }),
             h("span", { class: "muted grow", style: "font-size:12px", text: it.locked ? t("forge.lockedNote") : t("forge.unlockedNote") }),
             h("button", { class: "btn alt small", text: it.locked ? t("gear.unlock") : t("gear.lock"), attrs: { "data-key": "l" }, on: { click: () => c.act(s => setLocked(s, it.uid, !it.locked)) } })));
@@ -139,5 +163,27 @@ export function forgeView(c: Ctx): HTMLElement {
         h("div", { class: "smithy" },
             h("div", { class: "card" }, h("h3", { text: t("forge.rack") }), rack),
             anvil,
-            h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)));
+            h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)),
+        pouchCard(c));
+}
+
+/** The stone pouch: every stone held, what it does, and cutting three into one of the next tier. */
+function pouchCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const list = pouchList(st);
+    const box = h("div", { class: "pouch" });
+    for (const { key, n } of list) {
+        const p = parseStone(key)!;
+        const chip = stoneChip(key, 18);
+        const row = h("div", { class: "pouchrow" }, chip, h("b", { class: "grow", text: stoneFullName(key) }), h("span", { class: "num", text: `x${n}` }));
+        row.dataset.tip = stoneTip(key);
+        if (p.tier < STONE_TIERS.length - 1) {
+            const cost = cutCost(p.tier), next = stoneKey(p.id, p.tier + 1);
+            row.append(h("button", { class: "btn alt small", text: t("pouch.cut", { cost: fmt(cost) }), title: t("pouch.cutTip", { name: stoneFullName(key), next: stoneFullName(next) }),
+                attrs: n >= 3 && st.dust >= cost ? {} : { disabled: "" }, on: { click: () => c.act(s => cutStones(s, key)) } }));
+        }
+        box.append(row);
+    }
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("pouch.title") }), h("span", { class: "num", text: String(list.reduce((a, b) => a + b.n, 0)) })),
+        list.length ? box : h("div", { class: "muted", style: "font-size:12px", text: t("pouch.empty") }));
 }

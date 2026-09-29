@@ -27,6 +27,7 @@ describe("relighting the sun", () => {
         g.companions.saltcrab = 9000;
         g.echoes = ["bell", "warden", "saltchild", "regent"];
         addStone(g, "ruby:3", 2);
+        g.hero.equipment.weapon!.sockets = 1; g.hero.equipment.weapon!.stones = ["topaz:2"];
         g.codex = { lampwick: 1 };
         const heir: Item = { uid: 900, base: "sword5", ilvl: 70, rarity: "rare", name: "Heir", affixes: [] };
         const other: Item = { uid: 901, base: "sword5", ilvl: 70, rarity: "rare", name: "Lost", affixes: [] };
@@ -44,6 +45,7 @@ describe("relighting the sun", () => {
         expect(g.companions.saltcrab).toBe(9000);
         expect(g.echoes.length).toBe(4);
         expect(g.stones["ruby:3"]).toBe(2);
+        expect(g.stones["topaz:2"]).toBe(1); // from the gear left behind
         expect(g.codex).toEqual({ lampwick: 1 });
         expect(g.stash.map(x => x.uid)).toEqual([900]);
         expect(g.stash[0]!.locked).toBe(true);

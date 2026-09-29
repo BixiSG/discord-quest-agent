@@ -1,6 +1,12 @@
 // Tab views. Each returns a fresh element; the app swaps it in when the view's
 // signature changes, so scroll position and selection survive sim ticks.
 
+import { marketSig, marketView } from "./market";
+import { socketRows } from "./stones";
+import { allShards, sunShards, SUN_PINNACLES } from "../core/echoes";
+import { chooseDawnPerk, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
+import { DAWN_PERKS, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, ECHOES, ECHO_ORDER } from "../core/data";
+import { dawnTitle, echoText, echoWho, perkName, perkText, pinName, storyText } from "../i18n/names";
 import { ACTS, AFFIXES, ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, CURRENCIES, PASSIVES, RELICS, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, xpToNext, slotsFor, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
 import { runZone } from "../core/sim/engine";
@@ -45,10 +51,10 @@ export interface Ctx {
     storeKind: string;
 }
 
-export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "atlas" | "log" | "menu";
+export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "atlas" | "log" | "menu" | "market";
 /** The tabs in rail order; labels are "nav.<id>" strings. */
 export const VIEWS: { id: ViewId }[] = [
-    { id: "hero" }, { id: "gear" }, { id: "forge" }, { id: "skills" }, { id: "tree" }, { id: "world" }, { id: "atlas" }, { id: "log" }, { id: "menu" },
+    { id: "hero" }, { id: "gear" }, { id: "forge" }, { id: "skills" }, { id: "tree" }, { id: "world" }, { id: "atlas" }, { id: "log" }, { id: "menu" }, { id: "market" },
 ];
 
 /** What a view depends on; it is rebuilt when this changes (the app adds the language). */
@@ -57,13 +63,14 @@ export function viewSig(id: ViewId, c: Ctx): string {
     switch (id) {
         case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
-        case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
+        case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== undefined ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map(k => s.hero.equipment[k]).find(x => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
         case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}`;
         case "atlas": return atlasSig(c);
-        case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
-        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${JSON.stringify(s.settings.filter)}`;
+        case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
+        case "menu": return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
+        case "market": return marketSig(s);
     }
 }
 
@@ -78,6 +85,7 @@ export function renderView(id: ViewId, c: Ctx): HTMLElement {
         case "atlas": return atlasView(c);
         case "log": return logView(c);
         case "menu": return menuView(c);
+        case "market": return marketView(c);
     }
 }
 
@@ -327,6 +335,8 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
         for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" }, affixLine(a),
             h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })));
     }
+    const sockets = socketRows(item);
+    if (sockets) card.append(h("hr"), sockets);
     const relic = relicOf(item);
     if (relic) {
         card.append(h("hr"));
@@ -954,8 +964,10 @@ let logFilter = "all";
 function logView(c: Ctx): HTMLElement {
     const log = c.state.log;
     const n = (k: string) => log.filter(e => e.kind === k).length;
-    const filter = chips<string>([["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS).filter(k => n(k)).map(k => [k, t(`logkind.${k}`), n(k)] as [string, string, number])],
+    const filter = chips<string>([["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS).filter(k => n(k)).map(k => [k, t(`logkind.${k}`), n(k)] as [string, string, number]),
+        ["echoes", t("log.echoes"), c.state.echoes.length]],
         logFilter, v => { logFilter = v; c.rerender(); });
+    if (logFilter === "echoes") return h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter), echoesView(c));
     const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter));
     const now = Date.now();
     for (const e of [...log].reverse()) {
@@ -965,6 +977,22 @@ function logView(c: Ctx): HTMLElement {
             h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })));
     }
     return el;
+}
+
+/** The echoes: pages heard, in the order of the story; unheard ones say where they wait. */
+function echoesView(c: Ctx): HTMLElement {
+    const st = c.state;
+    const box = h("div", { class: "col echoes", style: "gap:8px" },
+        h("div", { class: "split row" }, h("b", { text: t("echoes.title") }), h("span", { class: "num", text: t("echoes.count", { n: st.echoes.length, total: ECHO_ORDER.length }) })),
+        h("div", { class: "muted", style: "font-size:12px", text: t("echoes.note") }));
+    for (const id of ECHO_ORDER) {
+        const heard = st.echoes.includes(id);
+        const pin = ECHOES[id]!.pinnacle;
+        box.append(h("div", { class: `echo${heard ? "" : " unheard"}` },
+            h("b", { text: heard ? echoWho(id) : pin ? pinName(pin) : "???" }),
+            h("div", { class: heard ? "story" : "muted", text: heard ? echoText(id) : pin ? t("echoes.unknownPin", { pin: pinName(pin) }) : t("echoes.unknown") })));
+    }
+    return box;
 }
 
 function fmtAgo(ms: number): string {
@@ -990,13 +1018,15 @@ function menuView(c: Ctx): HTMLElement {
         h("i"), h("span", null, h("b", { text: t("menu.autoEquip") }), h("small", { text: t("menu.autoEquipNote") })));
     const upkeep = h("button", { class: `toggle${st.settings.upkeep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.upkeep) }, on: { click: () => c.act(s => { s.settings.upkeep = !s.settings.upkeep; }) } },
         h("i"), h("span", null, h("b", { text: t("menu.upkeep") }), h("small", { text: t("menu.upkeepNote") })));
+    const autoStones = h("button", { class: `toggle${st.settings.autoStones ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoStones) }, on: { click: () => c.act(s => { s.settings.autoStones = !s.settings.autoStones; }) } },
+        h("i"), h("span", null, h("b", { text: t("menu.autoStones") }), h("small", { text: t("menu.autoStonesNote") })));
 
     const out = h("textarea", { attrs: { readonly: "", placeholder: t("menu.exportPh") } });
     const inp = h("textarea", { attrs: { placeholder: t("menu.importPh") } });
     const tot = st.totals;
     return h("div", { class: "grid2" },
         h("div", { class: "card col" }, h("h3", { text: t("menu.loot") }),
-            auto, upkeep,
+            auto, upkeep, autoStones,
             filterEditor(c),
             h("div", { class: "row" }, t("menu.otherwise"), keep),
             h("div", { class: "muted", style: "font-size:12px", text: t("menu.rulesNote") })),
@@ -1009,6 +1039,7 @@ function menuView(c: Ctx): HTMLElement {
         h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
             [t("menu.runs"), fmt(tot.runs)], [t("menu.kills"), fmt(tot.kills)], [t("menu.deaths"), fmt(tot.deaths)], [t("menu.items"), fmt(tot.items)], [t("menu.salvaged"), fmt(tot.salvaged)], [t("menu.swapped"), fmt(tot.swapped ?? 0)],
             [t("menu.time"), t("menu.hours", { n: (tot.simMs / 3600e3).toFixed(1) })]])),
+        rekindleCard(c),
         h("div", { class: "card col" }, h("h3", { text: t("menu.danger") }),
             h("button", { class: "btn hot", text: t("menu.newHero"), on: { click: () => {
                 const close = c.modal(h("div", { class: "card col" }, h("h3", { text: t("menu.startOver") }),
@@ -1017,6 +1048,67 @@ function menuView(c: Ctx): HTMLElement {
                         h("button", { class: "btn alt", text: t("common.cancel"), on: { click: () => close() } }))));
             } } })),
     );
+}
+
+/** The Rekindling: the sun shards held, the relight (with its confirmation), the dawn and its perks. */
+function rekindleCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const held = sunShards(st);
+    const dawn = dawnOf(st);
+    const card = h("div", { class: "card col dawncard" }, h("h3", { class: "split" }, h("span", { text: t("dawn.title") }), dawn ? h("span", { class: "tag dawn", text: dawnTitle(dawn) }) : null));
+    card.append(h("div", { class: "shards" }, ...SUN_PINNACLES.map(p => h("span", { class: `shard${held.includes(p) ? " on" : ""}`, title: pinName(p) }, glyph("sun", 18))),
+        h("b", { text: t("dawn.shards", { n: held.length, total: SUN_PINNACLES.length }) })));
+    card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.note", { pins: SUN_PINNACLES.map(p => pinName(p)).join(t("common.list")) }) }));
+    if (dawn) {
+        card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.world", { tough: DAWN_TOUGHER * dawn, rich: DAWN_RICHER * dawn }) }));
+        const perks = st.hero.dawn?.perks ?? [];
+        if (perks.length) card.append(h("div", { style: "font-size:12px", text: t("dawn.perks", { list: perks.map(p => perkName(p)).join(t("common.list")) }) }));
+        if (perksToPick(st)) card.append(h("button", { class: "btn hot", text: t("dawn.pickNow"), on: { click: () => perkDialog(c) } }));
+    }
+    if (allShards(st)) {
+        card.append(h("div", { class: "story", text: storyText("echo.shards") }),
+            h("button", { class: "btn hot", text: t("dawn.relight"), on: { click: () => relightDialog(c) } }));
+    }
+    return card;
+}
+
+function relightDialog(c: Ctx): void {
+    const st = c.state;
+    const heir = h("select", { attrs: { "aria-label": t("dawn.heirloom") } });
+    heir.append(h("option", { text: t("dawn.noHeirloom"), attrs: { value: "" } }));
+    for (const it of heirloomCandidates(st)) heir.append(h("option", { text: itemName(it), attrs: { value: String(it.uid) } }));
+    const cls = h("select", { attrs: { "aria-label": t("dawn.calling") } });
+    for (const k of Object.keys(CLASSES)) { const o = h("option", { text: className(k), attrs: { value: k } }); if (k === st.hero.cls) o.selected = true; cls.append(o); }
+    const next = dawnOf(st) + 1;
+    const close = c.modal(h("div", { class: "card col", style: "max-width:560px" }, h("h3", { text: t("dawn.confirm") }),
+        h("div", { style: "font-size:13px", text: t("dawn.gains", { dawn: dawnTitle(next), xp: DAWN_XP, tough: DAWN_TOUGHER, rich: DAWN_RICHER }) }),
+        h("div", { class: "muted", style: "font-size:12px", text: t("dawn.keeps") }),
+        h("div", { class: "muted", style: "font-size:12px", text: t("dawn.resets") }),
+        h("div", { class: "row" }, h("b", { text: t("dawn.heirloom") }), heir),
+        h("div", { class: "row" }, h("b", { text: t("dawn.calling") }), cls),
+        h("div", { class: "row" },
+            h("button", { class: "btn hot", text: t("dawn.go"), on: { click: () => {
+                close();
+                c.act(s => relightSun(s, { heirloom: heir.value ? Number(heir.value) : undefined, cls: cls.value }));
+                const done = c.modal(h("div", { class: "card col", style: "max-width:560px" }, h("h3", { text: dawnTitle(dawnOf(c.state)) }),
+                    ...storyText("dawn.story").split("\n\n").map(p => h("div", { class: "story", text: p })),
+                    h("button", { class: "btn", text: t("dawn.pickNow"), on: { click: () => { done(); perkDialog(c); } } })));
+            } } }),
+            h("button", { class: "btn alt", text: t("common.cancel"), on: { click: () => close() } }))));
+}
+
+function perkDialog(c: Ctx): void {
+    const st = c.state;
+    const taken = st.hero.dawn?.perks ?? [];
+    const list = h("div", { class: "perks" });
+    const close = c.modal(h("div", { class: "card col", style: "max-width:600px" }, h("h3", { text: t("dawn.perkTitle", { dawn: dawnTitle(dawnOf(st)) }) }),
+        h("div", { class: "muted", style: "font-size:12px", text: t("dawn.perkNote") }), list,
+        h("button", { class: "btn alt", text: t("common.close"), on: { click: () => close() } })));
+    for (const p of DAWN_PERKS) {
+        const has = taken.includes(p.id);
+        list.append(h("button", { class: `perk${has ? " on" : ""}`, attrs: has ? { disabled: "" } : {}, on: { click: () => { close(); c.act(s => chooseDawnPerk(s, p.id), perkName(p.id)); } } },
+            h("b", { text: perkName(p.id) }), h("span", { text: perkText(p.id) })));
+    }
 }
 
 function filterEditor(c: Ctx): HTMLElement {

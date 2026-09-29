@@ -6,6 +6,8 @@
 import { ECHOES, ECHOES_PER_POINT, MAP_ECHOES } from "./data";
 import type { Rng } from "./rng";
 import type { GameState } from "./state";
+import { pushLog } from "./game";
+import { ref } from "../i18n/refs";
 
 /**
  * The three who each took a piece of the sun. The Hollow Crown took none - it
@@ -22,6 +24,7 @@ export function grantEcho(s: GameState, id: string): boolean {
     s.echoes ??= [];
     if (s.echoes.includes(id)) return false;
     s.echoes.push(id);
+    pushLog(s, "info", "log.echo", { who: ref.key(`echo.${id}.who`) });
     const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
     s.world.rewards ??= [];
     for (let k = 1; k <= earned; k++) {

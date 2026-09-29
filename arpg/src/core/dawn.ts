@@ -9,6 +9,7 @@ import { allShards } from "./echoes";
 import { ECHOES_PER_POINT } from "./data";
 import { newGame, pushLog } from "./game";
 import { hashSeed } from "./rng";
+import { returnStones } from "./sockets";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
 import type { MapEffects } from "./maps";
@@ -32,6 +33,8 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
     const dawn = dawnOf(s) + 1;
     const heir = opts.heirloom !== undefined ? heirloomCandidates(s).find(x => x.uid === opts.heirloom) : undefined;
+    // Gear left behind gives its stones back to the pouch (the pouch is kept); the heirloom keeps its own.
+    for (const it of [...SLOTS.map(k => s.hero.equipment[k]), ...s.stash]) if (it && it !== heir && !it.relic) returnStones(s, it);
     // Worn relics go back into the case (all relics stay); the case keeps the better copy.
     const relics = [...s.relics];
     for (const k of SLOTS) {

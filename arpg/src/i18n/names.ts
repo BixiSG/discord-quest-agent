@@ -52,6 +52,25 @@ export const presetName = (id: string, l?: Lang) => tr(L(l), `preset.${id}.name`
 export const presetBlurb = (id: string, l?: Lang) => tr(L(l), `preset.${id}.blurb`);
 export const groupName = (group: string, l?: Lang) => tr(L(l), `group.${group}`);
 export const tagName = (tag: string, l?: Lang) => tr(L(l), `tag.${tag}`);
+/** "Radiant Ruby" / "Сияющий рубин": a pouch key ("ruby:4") by name. */
+export function stoneFullName(key: string, l?: Lang): string {
+    const [id, t] = key.split(":");
+    const lg = L(l), name = tr(lg, `stone.${id}.name`);
+    return tr(lg, "stone.full", { tier: tr(lg, `stone.tier${t}`), name: lg === "en" ? name : lowFirst(name) });
+}
+export const stoneKindName = (id: string, l?: Lang) => tr(L(l), `stone.${id}.name`);
+/** What a stone does in a place, its value filled in. */
+export function stoneEffectText(key: string, place: "weapon" | "armour" | "jewel", value: number, l?: Lang): string {
+    const [id] = key.split(":");
+    return tr(L(l), `stone.${id}.${place}`, { 0: value });
+}
+export const echoWho = (id: string, l?: Lang) => tr(L(l), `echo.${id}.who`);
+export const echoText = (id: string, l?: Lang) => tr(L(l), `echo.${id}.text`);
+export const perkName = (id: string, l?: Lang) => tr(L(l), `perk.${id}.name`);
+export const perkText = (id: string, l?: Lang) => tr(L(l), `perk.${id}.text`);
+const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+/** "Dawn II". */
+export const dawnTitle = (n: number, l?: Lang) => tr(L(l), "dawn.name", { n: ROMAN[n] ?? String(n) });
 
 /** "Outskirts", "Tier 5", "Depth 3". */
 export function tierName(tier: number, l?: Lang): string {

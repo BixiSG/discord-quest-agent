@@ -1,85 +1,6 @@
 /* Hollowmarch - idle ARPG addon for Discord Quest Agent. Built file; edit arpg/src. */
 "use strict";
 (() => {
-  // src/core/rng.ts
-  function splitmix32(a) {
-    return () => {
-      a = a + 2654435769 | 0;
-      let t2 = a ^ a >>> 16;
-      t2 = Math.imul(t2, 569420461);
-      t2 ^= t2 >>> 15;
-      t2 = Math.imul(t2, 1935289751);
-      t2 ^= t2 >>> 15;
-      return t2 >>> 0;
-    };
-  }
-  function hashSeed(...parts) {
-    let h2 = 2166136261;
-    for (const p of parts) {
-      const sm = splitmix32((h2 ^ (p | 0)) >>> 0);
-      h2 = (sm() ^ Math.imul(h2, 16777619)) >>> 0;
-    }
-    return h2 >>> 0;
-  }
-  var Rng = class {
-    s;
-    constructor(seed) {
-      if (Array.isArray(seed)) {
-        this.s = [seed[0] >>> 0, seed[1] >>> 0, seed[2] >>> 0, seed[3] >>> 0];
-        return;
-      }
-      const sm = splitmix32(seed >>> 0);
-      this.s = [sm(), sm(), sm(), sm()];
-      for (let i = 0; i < 12; i++) this.u32();
-    }
-    /** Uniform uint32. */
-    u32() {
-      let [a, b, c, d] = this.s;
-      const t2 = (a + b | 0) + d | 0;
-      d = d + 1 | 0;
-      a = b ^ b >>> 9;
-      b = c + (c << 3) | 0;
-      c = c << 21 | c >>> 11;
-      c = c + t2 | 0;
-      this.s = [a >>> 0, b >>> 0, c >>> 0, d >>> 0];
-      return t2 >>> 0;
-    }
-    /** Uniform float in [0, 1). */
-    next() {
-      return this.u32() / 4294967296;
-    }
-    /** Uniform float in [lo, hi). */
-    range(lo, hi) {
-      return lo + (hi - lo) * this.next();
-    }
-    /** Uniform integer in [lo, hi] (inclusive). */
-    int(lo, hi) {
-      return lo + Math.floor(this.next() * (hi - lo + 1));
-    }
-    chance(p) {
-      return p >= 1 || p > 0 && this.next() < p;
-    }
-    pick(arr) {
-      if (!arr.length) throw new Error("pick from empty array");
-      return arr[Math.floor(this.next() * arr.length)];
-    }
-    /** Weighted pick; returns undefined when every weight is zero. */
-    weighted(arr, weight) {
-      let total = 0;
-      for (const x of arr) total += Math.max(0, weight(x));
-      if (total <= 0) return void 0;
-      let r3 = this.next() * total;
-      for (const x of arr) {
-        r3 -= Math.max(0, weight(x));
-        if (r3 < 0) return x;
-      }
-      return arr[arr.length - 1];
-    }
-    state() {
-      return [...this.s];
-    }
-  };
-
   // src/core/data/scaling.ts
   var MAX_LEVEL = 100;
   function monsterLife(level) {
@@ -2483,6 +2404,7 @@
   var ECHO_ORDER = list8.map((e2) => e2.id);
   var MAP_ECHOES = list8.filter((e2) => !e2.pinnacle).map((e2) => e2.id);
   var ECHOES_PER_POINT = 3;
+  var SHARDS_TEXT = "Three pieces of the sun, still warm, and the ember in your chest beating in time with them. Put them together and the March might see a morning. The ember would have to go into the fire too.";
 
   // src/core/data/dawn.ts
   var DAWN_PERKS = [
@@ -2502,65 +2424,9 @@
   var DAWN_DUST = 10;
   var DAWN_TOUGHER = 15;
   var DAWN_RICHER = 20;
+  var DAWN_TEXT = "The pieces catch, the ember in your chest goes into the fire with them, and for a moment nothing happens. Then the sky over the crater turns grey, then pink, then gold. The sun rises over the March for the first time in three hundred years.\n\nYou wake in the surf with an ember where your heart was. The shore is warm this time.";
   var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   var dawnName = (n) => `Dawn ${ROMAN[n] ?? n}`;
-
-  // src/core/stats.ts
-  var StatBag = class _StatBag {
-    by = /* @__PURE__ */ new Map();
-    constructor(mods = []) {
-      for (const m4 of mods) this.add(m4);
-    }
-    add(m4) {
-      let list9 = this.by.get(m4.stat);
-      if (!list9) this.by.set(m4.stat, list9 = []);
-      list9.push(m4);
-    }
-    addAll(mods) {
-      for (const m4 of mods) this.add(m4);
-    }
-    /** Every modifier for a stat (for breakdowns). */
-    mods(stat) {
-      return this.by.get(stat) ?? [];
-    }
-    static applies(m4, ctx) {
-      if (!m4.tags || m4.tags.length === 0) return true;
-      if (!ctx) return false;
-      for (const t2 of m4.tags) if (!ctx.has(t2)) return false;
-      return true;
-    }
-    /** Sum of flat or inc values. */
-    sum(stat, kind, ctx) {
-      let s = 0;
-      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === kind && _StatBag.applies(m4, ctx)) s += m4.value;
-      return s;
-    }
-    /** Product of (1 + more/100). */
-    more(stat, ctx) {
-      let p = 1;
-      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === "more" && _StatBag.applies(m4, ctx)) p *= 1 + m4.value / 100;
-      return p;
-    }
-    flat(stat, ctx) {
-      return this.sum(stat, "flat", ctx);
-    }
-    inc(stat, ctx) {
-      return this.sum(stat, "inc", ctx);
-    }
-    /** Increase multiplier (1 + inc/100), floored at zero. */
-    incMult(stat, ctx) {
-      return Math.max(0, 1 + this.inc(stat, ctx) / 100);
-    }
-    /** Full formula. */
-    calc(stat, base = 0, ctx) {
-      return (base + this.flat(stat, ctx)) * this.incMult(stat, ctx) * this.more(stat, ctx);
-    }
-  };
-  var tagSet = (...groups) => {
-    const s = /* @__PURE__ */ new Set();
-    for (const g of groups) if (g) for (const t2 of g) s.add(t2);
-    return s;
-  };
 
   // src/core/items.ts
   var MAX_AFFIXES = {
@@ -2751,6 +2617,63 @@
     for (const a of item.affixes) req2 = Math.max(req2, Math.floor((affixOf(a).tiers[a.tier]?.ilvl ?? 1) * 0.8));
     return Math.min(req2, 90);
   }
+
+  // src/core/stats.ts
+  var StatBag = class _StatBag {
+    by = /* @__PURE__ */ new Map();
+    constructor(mods = []) {
+      for (const m4 of mods) this.add(m4);
+    }
+    add(m4) {
+      let list9 = this.by.get(m4.stat);
+      if (!list9) this.by.set(m4.stat, list9 = []);
+      list9.push(m4);
+    }
+    addAll(mods) {
+      for (const m4 of mods) this.add(m4);
+    }
+    /** Every modifier for a stat (for breakdowns). */
+    mods(stat) {
+      return this.by.get(stat) ?? [];
+    }
+    static applies(m4, ctx) {
+      if (!m4.tags || m4.tags.length === 0) return true;
+      if (!ctx) return false;
+      for (const t2 of m4.tags) if (!ctx.has(t2)) return false;
+      return true;
+    }
+    /** Sum of flat or inc values. */
+    sum(stat, kind, ctx) {
+      let s = 0;
+      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === kind && _StatBag.applies(m4, ctx)) s += m4.value;
+      return s;
+    }
+    /** Product of (1 + more/100). */
+    more(stat, ctx) {
+      let p = 1;
+      for (const m4 of this.by.get(stat) ?? []) if (m4.kind === "more" && _StatBag.applies(m4, ctx)) p *= 1 + m4.value / 100;
+      return p;
+    }
+    flat(stat, ctx) {
+      return this.sum(stat, "flat", ctx);
+    }
+    inc(stat, ctx) {
+      return this.sum(stat, "inc", ctx);
+    }
+    /** Increase multiplier (1 + inc/100), floored at zero. */
+    incMult(stat, ctx) {
+      return Math.max(0, 1 + this.inc(stat, ctx) / 100);
+    }
+    /** Full formula. */
+    calc(stat, base = 0, ctx) {
+      return (base + this.flat(stat, ctx)) * this.incMult(stat, ctx) * this.more(stat, ctx);
+    }
+  };
+  var tagSet = (...groups) => {
+    const s = /* @__PURE__ */ new Set();
+    for (const g of groups) if (g) for (const t2 of g) s.add(t2);
+    return s;
+  };
 
   // src/core/passives.ts
   function startNode(hero) {
@@ -3160,6 +3083,11 @@
     if (tier > 0 && rng.chance(0.3)) tier--;
     return stoneKey(rng.pick(STONE_ORDER), tier);
   }
+  function drillCost(item) {
+    const n = item.sockets ?? 0;
+    if (n >= socketCap(item)) return null;
+    return Math.round((50 + item.ilvl * 8) * Math.pow(n + 1, 1.6) / 10) * 10;
+  }
   function findItem(state, uid) {
     const s = state.stash.find((x) => x.uid === uid) ?? state.relics.find((x) => x.uid === uid);
     if (s) return { item: s };
@@ -3167,6 +3095,17 @@
       const it = state.hero.equipment[slot];
       if (it?.uid === uid) return { item: it, slot };
     }
+    return null;
+  }
+  function drillSocket(state, uid) {
+    const f = findItem(state, uid);
+    if (!f) return "item not found";
+    const cost = drillCost(f.item);
+    if (cost === null) return `no room for more than ${socketCap(f.item)} socket${socketCap(f.item) > 1 ? "s" : ""}`;
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    f.item.sockets = (f.item.sockets ?? 0) + 1;
+    fitStones(f.item);
     return null;
   }
   function setStone(state, uid, i, key) {
@@ -3184,6 +3123,19 @@
     if (old) addStone(state, old, 1);
     it.stones[i] = key;
     if (f.slot) state.hero.rev++;
+    return null;
+  }
+  var cutCost = (tier) => [40, 150, 500, 1500][tier] ?? 0;
+  function cutStones(state, key) {
+    const p = parseStone(key);
+    if (!p) return "unknown stone";
+    if (p.tier >= STONE_TIERS.length - 1) return "already Radiant";
+    if ((state.stones?.[key] ?? 0) < 3) return "needs three of them";
+    const cost = cutCost(p.tier);
+    if (state.dust < cost) return `needs ${cost} ember dust`;
+    state.dust -= cost;
+    addStone(state, key, -3);
+    addStone(state, stoneKey(p.id, p.tier + 1), 1);
     return null;
   }
   function autoSetStones(state) {
@@ -3216,39 +3168,145 @@
     }
     return n;
   }
+  function pouchList(state) {
+    return Object.entries(state.stones ?? {}).filter(([, n]) => n > 0).map(([key, n]) => ({ key, n })).sort((a, b) => parseStone(b.key).tier - parseStone(a.key).tier || STONE_ORDER.indexOf(parseStone(a.key).id) - STONE_ORDER.indexOf(parseStone(b.key).id));
+  }
 
-  // src/core/echoes.ts
-  function grantEcho(s, id) {
-    if (!ECHOES[id]) return false;
-    s.echoes ??= [];
-    if (s.echoes.includes(id)) return false;
-    s.echoes.push(id);
-    const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
-    s.world.rewards ??= [];
-    for (let k = 1; k <= earned; k++) {
-      const key = `echo:${k}`;
-      if (!s.world.rewards.includes(key)) {
-        s.world.rewards.push(key);
-        s.atlas.points++;
-      }
+  // src/core/rng.ts
+  function splitmix32(a) {
+    return () => {
+      a = a + 2654435769 | 0;
+      let t2 = a ^ a >>> 16;
+      t2 = Math.imul(t2, 569420461);
+      t2 ^= t2 >>> 15;
+      t2 = Math.imul(t2, 1935289751);
+      t2 ^= t2 >>> 15;
+      return t2 >>> 0;
+    };
+  }
+  function hashSeed(...parts) {
+    let h2 = 2166136261;
+    for (const p of parts) {
+      const sm = splitmix32((h2 ^ (p | 0)) >>> 0);
+      h2 = (sm() ^ Math.imul(h2, 16777619)) >>> 0;
     }
-    return true;
+    return h2 >>> 0;
   }
-  function rollMapEcho(s, rng) {
-    const unfound = MAP_ECHOES.filter((id2) => !(s.echoes ?? []).includes(id2));
-    if (!unfound.length || !rng.chance(0.03)) return null;
-    const id = rng.pick(unfound);
-    grantEcho(s, id);
-    return id;
-  }
-  function pinnacleEcho(s, pinnacle) {
-    const e2 = Object.values(ECHOES).find((x) => x.pinnacle === pinnacle);
-    return e2 && grantEcho(s, e2.id) ? e2.id : null;
-  }
+  var Rng = class {
+    s;
+    constructor(seed) {
+      if (Array.isArray(seed)) {
+        this.s = [seed[0] >>> 0, seed[1] >>> 0, seed[2] >>> 0, seed[3] >>> 0];
+        return;
+      }
+      const sm = splitmix32(seed >>> 0);
+      this.s = [sm(), sm(), sm(), sm()];
+      for (let i = 0; i < 12; i++) this.u32();
+    }
+    /** Uniform uint32. */
+    u32() {
+      let [a, b, c, d] = this.s;
+      const t2 = (a + b | 0) + d | 0;
+      d = d + 1 | 0;
+      a = b ^ b >>> 9;
+      b = c + (c << 3) | 0;
+      c = c << 21 | c >>> 11;
+      c = c + t2 | 0;
+      this.s = [a >>> 0, b >>> 0, c >>> 0, d >>> 0];
+      return t2 >>> 0;
+    }
+    /** Uniform float in [0, 1). */
+    next() {
+      return this.u32() / 4294967296;
+    }
+    /** Uniform float in [lo, hi). */
+    range(lo, hi) {
+      return lo + (hi - lo) * this.next();
+    }
+    /** Uniform integer in [lo, hi] (inclusive). */
+    int(lo, hi) {
+      return lo + Math.floor(this.next() * (hi - lo + 1));
+    }
+    chance(p) {
+      return p >= 1 || p > 0 && this.next() < p;
+    }
+    pick(arr) {
+      if (!arr.length) throw new Error("pick from empty array");
+      return arr[Math.floor(this.next() * arr.length)];
+    }
+    /** Weighted pick; returns undefined when every weight is zero. */
+    weighted(arr, weight) {
+      let total = 0;
+      for (const x of arr) total += Math.max(0, weight(x));
+      if (total <= 0) return void 0;
+      let r3 = this.next() * total;
+      for (const x of arr) {
+        r3 -= Math.max(0, weight(x));
+        if (r3 < 0) return x;
+      }
+      return arr[arr.length - 1];
+    }
+    state() {
+      return [...this.s];
+    }
+  };
 
   // src/core/dawn.ts
   var dawnOf = (s) => s.hero.dawn?.level ?? 0;
   var hasPerk = (s, id) => !!s.hero.dawn?.perks.includes(id);
+  var perksToPick = (s) => Math.max(0, dawnOf(s) - (s.hero.dawn?.perks.length ?? 0));
+  function heirloomCandidates(s) {
+    return [...SLOTS.map((k) => s.hero.equipment[k]).filter((x) => !!x && !x.relic), ...s.stash.filter((x) => !x.relic)];
+  }
+  function relightSun(s, opts = {}) {
+    if (!allShards(s)) return "needs the three sun shards";
+    const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
+    const dawn = dawnOf(s) + 1;
+    const heir = opts.heirloom !== void 0 ? heirloomCandidates(s).find((x) => x.uid === opts.heirloom) : void 0;
+    for (const it of [...SLOTS.map((k) => s.hero.equipment[k]), ...s.stash]) if (it && it !== heir && !it.relic) returnStones(s, it);
+    const relics = [...s.relics];
+    for (const k of SLOTS) {
+      const it = s.hero.equipment[k];
+      if (!it?.relic) continue;
+      const old = relics.find((x) => x.relic === it.relic);
+      if (!old) relics.push(it);
+    }
+    const fresh = newGame({ name: s.hero.name, cls, now: s.simTo, seed: hashSeed(s.seed, 218, dawn) });
+    fresh.nextUid = Math.max(fresh.nextUid, s.nextUid);
+    fresh.hero.dawn = { level: dawn, perks: [...s.hero.dawn?.perks ?? []] };
+    fresh.hero.bonusPoints = dawn;
+    if (s.hero.pet && s.companions[s.hero.pet.id] !== void 0) fresh.hero.pet = { id: s.hero.pet.id, level: companionLevel(s.companions[s.hero.pet.id]) };
+    fresh.relics = relics;
+    fresh.codex = s.codex;
+    fresh.companions = s.companions;
+    fresh.echoes = s.echoes;
+    fresh.stones = s.stones;
+    fresh.shrine = s.shrine;
+    fresh.settings = s.settings;
+    fresh.totals = s.totals;
+    fresh.stashCap = s.stashCap;
+    fresh.craftSeq = s.craftSeq;
+    if (heir) {
+      heir.locked = true;
+      fresh.stash.push(heir);
+    }
+    const echoPoints = Math.floor((s.echoes?.length ?? 0) / ECHOES_PER_POINT);
+    fresh.atlas.points = echoPoints;
+    fresh.world.rewards = Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`);
+    for (const k of Object.keys(s)) delete s[k];
+    Object.assign(s, fresh);
+    pushLog(s, "info", heir ? "log.sunRisesHeir" : "log.sunRises");
+    return null;
+  }
+  function chooseDawnPerk(s, id) {
+    if (!DAWN_PERK[id]) return "unknown perk";
+    if (!perksToPick(s)) return "no pick waiting";
+    if (s.hero.dawn.perks.includes(id)) return "already chosen";
+    s.hero.dawn.perks.push(id);
+    if (id === "deeppockets") s.stashCap += 20;
+    s.hero.rev++;
+    return null;
+  }
   var wrapped = /* @__PURE__ */ new WeakMap();
   function dawnEffects(s, key, base) {
     const d = dawnOf(s);
@@ -3518,6 +3576,23 @@
       o[`blessing.${b.id}.name`] = b.name;
       o[`blessing.${b.id}.text`] = b.text;
     }
+    for (const s of Object.values(STONES)) {
+      o[`stone.${s.id}.name`] = s.name;
+      for (const pl of ["weapon", "armour", "jewel"]) o[`stone.${s.id}.${pl}`] = s.effects[pl].text;
+    }
+    STONE_TIERS.forEach((n, i) => {
+      o[`stone.tier${i}`] = n;
+    });
+    for (const e2 of Object.values(ECHOES)) {
+      o[`echo.${e2.id}.who`] = e2.who;
+      o[`echo.${e2.id}.text`] = e2.text;
+    }
+    for (const p of DAWN_PERKS) {
+      o[`perk.${p.id}.name`] = p.name;
+      o[`perk.${p.id}.text`] = p.text;
+    }
+    o["echo.shards"] = SHARDS_TEXT;
+    o["dawn.story"] = DAWN_TEXT;
     for (const a of Object.values(MAP_AREAS)) o[`mapArea.${a.id}.name`] = a.name;
     for (const m4 of Object.values(MAP_MODS)) o[`mapMod.${m4.id}.text`] = m4.text;
     for (const n of Object.values(ATLAS)) {
@@ -3942,6 +4017,69 @@
     "shrine.title": "Ember shrine",
     "shrine.cost": "{cost} dust / hour",
     "shrine.note": "Blessings run on the hero's time, so they count while you are away too.",
+    "nav.market": "Market",
+    "market.title": "The Wandering Market",
+    "market.closed": "A caravan camps beside the road once {boss} is beaten.",
+    "market.next": "New stock in {time}",
+    "market.refresh": "New stock now: {cost}",
+    "market.refreshTip": "Costs {cost} ember dust; the price doubles with each refresh until the stock rotates.",
+    "market.pedlar": "The Pedlar",
+    "market.pedlarNote": "Gear at the highest item level you have reached; two pieces for your weakest slots.",
+    "market.jeweller": "The Jeweller",
+    "market.jewellerNote": "Ember stones. Set them in sockets at the Forge.",
+    "market.buy": "Buy {cost}",
+    "market.sold": "Sold",
+    "market.bought": "Bought: {name}",
+    "market.upgrade": "Upgrade",
+    "item.sockets": "Sockets",
+    "item.socketEmpty": "Empty socket",
+    "forge.sockets": "Sockets",
+    "forge.drill": "Drill: {cost}",
+    "forge.drillTip": "One more socket, up to {n}.",
+    "forge.socketsFull": "All sockets",
+    "forge.noSockets": "No sockets yet.",
+    "forge.setStone": "Set a stone",
+    "forge.pry": "Pry out",
+    "forge.here": "Here: {effect}",
+    "pouch.title": "Stone pouch",
+    "pouch.empty": "No ember stones yet. Champions and bosses drop them; the Jeweller sells them.",
+    "pouch.cut": "3 into 1: {cost}",
+    "pouch.cutTip": "Cut three {name} into one {next}.",
+    "pouch.inWeapon": "In a weapon: {e}",
+    "pouch.inArmour": "In armour: {e}",
+    "pouch.inJewel": "In jewellery: {e}",
+    "stone.full": "{tier} {name}",
+    "menu.autoStones": "Set stones on their own",
+    "menu.autoStonesNote": "Empty sockets in worn gear get the stone from the pouch that helps the build most.",
+    "toast.stone": "Stone: {name}",
+    "log.echoes": "Echoes",
+    "echoes.title": "Echoes of the day the sun fell",
+    "echoes.count": "{n} / {total} heard",
+    "echoes.note": "Map bosses sometimes leave one; each pinnacle leaves its own. Every third is an atlas point.",
+    "echoes.unknown": "Not heard yet.",
+    "echoes.unknownPin": "Waits with {pin}.",
+    "toast.echo": "Echo: {who}",
+    "log.echo": "An echo: {who}.",
+    "dawn.title": "The Rekindling",
+    "dawn.shards": "Sun shards: {n} / {total}",
+    "dawn.note": "Each piece of the sun is held by a pinnacle: {pins}.",
+    "dawn.relight": "Relight the sun",
+    "dawn.confirm": "Relight the sun?",
+    "dawn.keeps": "Kept: the relic case and codex, companions and their bond, echoes, the stone pouch, bought stash room, settings, totals - and one heirloom.",
+    "dawn.resets": "Starts over: level, passive tree, ascendancy, gear, stash, the road, the atlas, maps, dust and orbs.",
+    "dawn.gains": "Gained: {dawn} - {xp}% more experience and dust, a passive point, a world {tough}% tougher and {rich}% richer, and a perk to choose.",
+    "dawn.heirloom": "Heirloom",
+    "dawn.noHeirloom": "none",
+    "dawn.calling": "Calling",
+    "dawn.go": "Relight it",
+    "dawn.perkTitle": "{dawn}: choose a perk",
+    "dawn.perkNote": "One pick per dawn, kept for every dawn after.",
+    "dawn.perks": "Perks: {list}",
+    "dawn.pickNow": "Choose a perk",
+    "dawn.name": "Dawn {n}",
+    "dawn.world": "The world: {tough}% tougher, {rich}% richer",
+    "badge.perk": "A dawn perk to choose",
+    "badge.relight": "The sun can be relit",
     "shrine.line": "{name}: {text}",
     "shrine.left": "{time} left",
     "shrine.leftKept": "{time} left, kept up",
@@ -4688,6 +4826,69 @@
     "shrine.title": "\u0421\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435 \u0443\u0433\u043B\u0435\u0439",
     "shrine.cost": "{cost} \u043F\u044B\u043B\u0438 / \u0447\u0430\u0441",
     "shrine.note": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u0438\u044F \u0438\u0434\u0443\u0442 \u043F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0433\u0435\u0440\u043E\u044F, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u0438 \u043F\u043E\u043A\u0430 \u0432\u0430\u0441 \u043D\u0435\u0442.",
+    "nav.market": "\u0420\u044B\u043D\u043E\u043A",
+    "market.title": "\u0411\u0440\u043E\u0434\u044F\u0447\u0438\u0439 \u0440\u044B\u043D\u043E\u043A",
+    "market.closed": "\u041A\u0430\u0440\u0430\u0432\u0430\u043D \u0432\u0441\u0442\u0430\u043D\u0435\u0442 \u043B\u0430\u0433\u0435\u0440\u0435\u043C \u0443 \u0434\u043E\u0440\u043E\u0433\u0438, \u043A\u043E\u0433\u0434\u0430 \u043F\u0430\u0434\u0451\u0442 {boss}.",
+    "market.next": "\u041D\u043E\u0432\u044B\u0439 \u0442\u043E\u0432\u0430\u0440 \u0447\u0435\u0440\u0435\u0437 {time}",
+    "market.refresh": "\u041D\u043E\u0432\u044B\u0439 \u0442\u043E\u0432\u0430\u0440 \u0441\u0435\u0439\u0447\u0430\u0441: {cost}",
+    "market.refreshTip": "\u0421\u0442\u043E\u0438\u0442 {cost} \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438; \u0446\u0435\u043D\u0430 \u0443\u0434\u0432\u0430\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0441 \u043A\u0430\u0436\u0434\u044B\u043C \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435\u043C, \u043F\u043E\u043A\u0430 \u0442\u043E\u0432\u0430\u0440 \u043D\u0435 \u0441\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u0441\u0430\u043C.",
+    "market.pedlar": "\u041A\u043E\u0440\u043E\u0431\u0435\u0439\u043D\u0438\u043A",
+    "market.pedlarNote": "\u0421\u043D\u0430\u0440\u044F\u0436\u0435\u043D\u0438\u0435 \u043D\u0430\u0438\u0432\u044B\u0441\u0448\u0435\u0433\u043E \u0443\u0440\u043E\u0432\u043D\u044F \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u043E\u0433\u043E \u0432\u044B \u0434\u043E\u0441\u0442\u0438\u0433\u043B\u0438; \u0434\u0432\u0435 \u0432\u0435\u0449\u0438 - \u0434\u043B\u044F \u0441\u0430\u043C\u044B\u0445 \u0441\u043B\u0430\u0431\u044B\u0445 \u044F\u0447\u0435\u0435\u043A.",
+    "market.jeweller": "\u042E\u0432\u0435\u043B\u0438\u0440",
+    "market.jewellerNote": "\u0421\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u044B. \u0412\u0441\u0442\u0430\u0432\u043B\u044F\u0439\u0442\u0435 \u0438\u0445 \u0432 \u0433\u043D\u0451\u0437\u0434\u0430 \u0432 \u041A\u0443\u0437\u043D\u0438\u0446\u0435.",
+    "market.buy": "\u041A\u0443\u043F\u0438\u0442\u044C \u0437\u0430 {cost}",
+    "market.sold": "\u041F\u0440\u043E\u0434\u0430\u043D\u043E",
+    "market.bought": "\u041A\u0443\u043F\u043B\u0435\u043D\u043E: {name}",
+    "market.upgrade": "\u0423\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0435",
+    "item.sockets": "\u0413\u043D\u0451\u0437\u0434\u0430",
+    "item.socketEmpty": "\u041F\u0443\u0441\u0442\u043E\u0435 \u0433\u043D\u0435\u0437\u0434\u043E",
+    "forge.sockets": "\u0413\u043D\u0451\u0437\u0434\u0430",
+    "forge.drill": "\u0421\u0432\u0435\u0440\u043B\u0438\u0442\u044C: {cost}",
+    "forge.drillTip": "\u0415\u0449\u0451 \u043E\u0434\u043D\u043E \u0433\u043D\u0435\u0437\u0434\u043E, \u043D\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 {n}.",
+    "forge.socketsFull": "\u0412\u0441\u0435 \u0433\u043D\u0451\u0437\u0434\u0430",
+    "forge.noSockets": "\u0413\u043D\u0451\u0437\u0434 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.",
+    "forge.setStone": "\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442",
+    "forge.pry": "\u0412\u044B\u043D\u0443\u0442\u044C",
+    "forge.here": "\u0417\u0434\u0435\u0441\u044C: {effect}",
+    "pouch.title": "\u041C\u0435\u0448\u043E\u0447\u0435\u043A \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u043E\u0432",
+    "pouch.empty": "\u0421\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442. \u0418\u0445 \u0440\u043E\u043D\u044F\u044E\u0442 \u0447\u0435\u043C\u043F\u0438\u043E\u043D\u044B \u0438 \u0431\u043E\u0441\u0441\u044B, \u043F\u0440\u043E\u0434\u0430\u0451\u0442 \u042E\u0432\u0435\u043B\u0438\u0440.",
+    "pouch.cut": "3 \u0432 1: {cost}",
+    "pouch.cutTip": "\u041E\u0433\u0440\u0430\u043D\u0438\u0442\u044C \u0442\u0440\u0438 \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u0430 \xAB{name}\xBB \u0432 \u043E\u0434\u0438\u043D \xAB{next}\xBB.",
+    "pouch.inWeapon": "\u0412 \u043E\u0440\u0443\u0436\u0438\u0438: {e}",
+    "pouch.inArmour": "\u0412 \u0431\u0440\u043E\u043D\u0435: {e}",
+    "pouch.inJewel": "\u0412 \u0443\u043A\u0440\u0430\u0448\u0435\u043D\u0438\u044F\u0445: {e}",
+    "stone.full": "{tier} {name}",
+    "menu.autoStones": "\u0412\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u044C \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u044B \u0441\u0430\u043C\u0438\u043C",
+    "menu.autoStonesNote": "\u041F\u0443\u0441\u0442\u044B\u0435 \u0433\u043D\u0451\u0437\u0434\u0430 \u0432 \u043D\u0430\u0434\u0435\u0442\u044B\u0445 \u0432\u0435\u0449\u0430\u0445 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0448\u043E\u0447\u043A\u0430 \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0441\u0435\u0433\u043E \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0431\u0438\u043B\u0434\u0443.",
+    "toast.stone": "\u0421\u0430\u043C\u043E\u0446\u0432\u0435\u0442: {name}",
+    "log.echoes": "\u041E\u0442\u0437\u0432\u0443\u043A\u0438",
+    "echoes.title": "\u041E\u0442\u0437\u0432\u0443\u043A\u0438 \u0434\u043D\u044F, \u043A\u043E\u0433\u0434\u0430 \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435",
+    "echoes.count": "\u0443\u0441\u043B\u044B\u0448\u0430\u043D\u043E {n} / {total}",
+    "echoes.note": "\u0418\u0445 \u0438\u043D\u043E\u0433\u0434\u0430 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u044E\u0442 \u0431\u043E\u0441\u0441\u044B \u043A\u0430\u0440\u0442; \u043A\u0430\u0436\u0434\u0430\u044F \u0432\u0435\u0440\u0448\u0438\u043D\u0430 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u0441\u0432\u043E\u0439. \u041A\u0430\u0436\u0434\u044B\u0439 \u0442\u0440\u0435\u0442\u0438\u0439 - \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430.",
+    "echoes.unknown": "\u0415\u0449\u0451 \u043D\u0435 \u0443\u0441\u043B\u044B\u0448\u0430\u043D.",
+    "echoes.unknownPin": "\u0416\u0434\u0451\u0442 \u0443 \u0432\u0435\u0440\u0448\u0438\u043D\u044B: {pin}.",
+    "toast.echo": "\u041E\u0442\u0437\u0432\u0443\u043A: {who}",
+    "log.echo": "\u041E\u0442\u0437\u0432\u0443\u043A: {who}.",
+    "dawn.title": "\u0420\u0430\u0437\u0436\u0435\u0447\u044C \u0441\u043E\u043B\u043D\u0446\u0435",
+    "dawn.shards": "\u041E\u0441\u043A\u043E\u043B\u043A\u0438 \u0441\u043E\u043B\u043D\u0446\u0430: {n} / {total}",
+    "dawn.note": "\u041A\u0430\u0436\u0434\u044B\u0439 \u043A\u0443\u0441\u043E\u043A \u0441\u043E\u043B\u043D\u0446\u0430 \u0434\u0435\u0440\u0436\u0438\u0442 \u0432\u0435\u0440\u0448\u0438\u043D\u0430: {pins}.",
+    "dawn.relight": "\u0417\u0430\u0436\u0435\u0447\u044C \u0441\u043E\u043B\u043D\u0446\u0435",
+    "dawn.confirm": "\u0417\u0430\u0436\u0435\u0447\u044C \u0441\u043E\u043B\u043D\u0446\u0435?",
+    "dawn.keeps": "\u041E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F: \u043B\u0430\u0440\u0435\u0446 \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u0439 \u0438 \u043A\u043E\u0434\u0435\u043A\u0441, \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0438 \u0438 \u0438\u0445 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u044C, \u043E\u0442\u0437\u0432\u0443\u043A\u0438, \u043C\u0435\u0448\u043E\u0447\u0435\u043A \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u043E\u0432, \u043A\u0443\u043F\u043B\u0435\u043D\u043D\u044B\u0435 \u044F\u0447\u0435\u0439\u043A\u0438 \u0442\u0430\u0439\u043D\u0438\u043A\u0430, \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438, \u0438\u0442\u043E\u0433\u0438 - \u0438 \u043E\u0434\u043D\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F.",
+    "dawn.resets": "\u041D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u0437\u0430\u043D\u043E\u0432\u043E: \u0443\u0440\u043E\u0432\u0435\u043D\u044C, \u0434\u0440\u0435\u0432\u043E \u043F\u0430\u0441\u0441\u0438\u0432\u043E\u0432, \u0432\u043E\u0441\u0445\u043E\u0436\u0434\u0435\u043D\u0438\u0435, \u0441\u043D\u0430\u0440\u044F\u0436\u0435\u043D\u0438\u0435, \u0442\u0430\u0439\u043D\u0438\u043A, \u0434\u043E\u0440\u043E\u0433\u0430, \u0430\u0442\u043B\u0430\u0441, \u043A\u0430\u0440\u0442\u044B, \u043F\u044B\u043B\u044C \u0438 \u0441\u0444\u0435\u0440\u044B.",
+    "dawn.gains": "\u0412\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0435: {dawn} - \u043D\u0430 {xp}% \u0431\u043E\u043B\u044C\u0448\u0435 \u043E\u043F\u044B\u0442\u0430 \u0438 \u043F\u044B\u043B\u0438, \u043E\u0447\u043A\u043E \u043F\u0430\u0441\u0441\u0438\u0432\u043E\u0432, \u043C\u0438\u0440 \u043D\u0430 {tough}% \u043A\u0440\u0435\u043F\u0447\u0435 \u0438 \u043D\u0430 {rich}% \u0431\u043E\u0433\u0430\u0447\u0435 \u0438 \u0434\u0430\u0440 \u043D\u0430 \u0432\u044B\u0431\u043E\u0440.",
+    "dawn.heirloom": "\u0421\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F",
+    "dawn.noHeirloom": "\u0431\u0435\u0437 \u043D\u0435\u0451",
+    "dawn.calling": "\u041F\u0440\u0438\u0437\u0432\u0430\u043D\u0438\u0435",
+    "dawn.go": "\u0417\u0430\u0436\u0435\u0447\u044C",
+    "dawn.perkTitle": "{dawn}: \u0432\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0430\u0440",
+    "dawn.perkNote": "\u041E\u0434\u0438\u043D \u0434\u0430\u0440 \u0437\u0430 \u043A\u0430\u0436\u0434\u044B\u0439 \u0440\u0430\u0441\u0441\u0432\u0435\u0442, \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.",
+    "dawn.perks": "\u0414\u0430\u0440\u044B: {list}",
+    "dawn.pickNow": "\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0430\u0440",
+    "dawn.name": "\u0420\u0430\u0441\u0441\u0432\u0435\u0442 {n}",
+    "dawn.world": "\u041C\u0438\u0440: \u043D\u0430 {tough}% \u043A\u0440\u0435\u043F\u0447\u0435, \u043D\u0430 {rich}% \u0431\u043E\u0433\u0430\u0447\u0435",
+    "badge.perk": "\u041C\u043E\u0436\u043D\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0430\u0440 \u0440\u0430\u0441\u0441\u0432\u0435\u0442\u0430",
+    "badge.relight": "\u0421\u043E\u043B\u043D\u0446\u0435 \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u0436\u0435\u0447\u044C",
     "shrine.line": "{name}: {text}",
     "shrine.left": "\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {time}",
     "shrine.leftKept": "\u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C {time}, \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F",
@@ -4722,8 +4923,8 @@
     "log.contractRelic": "\u041D\u0430\u0433\u0440\u0430\u0434\u0430 \u0437\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442: {relic}.",
     "log.pinOpens": "\u041E\u0442\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u0443\u0442\u044C: {pin}.",
     "log.pinDefeated": "\u0412\u0435\u0440\u0448\u0438\u043D\u0430 \u043F\u043E\u043A\u043E\u0440\u0435\u043D\u0430: {pin}. +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430.|\u0412\u0435\u0440\u0448\u0438\u043D\u0430 \u043F\u043E\u043A\u043E\u0440\u0435\u043D\u0430: {pin}. +{n} \u043E\u0447\u043A\u0430 \u0430\u0442\u043B\u0430\u0441\u0430.|\u0412\u0435\u0440\u0448\u0438\u043D\u0430 \u043F\u043E\u043A\u043E\u0440\u0435\u043D\u0430: {pin}. +{n} \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430.",
-    "log.sunRises": "\u041D\u0430\u0434 \u041C\u0430\u0440\u0448\u0435\u043C \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u043B\u043D\u0446\u0435.",
-    "log.sunRisesHeir": "\u041D\u0430\u0434 \u041C\u0430\u0440\u0448\u0435\u043C \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u043B\u043D\u0446\u0435. \u0421 \u0432\u0430\u043C\u0438 \u043F\u0440\u0438\u0448\u043B\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F.",
+    "log.sunRises": "\u041D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u0439 \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u043B\u043D\u0446\u0435.",
+    "log.sunRisesHeir": "\u041D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u0439 \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u043B\u043D\u0446\u0435. \u0421 \u0432\u0430\u043C\u0438 \u043F\u0440\u0438\u0448\u043B\u0430 \u0441\u0435\u043C\u0435\u0439\u043D\u0430\u044F \u0440\u0435\u043B\u0438\u043A\u0432\u0438\u044F.",
     "log.tierFirst": "\u0412\u043F\u0435\u0440\u0432\u044B\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0430.|\u0412\u043F\u0435\u0440\u0432\u044B\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043A\u0430 \u0430\u0442\u043B\u0430\u0441\u0430.|\u0412\u043F\u0435\u0440\u0432\u044B\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043A\u043E\u0432 \u0430\u0442\u043B\u0430\u0441\u0430.",
     "log.bossFalls": "\u0411\u043E\u0441\u0441 \u043F\u043E\u0432\u0435\u0440\u0436\u0435\u043D: {monster}.",
     "log.sigilFound": "\u041D\u0430\u0439\u0434\u0435\u043D\u043E: {sigil}.",
@@ -5829,7 +6030,82 @@
     "tag.cold": "\u0445\u043E\u043B\u043E\u0434",
     "tag.lightning": "\u043C\u043E\u043B\u043D\u0438\u044F",
     "tag.chaos": "\u0445\u0430\u043E\u0441",
-    "tag.elemental": "\u0441\u0442\u0438\u0445\u0438\u0438"
+    "tag.elemental": "\u0441\u0442\u0438\u0445\u0438\u0438",
+    "stone.ruby.name": "\u0420\u0443\u0431\u0438\u043D",
+    "stone.ruby.weapon": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043E\u0433\u043D\u044F",
+    "stone.ruby.armour": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043E\u0433\u043D\u044E +{0}%",
+    "stone.ruby.jewel": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F +{0}",
+    "stone.sapphire.name": "\u0421\u0430\u043F\u0444\u0438\u0440",
+    "stone.sapphire.weapon": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u0445\u043E\u043B\u043E\u0434\u0430",
+    "stone.sapphire.armour": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "stone.sapphire.jewel": "\u0420\u0435\u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F {0} \u043C\u0430\u043D\u044B \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stone.topaz.name": "\u0422\u043E\u043F\u0430\u0437",
+    "stone.topaz.weapon": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430 \u043E\u0442 \u043C\u043E\u043B\u043D\u0438\u0438",
+    "stone.topaz.armour": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u043C\u043E\u043B\u043D\u0438\u0438 +{0}%",
+    "stone.topaz.jewel": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "stone.emerald.name": "\u0418\u0437\u0443\u043C\u0440\u0443\u0434",
+    "stone.emerald.weapon": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0448\u0430\u043D\u0441\u0430 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0430",
+    "stone.emerald.armour": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u043A\u043B\u043E\u043D\u0435\u043D\u0438\u044F",
+    "stone.emerald.jewel": "\u0413\u0440\u0430\u0446\u0438\u044F +{0}",
+    "stone.onyx.name": "\u041E\u043D\u0438\u043A\u0441",
+    "stone.onyx.weapon": "\u0423\u0434\u0430\u0440\u044B \u0438\u0433\u043D\u043E\u0440\u0438\u0440\u0443\u044E\u0442 {0}% \u0441\u0442\u0438\u0445\u0438\u0439\u043D\u043E\u0433\u043E \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F",
+    "stone.onyx.armour": "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "stone.onyx.jewel": "{0}% \u0443\u0440\u043E\u043D\u0430 \u043F\u043E\u0445\u0438\u0449\u0430\u0435\u0442\u0441\u044F \u043A\u0430\u043A \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u0435",
+    "stone.diamond.name": "\u0410\u043B\u043C\u0430\u0437",
+    "stone.diamond.weapon": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u0430\u0442\u0430\u043A\u0438 \u0438 \u0447\u0430\u0440",
+    "stone.diamond.armour": "{0}% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0431\u0440\u043E\u043D\u0438 \u0438 \u044D\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "stone.diamond.jewel": "\u0412\u0441\u0435 \u0441\u0442\u0438\u0445\u0438\u0439\u043D\u044B\u0435 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F +{0}%",
+    "stone.tier0": "\u0421\u043A\u043E\u043B\u043E\u0442\u044B\u0439",
+    "stone.tier1": "\u041C\u0443\u0442\u043D\u044B\u0439",
+    "stone.tier2": "\u0427\u0438\u0441\u0442\u044B\u0439",
+    "stone.tier3": "\u0411\u0435\u0437\u0443\u043F\u0440\u0435\u0447\u043D\u044B\u0439",
+    "stone.tier4": "\u0421\u0438\u044F\u044E\u0449\u0438\u0439",
+    "echo.bell.who": "\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u0447\u0430\u0441\u043E\u0432\u043D\u0438",
+    "echo.bell.text": "\u041A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u044F \u043F\u0440\u043E\u0432\u043E\u0436\u0430\u043B \u0441\u043E\u043B\u043D\u0446\u0435 \u0437\u0432\u043E\u043D\u043E\u043C, \u0438 \u043A\u0430\u0436\u0434\u043E\u0435 \u0443\u0442\u0440\u043E \u043E\u043D\u043E \u0441\u043D\u043E\u0432\u0430 \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u043B\u043E\u0441\u044C \u0438\u0437-\u0437\u0430 \u0445\u043E\u043B\u043C\u0430. \u0412 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u0432\u0435\u0447\u0435\u0440 \u044F \u0437\u0432\u043E\u043D\u0438\u043B \u0438 \u0437\u0432\u043E\u043D\u0438\u043B. \u0412\u0435\u0440\u0451\u0432\u043A\u0430 \u0441\u0442\u0451\u0440\u043B\u0430 \u043C\u043D\u0435 \u043B\u0430\u0434\u043E\u043D\u0438. \u042F \u0437\u0432\u043E\u043D\u044E \u0434\u043E \u0441\u0438\u0445 \u043F\u043E\u0440. \u041A\u0442\u043E-\u0442\u043E \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u0442\u044C \u043D\u0430\u0433\u043E\u0442\u043E\u0432\u0435, \u043A\u043E\u0433\u0434\u0430 \u043E\u043D\u043E \u043E\u0442\u0432\u0435\u0442\u0438\u0442.",
+    "echo.saltchild.who": "\u0420\u0435\u0431\u0451\u043D\u043E\u043A \u0441 \u0421\u043E\u043B\u0451\u043D\u043E\u0439 \u0442\u043E\u043F\u0438",
+    "echo.saltchild.text": "\u041C\u0430\u043C\u0430 \u0433\u043E\u0432\u043E\u0440\u0438\u043B\u0430, \u0447\u0442\u043E \u043F\u0440\u0438\u043B\u0438\u0432 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0442\u043E, \u0447\u0442\u043E \u0437\u0430\u0431\u0440\u0430\u043B. \u0415\u0451 \u043E\u043D \u0432\u0435\u0440\u043D\u0443\u043B \u043D\u0430 \u0447\u0435\u0442\u0432\u0451\u0440\u0442\u044B\u0439 \u0434\u0435\u043D\u044C. \u041E\u043D\u0430 \u0441\u0438\u0434\u0435\u043B\u0430 \u0443 \u043E\u0433\u043D\u044F \u0438 \u043D\u0435 \u0447\u0443\u0432\u0441\u0442\u0432\u043E\u0432\u0430\u043B\u0430 \u0435\u0433\u043E. \u042F \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043B \u0437\u0432\u0430\u0442\u044C \u0435\u0451 \u0441\u043F\u0430\u0442\u044C.",
+    "echo.warden.who": "\u0421\u0442\u0440\u0430\u0436 \u043F\u0440\u0438\u043B\u0438\u0432\u0430",
+    "echo.warden.text": "\u041F\u0440\u0438\u043A\u0430\u0437 \u0431\u044B\u043B \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0432\u043E\u0440\u043E\u0442\u0430, \u043F\u043E\u043A\u0430 \u043D\u0435 \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F \u0441\u0432\u0435\u0442. \u041D\u0438\u043A\u0442\u043E \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u043B, \u0447\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u043E\u043D \u043D\u0435 \u0432\u0435\u0440\u043D\u0451\u0442\u0441\u044F. \u0418 \u044F \u0434\u0435\u0440\u0436\u0430\u043B. \u041C\u043E\u0440\u0435 \u0431\u044B\u043B\u043E \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432\u043E. \u042F \u0442\u043E\u0436\u0435. \u0422\u043E\u043B\u044C\u043A\u043E \u043E\u0434\u0438\u043D \u0438\u0437 \u043D\u0430\u0441 \u0431\u044B\u043B \u043C\u0451\u0440\u0442\u0432.",
+    "echo.lamplighter.who": "\u0424\u043E\u043D\u0430\u0440\u0449\u0438\u043A",
+    "echo.lamplighter.text": "\u042F \u0437\u0430\u0436\u0438\u0433\u0430\u043B \u0444\u043E\u043D\u0430\u0440\u0438 \u043E\u0442 \u0431\u0435\u0440\u0435\u0433\u0430 \u0434\u043E \u0447\u0430\u0441\u043E\u0432\u043D\u0438, \u0447\u0442\u043E\u0431\u044B \u043C\u0451\u0440\u0442\u0432\u044B\u0435 \u043D\u0430\u0448\u043B\u0438 \u0434\u043E\u0440\u043E\u0433\u0443 \u0434\u043E\u043C\u043E\u0439. \u041D\u0430 \u0434\u0432\u0435\u043D\u0430\u0434\u0446\u0430\u0442\u044B\u0439 \u0433\u043E\u0434 \u043A\u043E\u043D\u0447\u0438\u043B\u043E\u0441\u044C \u043C\u0430\u0441\u043B\u043E. \u041E\u043D\u0438 \u0434\u043E \u0441\u0438\u0445 \u043F\u043E\u0440 \u0445\u043E\u0434\u044F\u0442 \u044D\u0442\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u0432 \u0442\u0435\u043C\u043D\u043E\u0442\u0435. \u0422\u0435\u043F\u0435\u0440\u044C \u043E\u043D\u0438 \u0437\u043D\u0430\u044E\u0442 \u0435\u0451 \u043D\u0430\u0438\u0437\u0443\u0441\u0442\u044C.",
+    "echo.sandwright.who": "\u041F\u0435\u0441\u0447\u0430\u043D\u044B\u0439 \u0437\u043E\u0434\u0447\u0438\u0439",
+    "echo.sandwright.text": "\u0421\u0442\u0435\u043A\u043B\u043E \u043F\u043E\u043C\u043D\u0438\u0442 \u0441\u0432\u0435\u0442. \u042F \u0441\u0442\u0440\u043E\u0438\u043B \u0431\u0430\u0448\u043D\u0438, \u0447\u0442\u043E\u0431\u044B \u0443\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043F\u043E\u043B\u0434\u0435\u043D\u044C, \u0437\u0435\u0440\u043A\u0430\u043B\u043E \u043D\u0430 \u0437\u0435\u0440\u043A\u0430\u043B\u0435, \u0447\u0442\u043E\u0431\u044B \u0432 \u041F\u0443\u0441\u0442\u043E\u0448\u0430\u0445 \u043D\u0438\u043A\u043E\u0433\u0434\u0430 \u043D\u0435 \u0431\u044B\u043B\u043E \u0442\u0435\u043C\u043D\u043E. \u0413\u043E\u0434 \u043E\u043D\u0438 \u0435\u0433\u043E \u0434\u0435\u0440\u0436\u0430\u043B\u0438. \u041F\u043E\u0442\u043E\u043C \u0441\u0432\u0435\u0442\u0443 \u0441\u0442\u0430\u043B\u043E \u0441 \u043D\u0430\u043C\u0438 \u0441\u043A\u0443\u0447\u043D\u043E, \u0438 \u043E\u043D \u0443\u0448\u0451\u043B \u0438\u0441\u043A\u0430\u0442\u044C \u0441\u043E\u043B\u043D\u0446\u0435.",
+    "echo.regent.who": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u0430\u044F \u0440\u0435\u0433\u0435\u043D\u0442\u0448\u0430",
+    "echo.regent.text": "\u0425\u043E\u0440 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u043B \u0441\u0434\u0435\u043B\u043A\u0443: \u043F\u0435\u0441\u043D\u044E, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442 \u0441\u0442\u0435\u043A\u043B\u043E \u0442\u0451\u043F\u043B\u044B\u043C. \u0426\u0435\u043D\u043E\u0439 \u0431\u044B\u043B\u0438 \u0432\u0441\u0435 \u0433\u043E\u043B\u043E\u0441\u0430 \u041F\u0443\u0441\u0442\u043E\u0448\u0435\u0439, \u043A\u0440\u043E\u043C\u0435 \u0438\u0445 \u0441\u043E\u0431\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0445. \u042F \u0441\u043E\u0447\u043B\u0430 \u044D\u0442\u043E \u0447\u0435\u0441\u0442\u043D\u043E\u0439 \u0441\u0434\u0435\u043B\u043A\u043E\u0439. \u0420\u043E\u0442 \u043E\u0441\u0442\u0430\u0432\u0438\u043B\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u043C\u043D\u0435 - \u0447\u0442\u043E\u0431\u044B \u044F \u043C\u043E\u0433\u043B\u0430 \u0441\u043A\u0430\u0437\u0430\u0442\u044C \xAB\u0434\u0430\xBB.",
+    "echo.judge.who": "\u0423\u0433\u043E\u043B\u044C\u043D\u044B\u0439 \u0441\u0443\u0434\u044C\u044F",
+    "echo.judge.text": "\u041A\u043E\u0433\u0434\u0430 \u0443\u043F\u0430\u043B\u0438 \u0443\u0433\u043B\u0438, \u043A\u0442\u043E-\u0442\u043E \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u043B \u0440\u0435\u0448\u0438\u0442\u044C, \u043A\u0442\u043E \u0434\u043E\u0441\u0442\u043E\u0438\u043D \u043F\u0440\u043E\u0441\u043D\u0443\u0442\u044C\u0441\u044F. \u042F \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043B \u0438\u0445: \u0445\u0440\u0430\u0431\u0440\u044B\u0445, \u0434\u043E\u0431\u0440\u044B\u0445, \u043F\u043E\u043B\u0435\u0437\u043D\u044B\u0445. \u0423\u0433\u043B\u044F\u043C \u043D\u0435 \u0431\u044B\u043B\u043E \u0434\u0435\u043B\u0430 \u0434\u043E \u043C\u043E\u0438\u0445 \u0432\u0435\u0441\u043E\u0432. \u041E\u043D\u0438 \u0431\u0443\u0434\u0438\u043B\u0438 \u0442\u043E\u0433\u043E, \u043D\u0430 \u043A\u043E\u0433\u043E \u043F\u0430\u0434\u0430\u043B\u0438. \u0421 \u0442\u0435\u0445 \u043F\u043E\u0440 \u044F \u0441\u0443\u0436\u0443 \u0443\u0433\u043B\u0438.",
+    "echo.matron.who": "\u0417\u043E\u043B\u044C\u043D\u0430\u044F \u043C\u0430\u0442\u0440\u043E\u043D\u0430",
+    "echo.matron.text": "\u041C\u043E\u0438 \u0433\u043E\u043D\u0447\u0438\u0435 \u0431\u044B\u043B\u0438 \u0449\u0435\u043D\u043A\u0430\u043C\u0438, \u043A\u043E\u0433\u0434\u0430 \u0443\u043F\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435. \u0418\u043C \u0431\u044B\u043B\u043E \u0445\u043E\u043B\u043E\u0434\u043D\u043E, \u0438 \u044F \u043F\u0443\u0441\u0442\u0438\u043B\u0430 \u0438\u0445 \u0441\u043F\u0430\u0442\u044C \u0432 \u043A\u0440\u0430\u0442\u0435\u0440. \u0422\u0435\u043F\u0435\u0440\u044C \u043E\u043D\u0438 \u0438\u0437 \u043D\u0435\u0433\u043E \u0441\u0434\u0435\u043B\u0430\u043D\u044B. \u041E\u043D\u0438 \u0432\u0441\u0451 \u0442\u0430\u043A \u0436\u0435 \u0431\u0435\u0433\u0443\u0442 \u043D\u0430 \u043C\u043E\u0439 \u0441\u0432\u0438\u0441\u0442. \u0412\u0441\u0451 \u0442\u0430\u043A \u0436\u0435 \u043A\u0443\u0441\u0430\u044E\u0442 \u0432\u0441\u0451, \u0447\u0442\u043E \u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442 \u043A \u043E\u0433\u043D\u044E.",
+    "echo.drownedsun.who": "\u0423\u0442\u043E\u043D\u0443\u0432\u0448\u0435\u0435 \u0441\u043E\u043B\u043D\u0446\u0435",
+    "echo.drownedsun.text": "\u0412\u0435\u0440\u043D\u0443\u0442\u044C \u0441\u043E\u043B\u043D\u0446\u0435 \u043E\u043D\u0438 \u043D\u0435 \u0441\u043C\u043E\u0433\u043B\u0438 \u0438 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 \u0441\u0432\u043E\u0451. \u041B\u044E\u0434\u0438 \u0421\u0442\u0440\u0430\u0436\u0430 \u0443\u0442\u043E\u043F\u0438\u043B\u0438 \u0432 \u043C\u043E\u0440\u0435 \u0441\u0432\u0435\u0442 \u0442\u044B\u0441\u044F\u0447\u0438 \u0444\u043E\u043D\u0430\u0440\u0435\u0439 \u0438 \u0432\u044B\u0442\u044F\u043D\u0443\u043B\u0438 \u043D\u0430\u0432\u0435\u0440\u0445 \u0447\u0442\u043E-\u0442\u043E \u043A\u0440\u0443\u0433\u043B\u043E\u0435, \u044F\u0440\u043A\u043E\u0435 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0435. \u041E\u043D\u043E \u0432\u0437\u043E\u0448\u043B\u043E. \u041E\u043D\u043E \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0441\u043E\u0433\u0440\u0435\u043B\u043E. \u0421 \u0442\u0435\u0445 \u043F\u043E\u0440 \u043E\u043D\u043E \u0432\u0441\u0451 \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442, \u0430 \u044F - \u0442\u043E, \u0441\u043A\u0432\u043E\u0437\u044C \u0447\u0442\u043E \u043E\u043D\u043E \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442.",
+    "echo.glasschoir.who": "\u0421\u0442\u0435\u043A\u043B\u044F\u043D\u043D\u044B\u0439 \u0445\u043E\u0440",
+    "echo.glasschoir.text": "\u041C\u044B - \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0439 \u043F\u043E\u043B\u0434\u0435\u043D\u044C, \u0440\u0430\u0437\u0431\u0438\u0442\u044B\u0439 \u043D\u0430 \u0442\u044B\u0441\u044F\u0447\u0443 \u043E\u0441\u043A\u043E\u043B\u043A\u043E\u0432, \u0438 \u043A\u0430\u0436\u0434\u044B\u0439 \u043F\u043E\u0451\u0442 \u0442\u0443 \u043D\u043E\u0442\u0443, \u0447\u0442\u043E \u0443\u0441\u043B\u044B\u0448\u0430\u043B, \u043A\u043E\u0433\u0434\u0430 \u043F\u0430\u0434\u0430\u043B\u043E \u0441\u043E\u043B\u043D\u0446\u0435. \u0412\u043C\u0435\u0441\u0442\u0435 \u043C\u044B \u043F\u043E\u0447\u0442\u0438 \u0437\u0432\u0443\u0447\u0438\u043C \u043A\u0430\u043A \u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0441\u0432\u0435\u0442. \u041F\u043E\u0447\u0442\u0438. \u041A\u0430\u0436\u0434\u044B\u0439 \u0433\u043E\u043B\u043E\u0441, \u0447\u0442\u043E \u043C\u044B \u0437\u0430\u0431\u0438\u0440\u0430\u0435\u043C, \u043F\u0440\u0438\u0431\u043B\u0438\u0436\u0430\u0435\u0442 \u043D\u0430\u0441.",
+    "echo.ashenking.who": "\u041F\u0435\u043F\u0435\u043B\u044C\u043D\u044B\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "echo.ashenking.text": "\u041C\u0435\u043D\u044F \u043A\u043E\u0440\u043E\u043D\u043E\u0432\u0430\u043B\u0438 \u0432 \u0442\u043E\u0442 \u043C\u0438\u0433, \u043A\u043E\u0433\u0434\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0443\u0434\u0430\u0440\u0438\u043B\u043E\u0441\u044C \u043E \u0437\u0435\u043C\u043B\u044E. \u042F \u043F\u043E\u043A\u043B\u044F\u043B\u0441\u044F \u043F\u0440\u0430\u0432\u0438\u0442\u044C, \u043F\u043E\u043A\u0430 \u043E\u043D\u043E \u043D\u0435 \u0432\u0437\u043E\u0439\u0434\u0451\u0442 \u0441\u043D\u043E\u0432\u0430, \u0438 \u044F \u0441\u0434\u0435\u0440\u0436\u0430\u043B \u043A\u0430\u0436\u0434\u0443\u044E \u043A\u043B\u044F\u0442\u0432\u0443, \u0447\u0442\u043E \u0434\u0430\u0432\u0430\u043B. \u041F\u043E\u043D\u0438\u043C\u0430\u0435\u0448\u044C \u043B\u0438 \u0442\u044B, \u043E \u0447\u0451\u043C \u043F\u0440\u043E\u0441\u0438\u0448\u044C, \u0420\u0430\u0437\u043E\u0436\u0436\u0451\u043D\u043D\u044B\u0439? \u0427\u0442\u043E\u0431\u044B \u043A\u043E\u043D\u0447\u0438\u043B\u043E\u0441\u044C \u043C\u043E\u0451 \u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435, \u0442\u0435\u0431\u0435 \u043F\u0440\u0438\u0434\u0451\u0442\u0441\u044F \u0441\u0434\u0435\u0440\u0436\u0430\u0442\u044C \u043C\u043E\u044E \u043A\u043B\u044F\u0442\u0432\u0443 \u0437\u0430 \u043C\u0435\u043D\u044F.",
+    "echo.hollowcrown.who": "\u041F\u043E\u043B\u0430\u044F \u043A\u043E\u0440\u043E\u043D\u0430",
+    "echo.hollowcrown.text": "\u041F\u0440\u0435\u0436\u0434\u0435 \u0447\u0435\u043C \u0443 \u041C\u0430\u0440\u043A\u0438 \u043F\u043E\u044F\u0432\u0438\u043B\u0438\u0441\u044C \u043A\u043E\u0440\u043E\u043B\u0438, \u0443 \u043D\u0435\u0451 \u0431\u044B\u043B\u0430 \u044F: \u043A\u043E\u0440\u043E\u043D\u0430, \u0436\u0434\u0443\u0449\u0430\u044F \u0433\u043E\u043B\u043E\u0432\u0443. \u0422\u044B\u0441\u044F\u0447\u0443 \u043B\u0435\u0442 \u0441\u043E\u043B\u043D\u0446\u0435 \u0441\u0438\u0434\u0435\u043B\u043E \u0443 \u043C\u0435\u043D\u044F \u043D\u0430 \u0447\u0435\u043B\u0435, \u0438 \u044F \u0431\u044B\u043B\u0430 \u0441\u044B\u0442\u0430. \u041F\u043E\u0442\u043E\u043C \u044F \u043F\u0440\u043E\u0433\u043E\u043B\u043E\u0434\u0430\u043B\u0430\u0441\u044C. \u042F \u0441\u044A\u0435\u043B\u0430 \u0441\u0432\u0435\u0442, \u043F\u043E\u0442\u043E\u043C\u0443 \u0447\u0442\u043E \u043E\u043D \u0431\u044B\u043B \u0440\u044F\u0434\u043E\u043C, \u043A\u0430\u043A \u043F\u0440\u0438\u043B\u0438\u0432 \u0437\u0430\u0431\u0438\u0440\u0430\u0435\u0442 \u0431\u0435\u0440\u0435\u0433. \u0412 \u0442\u0432\u043E\u0435\u0439 \u0433\u0440\u0443\u0434\u0438 \u0442\u043B\u0435\u0435\u0442 \u0435\u0433\u043E \u0438\u0441\u043A\u0440\u0430. \u042F \u0435\u0451 \u0447\u0443\u044E.",
+    "perk.firstlight.name": "\u041F\u0435\u0440\u0432\u044B\u0439 \u0441\u0432\u0435\u0442",
+    "perk.firstlight.text": "20% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u043C\u043E\u0433\u043E \u043E\u043F\u044B\u0442\u0430",
+    "perk.brightember.name": "\u042F\u0440\u043A\u0438\u0439 \u0443\u0433\u043E\u043B\u044C",
+    "perk.brightember.text": "15% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0443\u0440\u043E\u043D\u0430",
+    "perk.steadyflame.name": "\u0420\u043E\u0432\u043D\u043E\u0435 \u043F\u043B\u0430\u043C\u044F",
+    "perk.steadyflame.text": "10% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0430 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F",
+    "perk.keeneye.name": "\u0417\u043E\u0440\u043A\u0438\u0439 \u0433\u043B\u0430\u0437",
+    "perk.keeneye.text": "30% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0440\u0435\u0434\u043A\u043E\u0441\u0442\u0438 \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432",
+    "perk.oldroads.name": "\u0421\u0442\u0430\u0440\u044B\u0435 \u0434\u043E\u0440\u043E\u0433\u0438",
+    "perk.oldroads.text": "25% \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0435\u0440\u0435\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F",
+    "perk.warmhands.name": "\u0422\u0451\u043F\u043B\u044B\u0435 \u0440\u0443\u043A\u0438",
+    "perk.warmhands.text": "\u041D\u0430 25% \u0431\u043E\u043B\u044C\u0448\u0435 \u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u044B\u043B\u0438 \u043E\u0442 \u0440\u0430\u0437\u0431\u043E\u0440\u0430",
+    "perk.longmemory.name": "\u0414\u043E\u043B\u0433\u0430\u044F \u043F\u0430\u043C\u044F\u0442\u044C",
+    "perk.longmemory.text": "\u0421\u043F\u0443\u0442\u043D\u0438\u043A\u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0432\u0434\u0432\u043E\u0435 \u0431\u043E\u043B\u044C\u0448\u0435 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u043E\u0441\u0442\u0438",
+    "perk.deeppockets.name": "\u0413\u043B\u0443\u0431\u043E\u043A\u0438\u0435 \u043A\u0430\u0440\u043C\u0430\u043D\u044B",
+    "perk.deeppockets.text": "20 \u044F\u0447\u0435\u0435\u043A \u0442\u0430\u0439\u043D\u0438\u043A\u0430 \u0441\u0440\u0430\u0437\u0443 \u0438 \u043C\u0435\u0441\u0442\u043E \u0435\u0449\u0451 \u0434\u043B\u044F 20",
+    "perk.stonefinder.name": "\u0418\u0441\u043A\u0430\u0442\u0435\u043B\u044C \u0441\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u043E\u0432",
+    "perk.stonefinder.text": "\u0421\u0430\u043C\u043E\u0446\u0432\u0435\u0442\u044B \u0432\u044B\u043F\u0430\u0434\u0430\u044E\u0442 \u043D\u0430 50% \u0447\u0430\u0449\u0435",
+    "perk.tradersmark.name": "\u0417\u043D\u0430\u043A \u0442\u043E\u0440\u0433\u043E\u0432\u0446\u0430",
+    "perk.tradersmark.text": "\u0411\u0440\u043E\u0434\u044F\u0447\u0438\u0439 \u0440\u044B\u043D\u043E\u043A \u0431\u0435\u0440\u0451\u0442 \u043D\u0430 20% \u043C\u0435\u043D\u044C\u0448\u0435",
+    "echo.shards": "\u0422\u0440\u0438 \u043A\u0443\u0441\u043A\u0430 \u0441\u043E\u043B\u043D\u0446\u0430, \u0435\u0449\u0451 \u0442\u0451\u043F\u043B\u044B\u0435, \u0438 \u0443\u0433\u043E\u043B\u044C \u0443 \u0432\u0430\u0441 \u0432 \u0433\u0440\u0443\u0434\u0438 \u0431\u044C\u0451\u0442\u0441\u044F \u0441 \u043D\u0438\u043C\u0438 \u0432 \u0442\u0430\u043A\u0442. \u0421\u043B\u043E\u0436\u0438\u0442\u0435 \u0438\u0445 \u0432\u043C\u0435\u0441\u0442\u0435 - \u0438 \u041C\u0430\u0440\u043A\u0430, \u0431\u044B\u0442\u044C \u043C\u043E\u0436\u0435\u0442, \u0443\u0432\u0438\u0434\u0438\u0442 \u0443\u0442\u0440\u043E. \u0423\u0433\u043E\u043B\u044C \u0442\u043E\u0436\u0435 \u043F\u0440\u0438\u0434\u0451\u0442\u0441\u044F \u043E\u0442\u0434\u0430\u0442\u044C \u043E\u0433\u043D\u044E.",
+    "dawn.story": "\u041A\u0443\u0441\u043A\u0438 \u0441\u0445\u0432\u0430\u0442\u044B\u0432\u0430\u044E\u0442\u0441\u044F, \u0443\u0433\u043E\u043B\u044C \u0438\u0437 \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u0434\u0438 \u0443\u0445\u043E\u0434\u0438\u0442 \u0432 \u043E\u0433\u043E\u043D\u044C \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u043D\u0438\u043C\u0438, \u0438 \u043D\u0430 \u043C\u0438\u0433 \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0434\u0438\u0442. \u041F\u043E\u0442\u043E\u043C \u043D\u0435\u0431\u043E \u043D\u0430\u0434 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0441\u0435\u0440\u0435\u0435\u0442, \u0440\u043E\u0437\u043E\u0432\u0435\u0435\u0442, \u0437\u043E\u043B\u043E\u0442\u0438\u0442\u0441\u044F. \u0412\u043F\u0435\u0440\u0432\u044B\u0435 \u0437\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u043B\u0435\u0442 \u043D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u0439 \u0432\u043E\u0441\u0445\u043E\u0434\u0438\u0442 \u0441\u043E\u043B\u043D\u0446\u0435.\n\n\u0412\u044B \u043F\u0440\u043E\u0441\u044B\u043F\u0430\u0435\u0442\u0435\u0441\u044C \u0432 \u043F\u0440\u0438\u0431\u043E\u0435 \u0441 \u0443\u0433\u043B\u0451\u043C \u043D\u0430 \u043C\u0435\u0441\u0442\u0435 \u0441\u0435\u0440\u0434\u0446\u0430. \u041D\u0430 \u044D\u0442\u043E\u0442 \u0440\u0430\u0437 \u0431\u0435\u0440\u0435\u0433 \u0442\u0451\u043F\u043B\u044B\u0439."
   };
   var BASE = {};
   var GENDER = {};
@@ -6325,6 +6601,69 @@
     "shrine.title": "\u0421\u0432\u044F\u0442\u0438\u043B\u0438\u0449\u0435 \u0436\u0430\u0440\u0438\u043D",
     "shrine.cost": "{cost} \u043F\u0438\u043B\u0443 / \u0433\u043E\u0434\u0438\u043D\u0430",
     "shrine.note": "\u0411\u043B\u0430\u0433\u043E\u0441\u043B\u043E\u0432\u0435\u043D\u043D\u044F \u0439\u0434\u0443\u0442\u044C \u0437\u0430 \u0447\u0430\u0441\u043E\u043C \u0433\u0435\u0440\u043E\u044F, \u0442\u043E\u0436 \u0434\u0456\u044E\u0442\u044C \u0456 \u0442\u043E\u0434\u0456, \u043A\u043E\u043B\u0438 \u0432\u0430\u0441 \u043D\u0435\u043C\u0430\u0454.",
+    "nav.market": "\u0420\u0438\u043D\u043E\u043A",
+    "market.title": "\u041C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u0439 \u0440\u0438\u043D\u043E\u043A",
+    "market.closed": "\u041A\u0430\u0440\u0430\u0432\u0430\u043D \u0441\u0442\u0430\u043D\u0435 \u0442\u0430\u0431\u043E\u0440\u043E\u043C \u0431\u0456\u043B\u044F \u0434\u043E\u0440\u043E\u0433\u0438, \u043A\u043E\u043B\u0438 \u0432\u043F\u0430\u0434\u0435 {boss}.",
+    "market.next": "\u041D\u043E\u0432\u0438\u0439 \u0442\u043E\u0432\u0430\u0440 \u0437\u0430 {time}",
+    "market.refresh": "\u041D\u043E\u0432\u0438\u0439 \u0442\u043E\u0432\u0430\u0440 \u0437\u0430\u0440\u0430\u0437: {cost}",
+    "market.refreshTip": "\u041A\u043E\u0448\u0442\u0443\u0454 {cost} \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D; \u0446\u0456\u043D\u0430 \u043F\u043E\u0434\u0432\u043E\u044E\u0454\u0442\u044C\u0441\u044F \u0437 \u043A\u043E\u0436\u043D\u0438\u043C \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F\u043C, \u0434\u043E\u043A\u0438 \u0442\u043E\u0432\u0430\u0440 \u043D\u0435 \u0437\u043C\u0456\u043D\u0438\u0442\u044C\u0441\u044F \u0441\u0430\u043C.",
+    "market.pedlar": "\u041A\u043E\u0440\u043E\u0431\u0435\u0439\u043D\u0438\u043A",
+    "market.pedlarNote": "\u0421\u043F\u043E\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F \u043D\u0430\u0439\u0432\u0438\u0449\u043E\u0433\u043E \u0440\u0456\u0432\u043D\u044F \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432, \u044F\u043A\u043E\u0433\u043E \u0432\u0438 \u0434\u043E\u0441\u044F\u0433\u043B\u0438; \u0434\u0432\u0456 \u0440\u0435\u0447\u0456 - \u0434\u043B\u044F \u043D\u0430\u0439\u0441\u043B\u0430\u0431\u0448\u0438\u0445 \u043A\u043E\u043C\u0456\u0440\u043E\u043A.",
+    "market.jeweller": "\u042E\u0432\u0435\u043B\u0456\u0440",
+    "market.jewellerNote": "\u0421\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0438. \u0412\u0441\u0442\u0430\u0432\u043B\u044F\u0439\u0442\u0435 \u0457\u0445 \u0443 \u0433\u043D\u0456\u0437\u0434\u0430 \u0432 \u041A\u0443\u0437\u043D\u0456.",
+    "market.buy": "\u041A\u0443\u043F\u0438\u0442\u0438 \u0437\u0430 {cost}",
+    "market.sold": "\u041F\u0440\u043E\u0434\u0430\u043D\u043E",
+    "market.bought": "\u041A\u0443\u043F\u043B\u0435\u043D\u043E: {name}",
+    "market.upgrade": "\u041F\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u043D\u044F",
+    "item.sockets": "\u0413\u043D\u0456\u0437\u0434\u0430",
+    "item.socketEmpty": "\u041F\u043E\u0440\u043E\u0436\u043D\u0454 \u0433\u043D\u0456\u0437\u0434\u043E",
+    "forge.sockets": "\u0413\u043D\u0456\u0437\u0434\u0430",
+    "forge.drill": "\u0421\u0432\u0435\u0440\u0434\u043B\u0438\u0442\u0438: {cost}",
+    "forge.drillTip": "\u0429\u0435 \u043E\u0434\u043D\u0435 \u0433\u043D\u0456\u0437\u0434\u043E, \u043D\u0435 \u0431\u0456\u043B\u044C\u0448\u0435 {n}.",
+    "forge.socketsFull": "\u0423\u0441\u0456 \u0433\u043D\u0456\u0437\u0434\u0430",
+    "forge.noSockets": "\u0413\u043D\u0456\u0437\u0434 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454.",
+    "forge.setStone": "\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442",
+    "forge.pry": "\u0412\u0438\u0439\u043D\u044F\u0442\u0438",
+    "forge.here": "\u0422\u0443\u0442: {effect}",
+    "pouch.title": "\u0422\u043E\u0440\u0431\u0438\u043D\u043A\u0430 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0456\u0432",
+    "pouch.empty": "\u0421\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0456\u0432 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454. \u0407\u0445 \u043B\u0438\u0448\u0430\u044E\u0442\u044C \u0447\u0435\u043C\u043F\u0456\u043E\u043D\u0438 \u0439 \u0431\u043E\u0441\u0438, \u043F\u0440\u043E\u0434\u0430\u0454 \u042E\u0432\u0435\u043B\u0456\u0440.",
+    "pouch.cut": "3 \u0432 1: {cost}",
+    "pouch.cutTip": "\u041E\u0433\u0440\u0430\u043D\u0438\u0442\u0438 \u0442\u0440\u0438 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0438 \xAB{name}\xBB \u0432 \u043E\u0434\u0438\u043D \xAB{next}\xBB.",
+    "pouch.inWeapon": "\u0423 \u0437\u0431\u0440\u043E\u0457: {e}",
+    "pouch.inArmour": "\u0423 \u0431\u0440\u043E\u043D\u0456: {e}",
+    "pouch.inJewel": "\u0423 \u043F\u0440\u0438\u043A\u0440\u0430\u0441\u0430\u0445: {e}",
+    "stone.full": "{tier} {name}",
+    "menu.autoStones": "\u0412\u0441\u0442\u0430\u0432\u043B\u044F\u0442\u0438 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0438 \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u043E",
+    "menu.autoStonesNote": "\u041F\u043E\u0440\u043E\u0436\u043D\u0456 \u0433\u043D\u0456\u0437\u0434\u0430 \u0432 \u043E\u0434\u044F\u0433\u043D\u0435\u043D\u0438\u0445 \u0440\u0435\u0447\u0430\u0445 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C \u0456\u0437 \u0442\u043E\u0440\u0431\u0438\u043D\u043A\u0438 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442, \u0449\u043E \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 \u0434\u043E\u043F\u043E\u043C\u0430\u0433\u0430\u0454 \u0431\u0456\u043B\u0434\u0443.",
+    "toast.stone": "\u0421\u0430\u043C\u043E\u0446\u0432\u0456\u0442: {name}",
+    "log.echoes": "\u0412\u0456\u0434\u043B\u0443\u043D\u043D\u044F",
+    "echoes.title": "\u0412\u0456\u0434\u043B\u0443\u043D\u043D\u044F \u0434\u043D\u044F, \u043A\u043E\u043B\u0438 \u0432\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435",
+    "echoes.count": "\u043F\u043E\u0447\u0443\u0442\u043E {n} / {total}",
+    "echoes.note": "\u0407\u0445 \u0456\u043D\u043E\u0434\u0456 \u043B\u0438\u0448\u0430\u044E\u0442\u044C \u0431\u043E\u0441\u0438 \u043C\u0430\u043F; \u043A\u043E\u0436\u043D\u0430 \u0432\u0435\u0440\u0448\u0438\u043D\u0430 \u043B\u0438\u0448\u0430\u0454 \u0441\u0432\u043E\u0454. \u041A\u043E\u0436\u043D\u0435 \u0442\u0440\u0435\u0442\u0454 - \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443.",
+    "echoes.unknown": "\u0429\u0435 \u043D\u0435 \u043F\u043E\u0447\u0443\u0442\u0435.",
+    "echoes.unknownPin": "\u0427\u0435\u043A\u0430\u0454 \u0431\u0456\u043B\u044F \u0432\u0435\u0440\u0448\u0438\u043D\u0438: {pin}.",
+    "toast.echo": "\u0412\u0456\u0434\u043B\u0443\u043D\u043D\u044F: {who}",
+    "log.echo": "\u0412\u0456\u0434\u043B\u0443\u043D\u043D\u044F: {who}.",
+    "dawn.title": "\u0420\u043E\u0437\u043F\u0430\u043B\u0438\u0442\u0438 \u0441\u043E\u043D\u0446\u0435",
+    "dawn.shards": "\u0423\u043B\u0430\u043C\u043A\u0438 \u0441\u043E\u043D\u0446\u044F: {n} / {total}",
+    "dawn.note": "\u041A\u043E\u0436\u0435\u043D \u0448\u043C\u0430\u0442\u043E\u043A \u0441\u043E\u043D\u0446\u044F \u0442\u0440\u0438\u043C\u0430\u0454 \u0432\u0435\u0440\u0448\u0438\u043D\u0430: {pins}.",
+    "dawn.relight": "\u0417\u0430\u043F\u0430\u043B\u0438\u0442\u0438 \u0441\u043E\u043D\u0446\u0435",
+    "dawn.confirm": "\u0417\u0430\u043F\u0430\u043B\u0438\u0442\u0438 \u0441\u043E\u043D\u0446\u0435?",
+    "dawn.keeps": "\u0417\u0430\u043B\u0438\u0448\u0438\u0442\u044C\u0441\u044F: \u0441\u043A\u0440\u0438\u043D\u044C\u043A\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u0439 \u0456 \u043A\u043E\u0434\u0435\u043A\u0441, \u0441\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0438 \u0442\u0430 \u0457\u0445\u043D\u044F \u043F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u0456\u0441\u0442\u044C, \u0432\u0456\u0434\u043B\u0443\u043D\u043D\u044F, \u0442\u043E\u0440\u0431\u0438\u043D\u043A\u0430 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0456\u0432, \u043A\u0443\u043F\u043B\u0435\u043D\u0456 \u043A\u043E\u043C\u0456\u0440\u043A\u0438 \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438, \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F, \u043F\u0456\u0434\u0441\u0443\u043C\u043A\u0438 - \u0456 \u043E\u0434\u043D\u0430 \u0440\u043E\u0434\u0438\u043D\u043D\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F.",
+    "dawn.resets": "\u041F\u043E\u0447\u043D\u0435\u0442\u044C\u0441\u044F \u0437\u043D\u043E\u0432\u0443: \u0440\u0456\u0432\u0435\u043D\u044C, \u0434\u0435\u0440\u0435\u0432\u043E \u043F\u0430\u0441\u0438\u0432\u0456\u0432, \u0441\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F, \u0441\u043F\u043E\u0440\u044F\u0434\u0436\u0435\u043D\u043D\u044F, \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0430, \u0434\u043E\u0440\u043E\u0433\u0430, \u0430\u0442\u043B\u0430\u0441, \u043C\u0430\u043F\u0438, \u043F\u0438\u043B \u0456 \u0441\u0444\u0435\u0440\u0438.",
+    "dawn.gains": "\u0412\u0438 \u043E\u0442\u0440\u0438\u043C\u0430\u0454\u0442\u0435: {dawn} - \u043D\u0430 {xp}% \u0431\u0456\u043B\u044C\u0448\u0435 \u0434\u043E\u0441\u0432\u0456\u0434\u0443 \u0439 \u043F\u0438\u043B\u0443, \u043E\u0447\u043A\u043E \u043F\u0430\u0441\u0438\u0432\u0456\u0432, \u0441\u0432\u0456\u0442 \u043D\u0430 {tough}% \u043C\u0456\u0446\u043D\u0456\u0448\u0438\u0439 \u0456 \u043D\u0430 {rich}% \u0431\u0430\u0433\u0430\u0442\u0448\u0438\u0439 \u0442\u0430 \u0434\u0430\u0440 \u043D\u0430 \u0432\u0438\u0431\u0456\u0440.",
+    "dawn.heirloom": "\u0420\u043E\u0434\u0438\u043D\u043D\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F",
+    "dawn.noHeirloom": "\u0431\u0435\u0437 \u043D\u0435\u0457",
+    "dawn.calling": "\u041F\u043E\u043A\u043B\u0438\u043A\u0430\u043D\u043D\u044F",
+    "dawn.go": "\u0417\u0430\u043F\u0430\u043B\u0438\u0442\u0438",
+    "dawn.perkTitle": "{dawn}: \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0430\u0440",
+    "dawn.perkNote": "\u041E\u0434\u0438\u043D \u0434\u0430\u0440 \u0437\u0430 \u043A\u043E\u0436\u0435\u043D \u0441\u0432\u0456\u0442\u0430\u043D\u043E\u043A, \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438.",
+    "dawn.perks": "\u0414\u0430\u0440\u0438: {list}",
+    "dawn.pickNow": "\u041E\u0431\u0440\u0430\u0442\u0438 \u0434\u0430\u0440",
+    "dawn.name": "\u0421\u0432\u0456\u0442\u0430\u043D\u043E\u043A {n}",
+    "dawn.world": "\u0421\u0432\u0456\u0442: \u043D\u0430 {tough}% \u043C\u0456\u0446\u043D\u0456\u0448\u0438\u0439, \u043D\u0430 {rich}% \u0431\u0430\u0433\u0430\u0442\u0448\u0438\u0439",
+    "badge.perk": "\u041C\u043E\u0436\u043D\u0430 \u043E\u0431\u0440\u0430\u0442\u0438 \u0434\u0430\u0440 \u0441\u0432\u0456\u0442\u0430\u043D\u043A\u0443",
+    "badge.relight": "\u0421\u043E\u043D\u0446\u0435 \u043C\u043E\u0436\u043D\u0430 \u0437\u0430\u043F\u0430\u043B\u0438\u0442\u0438",
     "shrine.line": "{name}: {text}",
     "shrine.left": "\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {time}",
     "shrine.leftKept": "\u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044F {time}, \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F",
@@ -6359,8 +6698,8 @@
     "log.contractRelic": "\u041D\u0430\u0433\u043E\u0440\u043E\u0434\u0430 \u0437\u0430 \u043A\u043E\u043D\u0442\u0440\u0430\u043A\u0442: {relic}.",
     "log.pinOpens": "\u0412\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u0448\u043B\u044F\u0445: {pin}.",
     "log.pinDefeated": "\u0412\u0435\u0440\u0448\u0438\u043D\u0443 \u043F\u0456\u0434\u043A\u043E\u0440\u0435\u043D\u043E: {pin}. +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443.|\u0412\u0435\u0440\u0448\u0438\u043D\u0443 \u043F\u0456\u0434\u043A\u043E\u0440\u0435\u043D\u043E: {pin}. +{n} \u043E\u0447\u043A\u0438 \u0430\u0442\u043B\u0430\u0441\u0443.|\u0412\u0435\u0440\u0448\u0438\u043D\u0443 \u043F\u0456\u0434\u043A\u043E\u0440\u0435\u043D\u043E: {pin}. +{n} \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443.",
-    "log.sunRises": "\u041D\u0430\u0434 \u041C\u0430\u0440\u0448\u0435\u043C \u0441\u0445\u043E\u0434\u0438\u0442\u044C \u0441\u043E\u043D\u0446\u0435.",
-    "log.sunRisesHeir": "\u041D\u0430\u0434 \u041C\u0430\u0440\u0448\u0435\u043C \u0441\u0445\u043E\u0434\u0438\u0442\u044C \u0441\u043E\u043D\u0446\u0435. \u0417 \u0432\u0430\u043C\u0438 \u043F\u0440\u0438\u0439\u0448\u043B\u0430 \u0440\u043E\u0434\u0438\u043D\u043D\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F.",
+    "log.sunRises": "\u041D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u044E \u0441\u0445\u043E\u0434\u0438\u0442\u044C \u0441\u043E\u043D\u0446\u0435.",
+    "log.sunRisesHeir": "\u041D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u044E \u0441\u0445\u043E\u0434\u0438\u0442\u044C \u0441\u043E\u043D\u0446\u0435. \u0417 \u0432\u0430\u043C\u0438 \u043F\u0440\u0438\u0439\u0448\u043B\u0430 \u0440\u043E\u0434\u0438\u043D\u043D\u0430 \u0440\u0435\u043B\u0456\u043A\u0432\u0456\u044F.",
     "log.tierFirst": "\u0423\u043F\u0435\u0440\u0448\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043A\u043E \u0430\u0442\u043B\u0430\u0441\u0443.|\u0423\u043F\u0435\u0440\u0448\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043A\u0438 \u0430\u0442\u043B\u0430\u0441\u0443.|\u0423\u043F\u0435\u0440\u0448\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043E: {tier}. +{n} \u043E\u0447\u043E\u043A \u0430\u0442\u043B\u0430\u0441\u0443.",
     "log.bossFalls": "\u0411\u043E\u0441\u0430 \u043F\u0435\u0440\u0435\u043C\u043E\u0436\u0435\u043D\u043E: {monster}.",
     "log.sigilFound": "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E: {sigil}.",
@@ -7466,7 +7805,82 @@
     "tag.cold": "\u0445\u043E\u043B\u043E\u0434",
     "tag.lightning": "\u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0430",
     "tag.chaos": "\u0445\u0430\u043E\u0441",
-    "tag.elemental": "\u0441\u0442\u0438\u0445\u0456\u0457"
+    "tag.elemental": "\u0441\u0442\u0438\u0445\u0456\u0457",
+    "stone.ruby.name": "\u0420\u0443\u0431\u0456\u043D",
+    "stone.ruby.weapon": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0432\u043E\u0433\u043D\u044E",
+    "stone.ruby.armour": "\u041E\u043F\u0456\u0440 \u0432\u043E\u0433\u043D\u044E +{0}%",
+    "stone.ruby.jewel": "\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C \u0437\u0434\u043E\u0440\u043E\u0432'\u044F +{0}",
+    "stone.sapphire.name": "\u0421\u0430\u043F\u0444\u0456\u0440",
+    "stone.sapphire.weapon": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0445\u043E\u043B\u043E\u0434\u0443",
+    "stone.sapphire.armour": "\u041E\u043F\u0456\u0440 \u0445\u043E\u043B\u043E\u0434\u0443 +{0}%",
+    "stone.sapphire.jewel": "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F {0} \u043C\u0430\u043D\u0438 \u0437\u0430 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+    "stone.topaz.name": "\u0422\u043E\u043F\u0430\u0437",
+    "stone.topaz.weapon": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438 \u0432\u0456\u0434 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u043A\u0438",
+    "stone.topaz.armour": "\u041E\u043F\u0456\u0440 \u0431\u043B\u0438\u0441\u043A\u0430\u0432\u0446\u0456 +{0}%",
+    "stone.topaz.jewel": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "stone.emerald.name": "\u0421\u043C\u0430\u0440\u0430\u0433\u0434",
+    "stone.emerald.weapon": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0430\u043D\u0441\u0443 \u043A\u0440\u0438\u0442. \u0443\u0434\u0430\u0440\u0443",
+    "stone.emerald.armour": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0443\u0445\u0438\u043B\u0435\u043D\u043D\u044F",
+    "stone.emerald.jewel": "\u0413\u0440\u0430\u0446\u0456\u044F +{0}",
+    "stone.onyx.name": "\u041E\u043D\u0456\u043A\u0441",
+    "stone.onyx.weapon": "\u0423\u0434\u0430\u0440\u0438 \u0456\u0433\u043D\u043E\u0440\u0443\u044E\u0442\u044C {0}% \u043E\u043F\u043E\u0440\u0443 \u0441\u0442\u0438\u0445\u0456\u044F\u043C",
+    "stone.onyx.armour": "\u041E\u043F\u0456\u0440 \u0445\u0430\u043E\u0441\u0443 +{0}%",
+    "stone.onyx.jewel": "{0}% \u0448\u043A\u043E\u0434\u0438 \u0432\u0438\u043A\u0440\u0430\u0434\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "stone.diamond.name": "\u0414\u0456\u0430\u043C\u0430\u043D\u0442",
+    "stone.diamond.weapon": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u0430\u0442\u0430\u043A\u0438 \u0439 \u0447\u0430\u043A\u043B\u0443\u0432\u0430\u043D\u043D\u044F",
+    "stone.diamond.armour": "{0}% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0431\u0440\u043E\u043D\u0456 \u0439 \u0435\u043D\u0435\u0440\u0433\u043E\u0449\u0438\u0442\u0430",
+    "stone.diamond.jewel": "\u0423\u0441\u0456 \u043E\u043F\u043E\u0440\u0438 \u0441\u0442\u0438\u0445\u0456\u044F\u043C +{0}%",
+    "stone.tier0": "\u0429\u0435\u0440\u0431\u043B\u0435\u043D\u0438\u0439",
+    "stone.tier1": "\u041C\u0443\u0442\u043D\u0438\u0439",
+    "stone.tier2": "\u0427\u0438\u0441\u0442\u0438\u0439",
+    "stone.tier3": "\u0411\u0435\u0437\u0434\u043E\u0433\u0430\u043D\u043D\u0438\u0439",
+    "stone.tier4": "\u0421\u044F\u0439\u043D\u0438\u0439",
+    "echo.bell.who": "\u0425\u0440\u0430\u043D\u0438\u0442\u0435\u043B\u044C \u043A\u0430\u043F\u043B\u0438\u0446\u0456",
+    "echo.bell.text": "\u0429\u043E\u0432\u0435\u0447\u043E\u0440\u0430 \u044F \u043F\u0440\u043E\u0432\u043E\u0434\u0436\u0430\u0432 \u0441\u043E\u043D\u0446\u0435 \u0434\u0437\u0432\u043E\u043D\u043E\u043C, \u0456 \u0449\u043E\u0440\u0430\u043D\u043A\u0443 \u0432\u043E\u043D\u043E \u0437\u043D\u043E\u0432\u0443 \u0441\u0445\u043E\u0434\u0438\u043B\u043E \u0437-\u0437\u0430 \u043F\u0430\u0433\u043E\u0440\u0431\u0430. \u041E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0433\u043E \u0432\u0435\u0447\u043E\u0440\u0430 \u044F \u0434\u0437\u0432\u043E\u043D\u0438\u0432 \u0456 \u0434\u0437\u0432\u043E\u043D\u0438\u0432. \u041C\u043E\u0442\u0443\u0437\u043A\u0430 \u0441\u0442\u0435\u0440\u043B\u0430 \u043C\u0435\u043D\u0456 \u0434\u043E\u043B\u043E\u043D\u0456. \u042F \u0434\u0437\u0432\u043E\u043D\u044E \u0439 \u0434\u043E\u0441\u0456. \u0425\u0442\u043E\u0441\u044C \u043C\u0443\u0441\u0438\u0442\u044C \u0431\u0443\u0442\u0438 \u043D\u0430\u043F\u043E\u0433\u043E\u0442\u043E\u0432\u0456, \u043A\u043E\u043B\u0438 \u0432\u043E\u043D\u043E \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u044C.",
+    "echo.saltchild.who": "\u0414\u0438\u0442\u0438\u043D\u0430 \u0437 \u0421\u043E\u043B\u043E\u043D\u043E\u0457 \u0434\u0440\u0430\u0433\u043E\u0432\u0438\u043D\u0438",
+    "echo.saltchild.text": "\u041C\u0430\u043C\u0430 \u043A\u0430\u0437\u0430\u043B\u0430, \u0449\u043E \u043F\u0440\u0438\u043F\u043B\u0438\u0432 \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0454 \u0442\u0435, \u0449\u043E \u0437\u0430\u0431\u0440\u0430\u0432. \u0407\u0457 \u0432\u0456\u043D \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0432 \u043D\u0430 \u0447\u0435\u0442\u0432\u0435\u0440\u0442\u0438\u0439 \u0434\u0435\u043D\u044C. \u0412\u043E\u043D\u0430 \u0441\u0438\u0434\u0456\u043B\u0430 \u0431\u0456\u043B\u044F \u0432\u043E\u0433\u043D\u044E \u0439 \u043D\u0435 \u0432\u0456\u0434\u0447\u0443\u0432\u0430\u043B\u0430 \u0439\u043E\u0433\u043E. \u042F \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u0432 \u043A\u043B\u0438\u043A\u0430\u0442\u0438 \u0457\u0457 \u0441\u043F\u0430\u0442\u0438.",
+    "echo.warden.who": "\u0412\u0430\u0440\u0442\u043E\u0432\u0438\u0439 \u043F\u0440\u0438\u043F\u043B\u0438\u0432\u0443",
+    "echo.warden.text": "\u041D\u0430\u043A\u0430\u0437 \u0431\u0443\u0432 \u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u0431\u0440\u0430\u043C\u0443, \u0434\u043E\u043A\u0438 \u043D\u0435 \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F \u0441\u0432\u0456\u0442\u043B\u043E. \u041D\u0456\u0445\u0442\u043E \u043D\u0435 \u0441\u043A\u0430\u0437\u0430\u0432, \u0449\u043E \u0440\u043E\u0431\u0438\u0442\u0438, \u044F\u043A\u0449\u043E \u0432\u043E\u043D\u043E \u043D\u0435 \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u0442\u044C\u0441\u044F. \u0422\u043E\u0436 \u044F \u0442\u0440\u0438\u043C\u0430\u0432. \u041C\u043E\u0440\u0435 \u0431\u0443\u043B\u043E \u0442\u0435\u0440\u043F\u043B\u044F\u0447\u0435. \u042F \u0442\u0435\u0436. \u0422\u0456\u043B\u044C\u043A\u0438 \u043E\u0434\u0438\u043D \u0456\u0437 \u043D\u0430\u0441 \u0431\u0443\u0432 \u043C\u0435\u0440\u0442\u0432\u0438\u0439.",
+    "echo.lamplighter.who": "\u041B\u0456\u0445\u0442\u0430\u0440\u043D\u0438\u043A",
+    "echo.lamplighter.text": "\u042F \u0437\u0430\u043F\u0430\u043B\u044E\u0432\u0430\u0432 \u043B\u0456\u0445\u0442\u0430\u0440\u0456 \u0432\u0456\u0434 \u0431\u0435\u0440\u0435\u0433\u0430 \u0434\u043E \u043A\u0430\u043F\u043B\u0438\u0446\u0456, \u0449\u043E\u0431 \u043C\u0435\u0440\u0442\u0432\u0456 \u0437\u043D\u0430\u0439\u0448\u043B\u0438 \u0434\u043E\u0440\u043E\u0433\u0443 \u0434\u043E\u0434\u043E\u043C\u0443. \u041D\u0430 \u0434\u0432\u0430\u043D\u0430\u0434\u0446\u044F\u0442\u0438\u0439 \u0440\u0456\u043A \u0441\u043A\u0456\u043D\u0447\u0438\u043B\u0430\u0441\u044F \u043E\u043B\u0456\u044F. \u0412\u043E\u043D\u0438 \u0439 \u0434\u043E\u0441\u0456 \u0445\u043E\u0434\u044F\u0442\u044C \u0442\u0456\u0454\u044E \u0434\u043E\u0440\u043E\u0433\u043E\u044E \u0432 \u0442\u0435\u043C\u0440\u044F\u0432\u0456. \u0422\u0435\u043F\u0435\u0440 \u0432\u043E\u043D\u0438 \u0437\u043D\u0430\u044E\u0442\u044C \u0457\u0457 \u043D\u0430\u043F\u0430\u043C'\u044F\u0442\u044C.",
+    "echo.sandwright.who": "\u041F\u0456\u0449\u0430\u043D\u0438\u0439 \u0431\u0443\u0434\u0456\u0432\u043D\u0438\u0447\u0438\u0439",
+    "echo.sandwright.text": "\u0421\u043A\u043B\u043E \u043F\u0430\u043C'\u044F\u0442\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u043E. \u042F \u0431\u0443\u0434\u0443\u0432\u0430\u0432 \u0432\u0435\u0436\u0456, \u0449\u043E\u0431 \u0443\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u043F\u043E\u043B\u0443\u0434\u0435\u043D\u044C, \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u043E \u043D\u0430 \u0434\u0437\u0435\u0440\u043A\u0430\u043B\u0456, \u0449\u043E\u0431 \u0443 \u041F\u0443\u0441\u0442\u043A\u0430\u0445 \u043D\u0456\u043A\u043E\u043B\u0438 \u043D\u0435 \u0431\u0443\u043B\u043E \u0442\u0435\u043C\u043D\u043E. \u0420\u0456\u043A \u0432\u043E\u043D\u0438 \u0439\u043E\u0433\u043E \u0442\u0440\u0438\u043C\u0430\u043B\u0438. \u041F\u043E\u0442\u0456\u043C \u0441\u0432\u0456\u0442\u043B\u0443 \u0441\u0442\u0430\u043B\u043E \u0437 \u043D\u0430\u043C\u0438 \u043D\u0443\u0434\u043D\u043E, \u0456 \u0432\u043E\u043D\u043E \u043F\u0456\u0448\u043B\u043E \u0448\u0443\u043A\u0430\u0442\u0438 \u0441\u043E\u043D\u0446\u0435.",
+    "echo.regent.who": "\u0421\u043A\u043B\u044F\u043D\u0430 \u0440\u0435\u0433\u0435\u043D\u0442\u043A\u0430",
+    "echo.regent.text": "\u0425\u043E\u0440 \u0437\u0430\u043F\u0440\u043E\u043F\u043E\u043D\u0443\u0432\u0430\u0432 \u0443\u0433\u043E\u0434\u0443: \u043F\u0456\u0441\u043D\u044E, \u0449\u043E \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435 \u0441\u043A\u043B\u043E \u0442\u0435\u043F\u043B\u0438\u043C. \u0426\u0456\u043D\u043E\u044E \u0431\u0443\u043B\u0438 \u0432\u0441\u0456 \u0433\u043E\u043B\u043E\u0441\u0438 \u041F\u0443\u0441\u0442\u043E\u043A, \u043A\u0440\u0456\u043C \u0457\u0445\u043D\u0456\u0445 \u0432\u043B\u0430\u0441\u043D\u0438\u0445. \u042F \u0432\u0432\u0430\u0436\u0430\u043B\u0430 \u0446\u0435 \u0447\u0435\u0441\u043D\u043E\u044E \u0443\u0433\u043E\u0434\u043E\u044E. \u0420\u043E\u0442\u0430 \u0437\u0430\u043B\u0438\u0448\u0438\u043B\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043C\u0435\u043D\u0456 - \u0449\u043E\u0431 \u044F \u043C\u043E\u0433\u043B\u0430 \u0441\u043A\u0430\u0437\u0430\u0442\u0438 \xAB\u0442\u0430\u043A\xBB.",
+    "echo.judge.who": "\u0416\u0430\u0440\u043E\u0432\u0438\u0439 \u0441\u0443\u0434\u0434\u044F",
+    "echo.judge.text": "\u041A\u043E\u043B\u0438 \u0432\u043F\u0430\u043B\u0438 \u0436\u0430\u0440\u0438\u043D\u0438, \u0445\u0442\u043E\u0441\u044C \u043C\u0443\u0441\u0438\u0432 \u0432\u0438\u0440\u0456\u0448\u0438\u0442\u0438, \u0445\u0442\u043E \u0433\u0456\u0434\u043D\u0438\u0439 \u043F\u0440\u043E\u043A\u0438\u043D\u0443\u0442\u0438\u0441\u044F. \u042F \u0437\u0432\u0430\u0436\u0443\u0432\u0430\u0432 \u0457\u0445: \u0445\u043E\u0440\u043E\u0431\u0440\u0438\u0445, \u0434\u043E\u0431\u0440\u0438\u0445, \u043A\u043E\u0440\u0438\u0441\u043D\u0438\u0445. \u0416\u0430\u0440\u0438\u043D\u0430\u043C \u0431\u0443\u043B\u043E \u0431\u0430\u0439\u0434\u0443\u0436\u0435 \u0434\u043E \u043C\u043E\u0457\u0445 \u0442\u0435\u0440\u0435\u0437\u0456\u0432. \u0412\u043E\u043D\u0438 \u0431\u0443\u0434\u0438\u043B\u0438 \u0442\u043E\u0433\u043E, \u043D\u0430 \u043A\u043E\u0433\u043E \u043F\u0430\u0434\u0430\u043B\u0438. \u0412\u0456\u0434\u0442\u043E\u0434\u0456 \u044F \u0441\u0443\u0434\u0436\u0443 \u0436\u0430\u0440\u0438\u043D\u0438.",
+    "echo.matron.who": "\u0416\u0430\u0440\u0438\u0441\u0442\u0430 \u043C\u0430\u0442\u0440\u043E\u043D\u0430",
+    "echo.matron.text": "\u041C\u043E\u0457 \u0433\u043E\u043D\u0447\u0430\u043A\u0438 \u0431\u0443\u043B\u0438 \u0446\u0443\u0446\u0435\u043D\u044F\u0442\u0430\u043C\u0438, \u043A\u043E\u043B\u0438 \u0432\u043F\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435. \u0407\u043C \u0431\u0443\u043B\u043E \u0445\u043E\u043B\u043E\u0434\u043D\u043E, \u0456 \u044F \u043F\u0443\u0441\u0442\u0438\u043B\u0430 \u0457\u0445 \u0441\u043F\u0430\u0442\u0438 \u0432 \u043A\u0440\u0430\u0442\u0435\u0440. \u0422\u0435\u043F\u0435\u0440 \u0432\u043E\u043D\u0438 \u0437 \u043D\u044C\u043E\u0433\u043E \u0437\u0440\u043E\u0431\u043B\u0435\u043D\u0456. \u0412\u043E\u043D\u0438 \u0439 \u0434\u043E\u0441\u0456 \u0431\u0456\u0436\u0430\u0442\u044C \u043D\u0430 \u043C\u0456\u0439 \u0441\u0432\u0438\u0441\u0442. \u0406 \u0434\u043E\u0441\u0456 \u043A\u0443\u0441\u0430\u044E\u0442\u044C \u0443\u0441\u0435, \u0449\u043E \u043F\u0456\u0434\u0445\u043E\u0434\u0438\u0442\u044C \u0434\u043E \u0432\u043E\u0433\u043D\u044E.",
+    "echo.drownedsun.who": "\u041F\u043E\u0442\u043E\u043D\u0443\u043B\u0435 \u0441\u043E\u043D\u0446\u0435",
+    "echo.drownedsun.text": "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0441\u043E\u043D\u0446\u0435 \u0432\u043E\u043D\u0438 \u043D\u0435 \u0437\u043C\u043E\u0433\u043B\u0438 \u0439 \u0437\u0440\u043E\u0431\u0438\u043B\u0438 \u0441\u0432\u043E\u0454. \u041B\u044E\u0434\u0438 \u0412\u0430\u0440\u0442\u043E\u0432\u043E\u0433\u043E \u0432\u0442\u043E\u043F\u0438\u043B\u0438 \u0432 \u043C\u043E\u0440\u0456 \u0441\u0432\u0456\u0442\u043B\u043E \u0442\u0438\u0441\u044F\u0447\u0456 \u043B\u0456\u0445\u0442\u0430\u0440\u0456\u0432 \u0456 \u0432\u0438\u0442\u044F\u0433\u043B\u0438 \u043D\u0430\u0433\u043E\u0440\u0443 \u0449\u043E\u0441\u044C \u043A\u0440\u0443\u0433\u043B\u0435, \u044F\u0441\u043A\u0440\u0430\u0432\u0435 \u0439 \u0445\u043E\u043B\u043E\u0434\u043D\u0435. \u0412\u043E\u043D\u043E \u0437\u0456\u0439\u0448\u043B\u043E. \u0412\u043E\u043D\u043E \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0456\u0433\u0440\u0456\u043B\u043E. \u0412\u0456\u0434\u0442\u043E\u0434\u0456 \u0432\u043E\u043D\u043E \u0432\u0441\u0435 \u0441\u0445\u043E\u0434\u0438\u0442\u044C, \u0430 \u044F - \u0442\u0435, \u043A\u0440\u0456\u0437\u044C \u0449\u043E \u0432\u043E\u043D\u043E \u0441\u0445\u043E\u0434\u0438\u0442\u044C.",
+    "echo.glasschoir.who": "\u0421\u043A\u043B\u044F\u043D\u0438\u0439 \u0445\u043E\u0440",
+    "echo.glasschoir.text": "\u041C\u0438 - \u043E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u043F\u043E\u043B\u0443\u0434\u0435\u043D\u044C, \u0440\u043E\u0437\u0431\u0438\u0442\u0438\u0439 \u043D\u0430 \u0442\u0438\u0441\u044F\u0447\u0443 \u0443\u043B\u0430\u043C\u043A\u0456\u0432, \u0456 \u043A\u043E\u0436\u0435\u043D \u0441\u043F\u0456\u0432\u0430\u0454 \u0442\u0443 \u043D\u043E\u0442\u0443, \u044F\u043A\u0443 \u043F\u043E\u0447\u0443\u0432, \u043A\u043E\u043B\u0438 \u043F\u0430\u0434\u0430\u043B\u043E \u0441\u043E\u043D\u0446\u0435. \u0420\u0430\u0437\u043E\u043C \u043C\u0438 \u043C\u0430\u0439\u0436\u0435 \u0437\u0432\u0443\u0447\u0438\u043C\u043E \u044F\u043A \u0434\u0435\u043D\u043D\u0435 \u0441\u0432\u0456\u0442\u043B\u043E. \u041C\u0430\u0439\u0436\u0435. \u041A\u043E\u0436\u0435\u043D \u0433\u043E\u043B\u043E\u0441, \u044F\u043A\u0438\u0439 \u043C\u0438 \u0437\u0430\u0431\u0438\u0440\u0430\u0454\u043C\u043E, \u043D\u0430\u0431\u043B\u0438\u0436\u0430\u0454 \u043D\u0430\u0441.",
+    "echo.ashenking.who": "\u041F\u043E\u043F\u0435\u043B\u044F\u0441\u0442\u0438\u0439 \u043A\u043E\u0440\u043E\u043B\u044C",
+    "echo.ashenking.text": "\u041C\u0435\u043D\u0435 \u043A\u043E\u0440\u043E\u043D\u0443\u0432\u0430\u043B\u0438 \u0442\u0456\u0454\u0457 \u043C\u0438\u0442\u0456, \u043A\u043E\u043B\u0438 \u0441\u043E\u043D\u0446\u0435 \u0432\u0434\u0430\u0440\u0438\u043B\u043E\u0441\u044F \u043E\u0431 \u0437\u0435\u043C\u043B\u044E. \u042F \u043F\u0440\u0438\u0441\u044F\u0433\u043D\u0443\u0432 \u043F\u0440\u0430\u0432\u0438\u0442\u0438, \u0434\u043E\u043A\u0438 \u0432\u043E\u043D\u043E \u043D\u0435 \u0437\u0456\u0439\u0434\u0435 \u0437\u043D\u043E\u0432\u0443, \u0456 \u044F \u0434\u043E\u0442\u0440\u0438\u043C\u0430\u0432 \u043A\u043E\u0436\u043D\u043E\u0457 \u043F\u0440\u0438\u0441\u044F\u0433\u0438, \u044F\u043A\u0443 \u0434\u0430\u0432\u0430\u0432. \u0427\u0438 \u0440\u043E\u0437\u0443\u043C\u0456\u0454\u0448 \u0442\u0438, \u043F\u0440\u043E \u0449\u043E \u043F\u0440\u043E\u0441\u0438\u0448, \u0420\u043E\u0437\u043F\u0430\u043B\u0435\u043D\u0438\u0439? \u0429\u043E\u0431 \u0441\u043A\u0456\u043D\u0447\u0438\u043B\u043E\u0441\u044F \u043C\u043E\u0454 \u043F\u0440\u0430\u0432\u043B\u0456\u043D\u043D\u044F, \u0442\u043E\u0431\u0456 \u0434\u043E\u0432\u0435\u0434\u0435\u0442\u044C\u0441\u044F \u0434\u043E\u0442\u0440\u0438\u043C\u0430\u0442\u0438 \u043C\u043E\u0454\u0457 \u043F\u0440\u0438\u0441\u044F\u0433\u0438 \u0437\u0430 \u043C\u0435\u043D\u0435.",
+    "echo.hollowcrown.who": "\u041F\u043E\u0440\u043E\u0436\u043D\u0438\u0441\u0442\u0430 \u043A\u043E\u0440\u043E\u043D\u0430",
+    "echo.hollowcrown.text": "\u041F\u0435\u0440\u0448 \u043D\u0456\u0436 \u0443 \u041C\u0430\u0440\u043A\u0438 \u0437'\u044F\u0432\u0438\u043B\u0438\u0441\u044F \u043A\u043E\u0440\u043E\u043B\u0456, \u0443 \u043D\u0435\u0457 \u0431\u0443\u043B\u0430 \u044F: \u043A\u043E\u0440\u043E\u043D\u0430, \u0449\u043E \u0447\u0435\u043A\u0430\u0454 \u043D\u0430 \u0433\u043E\u043B\u043E\u0432\u0443. \u0422\u0438\u0441\u044F\u0447\u0443 \u0440\u043E\u043A\u0456\u0432 \u0441\u043E\u043D\u0446\u0435 \u0441\u0438\u0434\u0456\u043B\u043E \u0432 \u043C\u0435\u043D\u0435 \u043D\u0430 \u0447\u043E\u043B\u0456, \u0456 \u044F \u0431\u0443\u043B\u0430 \u0441\u0438\u0442\u0430. \u041F\u043E\u0442\u0456\u043C \u044F \u0437\u0433\u043E\u043B\u043E\u0434\u043D\u0456\u043B\u0430. \u042F \u0437'\u0457\u043B\u0430 \u0441\u0432\u0456\u0442\u043B\u043E, \u0431\u043E \u0432\u043E\u043D\u043E \u0431\u0443\u043B\u043E \u043F\u043E\u0440\u0443\u0447, \u044F\u043A \u043F\u0440\u0438\u043F\u043B\u0438\u0432 \u0437\u0430\u0431\u0438\u0440\u0430\u0454 \u0431\u0435\u0440\u0435\u0433. \u0423 \u0442\u0432\u043E\u0457\u0445 \u0433\u0440\u0443\u0434\u044F\u0445 \u0436\u0435\u0432\u0440\u0456\u0454 \u0439\u043E\u0433\u043E \u0456\u0441\u043A\u0440\u0430. \u042F \u0457\u0457 \u0447\u0443\u044E.",
+    "perk.firstlight.name": "\u041F\u0435\u0440\u0448\u0435 \u0441\u0432\u0456\u0442\u043B\u043E",
+    "perk.firstlight.text": "20% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043E\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u043D\u043E\u0433\u043E \u0434\u043E\u0441\u0432\u0456\u0434\u0443",
+    "perk.brightember.name": "\u042F\u0441\u043A\u0440\u0430\u0432\u0430 \u0436\u0430\u0440\u0438\u043D\u0430",
+    "perk.brightember.text": "15% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u043A\u043E\u0434\u0438",
+    "perk.steadyflame.name": "\u0420\u0456\u0432\u043D\u0435 \u043F\u043E\u043B\u0443\u043C'\u044F",
+    "perk.steadyflame.text": "10% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u043C\u0430\u043A\u0441\u0438\u043C\u0443\u043C\u0443 \u0437\u0434\u043E\u0440\u043E\u0432'\u044F",
+    "perk.keeneye.name": "\u041F\u0438\u043B\u044C\u043D\u0435 \u043E\u043A\u043E",
+    "perk.keeneye.text": "30% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0440\u0456\u0434\u043A\u0456\u0441\u043D\u043E\u0441\u0442\u0456 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0456\u0432",
+    "perk.oldroads.name": "\u0421\u0442\u0430\u0440\u0456 \u0434\u043E\u0440\u043E\u0433\u0438",
+    "perk.oldroads.text": "25% \u0437\u0431\u0456\u043B\u044C\u0448\u0435\u043D\u043D\u044F \u0448\u0432\u0438\u0434\u043A\u043E\u0441\u0442\u0456 \u043F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u043D\u043D\u044F",
+    "perk.warmhands.name": "\u0422\u0435\u043F\u043B\u0456 \u0440\u0443\u043A\u0438",
+    "perk.warmhands.text": "\u041D\u0430 25% \u0431\u0456\u043B\u044C\u0448\u0435 \u043F\u0438\u043B\u0443 \u0436\u0430\u0440\u0438\u043D \u0432\u0456\u0434 \u0440\u043E\u0437\u0431\u043E\u0440\u0443",
+    "perk.longmemory.name": "\u0414\u043E\u0432\u0433\u0430 \u043F\u0430\u043C'\u044F\u0442\u044C",
+    "perk.longmemory.text": "\u0421\u0443\u043F\u0443\u0442\u043D\u0438\u043A\u0438 \u043E\u0442\u0440\u0438\u043C\u0443\u044E\u0442\u044C \u0443\u0434\u0432\u0456\u0447\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043F\u0440\u0438\u0445\u0438\u043B\u044C\u043D\u043E\u0441\u0442\u0456",
+    "perk.deeppockets.name": "\u0413\u043B\u0438\u0431\u043E\u043A\u0456 \u043A\u0438\u0448\u0435\u043D\u0456",
+    "perk.deeppockets.text": "20 \u043A\u043E\u043C\u0456\u0440\u043E\u043A \u0441\u0445\u043E\u0432\u0430\u043D\u043A\u0438 \u043E\u0434\u0440\u0430\u0437\u0443 \u0439 \u043C\u0456\u0441\u0446\u0435 \u0449\u0435 \u0434\u043B\u044F 20",
+    "perk.stonefinder.name": "\u0428\u0443\u043A\u0430\u0447 \u0441\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0456\u0432",
+    "perk.stonefinder.text": "\u0421\u0430\u043C\u043E\u0446\u0432\u0456\u0442\u0438 \u0432\u0438\u043F\u0430\u0434\u0430\u044E\u0442\u044C \u043D\u0430 50% \u0447\u0430\u0441\u0442\u0456\u0448\u0435",
+    "perk.tradersmark.name": "\u0417\u043D\u0430\u043A \u0442\u043E\u0440\u0433\u043E\u0432\u0446\u044F",
+    "perk.tradersmark.text": "\u041C\u0430\u043D\u0434\u0440\u0456\u0432\u043D\u0438\u0439 \u0440\u0438\u043D\u043E\u043A \u0431\u0435\u0440\u0435 \u043D\u0430 20% \u043C\u0435\u043D\u0448\u0435",
+    "echo.shards": "\u0422\u0440\u0438 \u0448\u043C\u0430\u0442\u043A\u0438 \u0441\u043E\u043D\u0446\u044F, \u0449\u0435 \u0442\u0435\u043F\u043B\u0456, \u0456 \u0436\u0430\u0440\u0438\u043D\u0430 \u0443 \u0432\u0430\u0448\u0438\u0445 \u0433\u0440\u0443\u0434\u044F\u0445 \u0431'\u0454\u0442\u044C\u0441\u044F \u0437 \u043D\u0438\u043C\u0438 \u0432 \u0442\u0430\u043A\u0442. \u0421\u043A\u043B\u0430\u0434\u0456\u0442\u044C \u0457\u0445 \u0434\u043E\u043A\u0443\u043F\u0438 - \u0456 \u041C\u0430\u0440\u043A\u0430, \u043C\u043E\u0436\u043B\u0438\u0432\u043E, \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u044C \u0440\u0430\u043D\u043E\u043A. \u0416\u0430\u0440\u0438\u043D\u0443 \u0442\u0435\u0436 \u0434\u043E\u0432\u0435\u0434\u0435\u0442\u044C\u0441\u044F \u0432\u0456\u0434\u0434\u0430\u0442\u0438 \u0432\u043E\u0433\u043D\u044E.",
+    "dawn.story": "\u0428\u043C\u0430\u0442\u043A\u0438 \u0441\u0445\u043E\u043F\u043B\u044E\u044E\u0442\u044C\u0441\u044F, \u0436\u0430\u0440\u0438\u043D\u0430 \u0437 \u0432\u0430\u0448\u0438\u0445 \u0433\u0440\u0443\u0434\u0435\u0439 \u0456\u0434\u0435 \u0443 \u0432\u043E\u0433\u043E\u043D\u044C \u0440\u0430\u0437\u043E\u043C \u0456\u0437 \u043D\u0438\u043C\u0438, \u0456 \u043D\u0430 \u043C\u0438\u0442\u044C \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0441\u0442\u0430\u0454\u0442\u044C\u0441\u044F. \u041F\u043E\u0442\u0456\u043C \u043D\u0435\u0431\u043E \u043D\u0430\u0434 \u043A\u0440\u0430\u0442\u0435\u0440\u043E\u043C \u0441\u0456\u0440\u0456\u0454, \u0440\u043E\u0436\u0435\u0432\u0456\u0454, \u0437\u043E\u043B\u043E\u0442\u0456\u0454. \u0423\u043F\u0435\u0440\u0448\u0435 \u0437\u0430 \u0442\u0440\u0438\u0441\u0442\u0430 \u0440\u043E\u043A\u0456\u0432 \u043D\u0430\u0434 \u041C\u0430\u0440\u043A\u043E\u044E \u0441\u0445\u043E\u0434\u0438\u0442\u044C \u0441\u043E\u043D\u0446\u0435.\n\n\u0412\u0438 \u043F\u0440\u043E\u043A\u0438\u0434\u0430\u0454\u0442\u0435\u0441\u044F \u0432 \u043F\u0440\u0438\u0431\u043E\u0457 \u0437 \u0436\u0430\u0440\u0438\u043D\u043E\u044E \u043D\u0430 \u043C\u0456\u0441\u0446\u0456 \u0441\u0435\u0440\u0446\u044F. \u0426\u044C\u043E\u0433\u043E \u0440\u0430\u0437\u0443 \u0431\u0435\u0440\u0435\u0433 \u0442\u0435\u043F\u043B\u0438\u0439."
   };
   var BASE2 = {};
   var GENDER2 = {};
@@ -7647,6 +8061,21 @@
   var presetBlurb = (id, l) => tr(L(l), `preset.${id}.blurb`);
   var groupName = (group, l) => tr(L(l), `group.${group}`);
   var tagName = (tag, l) => tr(L(l), `tag.${tag}`);
+  function stoneFullName(key, l) {
+    const [id, t2] = key.split(":");
+    const lg = L(l), name = tr(lg, `stone.${id}.name`);
+    return tr(lg, "stone.full", { tier: tr(lg, `stone.tier${t2}`), name: lg === "en" ? name : lowFirst(name) });
+  }
+  function stoneEffectText(key, place, value, l) {
+    const [id] = key.split(":");
+    return tr(L(l), `stone.${id}.${place}`, { 0: value });
+  }
+  var echoWho = (id, l) => tr(L(l), `echo.${id}.who`);
+  var echoText = (id, l) => tr(L(l), `echo.${id}.text`);
+  var perkName = (id, l) => tr(L(l), `perk.${id}.name`);
+  var perkText = (id, l) => tr(L(l), `perk.${id}.text`);
+  var ROMAN2 = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+  var dawnTitle = (n, l) => tr(L(l), "dawn.name", { n: ROMAN2[n] ?? String(n) });
   function tierName2(tier, l) {
     const lg = L(l);
     return tier === 0 ? tr(lg, "tier.outskirts") : tier <= MAX_TIER ? tr(lg, "tier.tier", { n: tier }) : tr(lg, "tier.depth", { n: tier - MAX_TIER });
@@ -8212,6 +8641,39 @@
     act.runIndex++;
     act.run = null;
     return null;
+  }
+
+  // src/core/echoes.ts
+  var SUN_PINNACLES = ["drownedsun", "glasschoir", "ashenking"];
+  var sunShards = (s) => SUN_PINNACLES.filter((id) => (s.pinnacleKills[id] ?? 0) > 0);
+  var allShards = (s) => sunShards(s).length === SUN_PINNACLES.length;
+  function grantEcho(s, id) {
+    if (!ECHOES[id]) return false;
+    s.echoes ??= [];
+    if (s.echoes.includes(id)) return false;
+    s.echoes.push(id);
+    pushLog(s, "info", "log.echo", { who: ref.key(`echo.${id}.who`) });
+    const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
+    s.world.rewards ??= [];
+    for (let k = 1; k <= earned; k++) {
+      const key = `echo:${k}`;
+      if (!s.world.rewards.includes(key)) {
+        s.world.rewards.push(key);
+        s.atlas.points++;
+      }
+    }
+    return true;
+  }
+  function rollMapEcho(s, rng) {
+    const unfound = MAP_ECHOES.filter((id2) => !(s.echoes ?? []).includes(id2));
+    if (!unfound.length || !rng.chance(0.03)) return null;
+    const id = rng.pick(unfound);
+    grantEcho(s, id);
+    return id;
+  }
+  function pinnacleEcho(s, pinnacle) {
+    const e2 = Object.values(ECHOES).find((x) => x.pinnacle === pinnacle);
+    return e2 && grantEcho(s, e2.id) ? e2.id : null;
   }
 
   // src/core/maps.ts
@@ -8909,6 +9371,45 @@
     s.market.refreshes = 0;
     rollStock(s);
   }
+  var refreshCost = (s) => Math.round(forgeCost(s) * 4 * Math.pow(2, s.market?.refreshes ?? 0) / 10) * 10;
+  function refreshMarket(s) {
+    if (!marketOpen(s)) return "the caravan hasn't come yet";
+    const cost = refreshCost(s);
+    if (s.dust < cost) return `needs ${cost} ember dust`;
+    s.dust -= cost;
+    s.market.refreshes++;
+    rollStock(s);
+    return null;
+  }
+  function buyGear(s, i) {
+    const o = s.market?.pedlar[i];
+    if (!o || o.sold) return "sold out";
+    if (s.dust < o.price) return `needs ${o.price} ember dust`;
+    const upgrade = s.settings.autoEquip && !!upgradeSlot(s, o.item);
+    if (!upgrade && !o.item.relic && s.stash.length >= s.stashCap) return "stash full";
+    s.dust -= o.price;
+    o.sold = true;
+    const item = structuredClone(o.item);
+    const filter = s.settings.filter;
+    s.settings.filter = [{ on: true, action: "keep" }];
+    try {
+      receiveItem(s, item);
+    } finally {
+      s.settings.filter = filter;
+    }
+    s.totals.items--;
+    return null;
+  }
+  function buyStone(s, i) {
+    const o = s.market?.jeweller[i];
+    if (!o || o.sold) return "sold out";
+    if (s.dust < o.price) return `needs ${o.price} ember dust`;
+    s.dust -= o.price;
+    o.sold = true;
+    addStone(s, o.key, 1);
+    return null;
+  }
+  var nextStockIn = (s) => Math.max(0, (s.market?.rolledAt ?? 0) + ROTATION_MS - s.simTo);
 
   // src/core/sim/engine.ts
   var STEP_MS = 100;
@@ -11470,6 +11971,37 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
 .scout { margin-top: 4px; padding: 2px 6px; display: inline-block; font: 700 12px/1.3 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--line); }
 .scout.ok { background: var(--green); color: #1a1410; } .scout.mid { background: var(--gold); color: #1a1410; } .scout.bad { background: var(--ember); color: #1a1410; }
+/* round 5: stones, sockets, the market, echoes, the Rekindling */
+.stonechip { display: inline-grid; place-items: center; filter: drop-shadow(1px 1px 0 #1a1410); }
+.stonechip.empty { color: var(--muted); filter: none; }
+.stonechip.t0 { opacity: .55; } .stonechip.t1 { opacity: .7; } .stonechip.t2 { opacity: .85; }
+.stonechip.t4 { filter: drop-shadow(0 0 3px currentColor) drop-shadow(1px 1px 0 #1a1410); }
+.sockrows { display: flex; flex-direction: column; gap: 2px; }
+.sockrow { display: flex; align-items: center; gap: 6px; }
+.sockwork { align-items: center; }
+.sock1 { display: inline-flex; align-items: center; gap: 3px; }
+.sock1 select { max-width: 150px; }
+.offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.offer { display: flex; align-items: center; gap: 8px; padding: 4px 6px; min-width: 0; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.offer.sold { opacity: .5; }
+.offer .name { font-size: 13px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; }
+.offer .tag.up { background: var(--green); color: #1a1410; align-self: flex-start; }
+.offer .cell { flex: none; width: 48px; height: 48px; }
+.stonebig { width: 32px; display: grid; place-items: center; }
+.pouch { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px; }
+.pouchrow { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-bottom: 1px dashed color-mix(in srgb, var(--line) 30%, transparent); }
+.echoes .echo { padding: 6px 8px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.echoes .echo.unheard { opacity: .6; }
+.echoes .echo .story { margin-top: 4px; }
+.dawncard .shards { display: flex; align-items: center; gap: 6px; }
+.dawncard .shard { color: var(--muted); opacity: .45; } .dawncard .shard.on { color: #ffc233; opacity: 1; filter: drop-shadow(0 0 3px #ffc233); }
+.tag.dawn { background: #ffc233; color: #1a1410; border-color: #1a1410; }
+.perks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.perk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.perk span { font-size: 12px; color: var(--muted); }
+.perk.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; }
+.perk:hover:not(.on) { filter: brightness(1.08); }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
@@ -11632,6 +12164,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     gem: ["....#....", "...###...", "..#####..", ".#######.", "#########", ".#######.", "..#####..", "...###...", "....#...."],
     gemshine: [".........", "...#.....", "..#......", ".#.......", ".........", ".........", ".........", ".........", "........."],
     lock: ["..###..", ".#...#.", ".#...#.", "#######", "###.###", "###.###", "#######"],
+    market: ["....#....", "...###...", "..#####..", ".#######.", "#########", ".#.....#.", ".#.###.#.", ".#.#.#.#.", ".#.#.#.#."],
+    sun: ["#...#...#", ".#..#..#.", "...###...", "..#####..", "#########", "..#####..", "...###...", ".#..#..#.", "#...#...#"],
     socket: ["..#####..", ".#.....#.", "#.......#", "#.......#", "#.......#", "#.......#", "#.......#", ".#.....#.", "..#####.."],
     min: [
       ".......",
@@ -12286,6 +12820,128 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     return iconFor(b.kind, b.slot);
   }
 
+  // src/ui/stones.ts
+  function stoneChip(key, size = 14) {
+    const p = key ? parseStone(key) : null;
+    if (!p) return h("span", { class: "stonechip empty", attrs: { "aria-label": t("item.socketEmpty") } }, glyph("socket", size));
+    return h("span", { class: `stonechip t${p.tier}`, style: `color:${STONES[p.id].color}`, attrs: { "aria-label": stoneFullName(key) } }, glyph("gem", size));
+  }
+  var stoneValue = (key, place) => {
+    const p = parseStone(key);
+    return p ? STONES[p.id].effects[place].values[p.tier] : 0;
+  };
+  var stoneLine = (key, place) => stoneEffectText(key, place, stoneValue(key, place));
+  function stoneTip(key) {
+    return [stoneFullName(key), t("pouch.inWeapon", { e: stoneLine(key, "weapon") }), t("pouch.inArmour", { e: stoneLine(key, "armour") }), t("pouch.inJewel", { e: stoneLine(key, "jewel") })].join("\n");
+  }
+  function socketRows(item) {
+    if (!item.sockets) return null;
+    const place = placeOf(item);
+    const box2 = h("div", { class: "sockrows" });
+    for (let i = 0; i < item.sockets; i++) {
+      const k = item.stones?.[i] ?? null;
+      box2.append(h("div", { class: "aff sockrow" }, stoneChip(k, 12), h("span", { text: k ? `${stoneFullName(k)}: ${stoneLine(k, place)}` : t("item.socketEmpty") })));
+    }
+    return box2;
+  }
+
+  // src/ui/market.ts
+  function marketSig(s) {
+    const m4 = s.market;
+    return `${marketOpen(s)}:${m4?.seq ?? 0}:${m4?.pedlar.map((o) => o.sold ? 1 : 0).join("")}:${m4?.jeweller.map((o) => o.sold ? 1 : 0).join("")}:${Math.ceil(nextStockIn(s) / 6e4)}:${Math.floor(s.dust / 50)}:${s.hero.rev}`;
+  }
+  function marketView(c) {
+    const st = c.state;
+    const root = h("div", { class: "col market", style: "gap:14px" });
+    if (!marketOpen(st)) {
+      root.append(h(
+        "div",
+        { class: "card" },
+        h("h3", { text: t("market.title") }),
+        h("div", { class: "note" }, glyph("market", 16), h("span", { text: t("market.closed", { boss: monsterName("tidewarden") }) }))
+      ));
+      return root;
+    }
+    if (!st.market.pedlar.length || nextStockIn(st) === 0) tickMarket(st);
+    const cost = refreshCost(st);
+    root.append(h(
+      "div",
+      { class: "card" },
+      h("h3", { class: "split" }, h("span", { text: t("market.title") }), h("span", { class: "num", text: t("market.next", { time: fmtDuration2(nextStockIn(st)) }) })),
+      h(
+        "div",
+        { class: "row", style: "justify-content:space-between;gap:8px" },
+        h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
+        h("button", {
+          class: "btn alt small",
+          text: t("market.refresh", { cost: fmt(cost) }),
+          title: t("market.refreshTip", { cost: fmt(cost) }),
+          attrs: st.dust >= cost ? {} : { disabled: "" },
+          on: { click: () => c.act(refreshMarket) }
+        })
+      )
+    ));
+    const gear = h("div", { class: "offers" });
+    st.market.pedlar.forEach((o, i) => {
+      const it = o.item;
+      const up = !o.sold && !!upgradeSlot(st, it);
+      const cell = h("div", { class: `cell ${it.rarity}${o.sold ? " sold" : ""}${up ? " upg" : ""}`, attrs: { role: "img", "aria-label": itemName(it) } }, itemIcon(it));
+      withTip(cell, c, () => {
+        const targets = slotsFor(baseOf(it));
+        return itemCard(it, c, { compareSlot: upgradeSlot(st, it) ?? targets.find((x) => !st.hero.equipment[x]) ?? targets[0] });
+      });
+      gear.append(h(
+        "div",
+        { class: `offer${o.sold ? " sold" : ""}` },
+        cell,
+        h(
+          "div",
+          { class: "col grow", style: "gap:3px;min-width:0" },
+          h("b", { class: `name ${it.rarity}`, text: itemName(it) }),
+          up ? h("span", { class: "tag up", text: t("market.upgrade") }) : null
+        ),
+        o.sold ? h("span", { class: "muted", text: t("market.sold") }) : h("button", {
+          class: "btn small",
+          text: t("market.buy", { cost: fmt(o.price) }),
+          attrs: st.dust >= o.price ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => buyGear(s, i), t("market.bought", { name: itemName(it) })) }
+        })
+      ));
+    });
+    root.append(h(
+      "div",
+      { class: "card" },
+      h("h3", { text: t("market.pedlar") }),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.pedlarNote") }),
+      gear
+    ));
+    const stones = h("div", { class: "offers" });
+    st.market.jeweller.forEach((o, i) => {
+      const chip = stoneChip(o.key, 22);
+      chip.dataset.tip = stoneTip(o.key);
+      stones.append(h(
+        "div",
+        { class: `offer${o.sold ? " sold" : ""}` },
+        h("span", { class: "stonebig" }, chip),
+        h("b", { class: "grow", text: stoneFullName(o.key) }),
+        o.sold ? h("span", { class: "muted", text: t("market.sold") }) : h("button", {
+          class: "btn small",
+          text: t("market.buy", { cost: fmt(o.price) }),
+          attrs: st.dust >= o.price ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => buyStone(s, i), t("market.bought", { name: stoneFullName(o.key) })) }
+        })
+      ));
+    });
+    root.append(h(
+      "div",
+      { class: "card" },
+      h("h3", { text: t("market.jeweller") }),
+      h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("market.jewellerNote") }),
+      stones
+    ));
+    return root;
+  }
+
   // src/ui/gfx/portrait.ts
   var cache4 = /* @__PURE__ */ new Map();
   function paint(zone, w2, h2, cls) {
@@ -12419,6 +13075,36 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           })
         ));
       }
+      const dc = drillCost(it);
+      const srow = h("div", { class: "wrow sockwork" }, h("b", { text: t("forge.sockets") }));
+      if (!it.sockets) srow.append(h("span", { class: "muted grow", style: "font-size:12px", text: t("forge.noSockets") }));
+      const place = placeOf(it);
+      for (let i = 0; i < (it.sockets ?? 0); i++) {
+        const cur = it.stones?.[i] ?? null;
+        const pick = h("select", { attrs: { "aria-label": t("forge.setStone") } });
+        pick.append(h("option", { text: cur ? stoneFullName(cur) : t("forge.setStone"), attrs: { value: "" } }));
+        for (const { key, n } of pouchList(st)) pick.append(h("option", { text: `${stoneFullName(key)} x${n} - ${stoneLine(key, place)}`, attrs: { value: key } }));
+        pick.addEventListener("change", () => {
+          if (pick.value) c.act((s) => setStone(s, it.uid, i, pick.value));
+        });
+        const chip = stoneChip(cur, 16);
+        if (cur) chip.dataset.tip = t("forge.here", { effect: stoneLine(cur, place) });
+        srow.append(h(
+          "span",
+          { class: "sock1" },
+          chip,
+          pick,
+          cur ? h("button", { class: "x", text: "x", title: t("forge.pry"), attrs: { "aria-label": t("forge.pry") }, on: { click: () => c.act((s) => setStone(s, it.uid, i, null)) } }) : null
+        ));
+      }
+      srow.append(h("button", {
+        class: "btn alt small",
+        text: dc === null ? t("forge.socketsFull") : t("forge.drill", { cost: fmt(dc) }),
+        title: t("forge.drillTip", { n: socketCap(it) }),
+        attrs: dc !== null && st.dust >= dc ? {} : { disabled: "" },
+        on: { click: () => c.act((s) => drillSocket(s, it.uid)) }
+      }));
+      work.append(srow);
       work.append(h(
         "div",
         { class: "wrow" },
@@ -12534,7 +13220,36 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("div", { class: "card" }, h("h3", { text: t("forge.rack") }), rack),
         anvil,
         h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)
-      )
+      ),
+      pouchCard(c)
+    );
+  }
+  function pouchCard(c) {
+    const st = c.state;
+    const list9 = pouchList(st);
+    const box2 = h("div", { class: "pouch" });
+    for (const { key, n } of list9) {
+      const p = parseStone(key);
+      const chip = stoneChip(key, 18);
+      const row = h("div", { class: "pouchrow" }, chip, h("b", { class: "grow", text: stoneFullName(key) }), h("span", { class: "num", text: `x${n}` }));
+      row.dataset.tip = stoneTip(key);
+      if (p.tier < STONE_TIERS.length - 1) {
+        const cost = cutCost(p.tier), next = stoneKey(p.id, p.tier + 1);
+        row.append(h("button", {
+          class: "btn alt small",
+          text: t("pouch.cut", { cost: fmt(cost) }),
+          title: t("pouch.cutTip", { name: stoneFullName(key), next: stoneFullName(next) }),
+          attrs: n >= 3 && st.dust >= cost ? {} : { disabled: "" },
+          on: { click: () => c.act((s) => cutStones(s, key)) }
+        }));
+      }
+      box2.append(row);
+    }
+    return h(
+      "div",
+      { class: "card" },
+      h("h3", { class: "split" }, h("span", { text: t("pouch.title") }), h("span", { class: "num", text: String(list9.reduce((a, b) => a + b.n, 0)) })),
+      list9.length ? box2 : h("div", { class: "muted", style: "font-size:12px", text: t("pouch.empty") })
     );
   }
 
@@ -13152,7 +13867,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     { id: "world" },
     { id: "atlas" },
     { id: "log" },
-    { id: "menu" }
+    { id: "menu" },
+    { id: "market" }
   ];
   function viewSig(id, c) {
     const s = c.state;
@@ -13162,7 +13878,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       case "gear":
         return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
       case "forge":
-        return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}`;
+        return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== void 0 ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map((k) => s.hero.equipment[k]).find((x) => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
       case "skills":
         return `${s.hero.rev}:${s.hero.level}`;
       case "tree":
@@ -13172,9 +13888,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       case "atlas":
         return atlasSig(c);
       case "log":
-        return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}`;
+        return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
       case "menu":
-        return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${JSON.stringify(s.settings.filter)}`;
+        return `${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
+      case "market":
+        return marketSig(s);
     }
   }
   function renderView(id, c) {
@@ -13197,6 +13915,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         return logView(c);
       case "menu":
         return menuView(c);
+      case "market":
+        return marketView(c);
     }
   }
   var TYPE_COLOR = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
@@ -13487,6 +14207,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })
       ));
     }
+    const sockets = socketRows(item);
+    if (sockets) card.append(h("hr"), sockets);
     const relic = relicOf(item);
     if (relic) {
       card.append(h("hr"));
@@ -14340,13 +15062,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const log = c.state.log;
     const n = (k) => log.filter((e2) => e2.kind === k).length;
     const filter = chips(
-      [["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS2).filter((k) => n(k)).map((k) => [k, t(`logkind.${k}`), n(k)])],
+      [
+        ["all", t("log.all"), log.length],
+        ...Object.keys(LOG_KINDS2).filter((k) => n(k)).map((k) => [k, t(`logkind.${k}`), n(k)]),
+        ["echoes", t("log.echoes"), c.state.echoes.length]
+      ],
       logFilter,
       (v) => {
         logFilter = v;
         c.rerender();
       }
     );
+    if (logFilter === "echoes") return h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter), echoesView(c));
     const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter));
     const now = Date.now();
     for (const e2 of [...log].reverse()) {
@@ -14361,6 +15088,26 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       ));
     }
     return el;
+  }
+  function echoesView(c) {
+    const st = c.state;
+    const box2 = h(
+      "div",
+      { class: "col echoes", style: "gap:8px" },
+      h("div", { class: "split row" }, h("b", { text: t("echoes.title") }), h("span", { class: "num", text: t("echoes.count", { n: st.echoes.length, total: ECHO_ORDER.length }) })),
+      h("div", { class: "muted", style: "font-size:12px", text: t("echoes.note") })
+    );
+    for (const id of ECHO_ORDER) {
+      const heard = st.echoes.includes(id);
+      const pin = ECHOES[id].pinnacle;
+      box2.append(h(
+        "div",
+        { class: `echo${heard ? "" : " unheard"}` },
+        h("b", { text: heard ? echoWho(id) : pin ? pinName(pin) : "???" }),
+        h("div", { class: heard ? "story" : "muted", text: heard ? echoText(id) : pin ? t("echoes.unknownPin", { pin: pinName(pin) }) : t("echoes.unknown") })
+      ));
+    }
+    return box2;
   }
   function fmtAgo(ms) {
     if (ms < 6e4) return t("ago.now");
@@ -14396,6 +15143,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       h("i"),
       h("span", null, h("b", { text: t("menu.upkeep") }), h("small", { text: t("menu.upkeepNote") }))
     );
+    const autoStones = h(
+      "button",
+      { class: `toggle${st.settings.autoStones ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoStones) }, on: { click: () => c.act((s) => {
+        s.settings.autoStones = !s.settings.autoStones;
+      }) } },
+      h("i"),
+      h("span", null, h("b", { text: t("menu.autoStones") }), h("small", { text: t("menu.autoStonesNote") }))
+    );
     const out = h("textarea", { attrs: { readonly: "", placeholder: t("menu.exportPh") } });
     const inp = h("textarea", { attrs: { placeholder: t("menu.importPh") } });
     const tot = st.totals;
@@ -14408,6 +15163,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         h("h3", { text: t("menu.loot") }),
         auto,
         upkeep,
+        autoStones,
         filterEditor(c),
         h("div", { class: "row" }, t("menu.otherwise"), keep),
         h("div", { class: "muted", style: "font-size:12px", text: t("menu.rulesNote") })
@@ -14444,6 +15200,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         [t("menu.swapped"), fmt(tot.swapped ?? 0)],
         [t("menu.time"), t("menu.hours", { n: (tot.simMs / 36e5).toFixed(1) })]
       ])),
+      rekindleCard(c),
       h(
         "div",
         { class: "card col" },
@@ -14467,6 +15224,99 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         } } })
       )
     );
+  }
+  function rekindleCard(c) {
+    const st = c.state;
+    const held = sunShards(st);
+    const dawn = dawnOf(st);
+    const card = h("div", { class: "card col dawncard" }, h("h3", { class: "split" }, h("span", { text: t("dawn.title") }), dawn ? h("span", { class: "tag dawn", text: dawnTitle(dawn) }) : null));
+    card.append(h(
+      "div",
+      { class: "shards" },
+      ...SUN_PINNACLES.map((p) => h("span", { class: `shard${held.includes(p) ? " on" : ""}`, title: pinName(p) }, glyph("sun", 18))),
+      h("b", { text: t("dawn.shards", { n: held.length, total: SUN_PINNACLES.length }) })
+    ));
+    card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.note", { pins: SUN_PINNACLES.map((p) => pinName(p)).join(t("common.list")) }) }));
+    if (dawn) {
+      card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.world", { tough: DAWN_TOUGHER * dawn, rich: DAWN_RICHER * dawn }) }));
+      const perks = st.hero.dawn?.perks ?? [];
+      if (perks.length) card.append(h("div", { style: "font-size:12px", text: t("dawn.perks", { list: perks.map((p) => perkName(p)).join(t("common.list")) }) }));
+      if (perksToPick(st)) card.append(h("button", { class: "btn hot", text: t("dawn.pickNow"), on: { click: () => perkDialog(c) } }));
+    }
+    if (allShards(st)) {
+      card.append(
+        h("div", { class: "story", text: storyText("echo.shards") }),
+        h("button", { class: "btn hot", text: t("dawn.relight"), on: { click: () => relightDialog(c) } })
+      );
+    }
+    return card;
+  }
+  function relightDialog(c) {
+    const st = c.state;
+    const heir = h("select", { attrs: { "aria-label": t("dawn.heirloom") } });
+    heir.append(h("option", { text: t("dawn.noHeirloom"), attrs: { value: "" } }));
+    for (const it of heirloomCandidates(st)) heir.append(h("option", { text: itemName(it), attrs: { value: String(it.uid) } }));
+    const cls = h("select", { attrs: { "aria-label": t("dawn.calling") } });
+    for (const k of Object.keys(CLASSES)) {
+      const o = h("option", { text: className(k), attrs: { value: k } });
+      if (k === st.hero.cls) o.selected = true;
+      cls.append(o);
+    }
+    const next = dawnOf(st) + 1;
+    const close = c.modal(h(
+      "div",
+      { class: "card col", style: "max-width:560px" },
+      h("h3", { text: t("dawn.confirm") }),
+      h("div", { style: "font-size:13px", text: t("dawn.gains", { dawn: dawnTitle(next), xp: DAWN_XP, tough: DAWN_TOUGHER, rich: DAWN_RICHER }) }),
+      h("div", { class: "muted", style: "font-size:12px", text: t("dawn.keeps") }),
+      h("div", { class: "muted", style: "font-size:12px", text: t("dawn.resets") }),
+      h("div", { class: "row" }, h("b", { text: t("dawn.heirloom") }), heir),
+      h("div", { class: "row" }, h("b", { text: t("dawn.calling") }), cls),
+      h(
+        "div",
+        { class: "row" },
+        h("button", { class: "btn hot", text: t("dawn.go"), on: { click: () => {
+          close();
+          c.act((s) => relightSun(s, { heirloom: heir.value ? Number(heir.value) : void 0, cls: cls.value }));
+          const done = c.modal(h(
+            "div",
+            { class: "card col", style: "max-width:560px" },
+            h("h3", { text: dawnTitle(dawnOf(c.state)) }),
+            ...storyText("dawn.story").split("\n\n").map((p) => h("div", { class: "story", text: p })),
+            h("button", { class: "btn", text: t("dawn.pickNow"), on: { click: () => {
+              done();
+              perkDialog(c);
+            } } })
+          ));
+        } } }),
+        h("button", { class: "btn alt", text: t("common.cancel"), on: { click: () => close() } })
+      )
+    ));
+  }
+  function perkDialog(c) {
+    const st = c.state;
+    const taken = st.hero.dawn?.perks ?? [];
+    const list9 = h("div", { class: "perks" });
+    const close = c.modal(h(
+      "div",
+      { class: "card col", style: "max-width:600px" },
+      h("h3", { text: t("dawn.perkTitle", { dawn: dawnTitle(dawnOf(st)) }) }),
+      h("div", { class: "muted", style: "font-size:12px", text: t("dawn.perkNote") }),
+      list9,
+      h("button", { class: "btn alt", text: t("common.close"), on: { click: () => close() } })
+    ));
+    for (const p of DAWN_PERKS) {
+      const has2 = taken.includes(p.id);
+      list9.append(h(
+        "button",
+        { class: `perk${has2 ? " on" : ""}`, attrs: has2 ? { disabled: "" } : {}, on: { click: () => {
+          close();
+          c.act((s) => chooseDawnPerk(s, p.id), perkName(p.id));
+        } } },
+        h("b", { text: perkName(p.id) }),
+        h("span", { text: perkText(p.id) })
+      ));
+    }
   }
   function filterEditor(c) {
     const rules = c.state.settings.filter;
@@ -14682,7 +15532,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
   var STAGE_NEXT = { m: "l", l: "off", off: "m" };
   var STAGE_TITLE = (s) => t(`app.stage.${s}`);
   var STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
-  var NAV_GLYPH = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu" };
+  var NAV_GLYPH = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu", market: "market" };
+  var navKey = (i) => String((i + 1) % 10);
   var GameWindow = class _GameWindow {
     constructor(store2, kv2, hooks = {}) {
       this.store = store2;
@@ -14848,13 +15699,13 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": t("app.hudLabel") } }, this.hud.canvas);
       this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
       VIEWS.forEach((v, i) => {
-        this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${i + 1})` }, on: { click: () => {
+        this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${navKey(i)})` }, on: { click: () => {
           this.view = v.id;
           this.sig = "";
           if (this.ctx) this.ctx.sel = {};
           this.renderTab(true);
           this.body.scrollTop = 0;
-        } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
+        } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: navKey(i) }), h("span", { class: "badge", attrs: { hidden: "" } })));
       });
       this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
       const main = h("div", { class: "main" }, this.nav, this.body);
@@ -14906,7 +15757,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           return;
         }
         if (e2.ctrlKey || e2.altKey || e2.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
-        const n = Number(e2.key);
+        const n = e2.key === "0" ? 10 : Number(e2.key);
         if (n >= 1 && n <= VIEWS.length) {
           this.nav.children[n - 1]?.click();
           e2.preventDefault();
@@ -15234,6 +16085,18 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
           this.lastEvent = ["event.died", {}];
           sfx("death");
         },
+        stone: (key) => {
+          if ((parseStone(key)?.tier ?? 0) >= 3) {
+            const name = stoneFullName(key);
+            this.toast(t("toast.stone", { name }), "rare");
+            this.lastEvent = ["toast.stone", { name }];
+          }
+        },
+        echo: (id) => {
+          const who = echoWho(id);
+          this.toast(t("toast.echo", { who }), "relic");
+          this.lastEvent = ["toast.echo", { who }];
+        },
         companion: (id, isNew) => {
           const pet = companionName(id);
           this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
@@ -15357,7 +16220,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       VIEWS.forEach((v, i) => {
         const b = this.nav.children[i];
         if (!b) return;
-        b.title = `${t(`nav.${v.id}`)} (${i + 1})`;
+        b.title = `${t(`nav.${v.id}`)} (${navKey(i)})`;
         delete b.dataset.tip;
         b.removeAttribute("aria-description");
         b.querySelector(".lbl")?.replaceWith(h("span", { class: "lbl", text: t(`nav.${v.id}`) }));
@@ -15395,7 +16258,8 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         tree: tree ? [String(tree), tn("badge.tree", tree)] : void 0,
         atlas: atlas ? [String(atlas), tn("badge.atlas", atlas)] : void 0,
         gear: s.stashFull ? ["!", t("badge.stash")] : void 0,
-        world: claimable(s) ? [String(claimable(s)), tn("badge.contracts", claimable(s))] : void 0
+        world: claimable(s) ? [String(claimable(s)), tn("badge.contracts", claimable(s))] : void 0,
+        menu: perksToPick(s) ? ["!", t("badge.perk")] : allShards(s) ? ["!", t("badge.relight")] : void 0
       };
       for (const b of this.nav.children) {
         const id = b.getAttribute("data-v");

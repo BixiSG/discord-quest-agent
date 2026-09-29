@@ -562,6 +562,37 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
 .scout { margin-top: 4px; padding: 2px 6px; display: inline-block; font: 700 12px/1.3 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--line); }
 .scout.ok { background: var(--green); color: #1a1410; } .scout.mid { background: var(--gold); color: #1a1410; } .scout.bad { background: var(--ember); color: #1a1410; }
+/* round 5: stones, sockets, the market, echoes, the Rekindling */
+.stonechip { display: inline-grid; place-items: center; filter: drop-shadow(1px 1px 0 #1a1410); }
+.stonechip.empty { color: var(--muted); filter: none; }
+.stonechip.t0 { opacity: .55; } .stonechip.t1 { opacity: .7; } .stonechip.t2 { opacity: .85; }
+.stonechip.t4 { filter: drop-shadow(0 0 3px currentColor) drop-shadow(1px 1px 0 #1a1410); }
+.sockrows { display: flex; flex-direction: column; gap: 2px; }
+.sockrow { display: flex; align-items: center; gap: 6px; }
+.sockwork { align-items: center; }
+.sock1 { display: inline-flex; align-items: center; gap: 3px; }
+.sock1 select { max-width: 150px; }
+.offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.offer { display: flex; align-items: center; gap: 8px; padding: 4px 6px; min-width: 0; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.offer.sold { opacity: .5; }
+.offer .name { font-size: 13px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; }
+.offer .tag.up { background: var(--green); color: #1a1410; align-self: flex-start; }
+.offer .cell { flex: none; width: 48px; height: 48px; }
+.stonebig { width: 32px; display: grid; place-items: center; }
+.pouch { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px; }
+.pouchrow { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-bottom: 1px dashed color-mix(in srgb, var(--line) 30%, transparent); }
+.echoes .echo { padding: 6px 8px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.echoes .echo.unheard { opacity: .6; }
+.echoes .echo .story { margin-top: 4px; }
+.dawncard .shards { display: flex; align-items: center; gap: 6px; }
+.dawncard .shard { color: var(--muted); opacity: .45; } .dawncard .shard.on { color: #ffc233; opacity: 1; filter: drop-shadow(0 0 3px #ffc233); }
+.tag.dawn { background: #ffc233; color: #1a1410; border-color: #1a1410; }
+.perks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.perk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
+.perk span { font-size: 12px; color: var(--muted); }
+.perk.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; }
+.perk:hover:not(.on) { filter: brightness(1.08); }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }

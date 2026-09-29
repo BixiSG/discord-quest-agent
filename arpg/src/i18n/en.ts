@@ -3,7 +3,7 @@
 // the data files stay the one place their English lives. ru.ts and uk.ts
 // translate every key (a test holds them to it).
 
-import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
+import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, DAWN_PERKS, DAWN_TEXT, ECHOES, SHARDS_TEXT, STONES, STONE_TIERS, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
 import { FILTER_PRESETS, groupLabel } from "../core/filter";
 import { BLESSINGS } from "../core/shrine";
 import { DAMAGE_TYPES } from "../core/types";
@@ -74,6 +74,12 @@ function content(): Record<string, string> {
         o[`companion.${c.id}.name`] = c.name; o[`companion.${c.id}.blurb`] = c.blurb; o[`companion.${c.id}.where`] = c.where; o[`companion.${c.id}.bonus`] = c.bonus.text;
     }
     for (const b of BLESSINGS) { o[`blessing.${b.id}.name`] = b.name; o[`blessing.${b.id}.text`] = b.text; }
+    for (const s of Object.values(STONES)) { o[`stone.${s.id}.name`] = s.name; for (const pl of ["weapon", "armour", "jewel"] as const) o[`stone.${s.id}.${pl}`] = s.effects[pl].text; }
+    STONE_TIERS.forEach((n, i) => { o[`stone.tier${i}`] = n; });
+    for (const e of Object.values(ECHOES)) { o[`echo.${e.id}.who`] = e.who; o[`echo.${e.id}.text`] = e.text; }
+    for (const p of DAWN_PERKS) { o[`perk.${p.id}.name`] = p.name; o[`perk.${p.id}.text`] = p.text; }
+    o["echo.shards"] = SHARDS_TEXT;
+    o["dawn.story"] = DAWN_TEXT;
     for (const a of Object.values(MAP_AREAS)) o[`mapArea.${a.id}.name`] = a.name;
     for (const m of Object.values(MAP_MODS)) o[`mapMod.${m.id}.text`] = m.text;
     for (const n of Object.values(ATLAS)) { o[`atlas.${n.id}.name`] = n.name; o[`atlas.${n.id}.text`] = n.text; }
@@ -497,6 +503,69 @@ const UI: Record<string, string> = {
     "shrine.title": "Ember shrine",
     "shrine.cost": "{cost} dust / hour",
     "shrine.note": "Blessings run on the hero's time, so they count while you are away too.",
+    "nav.market": "Market",
+    "market.title": "The Wandering Market",
+    "market.closed": "A caravan camps beside the road once {boss} is beaten.",
+    "market.next": "New stock in {time}",
+    "market.refresh": "New stock now: {cost}",
+    "market.refreshTip": "Costs {cost} ember dust; the price doubles with each refresh until the stock rotates.",
+    "market.pedlar": "The Pedlar",
+    "market.pedlarNote": "Gear at the highest item level you have reached; two pieces for your weakest slots.",
+    "market.jeweller": "The Jeweller",
+    "market.jewellerNote": "Ember stones. Set them in sockets at the Forge.",
+    "market.buy": "Buy {cost}",
+    "market.sold": "Sold",
+    "market.bought": "Bought: {name}",
+    "market.upgrade": "Upgrade",
+    "item.sockets": "Sockets",
+    "item.socketEmpty": "Empty socket",
+    "forge.sockets": "Sockets",
+    "forge.drill": "Drill: {cost}",
+    "forge.drillTip": "One more socket, up to {n}.",
+    "forge.socketsFull": "All sockets",
+    "forge.noSockets": "No sockets yet.",
+    "forge.setStone": "Set a stone",
+    "forge.pry": "Pry out",
+    "forge.here": "Here: {effect}",
+    "pouch.title": "Stone pouch",
+    "pouch.empty": "No ember stones yet. Champions and bosses drop them; the Jeweller sells them.",
+    "pouch.cut": "3 into 1: {cost}",
+    "pouch.cutTip": "Cut three {name} into one {next}.",
+    "pouch.inWeapon": "In a weapon: {e}",
+    "pouch.inArmour": "In armour: {e}",
+    "pouch.inJewel": "In jewellery: {e}",
+    "stone.full": "{tier} {name}",
+    "menu.autoStones": "Set stones on their own",
+    "menu.autoStonesNote": "Empty sockets in worn gear get the stone from the pouch that helps the build most.",
+    "toast.stone": "Stone: {name}",
+    "log.echoes": "Echoes",
+    "echoes.title": "Echoes of the day the sun fell",
+    "echoes.count": "{n} / {total} heard",
+    "echoes.note": "Map bosses sometimes leave one; each pinnacle leaves its own. Every third is an atlas point.",
+    "echoes.unknown": "Not heard yet.",
+    "echoes.unknownPin": "Waits with {pin}.",
+    "toast.echo": "Echo: {who}",
+    "log.echo": "An echo: {who}.",
+    "dawn.title": "The Rekindling",
+    "dawn.shards": "Sun shards: {n} / {total}",
+    "dawn.note": "Each piece of the sun is held by a pinnacle: {pins}.",
+    "dawn.relight": "Relight the sun",
+    "dawn.confirm": "Relight the sun?",
+    "dawn.keeps": "Kept: the relic case and codex, companions and their bond, echoes, the stone pouch, bought stash room, settings, totals - and one heirloom.",
+    "dawn.resets": "Starts over: level, passive tree, ascendancy, gear, stash, the road, the atlas, maps, dust and orbs.",
+    "dawn.gains": "Gained: {dawn} - {xp}% more experience and dust, a passive point, a world {tough}% tougher and {rich}% richer, and a perk to choose.",
+    "dawn.heirloom": "Heirloom",
+    "dawn.noHeirloom": "none",
+    "dawn.calling": "Calling",
+    "dawn.go": "Relight it",
+    "dawn.perkTitle": "{dawn}: choose a perk",
+    "dawn.perkNote": "One pick per dawn, kept for every dawn after.",
+    "dawn.perks": "Perks: {list}",
+    "dawn.pickNow": "Choose a perk",
+    "dawn.name": "Dawn {n}",
+    "dawn.world": "The world: {tough}% tougher, {rich}% richer",
+    "badge.perk": "A dawn perk to choose",
+    "badge.relight": "The sun can be relit",
     "shrine.line": "{name}: {text}",
     "shrine.left": "{time} left",
     "shrine.leftKept": "{time} left, kept up",

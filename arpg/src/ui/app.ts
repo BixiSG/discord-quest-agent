@@ -3,6 +3,10 @@
 // Closed means closed: no timers, no drawing; the next open catches up from
 // the saved timestamp. Mini mode is still open: the hero keeps fighting.
 
+import { parseStone } from "../core/data";
+import { allShards } from "../core/echoes";
+import { perksToPick } from "../core/dawn";
+import { echoWho, stoneFullName } from "../i18n/names";
 import { advance, runSheet, runZone, STEP_MS, type SimEvents } from "../core/sim/engine";
 import { startReport, type Report } from "../core/sim/report";
 import { newGame, sheetOf } from "../core/game";
@@ -72,7 +76,9 @@ export interface AppHooks {
 // Events typed or pasted in the game must not reach Discord's document handlers.
 const STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
 
-const NAV_GLYPH: Record<ViewId, GlyphName> = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu" };
+const NAV_GLYPH: Record<ViewId, GlyphName> = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu", market: "market" };
+/** Tab keys: 1-9, then 0 for the tenth. */
+const navKey = (i: number) => String((i + 1) % 10);
 
 export class GameWindow {
     private host: HTMLDivElement | null = null;
@@ -217,10 +223,10 @@ export class GameWindow {
 
         this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
         VIEWS.forEach((v, i) => {
-            this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${i + 1})` }, on: { click: () => {
+            this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${t(`nav.${v.id}`)} (${navKey(i)})` }, on: { click: () => {
                 this.view = v.id; this.sig = ""; if (this.ctx) this.ctx.sel = {};
                 this.renderTab(true); this.body.scrollTop = 0;
-            } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
+            } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: navKey(i) }), h("span", { class: "badge", attrs: { hidden: "" } })));
         });
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
         const main = h("div", { class: "main" }, this.nav, this.body);
@@ -257,7 +263,7 @@ export class GameWindow {
                 return;
             }
             if (e.ctrlKey || e.altKey || e.metaKey || this.frame.mini || this.win.querySelector(".modal")) return;
-            const n = Number(e.key);
+            const n = e.key === "0" ? 10 : Number(e.key);
             if (n >= 1 && n <= VIEWS.length) {
                 (this.nav.children[n - 1] as HTMLElement | undefined)?.click();
                 e.preventDefault();
@@ -500,6 +506,15 @@ export class GameWindow {
                 else if (item.rarity === "rare" || item.rarity === "relic") { this.toast(t(item.rarity === "relic" ? "toast.relic" : "toast.rare", { item: name }), item.rarity); this.lastEvent = ["event.found", { item: name }]; }
             },
             death: () => { this.lastEvent = ["event.died", {}]; sfx("death"); },
+            stone: key => {
+                // Only the good ones make noise; the rest go to the pouch quietly.
+                if ((parseStone(key)?.tier ?? 0) >= 3) { const name = stoneFullName(key); this.toast(t("toast.stone", { name }), "rare"); this.lastEvent = ["toast.stone", { name }]; }
+            },
+            echo: id => {
+                const who = echoWho(id);
+                this.toast(t("toast.echo", { who }), "relic");
+                this.lastEvent = ["toast.echo", { who }];
+            },
             companion: (id, isNew) => {
                 const pet = companionName(id);
                 this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
@@ -619,7 +634,7 @@ export class GameWindow {
         VIEWS.forEach((v, i) => {
             const b = this.nav.children[i] as HTMLElement | undefined;
             if (!b) return;
-            b.title = `${t(`nav.${v.id}`)} (${i + 1})`;
+            b.title = `${t(`nav.${v.id}`)} (${navKey(i)})`;
             delete b.dataset.tip;
             b.removeAttribute("aria-description");
             b.querySelector(".lbl")?.replaceWith(h("span", { class: "lbl", text: t(`nav.${v.id}`) }));
@@ -658,6 +673,7 @@ export class GameWindow {
             atlas: atlas ? [String(atlas), tn("badge.atlas", atlas)] : undefined,
             gear: s.stashFull ? ["!", t("badge.stash")] : undefined,
             world: claimable(s) ? [String(claimable(s)), tn("badge.contracts", claimable(s))] : undefined,
+            menu: perksToPick(s) ? ["!", t("badge.perk")] : allShards(s) ? ["!", t("badge.relight")] : undefined,
         };
         for (const b of this.nav.children) {
             const id = b.getAttribute("data-v") as ViewId;
