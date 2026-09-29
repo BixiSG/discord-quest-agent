@@ -1,9 +1,9 @@
 // The Atlas tab: map stash, map crafting, the atlas tree and pinnacles.
 
-import { ACTS, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, ZONES, tierName } from "../core/data";
+import { ACTS, ATLAS, CURRENCIES, MAP_AREAS, MAX_TIER, PINNACLES, ZONES } from "../core/data";
 import { scoutPinnacle, type Scout } from "../core/scout";
 import type { GameState } from "../core/state";
-import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, mapLabel, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
+import { autoXpCap, atlasPointsLeft, canTakeAtlas, craftMap, endgameOpen, queuePinnacle, setMapMode, setMapTier, takeAtlas } from "../core/maps";
 import { h } from "./dom";
 import { glyph } from "./glyphs";
 import { MAP_DEATH_XP } from "../core/sim/engine";
@@ -11,6 +11,8 @@ import type { Ctx } from "./views";
 import { scenery } from "./gfx/portrait";
 import { spriteCanvas } from "./gfx/sprites";
 import { MONSTER_CAST } from "./gfx/cast";
+import { t, tn } from "../i18n";
+import { atlasName, atlasText, currencyBlurb, currencyName, mapLabel, mapModText, pinName, pinText, sigilName, tierName, zoneName } from "../i18n/names";
 
 const MAP_CRAFTS = ["kindling", "reshaper", "graft", "crownseal", "forgeheart", "tempest", "starfall", "salt"];
 const RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare: "var(--r-rare)" };
@@ -30,41 +32,41 @@ export function atlasView(c: Ctx): HTMLElement {
         const acts = h("div", { class: "gate-acts" }, ...ACTS.map(a => {
             const done = !!st.world.clears[a.zones[a.zones.length - 1]!];
             const here = a.zones.includes(st.activity.zone) || a.trial === st.activity.zone;
-            return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: `Act ${a.id}${done ? ": cleared" : here ? ": here" : ""}` });
+            return h("span", { class: `tag${done ? " done" : here ? " here" : ""}`, text: t(done ? "atlas.actCleared" : here ? "atlas.actHere" : "atlas.act", { n: a.id }) });
         }));
-        return h("div", { class: "card col atlas-locked" }, h("h3", { text: "The Cinderlands" }),
+        return h("div", { class: "card col atlas-locked" }, h("h3", { text: t("atlas.lands") }),
             h("div", { class: "gate" }, pic, h("span", { class: "lock" }, glyph("block", 22))),
-            h("div", { class: "story", text: "Past the crater the land is all ember and ash, and it never ends. Clear the Sunfall to walk it." }),
-            h("div", { class: "row" }, h("span", { class: "sub", style: "margin:0", text: "Opens after" }), h("b", { text: `${gate.name} (area level ${gate.level})` }),
-                h("span", { class: "muted", text: `the hero is level ${st.hero.level}` })),
+            h("div", { class: "story", text: t("atlas.story") }),
+            h("div", { class: "row" }, h("span", { class: "sub", style: "margin:0", text: t("atlas.opensAfter") }), h("b", { text: t("atlas.gate", { zone: zoneName(gate.id), level: gate.level }) }),
+                h("span", { class: "muted", text: t("atlas.heroLevel", { n: st.hero.level }) })),
             acts,
-            h("div", { class: "sub", style: "margin:4px 0 0", text: `Then ${MAX_TIER} map tiers and the endless Depths` }),
+            h("div", { class: "sub", style: "margin:4px 0 0", text: t("atlas.then", { n: MAX_TIER }) }),
             tierChips([]),
-            h("div", { class: "muted", text: st.maps.length ? `${st.maps.length} map${st.maps.length === 1 ? "" : "s"} already found and kept for later.` : "Maps start to drop in Act 3; they are kept for later." }));
+            h("div", { class: "muted", text: st.maps.length ? tn("atlas.kept", st.maps.length) : t("atlas.dropLater") }));
     }
     const root = h("div", { class: "col" });
 
     // Controls.
     const onMaps = st.activity.mode === "map";
     const mode = h("button", { class: `toggle${onMaps ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(onMaps) }, on: { click: () => c.act(s => setMapMode(s, !onMaps)) } },
-        h("i"), h("span", null, h("b", { text: "Run maps" }), h("small", { text: "Instead of story zones. With no maps left: the Outskirts, which drop Tier 1 maps." })));
+        h("i"), h("span", null, h("b", { text: t("atlas.runMaps") }), h("small", { text: t("atlas.runMapsNote") })));
     const tiers = [...new Set([...st.maps.map(m => m.tier), ...(st.activity.mapTier ? [st.activity.mapTier] : [])])].sort((a, b) => a - b);
     const tierSel = h("select");
-    tierSel.append(h("option", { text: "Highest tier first", attrs: { value: "0" } }));
-    for (const t of tiers) tierSel.append(h("option", { text: `${tierName(t)} and below${st.maps.some(m => m.tier === t) ? "" : " (none in stash)"}`, attrs: { value: String(t) } }));
+    tierSel.append(h("option", { text: t("atlas.highest"), attrs: { value: "0" } }));
+    for (const tier of tiers) tierSel.append(h("option", { text: t(st.maps.some(m => m.tier === tier) ? "atlas.andBelow" : "atlas.andBelowNone", { tier: tierName(tier) }), attrs: { value: String(tier) } }));
     tierSel.value = String(st.activity.mapTier);
     tierSel.addEventListener("change", () => c.act(s => setMapTier(s, +tierSel.value)));
     const deepest = Math.max(0, ...st.atlas.tiers);
     root.append(h("div", { class: "card col" },
-        h("h3", { text: "The map device" }),
+        h("h3", { text: t("atlas.device") }),
         mode,
-        h("div", { class: "row" }, "Order", tierSel,
-            h("span", { class: "tag", text: `${st.maps.length}/${st.mapCap} maps` }),
-            h("span", { class: "tag", text: `Deepest: ${deepest ? tierName(deepest) : "none"}` }),
-            autoXpCap(st) ? h("span", { class: "tag", title: "Auto-push keeps to tiers within 4 levels of the hero for experience", text: `XP cap: ${tierName(autoXpCap(st))}` }) : null,
-            st.activity.autoCap ? h("span", { class: "tag ember", text: `Auto-push cap: ${tierName(st.activity.autoCap)}` }) : null),
+        h("div", { class: "row" }, t("atlas.order"), tierSel,
+            h("span", { class: "tag", text: t("atlas.count", { n: st.maps.length, cap: st.mapCap }) }),
+            h("span", { class: "tag", text: t("atlas.deepest", { tier: deepest ? tierName(deepest) : t("atlas.none") }) }),
+            autoXpCap(st) ? h("span", { class: "tag", title: t("atlas.xpCapTip"), text: t("atlas.xpCap", { tier: tierName(autoXpCap(st)) }) }) : null,
+            st.activity.autoCap ? h("span", { class: "tag ember", text: t("atlas.autoCap", { tier: tierName(st.activity.autoCap) }) }) : null),
         tierChips(st.atlas.tiers),
-        h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })));
+        h("div", { class: "muted", style: "font-size:12px", text: t("atlas.deathNote", { n: MAP_DEATH_XP * 100 }) })));
 
     // Map stash.
     const list = h("div", { class: "col", style: "gap:4px" });
@@ -77,20 +79,20 @@ export function atlasView(c: Ctx): HTMLElement {
         list.append(h("div", { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
             thumb,
             h("div", { class: "grow" }, h("div", { class: "row", style: "gap:6px" }, h("span", { class: "tag", style: `background:${RCOLOR[m.rarity]};color:#1a1410`, text: tierName(m.tier) }), h("b", { text: mapLabel(m) })),
-                m.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m.mods.map(id => MAP_MODS[id]?.text ?? id).join(" / ") }) : null)));
+                m.mods.length ? h("div", { class: "muted", style: "font-size:12px;margin-top:2px", text: m.mods.map(id => mapModText(id)).join(" / ") }) : null)));
     }
-    if (!maps.length) list.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    if (!maps.length) list.append(h("div", { class: "muted", text: t("atlas.noMaps") }));
     const sel = st.maps.find(m => m.uid === c.sel.uid);
     const bench = h("div", { class: "row", style: "gap:4px" });
     if (sel) {
         for (const id of MAP_CRAFTS) {
             const have = st.currency[id] ?? 0;
-            bench.append(h("button", { class: "btn alt", text: `${CURRENCIES[id]!.name} (${have})`, title: CURRENCIES[id]!.blurb, attrs: have ? {} : { disabled: "" },
+            bench.append(h("button", { class: "btn alt", text: t("common.count", { label: currencyName(id), n: have }), title: currencyBlurb(id), attrs: have ? {} : { disabled: "" },
                 on: { click: () => c.act(s => craftMap(s, id, sel.uid)) } }));
         }
     }
-    root.append(h("div", { class: "card col" }, h("h3", { text: "Maps" }), list,
-        sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null));
+    root.append(h("div", { class: "card col" }, h("h3", { text: t("atlas.maps") }), list,
+        sel ? h("div", { class: "col" }, h("div", { class: "muted", text: t("atlas.craft", { map: mapLabel(sel) }) }), bench) : null));
 
     // Atlas tree.
     const left = atlasPointsLeft(st);
@@ -100,12 +102,12 @@ export function atlasView(c: Ctx): HTMLElement {
         const err = own ? null : canTakeAtlas(st, n.id);
         const locked = !own && !!err && err !== "no atlas points";
         grid.append(h("div", { class: `skill${own ? " on" : ""}${locked ? " locked" : ""}`, on: { click: () => { if (!own && !err) c.act(s => takeAtlas(s, n.id)); } } },
-            h("div", { class: "grow" }, h("div", { class: "nm", text: n.name }), h("div", { class: "ds", text: n.text }),
-                n.requires.length ? h("div", { class: "ds muted", text: `After: ${n.requires.map(r => ATLAS[r]?.name ?? r).join(", ")}` }) : null),
-            h("div", { class: "tag", text: own ? "taken" : err ? (locked ? "locked" : "no points") : "take" })));
+            h("div", { class: "grow" }, h("div", { class: "nm", text: atlasName(n.id) }), h("div", { class: "ds", text: atlasText(n.id) }),
+                n.requires.length ? h("div", { class: "ds muted", text: t("atlas.after", { list: n.requires.map(r => (ATLAS[r] ? atlasName(r) : r)).join(t("common.list")) }) }) : null),
+            h("div", { class: "tag", text: own ? t("atlas.taken") : err ? (locked ? t("atlas.locked") : t("atlas.noPoints")) : t("atlas.take") })));
     }
-    root.append(h("div", { class: "card col" }, h("h3", { text: `Atlas (${left} point${left === 1 ? "" : "s"} left)` }),
-        h("div", { class: "muted", style: "font-size:12px", text: `First clears of tiers 1-${MAX_TIER} give a point each, every fifth Depth one more, pinnacles two.` }), grid));
+    root.append(h("div", { class: "card col" }, h("h3", { text: tn("atlas.tree", left) }),
+        h("div", { class: "muted", style: "font-size:12px", text: t("atlas.pointsNote", { n: MAX_TIER }) }), grid));
 
     // Pinnacles.
     const pins = h("div", { class: "grid2" });
@@ -117,16 +119,16 @@ export function atlasView(c: Ctx): HTMLElement {
         if (art) art.className = "pin-art";
         pins.append(h("div", { class: "skill pinnacle", style: "cursor:default" },
             art ? h("div", { class: "pin-frame", style: `background:${p.palette[0]}` }, art) : null,
-            h("div", { class: "grow" }, h("div", { class: "nm", text: p.name }), h("div", { class: "ds", text: p.text }),
-                h("div", { class: "ds muted", text: `Level ${p.level}. ${p.sigilName}s drop from map bosses at ${tierName(p.minTier)}+. Kills: ${st.pinnacleKills[p.id] ?? 0}.` }),
+            h("div", { class: "grow" }, h("div", { class: "nm", text: pinName(p.id) }), h("div", { class: "ds", text: pinText(p.id) }),
+                h("div", { class: "ds muted", text: t("atlas.pinInfo", { level: p.level, sigil: sigilName(p.id), tier: tierName(p.minTier), kills: st.pinnacleKills[p.id] ?? 0 }) }),
                 scoutLine(c, p.id),
                 h("div", { class: "row", style: "margin-top:6px;gap:6px" },
-                    h("button", { class: "btn hot", text: queued ? "Next run" : `Challenge (${have}/${p.cost})`, attrs: have >= p.cost && !queued ? {} : { disabled: "" },
-                        on: { click: () => c.act(s => queuePinnacle(s, p.id), `${p.name} is next`) } }),
-                    h("button", { class: "btn alt", text: "Scout", title: "Fight it five times on a copy of your hero (nothing is spent) to see the odds",
+                    h("button", { class: "btn hot", text: queued ? t("atlas.nextRun") : t("atlas.challenge", { have, cost: p.cost }), attrs: have >= p.cost && !queued ? {} : { disabled: "" },
+                        on: { click: () => c.act(s => queuePinnacle(s, p.id), t("atlas.isNext", { name: pinName(p.id) })) } }),
+                    h("button", { class: "btn alt", text: t("atlas.scout"), title: t("atlas.scoutTip"),
                         on: { click: () => { scouted.set(scoutKey(st, p.id), scoutPinnacle(st, p.id, 5)); c.rerender(); } } })))));
     }
-    root.append(h("div", { class: "card col" }, h("h3", { text: "Pinnacles" }), pins));
+    root.append(h("div", { class: "card col" }, h("h3", { text: t("atlas.pinnacles") }), pins));
     return root;
 }
 
@@ -138,13 +140,13 @@ function scoutLine(c: Ctx, id: string): HTMLElement | null {
     const r = scouted.get(scoutKey(c.state, id));
     if (!r) return null;
     const odds = r.wins / Math.max(1, r.trials);
-    const verdict = odds >= 0.8 ? "ready" : odds >= 0.4 ? "risky" : "not yet";
-    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: `Scouted: won ${r.wins} of ${r.trials}${r.wins ? `, about ${r.seconds} s each` : ""} - ${verdict}` });
+    const verdict = t(odds >= 0.8 ? "atlas.ready" : odds >= 0.4 ? "atlas.risky" : "atlas.notYet");
+    return h("div", { class: `scout ${odds >= 0.8 ? "ok" : odds >= 0.4 ? "mid" : "bad"}`, text: t(r.wins ? "atlas.scoutedTime" : "atlas.scouted", { wins: r.wins, n: r.trials, s: r.seconds, verdict }) });
 }
 
 /** The tier ladder: one rung per tier, lit once cleared. */
 function tierChips(done: number[]): HTMLElement {
-    const row = h("div", { class: "ladder", attrs: { "aria-label": `Tiers cleared: ${done.length} of ${MAX_TIER}` } });
-    for (let t = 1; t <= MAX_TIER; t++) row.append(h("span", { class: `rung${done.includes(t) ? " done" : ""}`, title: `${tierName(t)}${done.includes(t) ? ": cleared" : ""}`, text: String(t) }));
+    const row = h("div", { class: "ladder", attrs: { "aria-label": t("atlas.ladderAria", { n: done.length, max: MAX_TIER }) } });
+    for (let k = 1; k <= MAX_TIER; k++) row.append(h("span", { class: `rung${done.includes(k) ? " done" : ""}`, title: done.includes(k) ? t("atlas.rungCleared", { tier: tierName(k) }) : tierName(k), text: String(k) }));
     return row;
 }

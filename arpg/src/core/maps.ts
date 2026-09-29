@@ -3,6 +3,7 @@
 import { MAX_LEVEL, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES, depthMult, emptyAtlas, mapLevel, tierName, type AtlasEffects, type ZoneDef } from "./data";
 import { Rng, hashSeed } from "./rng";
 import { pushLog } from "./game";
+import { ref } from "../i18n/refs";
 import type { GameState, MapItem, RunMap } from "./state";
 import { pinnacleEcho } from "./echoes";
 import type { DamageType, Mod } from "./types";
@@ -87,10 +88,6 @@ export function rollMap(rng: Rng, uid: number, tier: number): MapItem {
     return { uid, tier: Math.max(1, tier), area, mods: rollMods(rng, n), rarity };
 }
 
-export function mapLabel(m: { tier: number; area: string }): string {
-    return `${MAP_AREAS[m.area]?.name ?? m.area} (${tierName(m.tier)})`;
-}
-
 /** Map crafting with the same currency as items. */
 export function craftMap(state: GameState, currency: string, uid: number): string | null {
     const m = state.maps.find(x => x.uid === uid);
@@ -143,7 +140,7 @@ export function startMapRun(state: GameState): RunMap {
         act.pinnacle = undefined;
         if ((state.sigils[pin.sigil] ?? 0) >= pin.cost) {
             state.sigils[pin.sigil]! -= pin.cost;
-            pushLog(state, "zone", `The way to ${pin.name} opens.`);
+            pushLog(state, "zone", "log.pinOpens", { pin: ref.pinnacle(pin.id) });
             return { tier: MAX_TIER, area: "sunscar", mods: [], level: pin.level, pinnacle: pin.id };
         }
     }
@@ -217,7 +214,7 @@ export function completeMap(state: GameState, m: RunMap): void {
     if (m.pinnacle) {
         const first = !state.pinnacleKills[m.pinnacle];
         state.pinnacleKills[m.pinnacle] = (state.pinnacleKills[m.pinnacle] ?? 0) + 1;
-        if (first) { state.atlas.points += 2; pushLog(state, "boss", `${PINNACLES[m.pinnacle]!.name} is defeated: +2 atlas points.`); }
+        if (first) { state.atlas.points += 2; pushLog(state, "boss", "log.pinDefeated", { pin: ref.pinnacle(m.pinnacle), n: 2 }); }
         // Its echo and its piece of the sun (the shard is the kill itself).
         pinnacleEcho(state, m.pinnacle);
         return;
@@ -227,7 +224,7 @@ export function completeMap(state: GameState, m: RunMap): void {
         // Every tier up to 16 gives a point; past that, every fifth Depth.
         if (m.tier <= MAX_TIER || (m.tier - MAX_TIER) % 5 === 0) {
             state.atlas.points++;
-            pushLog(state, "info", `${tierName(m.tier)} completed for the first time: +1 atlas point.`);
+            pushLog(state, "info", "log.tierFirst", { tier: ref.tier(m.tier), n: 1 });
         }
     }
 }

@@ -35,6 +35,8 @@ It has nothing to do with quests: it never reads quest data or orbs.
   atlas tree and four pinnacle bosses.
 - Character sheet with DPS and EHP breakdowns (click a stat to see where it
   comes from), compare deltas on every item and support.
+- English, Russian and Ukrainian, everything included (story, items, the
+  chronicle, the pixel font's Cyrillic); it follows Quest Agent's language.
 
 ## Install (Windows, with Discord Quest Agent)
 
@@ -92,7 +94,8 @@ Requirements: Node 20+.
   `http://127.0.0.1:8765/arpg/dev/play.html` (standalone) or
   `http://127.0.0.1:8765/dev/harness.html?arpg=1&view=addon:arpg` (mock
   Discord with the hub). `npm run smoke` drives the standalone page in
-  headless Chromium and fails on console errors.
+  headless Chromium and fails on console errors. Add `?lang=ru` or `?lang=uk`
+  to the standalone page for another language.
 - `node tools/run-ts.mjs tools/make-save.ts 40 strider /tmp/save.txt` writes
   a bot-played save you can import from the Menu tab.
 - Docs: `docs/GDD.md` (design), `docs/COMBAT.md` (every formula),

@@ -62,7 +62,7 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     fresh.world.rewards = Array.from({ length: echoPoints }, (_, i) => `echo:${i + 1}`);
     for (const k of Object.keys(s) as (keyof GameState)[]) delete (s as unknown as Record<string, unknown>)[k];
     Object.assign(s, fresh);
-    pushLog(s, "info", `The sun rises over the March. ${heir ? "An heirloom came with you." : ""}`.trim());
+    pushLog(s, "info", heir ? "log.sunRisesHeir" : "log.sunRises");
     return null;
 }
 

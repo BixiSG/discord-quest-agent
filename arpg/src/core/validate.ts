@@ -3,7 +3,8 @@
 
 import { COMPANIONS, DAWN_PERK, ECHOES, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
-import type { GameState } from "./state";
+import type { GameState, LogEntry } from "./state";
+import { has } from "../i18n";
 import { SLOTS, type Item } from "./types";
 import { DEFAULT_FILTER, type FilterRule } from "./filter";
 import { newTotals } from "./state";
@@ -83,6 +84,27 @@ function cleanRule(v: unknown): FilterRule | null {
     const behind = pos(r.behind); if (behind) out.behind = behind;
     const minAffixes = pos(r.minAffixes); if (minAffixes) out.minAffixes = minAffixes;
     if (typeof r.group === "string") out.group = r.group;
+    return out;
+}
+
+const LOG_KINDS = ["level", "loot", "death", "zone", "boss", "info"];
+
+/**
+ * A chronicle line as saved: English text, and (newer saves) a string key with params. A key this
+ * version doesn't know, or params that aren't plain values, are dropped: the line reads its text.
+ */
+function cleanLog(v: unknown): LogEntry | null {
+    if (!v || typeof v !== "object") return null;
+    const e = v as Partial<LogEntry>;
+    if (typeof e.text !== "string" || !LOG_KINDS.includes(e.kind as string)) return null;
+    const out: LogEntry = { t: typeof e.t === "number" && Number.isFinite(e.t) ? e.t : 0, kind: e.kind!, text: e.text };
+    if (typeof e.key === "string" && has(e.key, "en")) {
+        out.key = e.key;
+        if (e.params && typeof e.params === "object" && !Array.isArray(e.params)) {
+            const params = Object.fromEntries(Object.entries(e.params).filter(([, x]) => typeof x === "string" || (typeof x === "number" && Number.isFinite(x))));
+            if (Object.keys(params).length) out.params = params as Record<string, string | number>;
+        }
+    }
     return out;
 }
 
@@ -218,7 +240,7 @@ export function validateState(raw: unknown): GameState {
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
-    s.log = Array.isArray(s.log) ? s.log.slice(-60) : [];
+    s.log = (Array.isArray(s.log) ? s.log : []).map(cleanLog).filter((e): e is LogEntry => !!e).slice(-60);
     reconcileRewards(s);
     cleanContracts(s);
     return s;

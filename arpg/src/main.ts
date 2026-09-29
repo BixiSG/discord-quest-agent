@@ -6,6 +6,7 @@ import { GameWindow, type Summary } from "./ui/app";
 import { mountCard, type CardStatus } from "./ui/card";
 import { openStore, type SaveStore } from "./platform/store";
 import { hubKV, localKV } from "./platform/kv";
+import { setLang, t } from "./i18n";
 
 const ID = "arpg";
 const ICON = "M12 1.5c1.7 3.1 4.6 4.9 4.6 8.9a4.6 4.6 0 0 1-9.2 0c0-1.9.8-3.2 1.9-4.3.2 1.4.9 2.4 2.2 2.8-.6-2.6-.2-5 .5-7.4ZM4 17h16v2.5H4ZM7 21h10v1.5H7Z";
@@ -31,6 +32,8 @@ const STRINGS: Record<string, string> = {
 
 interface HubApi {
     t(key: string, params?: Record<string, unknown>): string;
+    /** The hub's language code ("en", "ru", "uk"...): the game shows its strings in it. */
+    lang(): string;
     theme(): string;
     load(): unknown;
     save(obj: unknown): boolean;
@@ -70,6 +73,8 @@ async function doOpen(): Promise<void> {
             theme: () => (hub?.theme() === "light" ? "light" : hub ? "dark" : "light"),
             onClose: () => { if (!tearingDown) kv.del(REOPEN); refreshCard?.(); if (standalone) showOpener(); },
             onMini: () => refreshCard?.(),
+            // In Discord the hub's language; standalone, ?lang= or the browser's.
+            lang: () => (hub ? (typeof hub.lang === "function" ? hub.lang() : "en") : standaloneLang()),
         });
     }
     await game.open();
@@ -118,10 +123,16 @@ const def = {
     },
 };
 
+/** Standalone (dev/play.html): ?lang=ru|uk|en, else the browser's language. */
+function standaloneLang(): string {
+    try { return new URLSearchParams(location.search).get("lang") || navigator.language || "en"; } catch { return "en"; }
+}
+
 // Standalone page: a button to reopen the window after closing it.
 function showOpener(): void {
     const b = document.createElement("button");
-    b.textContent = "Open Hollowmarch";
+    setLang(standaloneLang());
+    b.textContent = t("app.openBtn");
     b.setAttribute("style", "position:fixed;left:16px;bottom:16px;z-index:10049;font:900 14px Segoe UI,sans-serif;padding:10px 16px;background:#ffc233;border:3px solid #111;box-shadow:4px 4px 0 #111;cursor:pointer");
     b.addEventListener("click", () => { b.remove(); void openGame(); });
     document.body.append(b);

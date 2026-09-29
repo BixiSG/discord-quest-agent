@@ -6,6 +6,7 @@
 import { drawText, textWidth } from "./gfx/pixfont";
 import { iconFor } from "./icons";
 import { fmt } from "./dom";
+import { t } from "../i18n";
 
 export const HUD_H = 44;
 
@@ -60,8 +61,8 @@ export class Hud {
         this.globe(W - 22, 24, 19, d.manaMax ? d.mana / d.manaMax : 0, "#3a7bff", "#1f47a8", "#9dbbff", now, 1.7);
         // Dead: the globe says so (the battle view may be hidden or folded away).
         if (d.dead) {
-            drawText(g, "DEAD", 22, 17, "#ff8a8c", "center");
-            drawText(g, `${Math.max(0, Math.ceil(d.respawn ?? 0))}S`, 22, 27, CREAM, "center");
+            drawText(g, fit(t("hud.dead"), 36), 22, 17, "#ff8a8c", "center");
+            drawText(g, t("hud.secs", { n: Math.max(0, Math.ceil(d.respawn ?? 0)) }), 22, 27, CREAM, "center");
         } else drawText(g, fmt(Math.floor(Math.max(0, d.life))), 22, 20, CREAM, "center");
         drawText(g, fmt(Math.floor(Math.max(0, d.mana))), W - 22, 20, CREAM, "center");
         if (!d.dead && d.esMax > 0 && d.es > 0) drawText(g, fmt(Math.floor(d.es)), 22, 30, "#bfe9ff", "center");
@@ -77,12 +78,12 @@ export class Hud {
         if (leftRoom >= 60) {
             const z = fit(d.zone.toUpperCase(), leftRoom - 4);
             drawText(g, z, 48, 13, CREAM);
-            drawText(g, `AREA ${d.zoneLevel}`, 48, 24, "#b5a48b");
-            drawText(g, `${fmt(d.packDps)} DPS`, 48, 33, GOLD);
+            drawText(g, fit(t("hud.area", { n: d.zoneLevel }), leftRoom - 4), 48, 24, "#b5a48b");
+            drawText(g, fit(t("hud.dps", { dps: fmt(d.packDps) }), leftRoom - 4), 48, 33, GOLD);
         }
         if (rightRoom >= 60) {
             const rx = W - 48;
-            drawText(g, `${Math.floor(d.xpFrac * 100)}% XP`, rx, 13, GOLD, "right");
+            drawText(g, fit(t("hud.xp", { n: Math.floor(d.xpFrac * 100) }), rightRoom - 4), rx, 13, GOLD, "right");
             if (d.eta) drawText(g, fit(d.eta.toUpperCase(), rightRoom - 4), rx, 24, "#b5a48b", "right");
         }
     }
@@ -169,7 +170,7 @@ export class Hud {
         this.box(x, y, 28, 28, INK);
         const g = this.g;
         g.fillStyle = GOLD; g.fillRect(x, y, 28, 2); g.fillRect(x, y + 26, 28, 2);
-        drawText(g, "LV", x + 14, y + 4, "#b5a48b", "center");
+        drawText(g, t("hud.lv"), x + 14, y + 4, "#b5a48b", "center");
         drawText(g, String(lv), x + 14, y + 14, GOLD, "center");
     }
 }
@@ -179,7 +180,11 @@ const clamp01 = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v))
 /** Trim text to fit a width in pixel-font pixels. */
 function fit(text: string, max: number): string {
     if (textWidth(text) + 2 <= max) return text;
+    // "AREA - TIER 3" that doesn't fit shows the area whole rather than a cut tier.
+    const head = text.split(" - ")[0]!;
+    if (head !== text) return fit(head, max);
     let t = text;
     while (t.length > 1 && textWidth(t + ".") + 2 > max) t = t.slice(0, -1);
-    return t.trimEnd() + ".";
+    // A cut right after a word keeps no dangling separator ("SALT FLATS - ." reads "SALT FLATS.").
+    return t.replace(/[\s\-:,]+$/, "") + ".";
 }

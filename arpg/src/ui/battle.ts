@@ -10,6 +10,8 @@ import { runZone, type SimEvents } from "../core/sim/engine";
 import type { GameState } from "../core/state";
 import type { Sheet } from "../core/character";
 import { drawText } from "./gfx/pixfont";
+import { t } from "../i18n";
+import { monsterName } from "../i18n/names";
 import { drawSprite, loadSprites, spriteOf, tileLayer } from "./gfx/sprites";
 import { setFor } from "./gfx/scenes";
 import { HERO_CAST, MONSTER_CAST } from "./gfx/cast";
@@ -91,16 +93,16 @@ export class Battle {
             heroMiss: i => {
                 if (this.quiet) return;
                 const p = this.positions(state())[i];
-                if (p) this.pushFloat({ x: p[0], y: p[1] - 44, text: "miss", color: "#9aa0a6", t: now(), big: false });
+                if (p) this.pushFloat({ x: p[0], y: p[1] - 44, text: t("battle.miss"), color: "#9aa0a6", t: now(), big: false });
             },
             monsterHit: (i, dmg, avoided) => {
                 if (this.quiet) return;
                 this.monAtk.set(i, now());
-                if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 56, text: avoided, color: "#7fd1ff", t: now(), big: false });
+                if (avoided) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 56, text: t(avoided === "evade" ? "battle.evade" : "battle.block"), color: "#7fd1ff", t: now(), big: false });
                 else { this.heroHurt = now(); this.pushFloat({ x: this.HERO_X - 6, y: this.GROUND - 56, text: fmtShort(dmg), color: "#ff5a36", t: now(), big: false }); }
             },
-            flask: () => { if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 66, text: "+flask", color: "#3fbf5f", t: now(), big: false }); },
-            level: l => { if (!this.quiet) { this.pushFloat({ x: this.HERO_X, y: this.GROUND - 74, text: "LEVEL " + l, color: "#ffc233", t: now(), big: true }); this.kick(now(), 2); } },
+            flask: () => { if (!this.quiet) this.pushFloat({ x: this.HERO_X, y: this.GROUND - 66, text: t("battle.flask"), color: "#3fbf5f", t: now(), big: false }); },
+            level: l => { if (!this.quiet) { this.pushFloat({ x: this.HERO_X, y: this.GROUND - 74, text: t("battle.level", { n: l }), color: "#ffc233", t: now(), big: true }); this.kick(now(), 2); } },
         };
     }
 
@@ -177,7 +179,7 @@ export class Battle {
                 // Boss plate: name over a life bar, top centre.
                 const bw = Math.min(200, this.W - 120), bx = Math.round(this.W / 2 - bw / 2);
                 g.fillStyle = "#111"; g.fillRect(bx - 2, 3, bw + 4, 19);
-                drawText(g, MONSTERS[boss.def]!.name.toUpperCase(), this.W / 2, 3, "#ffffff", "center");
+                drawText(g, monsterName(boss.def).toUpperCase(), this.W / 2, 3, "#ffffff", "center");
                 bar(g, bx, 15, bw, 4, boss.life / boss.maxLife, "#e5383b");
             }
         }
@@ -247,8 +249,8 @@ export class Battle {
         if (dead && run) {
             g.fillStyle = "rgba(10,10,14,0.6)"; g.fillRect(0, 0, this.W, this.H);
             const cy = Math.round(this.H / 2) - 12;
-            drawText(g, "THE EMBER RELIGHTS", this.W / 2, cy, "#ff5a36", "center");
-            drawText(g, `BACK IN ${Math.max(0, run.timer).toFixed(0)}S`, this.W / 2, cy + 12, "#ffffff", "center");
+            drawText(g, t("battle.relights"), this.W / 2, cy, "#ff5a36", "center");
+            drawText(g, t("battle.backIn", { n: Math.max(0, run.timer).toFixed(0) }), this.W / 2, cy + 12, "#ffffff", "center");
         }
         // Pack progress pips.
         if (run) {

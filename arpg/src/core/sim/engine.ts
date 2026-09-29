@@ -10,7 +10,7 @@ import { DAMAGE_TYPES, type Item } from "../types";
 import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
-import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES, tierName } from "../data";
+import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
 import { blessing, tickShrine } from "../shrine";
@@ -19,6 +19,7 @@ import { tickMarket } from "../market";
 import { pinnacleEcho, rollMapEcho } from "../echoes";
 import { dawnEffects, hasPerk } from "../dawn";
 import { ACT_COMPANION } from "../data";
+import { ref } from "../../i18n/refs";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -47,7 +48,8 @@ export interface SimEvents {
     zone?(from: string, to: string, why: "push" | "retreat" | "unlock"): void;
     flask?(): void;
     currency?(id: string): void;
-    story?(text: string): void;
+    /** A story beat, as a string key (a zone's boss text, an act's outro). */
+    story?(key: string): void;
     /** A companion joined (new) or added bond to one owned (duplicate). */
     companion?(id: string, isNew: boolean): void;
     /** An ember stone went into the pouch. */
@@ -337,7 +339,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const had = { ...state.companions };
         const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
-        pushLog(state, "boss", `${d.name} falls.`);
+        pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
     return changed ? runSheet(state) : sheet;
 }
@@ -361,7 +363,7 @@ function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng
         if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
             const p = eligible[rng.int(0, eligible.length - 1)]!;
             state.sigils[p.sigil] = (state.sigils[p.sigil] ?? 0) + 1;
-            pushLog(state, "loot", `Found a ${p.sigilName}.`);
+            pushLog(state, "loot", "log.sigilFound", { sigil: ref.sigil(p.id) });
         }
     }
 }
@@ -378,7 +380,7 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         hero.rev++;
         up = true;
         if (state.activity.capBackoff) state.activity.capBackoff = 0; // stronger now: map auto-push may climb sooner
-        pushLog(state, "level", `Reached level ${hero.level}.`);
+        pushLog(state, "level", "log.levelUp", { level: hero.level });
         ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
@@ -395,7 +397,7 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     const act = state.activity;
     act.streak = 0;
     act.deaths++;
-    pushLog(state, "death", `Died in ${runZone(state, run).name}.`);
+    pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {
         // GDD: dying in a map costs the map and 5% of a level's experience.
@@ -407,7 +409,7 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
             act.deaths = 0;
             // Each fall back doubles the clean streak needed to climb again (until the next level-up).
             act.capBackoff = Math.min(3, (act.capBackoff ?? 0) + 1);
-            pushLog(state, "zone", `Too deep: running ${tierName(act.autoCap)} and below for now.`);
+            pushLog(state, "zone", "log.tooDeep", { tier: ref.tier(act.autoCap) });
         }
         return;
     }
@@ -415,14 +417,14 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
         // Too hard for now: back to the furthest open road.
         const road = [...ZONE_ORDER].reverse().find(id => state.world.unlocked.includes(id) && (state.world.clears[id] ?? 0) > 0) ?? ZONE_ORDER[0]!;
         ev.zone?.(act.zone, road, "retreat");
-        pushLog(state, "zone", `Fell back to ${zoneOf(road).name}.`);
+        pushLog(state, "zone", "log.fellBack", { zone: ref.zone(road) });
         act.zone = road; act.deaths = 0;
     } else if (act.autoPush && act.deaths >= 3) {
         const i = ZONE_ORDER.indexOf(act.zone);
         if (i > 0) {
             const to = ZONE_ORDER[i - 1]!;
             ev.zone?.(act.zone, to, "retreat");
-            pushLog(state, "zone", `Fell back to ${zoneOf(to).name}.`);
+            pushLog(state, "zone", "log.fellBack", { zone: ref.zone(to) });
             act.zone = to; act.deaths = 0;
         }
     }
@@ -432,10 +434,10 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
 function firstClear(state: GameState, zoneId: string, ev: SimEvents): void {
     const z = zoneOf(zoneId);
     const hero = state.hero;
-    if (z.bossText) { pushLog(state, "boss", z.bossText); ev.story?.(z.bossText); }
+    if (z.bossText) { pushLog(state, "boss", `zone.${z.id}.bossText`); ev.story?.(`zone.${z.id}.bossText`); }
     void hero;
     const actDef = ACTS.find(a => a.zones[a.zones.length - 1] === zoneId);
-    if (actDef) ev.story?.(actDef.outro);
+    if (actDef) ev.story?.(`act.${actDef.id}.outro`);
     reconcileRewards(state, ev);
 }
 
@@ -455,7 +457,7 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
             w.rewards.push(key);
             hero.bonusPoints = (hero.bonusPoints ?? 0) + ACT_BOSS_POINTS;
             hero.rev++;
-            pushLog(state, "info", `Act ${a.id} complete: +${ACT_BOSS_POINTS} passive points.`);
+            pushLog(state, "info", "log.actDone", { act: a.id, n: ACT_BOSS_POINTS });
         }
         // Each act boss gives a companion on its first clear (saves from before companions get theirs on load).
         const petKey = `pet:act${a.id}`, pet = ACT_COMPANION[a.id];
@@ -470,7 +472,7 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
     for (const [trial, after] of Object.entries(TRIAL_AFTER)) {
         if (cleared(after) && !w.unlocked.includes(trial)) {
             w.unlocked.push(trial);
-            pushLog(state, "zone", `${zoneOf(trial).name} is open.`);
+            pushLog(state, "zone", "log.zoneOpen", { zone: ref.zone(trial) });
             ev.zone?.(after, trial, "unlock");
         }
         const key = `trial:${trial}`;
@@ -478,7 +480,7 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
             w.rewards.push(key);
             hero.ascPoints = (hero.ascPoints ?? 0) + TRIAL_POINTS;
             hero.rev++;
-            pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
+            pushLog(state, "info", "log.trialPassed", { zone: ref.zone(trial), n: TRIAL_POINTS });
         }
     }
     // Pinnacles beaten before echoes existed leave theirs now.
@@ -503,7 +505,7 @@ function tryTrial(state: GameState, ev: SimEvents): boolean {
         if (L < zoneOf(t).level + 2 || L < (w.trialTry[t] ?? 0)) continue;
         w.trialTry[t] = L + 3;
         ev.zone?.(act.zone, t, "push");
-        pushLog(state, "zone", `Attempting ${zoneOf(t).name}.`);
+        pushLog(state, "zone", "log.attempting", { zone: ref.zone(t) });
         act.zone = t; act.streak = 0; act.deaths = 0;
         return true;
     }
@@ -529,7 +531,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
             act.autoCap++;
             act.streak = 0;
             if (act.autoCap > Math.max(0, ...state.maps.map(m => m.tier))) act.autoCap = 0;
-            else pushLog(state, "zone", `Pushing deeper: ${tierName(act.autoCap)} and below.`);
+            else pushLog(state, "zone", "log.pushDeeper", { tier: ref.tier(act.autoCap) });
         }
         ev.runDone?.(run.zone);
         act.runIndex++;
@@ -547,7 +549,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     const next = ZONE_ORDER[i + 1];
     if (next && !state.world.unlocked.includes(next)) {
         state.world.unlocked.push(next);
-        pushLog(state, "zone", `${zoneOf(next).name} is open.`);
+        pushLog(state, "zone", "log.zoneOpen", { zone: ref.zone(next) });
         ev.zone?.(run.zone, next, "unlock");
     }
     const z = zoneOf(run.zone);
@@ -560,7 +562,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     } else if (act.autoPush && next && state.world.unlocked.includes(next) && act.streak >= 3 && act.zone === run.zone
         && zoneOf(next).level <= state.hero.level + PUSH_LEVEL_MARGIN) {
         ev.zone?.(act.zone, next, "push");
-        pushLog(state, "zone", `Pushed on to ${zoneOf(next).name}.`);
+        pushLog(state, "zone", "log.pushedOn", { zone: ref.zone(next) });
         act.zone = next;
         act.streak = 0;
     }

@@ -405,7 +405,7 @@ button.fchip { cursor: pointer; } button.fchip:hover { filter: brightness(1.08);
   border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px; }
 button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .sock.main { flex-grow: 1.3; max-width: 128px; border-image-source: var(--fr-gold); color: #1a1410; }
-.sock b { font: 700 12px/1.15 var(--display); letter-spacing: 1px; text-transform: uppercase; text-align: center; max-width: 100%; overflow-wrap: anywhere; }
+.sock b { font: 700 12px/1.15 var(--display); letter-spacing: 1px; text-transform: uppercase; text-align: center; max-width: 100%; overflow-wrap: normal; }
 .sock.main b { font-size: 12px; }
 .sock.empty b, .sock.locked b { color: var(--muted); }
 .sock.locked { opacity: .55; }
@@ -568,5 +568,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .contract.done .muted { color: #4d4030; }
 .contract .cg { flex: none; width: 26px; height: 26px; display: grid; place-items: center; background: #1a1410; color: #ffc233; border: 2px solid var(--line); }
 .contract .meter { height: 14px; } .contract .meter i { background: var(--teal); } .contract.done .meter i { background: var(--gold); } .contract .meter span { font-size: 11px; line-height: 10px; }
+/* Longer words (Russian and Ukrainian run 20-40% longer): a socket label whose word doesn't fit drops to the
+   small size (views.ts measures it) instead of breaking the word; small caps labels lose their letter-spacing. */
+.sock b.long { font-size: 8px; line-height: 1.3; letter-spacing: 0; overflow-wrap: anywhere; }
+.lang-ru .cattrs, .lang-uk .cattrs { flex-wrap: wrap; row-gap: 2px; }
+.lang-ru .cattr small, .lang-uk .cattr small, .lang-ru .attr span, .lang-uk .attr span, .lang-ru .stat span, .lang-uk .stat span,
+.lang-ru .fchip span, .lang-uk .fchip span { letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;

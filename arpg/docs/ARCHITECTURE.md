@@ -11,6 +11,8 @@
           sim/           combat step, runs, offline catch-up
           state.ts       GameState + reducers for player actions
           save.ts        versioned save envelope + migrations
+        i18n/            strings: en.ts (source) + ru.ts, uk.ts; content names,
+                         plurals, log references, the core's messages
         platform/        browser glue: IndexedDB store, clock, hub adapter
         ui/              Shadow DOM overlay, views, canvas renderers
         main.ts          entry: registers with the hub or boots standalone
@@ -41,6 +43,20 @@
    mod is a data change. Sim cost is linear in simulated time, independent of
    content size. Offline catch-up runs in slices (yielding to the UI) and can
    move to a Worker without changing the core.
+7. **Every string the player reads goes through `src/i18n`.** UI strings are
+   written in `en.ts`; content strings (names, blurbs, affix lines, story) are
+   generated from the data tables by id, so the data stays the source of its
+   English. `ru.ts` and `uk.ts` cover every key (`test/i18n.test.ts` checks
+   keys, placeholders, plural and gender forms, and that the pixel font can
+   draw every character). Plurals are `one|other` in English and
+   `one|few|many` in Russian and Ukrainian; an adjective before an item name
+   has `m|f|n|p` forms and agrees with the base noun's gender. Chronicle
+   entries are saved as a key plus params (content as `@kind:id` references)
+   with the English text alongside, so they read in the current language and
+   old saves still read. The core's action and save messages stay English
+   (tests read them); `i18n/errors.ts` maps them onto translated strings.
+   The language is the hub's `api.lang()` in Discord (followed live), else
+   `?lang=` or the browser's.
 
 ## Runtime in Discord
 

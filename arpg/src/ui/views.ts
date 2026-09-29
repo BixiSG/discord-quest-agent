@@ -1,12 +1,12 @@
 // Tab views. Each returns a fresh element; the app swaps it in when the view's
 // signature changes, so scroll position and selection survive sim ticks.
 
-import { ACTS, ASCENDANCIES, BASES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, RELICS, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, companionText, xpToNext, slotsFor, type CompanionDef } from "../core/data";
+import { ACTS, AFFIXES, ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, CURRENCIES, PASSIVES, RELICS, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, xpToNext, slotsFor, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
 import { runZone } from "../core/sim/engine";
 import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { canEquip, equip, salvage, setSkill, setSupports, setZone, trialSheet, unequip, upgradeSlot, RARITY_RANK, buildScore, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
-import { affixOf, affixText, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicLines, relicOf } from "../core/items";
+import { affixOf, baseOf, itemLabel, itemStats, levelReq, tierLabel, salvageValue, relicOf } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType, type Item, type Slot } from "../core/types";
 import { clear, fmt, fmtDuration, h, pct } from "./dom";
@@ -21,9 +21,13 @@ import { modText } from "./text";
 import { forgeView } from "./forge";
 import { treeView } from "./tree";
 import { atlasSig, atlasView } from "./atlas";
-import { AFFIX_GROUPS, DEFAULT_FILTER, FILTER_PRESETS, describeRule, type FilterRule } from "../core/filter";
-import { claimContract, contractText, rerollContract, rerollCost, rewardText, type Contract } from "../core/contracts";
+import { DEFAULT_FILTER, FILTER_PRESETS, type FilterRule } from "../core/filter";
+import { claimContract, contractDust, rerollContract, rerollCost, type Contract } from "../core/contracts";
 import { BLESSINGS, ORB_RESERVE, bless, blessingCost, setKeep, spareOrbValue } from "../core/shrine";
+import { lang, t, tn } from "../i18n";
+import { actIntro, actName, actOutro, affixLine, ascName, ascNodeName, baseName, nodeName, blessingName, blessingText, classBlurb, className, companionBlurb, companionBonus, companionName, companionWhere, contractGoal,
+    currencyName, groupName, itemName, logText, placeName, presetBlurb, presetName, relicFlavour, relicLines, relicName, skillBlurb, skillName, supportBlurb, supportName, tagName, zoneName, zoneStory } from "../i18n/names";
+import { tErr } from "../i18n/errors";
 
 export interface Ctx {
     state: GameState;
@@ -42,12 +46,12 @@ export interface Ctx {
 }
 
 export type ViewId = "hero" | "gear" | "forge" | "skills" | "tree" | "world" | "atlas" | "log" | "menu";
-export const VIEWS: { id: ViewId; label: string }[] = [
-    { id: "hero", label: "Hero" }, { id: "gear", label: "Gear" }, { id: "forge", label: "Forge" }, { id: "skills", label: "Skills" },
-    { id: "tree", label: "Tree" }, { id: "world", label: "World" }, { id: "atlas", label: "Atlas" }, { id: "log", label: "Log" }, { id: "menu", label: "Menu" },
+/** The tabs in rail order; labels are "nav.<id>" strings. */
+export const VIEWS: { id: ViewId }[] = [
+    { id: "hero" }, { id: "gear" }, { id: "forge" }, { id: "skills" }, { id: "tree" }, { id: "world" }, { id: "atlas" }, { id: "log" }, { id: "menu" },
 ];
 
-/** What a view depends on; it is rebuilt when this changes. */
+/** What a view depends on; it is rebuilt when this changes (the app adds the language). */
 export function viewSig(id: ViewId, c: Ctx): string {
     const s = c.state;
     switch (id) {
@@ -78,7 +82,7 @@ export function renderView(id: ViewId, c: Ctx): HTMLElement {
 }
 
 const TYPE_COLOR: Record<DamageType, string> = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
-const TYPE_NAME: Record<DamageType, string> = { phys: "Physical", fire: "Fire", cold: "Cold", lightning: "Lightning", chaos: "Chaos" };
+const TYPE_NAME = (t0: DamageType) => t(`type.${t0}`);
 
 function kv(rows: [string, string | HTMLElement, (() => void)?][]): HTMLElement {
     const el = h("div", { class: "kv" });
@@ -102,9 +106,13 @@ function heroView(c: Ctx): HTMLElement {
     const breakdown = (stat: Parameters<Sheet["bag"]["mods"]>[0], title: string) => () => {
         const mods = s.bag.mods(stat);
         const list = h("div", { class: "kv" });
-        for (const m of mods) list.append(h("div", { text: m.src ?? "?" }), h("div", { class: "num", text: `${m.kind === "flat" ? "+" : ""}${m.value}${m.kind === "flat" ? "" : "% " + m.kind}${m.tags ? " [" + m.tags.join(",") + "]" : ""}` }));
-        if (!mods.length) list.append(h("div", { text: "No modifiers" }), h("div"));
-        const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+        const src = sourceNames(st);
+        for (const m of mods) {
+            const v = m.kind === "flat" ? `+${m.value}` : t(m.kind === "more" ? "hero.more" : "hero.inc", { v: m.value });
+            list.append(h("div", { text: m.src ? src(m.src) : "?" }), h("div", { class: "num", text: `${v}${m.tags ? " [" + m.tags.map(x => tagName(x)).join(", ") + "]" : ""}` }));
+        }
+        if (!mods.length) list.append(h("div", { text: t("hero.noMods") }), h("div"));
+        const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: t("common.close"), on: { click: () => close() } }))));
     };
 
     // Who and where: the hero in the scenery of the current zone.
@@ -113,19 +121,19 @@ function heroView(c: Ctx): HTMLElement {
     const por = portrait(zone, hero.cls);
     por.className = "portrait";
     por.style.width = por.width * 2 + "px"; por.style.height = por.height * 2 + "px";
-    const asc = hero.asc ? ASCENDANCIES[hero.asc]?.name : null;
+    const asc = hero.asc && ASCENDANCIES[hero.asc] ? ascName(hero.asc) : null;
     const xpNeed = xpToNext(hero.level);
     const xpF = isFinite(xpNeed) ? hero.xp / xpNeed : 1;
     const who = h("div", { class: "card sheet-who" },
         h("h3", { text: hero.name }),
-        h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: zone.name })),
+        h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: placeName(st) })),
         h("div", { class: "row", style: "gap:5px;margin-top:8px" },
-            h("span", { class: "tag lv", text: `Level ${hero.level}` }), h("span", { class: "tag", text: CLASSES[hero.cls]?.name ?? hero.cls }),
+            h("span", { class: "tag lv", text: t("common.level", { n: hero.level }) }), h("span", { class: "tag", text: CLASSES[hero.cls] ? className(hero.cls) : hero.cls }),
             asc ? h("span", { class: "tag asc", text: asc }) : null),
-        h("div", { class: "xpbar", title: isFinite(xpNeed) ? `${fmt(hero.xp)} / ${fmt(xpNeed)} experience` : "max level" }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
-        h("div", { class: "attrs" }, ...([["might", "Might", s.str], ["grace", "Grace", s.dex], ["wit", "Wit", s.int]] as const).map(([g, label, v]) =>
+        h("div", { class: "xpbar", title: isFinite(xpNeed) ? t("hero.xpTitle", { xp: fmt(hero.xp), need: fmt(xpNeed) }) : t("hero.maxLevel") }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
+        h("div", { class: "attrs" }, ...([["might", t("attr.str"), s.str], ["grace", t("attr.dex"), s.dex], ["wit", t("attr.int"), s.int]] as const).map(([g, label, v]) =>
             h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
-        ...s.problems.map(p => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: p })),
+        ...s.problems.map(p => h("div", { class: "tag", style: "background:var(--ember);color:#1a1410;margin-top:6px;white-space:normal", text: tErr(p) })),
     );
 
     // Offence: the two numbers that matter, then how they are made.
@@ -133,47 +141,47 @@ function heroView(c: Ctx): HTMLElement {
     const chip = (label: string, value: string, click?: () => void, total = false) => h(click ? "button" : "div", { class: `fchip${total ? " total" : ""}`, on: click ? { click } : {} }, h("span", { text: label }), h("b", { class: "num", text: value }));
     const op = (t: string) => h("span", { class: "fop", text: t });
     const formula = h("div", { class: "formula" },
-        chip("Hit", fmt(sk.avgHit), breakdown("damage", "Damage modifiers")), op("x"),
-        chip("Crit", critFactor.toFixed(2), breakdown("critChance", "Critical chance")), op("x"),
-        chip(sk.kind === "attack" ? "Attacks" : "Casts", `${rate.toFixed(2)}/s`, breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", "Speed")),
-        ...(sk.kind === "attack" ? [op("x"), chip("Hit chance", pct(sk.hitChance), breakdown("accuracy", "Accuracy"))] : []),
-        op("="), chip("DPS", fmt(sk.dps), undefined, true));
+        chip(t("hero.hit"), fmt(sk.avgHit), breakdown("damage", t("hero.bdDamage"))), op("x"),
+        chip(t("hero.crit"), critFactor.toFixed(2), breakdown("critChance", t("hero.bdCrit"))), op("x"),
+        chip(sk.kind === "attack" ? t("hero.attacks") : t("hero.casts"), t("hero.perSec", { n: rate.toFixed(2) }), breakdown(sk.kind === "attack" ? "attackSpeed" : "castSpeed", t("hero.bdSpeed"))),
+        ...(sk.kind === "attack" ? [op("x"), chip(t("hero.hitChance"), pct(sk.hitChance), breakdown("accuracy", t("hero.bdAccuracy")))] : []),
+        op("="), chip(t("hero.dps"), fmt(sk.dps), undefined, true));
     const big = (label: string, value: string, colour: string, note: string) =>
         h("div", { class: "bigstat" }, pixText(value, colour, 4), h("div", null, h("b", { text: label }), h("span", { text: note })));
     const off = h("div", { class: "card" },
-        h("h3", { text: `Offence - ${sk.name}` }),
-        h("div", { class: "bigrow" }, big("Single target", fmt(sk.dps), "#ffc233", "damage per second"), big("Against packs", fmt(sk.packDps), "#ff8a5c", `${sk.targets} target${sk.targets > 1 ? "s" : ""} hit`)),
+        h("h3", { text: t("hero.offence", { skill: skillName(sk.id) }) }),
+        h("div", { class: "bigrow" }, big(t("hero.single"), fmt(sk.dps), "#ffc233", t("hero.singleNote")), big(t("hero.packs"), fmt(sk.packDps), "#ff8a5c", tn("hero.targets", sk.targets))),
         formula,
         kv([
-            ...DAMAGE_TYPES.filter(t => sk.hit[t][1] > 0).map(t => [`${TYPE_NAME[t]} damage`, `${fmt(sk.hit[t][0])}-${fmt(sk.hit[t][1])}`] as [string, string]),
-            ["Critical chance", `${sk.critChance.toFixed(1)}%`, breakdown("critChance", "Critical chance")],
-            ["Critical multiplier", `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", "Critical multiplier")],
-            ["Mana cost", fmt(sk.manaCost)],
-            ...(sk.sustain < sk.speed ? [["Mana-limited to", `${sk.sustain.toFixed(2)}/s`] as [string, string]] : []),
-            ...(sk.leech ? [["Life leech", `${sk.leech}%`] as [string, string]] : []),
+            ...DAMAGE_TYPES.filter(d => sk.hit[d][1] > 0).map(d => [t(`dmg.${d}`), `${fmt(sk.hit[d][0])}-${fmt(sk.hit[d][1])}`] as [string, string]),
+            [t("hero.critChance"), `${sk.critChance.toFixed(1)}%`, breakdown("critChance", t("hero.bdCrit"))],
+            [t("hero.critMulti"), `${sk.critMulti.toFixed(0)}%`, breakdown("critMulti", t("hero.bdCritMulti"))],
+            [t("hero.manaCost"), fmt(sk.manaCost)],
+            ...(sk.sustain < sk.speed ? [[t("hero.manaLimited"), t("hero.perSec", { n: sk.sustain.toFixed(2) })] as [string, string]] : []),
+            ...(sk.leech ? [[t("hero.leech"), `${sk.leech}%`] as [string, string]] : []),
         ]));
 
     // Resistances: one badge per element, red below zero, marked when over the cap.
     const RES_GLYPH = { fire: "skills", cold: "cold", lightning: "lightning", chaos: "chaos" } as const;
-    const res = h("div", { class: "card" }, h("h3", { text: "Resistances" }),
-        h("div", { class: "resrow" }, ...(["fire", "cold", "lightning", "chaos"] as const).map(t => {
-            const v = s.res[t], raw = s.resRaw[t], max = s.maxRes[t];
-            return h("button", { class: `res ${t}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: `${TYPE_NAME[t]} resistance - click for where it comes from`, on: { click: breakdown(`res.${t}`, `${TYPE_NAME[t]} resistance`) } },
-                glyph(RES_GLYPH[t], 22), h("b", { class: "num", text: `${v}%` }), h("span", { text: raw > max ? `over cap (${raw})` : `max ${max}` }));
+    const res = h("div", { class: "card" }, h("h3", { text: t("hero.resistances") }),
+        h("div", { class: "resrow" }, ...(["fire", "cold", "lightning", "chaos"] as const).map(d => {
+            const v = s.res[d], raw = s.resRaw[d], max = s.maxRes[d];
+            return h("button", { class: `res ${d}${v < 0 ? " neg" : ""}${v >= max ? " cap" : ""}`, title: t("hero.whereTip", { name: t(`res.${d}`) }), on: { click: breakdown(`res.${d}`, t(`res.${d}`)) } },
+                glyph(RES_GLYPH[d], 22), h("b", { class: "num", text: `${v}%` }), h("span", { text: raw > max ? t("hero.overCap", { n: raw }) : t("hero.max", { n: max }) }));
         })));
 
     // Defence: tiles with the pool and its layers; each opens its breakdown.
     const tile = (g: Parameters<typeof glyph>[0], label: string, value: string, stat: Parameters<Sheet["bag"]["mods"]>[0]) =>
-        h("button", { class: `stat ${g}`, title: `${label} - click for where it comes from`, on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
+        h("button", { class: `stat ${g}`, title: t("hero.whereTip", { name: label }), on: { click: breakdown(stat, label) } }, glyph(g, 18), h("b", { class: "num", text: value }), h("span", { text: label }));
     const pool = s.life + s.es;
     const def = h("div", { class: "card" },
-        h("h3", { text: "Defence" }),
+        h("h3", { text: t("hero.defence") }),
         h("div", { class: "tiles" },
-            tile("heart", "Life", fmt(s.life), "life"), tile("esorb", "Energy shield", fmt(s.es), "energyShield"), tile("regen", "Life regen", `${fmt(s.lifeRegen)}/s`, "lifeRegen"),
-            tile("armour", "Armour", fmt(s.armour), "armour"), tile("evasion", "Evasion", fmt(s.evasion), "evasion"), tile("block", "Block", `${s.block.toFixed(0)}%`, "block")),
-        h("div", { class: "sub" }, `Effective HP against each type (pool ${fmt(pool)})`),
+            tile("heart", t("hero.life"), fmt(s.life), "life"), tile("esorb", t("hero.es"), fmt(s.es), "energyShield"), tile("regen", t("hero.regen"), t("hero.perSec", { n: fmt(s.lifeRegen) }), "lifeRegen"),
+            tile("armour", t("hero.armour"), fmt(s.armour), "armour"), tile("evasion", t("hero.evasion"), fmt(s.evasion), "evasion"), tile("block", t("hero.block"), `${s.block.toFixed(0)}%`, "block")),
+        h("div", { class: "sub" }, t("hero.ehp", { n: fmt(pool) })),
         ehpBars(s),
-        kv([["Movement speed", pct(s.moveSpeed)], ["Item rarity", codexRarity(st) ? `+${s.rarity + codexRarity(st)}% (codex +${codexRarity(st)}%)` : `+${s.rarity}%`], ["Flask healing", pct(s.flaskHeal)], ["Build score", fmt(buildScore(s))]]));
+        kv([[t("hero.move"), pct(s.moveSpeed)], [t("hero.rarity"), codexRarity(st) ? t("hero.rarityCodex", { total: s.rarity + codexRarity(st), codex: codexRarity(st) }) : `+${s.rarity}%`], [t("hero.flask"), pct(s.flaskHeal)], [t("hero.score"), fmt(buildScore(s))]]));
 
     return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res), def);
 }
@@ -197,7 +205,7 @@ function companionCard(c: Ctx): HTMLElement {
     const st = c.state;
     const pet = st.hero.pet;
     const owned = COMPANION_ORDER.filter(id => st.companions[id] !== undefined);
-    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: "Companion" }), h("span", { class: "num", text: `${owned.length} / ${COMPANION_ORDER.length} found` })));
+    const card = h("div", { class: "card pets" }, h("h3", { class: "split" }, h("span", { text: t("pets.title") }), h("span", { class: "num", text: t("pets.found", { n: owned.length, total: COMPANION_ORDER.length }) })));
     if (pet && COMPANIONS[pet.id]) {
         const def = COMPANIONS[pet.id]!;
         const bond = st.companions[pet.id] ?? 0;
@@ -206,12 +214,12 @@ function companionCard(c: Ctx): HTMLElement {
         card.append(h("div", { class: "pet-now" },
             h("div", { class: "pet-stage" }, petArt(def, 2)),
             h("div", { class: "col grow", style: "gap:4px;min-width:0" },
-                h("div", { class: "row", style: "gap:6px" }, h("b", { text: def.name }), h("span", { class: "tag lv", text: `Level ${pet.level}` })),
-                h("span", { class: "pet-bonus", text: companionText(pet.id, pet.level) }),
-                h("div", { class: "xpbar", title: max ? "Fully bonded" : `${fmt(bond - lo)} / ${fmt(hi - lo)} bond: every kill while it is out` }, h("i", { style: `width:${max ? 100 : Math.min(100, ((bond - lo) / (hi - lo)) * 100).toFixed(1)}%` })),
-                h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: def.blurb }))));
+                h("div", { class: "row", style: "gap:6px" }, h("b", { text: companionName(def.id) }), h("span", { class: "tag lv", text: t("common.level", { n: pet.level }) })),
+                h("span", { class: "pet-bonus", text: companionBonus(pet.id, pet.level) }),
+                h("div", { class: "xpbar", title: max ? t("pets.fullBond") : t("pets.bond", { have: fmt(bond - lo), need: fmt(hi - lo) }) }, h("i", { style: `width:${max ? 100 : Math.min(100, ((bond - lo) / (hi - lo)) * 100).toFixed(1)}%` })),
+                h("span", { class: "muted", style: "font-size:12px;font-style:italic", text: companionBlurb(def.id) }))));
     } else {
-        card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? "No companion out: pick one below." : "No companion yet. The Tide-Warden guards the first one; bosses sometimes bring others." }));
+        card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:6px", text: owned.length ? t("pets.noneOut") : t("pets.none") }));
     }
     const grid = h("div", { class: "pet-grid" });
     for (const id of COMPANION_ORDER) {
@@ -219,13 +227,14 @@ function companionCard(c: Ctx): HTMLElement {
         const has = st.companions[id] !== undefined;
         const out = pet?.id === id;
         const lvl = has ? companionLevel(st.companions[id]!) : 0;
+        const name = companionName(id), where = companionWhere(id);
         const tile = h(has ? "button" : "div", { class: `pet${out ? " on" : ""}${has ? "" : " unknown"}`,
-            attrs: has ? { "aria-pressed": String(out), "aria-label": `${def.name}, level ${lvl}` } : { role: "img", "aria-label": `Not found yet: ${def.where}` },
-            on: has && !out ? { click: () => c.act(s => setCompanion(s, id), `${def.name} walks with you`) } : {} },
+            attrs: has ? { "aria-pressed": String(out), "aria-label": t("pets.aria", { name, level: lvl }) } : { role: "img", "aria-label": t("pets.notFoundAria", { where }) },
+            on: has && !out ? { click: () => c.act(s => setCompanion(s, id), t("pets.walks", { name })) } : {} },
             h("span", { class: "pic" }, has ? petArt(def, 1) : h("span", { class: "q", text: "?" })),
-            h("b", { text: has ? def.name : "Unknown" }),
-            h("span", { text: has ? `Lv ${lvl}${out ? " - out" : ""}` : def.where }));
-        tile.dataset.tip = has ? `${def.name}, level ${lvl}: ${companionText(id, lvl)}.${out ? " At your side now." : " Click to send it out."}` : `Not found yet. ${def.where}.`;
+            h("b", { text: has ? name : t("pets.unknown") }),
+            h("span", { text: has ? t(out ? "pets.lvOut" : "pets.lv", { n: lvl }) : where }));
+        tile.dataset.tip = has ? t(out ? "pets.tipOut" : "pets.tipIn", { name, level: lvl, bonus: companionBonus(id, lvl) }) : t("pets.tipUnknown", { where });
         grid.append(tile);
     }
     card.append(grid);
@@ -233,11 +242,11 @@ function companionCard(c: Ctx): HTMLElement {
 }
 
 function ehpBars(s: Sheet): HTMLElement {
-    const max = Math.max(...DAMAGE_TYPES.map(t => s.ehp[t]));
+    const max = Math.max(...DAMAGE_TYPES.map(d => s.ehp[d]));
     const el = h("div", { class: "col", style: "gap:3px" });
-    for (const t of DAMAGE_TYPES) {
-        const m = h("div", { class: "meter", title: t === "phys" ? "Against a typical hit: armour, evasion and block" : "Resistance and block" });
-        m.append(h("i", { style: `width:${(s.ehp[t] / max) * 100}%;background:${TYPE_COLOR[t]}` }), h("span", { text: `${TYPE_NAME[t]} ${fmt(s.ehp[t])}` }));
+    for (const d of DAMAGE_TYPES) {
+        const m = h("div", { class: "meter", title: d === "phys" ? t("hero.ehpPhys") : t("hero.ehpEle") });
+        m.append(h("i", { style: `width:${(s.ehp[d] / max) * 100}%;background:${TYPE_COLOR[d]}` }), h("span", { text: `${TYPE_NAME(d)} ${fmt(s.ehp[d])}` }));
         el.append(m);
     }
     return el;
@@ -245,13 +254,13 @@ function ehpBars(s: Sheet): HTMLElement {
 
 // ---- Gear ------------------------------------------------------------------
 
-const SLOT_LABEL: Record<Slot, string> = { weapon: "Weapon", offhand: "Off-hand", helmet: "Helm", body: "Body", gloves: "Gloves", boots: "Boots", belt: "Belt", amulet: "Amulet", ring1: "Ring", ring2: "Ring" };
+const SLOT_LABEL = (s: Slot) => t(`slot.${s === "ring2" ? "ring" : s}`);
 
 function itemCell(item: Item | undefined, slot: Slot | null, selected: boolean, onClick: () => void): HTMLElement {
     const cell = h("div", { class: `cell ${item ? item.rarity : "empty"}${selected ? " sel" : ""}`,
-        attrs: { "aria-label": item ? itemLabel(item) : slot ? `${SLOT_LABEL[slot]}: empty` : "empty", ...(item || slot ? { role: "button", tabindex: "0" } : {}), ...(selected ? { "aria-pressed": "true" } : {}) }, on: { click: onClick } });
+        attrs: { "aria-label": item ? itemName(item) : slot ? t("gear.slotEmpty", { slot: SLOT_LABEL(slot) }) : t("gear.empty"), ...(item || slot ? { role: "button", tabindex: "0" } : {}), ...(selected ? { "aria-pressed": "true" } : {}) }, on: { click: onClick } });
     if (item) cell.append(itemIcon(item));
-    if (slot) { cell.dataset.slot = slot; cell.append(h("span", { class: "lbl", text: SLOT_LABEL[slot] })); }
+    if (slot) { cell.dataset.slot = slot; cell.append(h("span", { class: "lbl", text: SLOT_LABEL(slot) })); }
     return cell;
 }
 
@@ -285,27 +294,27 @@ let drag: { uid?: number; slot?: Slot } | null = null;
 export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot | null } = {}): HTMLElement {
     const b = baseOf(item);
     const st = itemStats(item);
-    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemLabel(item) }));
+    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
     const lines: string[] = [];
-    if (item.rarity === "rare" || item.rarity === "relic") lines.push(b.name);
-    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : b.kind].filter(Boolean).join(" - ")}  ilvl ${item.ilvl}, needs level ${levelReq(item)}` }));
+    if (item.rarity === "rare" || item.rarity === "relic") lines.push(baseName(b.id));
+    card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : t(`kind.${b.kind}`)].filter(Boolean).join(" - ")}  ${t("item.levels", { ilvl: item.ilvl, req: levelReq(item) })}` }));
     if (item.quality || item.locked) card.append(h("div", { class: "row", style: "gap:4px;margin-top:3px" },
-        item.quality ? h("span", { class: "tag q", text: `Quality +${item.quality}%` }) : null,
-        item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " Locked") : null));
+        item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
+        item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " " + t("item.locked")) : null));
     if (st.weapon) {
         const w = st.weapon;
-        const rows: [string, string][] = [["Physical", `${w.phys[0]}-${w.phys[1]}`]];
-        for (const [t, r] of Object.entries(w.added)) rows.push([TYPE_NAME[t as DamageType], `${r![0]}-${r![1]}`]);
-        rows.push(["Attacks per second", w.aps.toFixed(2)], ["Critical chance", `${w.crit.toFixed(1)}%`], ["Hands", String(w.hands)]);
+        const rows: [string, string][] = [[t("item.physical"), `${w.phys[0]}-${w.phys[1]}`]];
+        for (const [d, r] of Object.entries(w.added)) rows.push([TYPE_NAME(d as DamageType), `${r![0]}-${r![1]}`]);
+        rows.push([t("item.aps"), w.aps.toFixed(2)], [t("item.crit"), `${w.crit.toFixed(1)}%`], [t("item.hands"), String(w.hands)]);
         card.append(kv(rows));
     }
     if (st.defence) {
         const d = st.defence;
         const rows: [string, string][] = [];
-        if (d.armour) rows.push(["Armour", String(d.armour)]);
-        if (d.evasion) rows.push(["Evasion", String(d.evasion)]);
-        if (d.energyShield) rows.push(["Energy shield", String(d.energyShield)]);
-        if (d.block) rows.push(["Block", `${d.block}%`]);
+        if (d.armour) rows.push([t("item.armour"), String(d.armour)]);
+        if (d.evasion) rows.push([t("item.evasion"), String(d.evasion)]);
+        if (d.energyShield) rows.push([t("item.es"), String(d.energyShield)]);
+        if (d.block) rows.push([t("item.block"), `${d.block}%`]);
         card.append(kv(rows));
     }
     if (b.implicit?.length) {
@@ -315,13 +324,14 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
     if (item.affixes.length) {
         card.append(h("hr"));
         const sorted = [...item.affixes].sort((a, z) => (affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1));
-        for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? "Added at the bench" : "" }, affixText(a), h("b", { text: `${a.bench ? "Bench " : ""}${affixOf(a).type === "prefix" ? "P" : "S"} T${tierLabel(a)}` })));
+        for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" }, affixLine(a),
+            h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })));
     }
     const relic = relicOf(item);
     if (relic) {
         card.append(h("hr"));
         for (const l of relicLines(item)) card.append(h("div", { class: "aff", text: l }));
-        card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relic.flavour }));
+        card.append(h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(relic.id) }));
     }
     if (c && opts.compareSlot !== undefined) {
         const slot = opts.compareSlot ?? slotsFor(b).find(s => !c.state.hero.equipment[s]) ?? slotsFor(b)[0]!;
@@ -329,7 +339,7 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
         if (trial) {
             card.append(h("hr"), compareRows(c.sheet(), trial));
         } else {
-            card.append(h("hr"), h("div", { class: "down", text: canEquip(c.state, item, slot) ?? "can't equip" }));
+            card.append(h("hr"), h("div", { class: "down", text: tErr(canEquip(c.state, item, slot) ?? t("item.cantEquip")) }));
         }
     }
     return card;
@@ -337,19 +347,19 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
 
 function compareRows(now: Sheet, next: Sheet): HTMLElement {
     const rows: [string, number, number][] = [
-        ["DPS", now.skill.dps, next.skill.dps], ["Pack DPS", now.skill.packDps, next.skill.packDps],
-        ["Life", now.life, next.life], ["Energy shield", now.es, next.es],
-        ["EHP physical", now.ehp.phys, next.ehp.phys],
-        ["EHP elemental", (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3],
+        [t("cmp.dps"), now.skill.dps, next.skill.dps], [t("cmp.packDps"), now.skill.packDps, next.skill.packDps],
+        [t("cmp.life"), now.life, next.life], [t("cmp.es"), now.es, next.es],
+        [t("cmp.ehpPhys"), now.ehp.phys, next.ehp.phys],
+        [t("cmp.ehpEle"), (now.ehp.fire + now.ehp.cold + now.ehp.lightning) / 3, (next.ehp.fire + next.ehp.cold + next.ehp.lightning) / 3],
     ];
     const el = h("div", { class: "kv" });
     for (const [k, a, b] of rows) {
         if (Math.abs(b - a) < 0.005 * Math.max(1, a)) continue;
         const d = b - a;
-        el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + ((d / a) * 100).toFixed(0) + "%" : "new"})` }));
+        el.append(h("div", { text: k }), h("div", { class: `num ${d > 0 ? "up" : "down"}`, text: `${d > 0 ? "+" : ""}${fmt(d)} (${a > 0 ? (d > 0 ? "+" : "") + ((d / a) * 100).toFixed(0) + "%" : t("cmp.new")})` }));
     }
     const sa = buildScore(now), sb = buildScore(next);
-    el.append(h("div", { text: "Build score" }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? (((sb - sa) / sa) * 100).toFixed(1) : "0"}%` }));
+    el.append(h("div", { text: t("cmp.score") }), h("div", { class: `num ${sb >= sa ? "up" : "down"}`, text: `${sb >= sa ? "+" : ""}${sa > 0 ? (((sb - sa) / sa) * 100).toFixed(1) : "0"}%` }));
     return el;
 }
 
@@ -393,8 +403,9 @@ const lockBadge = () => h("span", { class: "lockb", attrs: { "aria-hidden": "tru
 /** Marks a cell as an item the hero is wearing: a gold frame and a "worn" tag (Gear lists, the codex, the Forge rack). */
 export function markWorn(cell: HTMLElement, slot?: Slot): HTMLElement {
     cell.classList.add("wornc");
-    cell.append(h("span", { class: "worn", text: "worn" }));
-    cell.setAttribute("aria-label", `${cell.getAttribute("aria-label") ?? ""} (worn${slot ? ", " + SLOT_LABEL[slot].toLowerCase() : ""})`);
+    cell.append(h("span", { class: "worn", text: t("gear.worn") }));
+    const label = cell.getAttribute("aria-label") ?? "";
+    cell.setAttribute("aria-label", slot ? t("gear.wornAriaSlot", { label, slot: SLOT_LABEL(slot).toLowerCase() }) : t("gear.wornAria", { label }));
     return cell;
 }
 
@@ -425,9 +436,9 @@ function gearView(c: Ctx): HTMLElement {
         if (s === "offhand" && !it && wb?.weapon?.hands === 2) {
             const bow = wb.kind === "bow";
             cell.classList.add(bow ? "only" : "blocked");
-            cell.querySelector(".lbl")!.textContent = bow ? "Quiver" : "2-hand";
-            cell.title = bow ? "Only a quiver fits beside a bow" : `${wb.name} takes both hands`;
-            cell.setAttribute("aria-label", `Off-hand: ${cell.title}`);
+            cell.querySelector(".lbl")!.textContent = bow ? t("gear.quiverOnly") : t("gear.twoHand");
+            cell.title = bow ? t("gear.quiverTip") : t("gear.twoHandTip", { base: baseName(wb.id) });
+            cell.setAttribute("aria-label", t("gear.offhandAria", { why: cell.title }));
             if (!bow) cell.tabIndex = -1; // nothing can go there: not a stop for the keyboard
         }
         // Hover a slot: the stash items that fit it light up, the rest fade.
@@ -469,7 +480,7 @@ function gearView(c: Ctx): HTMLElement {
             cell.addEventListener("click", e => {
                 if (!e.shiftKey && !e.ctrlKey && !e.metaKey) return;
                 e.stopImmediatePropagation();
-                if (it.locked) { c.toast("Locked items can't be marked for salvage"); return; }
+                if (it.locked) { c.toast(t("gear.noMarkLocked")); return; }
                 if (gearOpts.marks.has(it.uid)) gearOpts.marks.delete(it.uid); else gearOpts.marks.add(it.uid);
                 c.rerender();
             }, { capture: true });
@@ -493,7 +504,7 @@ function gearView(c: Ctx): HTMLElement {
             const cmp = upgradeOf(st, it) ?? targets.find(t => !eq[t]) ?? targets[0]!;
             const worn = eq[cmp];
             return h("div", { class: "tipcols" }, itemCard(it, c, { compareSlot: cmp }),
-                worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: "Equipped" }), itemCard(worn, null)) : null);
+                worn ? h("div", { class: "col", style: "gap:4px" }, h("div", { class: "tiplbl", text: t("gear.equippedLbl") }), itemCard(worn, null)) : null);
         });
         cell.draggable = true;
         cell.addEventListener("dragstart", e => {
@@ -515,7 +526,7 @@ function gearView(c: Ctx): HTMLElement {
     if (relicsTab) {
         // The codex: every relic in level order - the case's copy, one that is worn, one only seen, or not found yet.
         const worn = new Map(SLOTS.map(s => eq[s]).filter((x): x is Item => !!x?.relic).map(x => [x.relic!, x]));
-        for (const def of Object.values(RELICS).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))) {
+        for (const def of Object.values(RELICS).sort((a, b) => a.level - b.level || relicName(a.id).localeCompare(relicName(b.id), lang()))) {
             const own = st.relics.find(x => x.relic === def.id);
             const seen = st.codex[def.id] ?? 0;
             if (own) { grid.append(ownedCell(own, false)); continue; }
@@ -527,13 +538,13 @@ function gearView(c: Ctx): HTMLElement {
                 grid.append(cell);
                 continue;
             }
-            const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? `${def.name}: found ${seen}, none kept` : "A relic not found yet" } });
+            const ghost = h("div", { class: `cell ${seen ? "ghost" : "unknown"}`, attrs: { role: "img", "aria-label": seen ? t("gear.ghostAria", { name: relicName(def.id), n: seen }) : t("gear.unknownRelicAria") } });
             if (seen) ghost.append(itemIcon({ uid: -1, base: def.base, ilvl: def.level, rarity: "relic", affixes: [], relic: def.id }), h("span", { class: "cnt num", text: `x${seen}` }));
             else ghost.append(h("span", { class: "q", text: "?" }));
             withTip(ghost, c, () => h("div", { class: "card item" },
-                h("div", { class: "name relic", text: seen ? def.name : "Unknown relic" }),
-                h("div", { class: "muted", text: seen ? `Found ${seen} time${seen === 1 ? "" : "s"}; none kept. Relics that roll better replace the case's copy.` : `Drops from monsters of level ${def.level} and up.` }),
-                seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: def.flavour }) : null));
+                h("div", { class: "name relic", text: seen ? relicName(def.id) : t("gear.unknownRelic") }),
+                h("div", { class: "muted", text: seen ? tn("gear.foundTimes", seen) : t("gear.dropsFrom", { n: def.level }) }),
+                seen ? h("div", { class: "muted", style: "font-style:italic;margin-top:4px", text: relicFlavour(def.id) }) : null));
             grid.append(ghost);
         }
     } else {
@@ -546,7 +557,7 @@ function gearView(c: Ctx): HTMLElement {
         const grouped = gearOpts.filter !== "all" && gearOpts.filter !== "upgrades";
         const worn = grouped ? SLOTS.filter(s => eq[s] && groupOf(eq[s]!) === gearOpts.filter) : [];
         if (worn.length) {
-            grid.append(gridSep("Worn"));
+            grid.append(gridSep(t("gear.wornSep")));
             for (const s of worn) {
                 const w = eq[s]!;
                 const cell = markWorn(itemCell(w, null, c.sel.slot === s && c.sel.uid === undefined, () => { c.sel = { slot: s }; c.rerender(); }), s);
@@ -554,20 +565,20 @@ function gearView(c: Ctx): HTMLElement {
                 withTip(cell, c, () => itemCard(w, c));
                 grid.append(cell);
             }
-            grid.append(gridSep(`In the stash (${shown.length})`));
+            grid.append(gridSep(t("gear.inStash", { n: shown.length })));
         }
         for (const it of shown) grid.append(ownedCell(it, true));
         if (gearOpts.filter === "all") for (let i = st.stash.length; i < st.stashCap; i++) grid.append(h("div", { class: "cell empty" }));
-        if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: "The stash is empty. Drops the loot filter keeps land here." }));
-        else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? "Nothing in the stash beats what is equipped." : "None of these in the stash." }));
+        if (!st.stash.length) grid.prepend(h("div", { class: "muted stash-note", text: t("gear.stashEmpty") }));
+        else if (!shown.length) grid.append(h("div", { class: "muted", style: "grid-column:1/-1;padding:6px 0", text: gearOpts.filter === "upgrades" ? t("gear.noUpgrades") : t("gear.noneHere") }));
     }
     // Drop an equipped item anywhere on the stash to take it off.
     grid.addEventListener("dragover", e => { if (drag?.slot) { e.preventDefault(); grid.classList.add("over"); } });
     grid.addEventListener("dragleave", () => grid.classList.remove("over"));
     grid.addEventListener("drop", e => { e.preventDefault(); const s = drag?.slot; endDrag(); if (s) c.act(x => unequip(x, s)); });
 
-    const sort = h("select", { attrs: { "aria-label": "Sort the stash" } });
-    for (const [v, label] of [["rarity", "Sort: rarity"], ["level", "Sort: item level"], ["slot", "Sort: slot"]] as const) {
+    const sort = h("select", { attrs: { "aria-label": t("gear.sortAria") } });
+    for (const [v, label] of [["rarity", t("gear.sortRarity")], ["level", t("gear.sortLevel")], ["slot", t("gear.sortSlot")]] as const) {
         const o = h("option", { text: label, attrs: { value: v } });
         if (gearOpts.sort === v) o.selected = true;
         sort.append(o);
@@ -575,21 +586,21 @@ function gearView(c: Ctx): HTMLElement {
     sort.addEventListener("change", () => { gearOpts.sort = sort.value as GearSort; c.rerender(); });
     const full = st.stash.length >= st.stashCap;
     const room = stashRoomCost(st);
-    const roomBtn = room === null ? null : h("button", { class: "btn alt small", text: `+${STASH_STEP} slots`, attrs: st.dust >= room ? {} : { disabled: "" },
-        title: `Ten more stash slots for ${fmt(room)} ember dust (up to ${STASH_MAX})`, on: { click: () => c.act(buyStashRoom, `Stash: ${st.stashCap + STASH_STEP} slots`) } });
+    const roomBtn = room === null ? null : h("button", { class: "btn alt small", text: t("gear.roomBtn", { n: STASH_STEP }), attrs: st.dust >= room ? {} : { disabled: "" },
+        title: t("gear.roomTip", { cost: fmt(room), max: STASH_MAX }), on: { click: () => c.act(buyStashRoom, t("gear.roomToast", { n: st.stashCap + STASH_STEP })) } });
     const found = Object.keys(st.codex).length, total = Object.keys(RELICS).length;
     const head = relicsTab
-        ? h("h3", { class: "split" }, h("span", { text: "Relic codex" }), h("span", { class: "num", title: "Every different relic found adds 1% item rarity", text: `${found} / ${total} found, +${codexRarity(st)}% rarity` }))
-        : h("h3", { class: "split" }, h("span", { text: "Stash" }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
+        ? h("h3", { class: "split" }, h("span", { text: t("gear.codex") }), h("span", { class: "num", title: t("gear.codexTip"), text: t("gear.codexCount", { found, total, n: codexRarity(st) }) }))
+        : h("h3", { class: "split" }, h("span", { text: t("gear.stash") }), h("span", { class: "row", style: "gap:6px" }, roomBtn, h("span", { class: `num${full ? " full" : ""}`, text: `${st.stash.length} / ${st.stashCap}` })));
     const note = relicsTab
-        ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "The relic case keeps the best-rolled copy of every relic, outside the stash. Drag one onto a slot to wear it." })
+        ? h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("gear.caseNote") })
         : st.stashFull ? h("div", { class: "warnbar", attrs: { role: "status" } }, glyph("forge", 14),
-            h("span", { text: st.settings.upkeep ? "Stash full of locked items and upgrades: new keepers are salvaged. Unlock, salvage or buy room." : "Stash full: new drops are salvaged into dust. Salvage, buy room, or switch on upkeep (Menu)." }))
+            h("span", { text: st.settings.upkeep ? t("gear.fullUpkeep") : t("gear.fullNoUpkeep") }))
         : full && st.settings.upkeep ? h("div", { class: "note", style: "margin-bottom:8px" }, glyph("forge", 14),
-            h("span", { text: "Stash full: upkeep swaps the least-worth unlocked item for each better keeper. Lock what you want to keep." })) : null;
+            h("span", { text: t("gear.fullNote") })) : null;
     const stashCard = h("div", { class: "card" }, head, note,
         h("div", { class: "row", style: "margin-bottom:8px;justify-content:space-between" },
-            chips<GearFilter>([["all", "All", count("all")], ["upgrades", "Upgrades", count("upgrades")], ["weapons", "Weapons", count("weapons")], ["armour", "Armour", count("armour")], ["jewellery", "Jewellery", count("jewellery")], ["relics", "Relics", count("relics")]],
+            chips<GearFilter>((["all", "upgrades", "weapons", "armour", "jewellery", "relics"] as const).map(f => [f, t(`gear.${f}`), count(f)] as [GearFilter, string, number]),
                 gearOpts.filter, v => { gearOpts.filter = v; c.sel = {}; c.rerender(); }),
             relicsTab ? null : sort),
         grid);
@@ -599,61 +610,60 @@ function gearView(c: Ctx): HTMLElement {
     const plain = free(st.stash.filter(x => x.rarity === "plain")), ench = free(st.stash.filter(x => x.rarity === "enchanted"));
     const old = outdatedItems(st);
     const marked = st.stash.filter(x => gearOpts.marks.has(x.uid));
-    const bulk = (label: string, xs: Item[], title: string, key?: string) => h("button", { class: "btn alt small", text: `${label} (${xs.length})`, title,
+    const bulk = (label: string, xs: Item[], title: string, key?: string) => h("button", { class: "btn alt small", text: t("common.count", { label, n: xs.length }), title,
         attrs: { ...(xs.length ? {} : { disabled: "" }), ...(key ? { "data-key": key } : {}) },
-        on: { click: () => c.act(s => { const n = salvage(s, xs.map(x => x.uid)); for (const x of xs) gearOpts.marks.delete(x.uid); c.sel = {}; c.toast(`Salvaged ${n} for dust`); }) } });
-    const anvil = h("div", { class: "anvil", title: "Drop a stash item here to salvage it", attrs: { "aria-label": "Salvage: drop a stash item here" } }, glyph("forge", 18), h("span", { text: "Salvage" }));
+        on: { click: () => c.act(s => { const n = salvage(s, xs.map(x => x.uid)); for (const x of xs) gearOpts.marks.delete(x.uid); c.sel = {}; c.toast(t("gear.salvaged", { n })); }) } });
+    const anvil = h("div", { class: "anvil", title: t("gear.anvilTip"), attrs: { "aria-label": t("gear.anvilAria") } }, glyph("forge", 18), h("span", { text: t("gear.salvage") }));
     anvil.addEventListener("dragover", e => { if (drag?.uid !== undefined) { e.preventDefault(); anvil.classList.add("over"); } });
     anvil.addEventListener("dragleave", () => anvil.classList.remove("over"));
-    anvil.addEventListener("drop", e => { e.preventDefault(); const uid = drag?.uid; endDrag(); if (uid !== undefined) c.act(x => { if (!salvage(x, [uid])) return "locked items can't be salvaged"; c.sel = {}; }); });
+    anvil.addEventListener("drop", e => { e.preventDefault(); const uid = drag?.uid; endDrag(); if (uid !== undefined) c.act(x => { if (!salvage(x, [uid])) return t("gear.lockedNoSalvage"); c.sel = {}; }); });
     const upCount = ups.size + caseUps;
     const tools = h("div", { class: "row tools" },
         anvil,
-        h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: `Ember dust ${fmt(st.dust)}` }),
-        h("button", { class: "btn small", text: `Equip upgrades (${upCount})`, title: "Wear every stash item that raises the build score, the best first", attrs: upCount ? {} : { disabled: "" },
-            on: { click: () => c.act(s => { const n = equipUpgrades(s); c.toast(n ? `Equipped ${n} upgrade${n === 1 ? "" : "s"}` : "Nothing to equip"); }) } }),
-        bulk("Salvage outdated", old, "Unlocked items on a base 10+ levels behind the hero that are not upgrades"),
-        bulk("Salvage plain", plain, "Every unlocked plain item in the stash"),
-        bulk("Salvage enchanted", ench, "Every unlocked enchanted item in the stash"),
-        marked.length ? bulk("Salvage marked", marked, "The items you shift-clicked") : null,
-        marked.length ? h("button", { class: "btn alt small", text: "Clear marks", on: { click: () => { gearOpts.marks.clear(); c.rerender(); } } }) : null,
+        h("span", { class: "tag", style: "background:var(--gold);color:#1a1410", text: t("gear.dust", { n: fmt(st.dust) }) }),
+        h("button", { class: "btn small", text: t("gear.equipUps", { n: upCount }), title: t("gear.equipUpsTip"), attrs: upCount ? {} : { disabled: "" },
+            on: { click: () => c.act(s => { const n = equipUpgrades(s); c.toast(n ? tn("gear.equippedN", n) : t("gear.nothingToEquip")); }) } }),
+        bulk(t("gear.salvageOutdated"), old, t("gear.salvageOutdatedTip")),
+        bulk(t("gear.salvagePlain"), plain, t("gear.salvagePlainTip")),
+        bulk(t("gear.salvageEnchanted"), ench, t("gear.salvageEnchantedTip")),
+        marked.length ? bulk(t("gear.salvageMarked"), marked, t("gear.salvageMarkedTip")) : null,
+        marked.length ? h("button", { class: "btn alt small", text: t("gear.clearMarks"), on: { click: () => { gearOpts.marks.clear(); c.rerender(); } } }) : null,
     );
 
     // The picked item: its card pinned beside its slot, with what it would change and its actions.
     const selItem = c.sel.uid !== undefined ? ownedItem(st, c.sel.uid) : undefined;
     const selSlot = c.sel.slot;
     let pop: HTMLElement | null = null;
-    const close = h("button", { class: "x popx", text: "x", title: "Put it back (Esc)", attrs: { "aria-label": "Close", "data-esc": "" }, on: { click: () => { c.sel = {}; c.rerender(); } } });
-    const lockBtn = (it: Item) => h("button", { class: "btn alt", text: it.locked ? "Unlock" : "Lock", attrs: { "data-key": "l" },
-        title: it.locked ? "Let upkeep and bulk salvage take it again (L)" : "Keep it: upkeep, auto-equip and bulk salvage leave it alone (L)",
+    const close = h("button", { class: "x popx", text: "x", title: t("gear.putBack"), attrs: { "aria-label": t("common.close"), "data-esc": "" }, on: { click: () => { c.sel = {}; c.rerender(); } } });
+    const lockBtn = (it: Item) => h("button", { class: "btn alt", text: it.locked ? t("gear.unlock") : t("gear.lock"), attrs: { "data-key": "l" },
+        title: it.locked ? t("gear.unlockTip") : t("gear.lockTip"),
         on: { click: () => c.act(s => setLocked(s, it.uid, !it.locked)) } });
     if (selItem) {
         const targets = slotsFor(baseOf(selItem));
         const cmp = upgradeOf(st, selItem) ?? (targets.length > 1 ? (targets.find(t => !eq[t]) ?? targets[0]!) : targets[0]!);
         const card = itemCard(selItem, c, { compareSlot: cmp });
         const row = h("div", { class: "row popacts" });
-        targets.forEach((t, i) => {
-            const err = canEquip(st, selItem, t);
-            row.append(h("button", { class: "btn", text: targets.length > 1 ? `Equip ${t === "ring1" ? "left" : "right"}` : "Equip",
-                attrs: { ...(err ? { disabled: "" } : {}), ...(i === 0 ? { "data-key": "e" } : {}) }, title: err ?? (i === 0 ? "Equip (E)" : ""),
-                on: { click: () => c.act(s => { const e = equip(s, selItem.uid, t); if (!e) c.sel = { slot: t }; return e; }) } }));
+        targets.forEach((ts, i) => {
+            const err = canEquip(st, selItem, ts);
+            row.append(h("button", { class: "btn", text: targets.length > 1 ? t(ts === "ring1" ? "gear.equipLeft" : "gear.equipRight") : t("gear.equip"),
+                attrs: { ...(err ? { disabled: "" } : {}), ...(i === 0 ? { "data-key": "e" } : {}) }, title: err ? tErr(err) : (i === 0 ? t("gear.equipKey") : ""),
+                on: { click: () => c.act(s => { const e = equip(s, selItem.uid, ts); if (!e) c.sel = { slot: ts }; return e; }) } }));
         });
         row.append(lockBtn(selItem));
-        row.append(h("button", { class: "btn alt", text: `Salvage +${salvageValue(selItem)}`, title: selItem.locked ? "Unlock it first" : "Salvage into ember dust (S)",
+        row.append(h("button", { class: "btn alt", text: t("gear.salvageFor", { n: salvageValue(selItem) }), title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
             attrs: { "data-key": "s", ...(selItem.locked ? { disabled: "" } : {}) },
             on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
         card.append(row);
-        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(selItem) } }, card, close);
+        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(selItem) } }, card, close);
     } else if (selSlot && eq[selSlot]) {
         const it = eq[selSlot]!;
         const card = itemCard(it, c);
-        card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: "Unequip", title: it.relic ? "Back to the relic case" : "Back to the stash", on: { click: () => c.act(s => unequip(s, selSlot)) } }), lockBtn(it)));
-        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemLabel(it) } }, card, close);
+        card.append(h("div", { class: "row popacts" }, h("button", { class: "btn alt", text: t("gear.unequip"), title: it.relic ? t("gear.toCase") : t("gear.toStash"), on: { click: () => c.act(s => unequip(s, selSlot)) } }), lockBtn(it)));
+        pop = h("div", { class: "gpop", attrs: { role: "dialog", "aria-label": itemName(it) } }, card, close);
     }
 
-    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": "How gear works" },
-        title: "Hover an item to compare it with what you wear; click it to pin its card with Equip, Lock and Salvage.\nDrag an item onto a slot to equip it, onto the anvil to salvage it; drag worn gear back to the stash to take it off.\nShift-click stash items to mark them, then Salvage marked.\nA green corner marks an upgrade; faded items need a higher level; a lock keeps an item safe from upkeep and bulk salvage.\nKeys: E equips the picked item, L locks it, S salvages it, Esc puts it back." });
-    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Equipped" }), help), doll);
+    const help = h("button", { class: "info", text: "i", attrs: { "aria-label": t("gear.helpAria") }, title: t("gear.help") });
+    const equipped = h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("gear.equippedHead") }), help), doll);
     root.append(equipped, h("div", { class: "col" }, stashCard, tools));
     // A click on empty space puts the picked item back.
     root.addEventListener("click", e => {
@@ -687,6 +697,7 @@ function placeBeside(el: HTMLElement, anchor: HTMLElement, body: HTMLElement): v
 // ---- Skills ----------------------------------------------------------------
 
 const pctDelta = (a: number, b: number) => b / Math.max(0.01, a) - 1;
+
 const fmtPct = (d: number) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
 
 function skillsView(c: Ctx): HTMLElement {
@@ -700,8 +711,8 @@ function skillsView(c: Ctx): HTMLElement {
         const locked = s.level > hero.level;
         const on = hero.skill === s.id;
         let meta: HTMLElement;
-        if (locked) meta = h("span", { class: "tag", text: `level ${s.level}` });
-        else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: `${fmt(cur.skill.packDps)} dps` });
+        if (locked) meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) });
+        else if (on) meta = h("span", { class: "tag", style: "background:#1a1410;color:var(--gold)", text: t("skills.dps", { dps: fmt(cur.skill.packDps) }) });
         else {
             const sh = deriveSheet({ ...hero, skill: s.id, rev: -1 });
             const d = pctDelta(cur.skill.packDps, sh.skill.packDps);
@@ -709,12 +720,12 @@ function skillsView(c: Ctx): HTMLElement {
                 h("span", { class: `delta ${d >= 0 ? "up" : "down"}`, text: fmtPct(d) }));
         }
         skills.append(h("div", { class: `li${on ? " on" : ""}${locked ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || on ? "-1" : "0" },
-            title: locked ? `Unlocks at level ${s.level}` : on ? "Your main skill" : "Pack DPS with your current gear and supports",
-            on: { click: () => { if (!locked && !on) c.act(st => setSkill(st, s.id), `${s.name} selected`); } } },
-            h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: s.name })),
+            title: locked ? t("skills.unlocksAt", { n: s.level }) : on ? t("skills.main") : t("skills.packTip"),
+            on: { click: () => { if (!locked && !on) c.act(st => setSkill(st, s.id), t("skills.selected", { name: skillName(s.id) })); } } },
+            h("div", { class: "nm" }, gem(colourOf(s.tags), false, 14), h("span", { text: skillName(s.id) })),
             h("div", { class: "meta" }, meta),
-            h("div", { class: "ds", text: s.blurb }),
-            h("div", { class: "tags" }, ...s.tags.map(t => h("span", { class: "tag", text: t })), h("span", { class: "tag", text: `${s.effectiveness}% eff.` }))));
+            h("div", { class: "ds", text: skillBlurb(s.id) }),
+            h("div", { class: "tags" }, ...s.tags.map(x => h("span", { class: "tag", text: tagName(x) })), h("span", { class: "tag", text: t("skills.eff", { n: s.effectiveness }) }))));
     }
 
     // Supports: what adding, removing or swapping each one does, best first.
@@ -745,50 +756,54 @@ function skillsView(c: Ctx): HTMLElement {
     for (const r of rows) {
         const { s, on, locked, fits, d, swap } = r;
         let meta: HTMLElement, tip: string;
-        if (locked) { meta = h("span", { class: "tag", text: `level ${s.level}` }); tip = `Unlocks at level ${s.level}`; }
-        else if (!fits) { meta = h("span", { class: "tag", text: "no fit" }); tip = `Needs a ${s.requires.join(" or ")} skill`; }
-        else if (on) { meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: "slotted" }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: `worth ${fmtPct(-(d ?? 0))}` })); tip = `Click to remove: ${fmtPct(d ?? 0)} pack DPS`; }
+        const needs = s.requires.map(x => tagName(x)).join(t("common.or"));
+        if (locked) { meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) }); tip = t("skills.unlocksAt", { n: s.level }); }
+        else if (!fits) { meta = h("span", { class: "tag", text: t("skills.noFit") }); tip = t("skills.needs", { tags: needs }); }
+        else if (on) { meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) })); tip = t("skills.clickRemove", { pct: fmtPct(d ?? 0) }); }
         else {
             const good = (d ?? 0) > 0;
+            const swapName = swap && SUPPORTS[swap] ? supportName(swap) : swap ?? "";
             meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
-                swap ? h("span", { class: "muted", style: "font-size:8px", text: `for ${SUPPORTS[swap]?.name ?? swap}` }) : null);
-            tip = swap ? `Click to swap out ${SUPPORTS[swap]?.name}: ${fmtPct(d ?? 0)} pack DPS` : `Click to add: ${fmtPct(d ?? 0)} pack DPS`;
+                swap ? h("span", { class: "muted", style: "font-size:8px", text: t("skills.for", { name: swapName }) }) : null);
+            tip = swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) });
         }
         sups.append(h("div", { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
             if (locked || !fits) return;
-            if (on) c.act(st => setSupports(st, active.filter(x => x !== s.id)), `${s.name} removed`);
-            else if (!full) c.act(st => setSupports(st, [...active, s.id]), `${s.name} added`);
-            else if (swap) c.act(st => setSupports(st, active.map(x => x === swap ? s.id : x)), `${SUPPORTS[swap]?.name} swapped for ${s.name}`);
+            if (on) c.act(st => setSupports(st, active.filter(x => x !== s.id)), t("skills.removed", { name: supportName(s.id) }));
+            else if (!full) c.act(st => setSupports(st, [...active, s.id]), t("skills.added", { name: supportName(s.id) }));
+            else if (swap) c.act(st => setSupports(st, active.map(x => x === swap ? s.id : x)), t("skills.swapped", { out: supportName(swap), name: supportName(s.id) }));
         } } },
-            h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: s.name })), h("div", { class: "meta" }, meta),
-            h("div", { class: "ds", text: s.blurb + (s.requires.length ? `  Needs: ${s.requires.join(" or ")}.` : "") })));
+            h("div", { class: "nm" }, gem(colourOf(s.requires), false, 14), h("span", { text: supportName(s.id) })), h("div", { class: "meta" }, meta),
+            h("div", { class: "ds", text: supportBlurb(s.id) + (s.requires.length ? "  " + t("skills.needsShort", { tags: needs }) : "") })));
     }
     const next = [1, 1, 8, 18, 32].find(l => l > hero.level);
 
     // Skill links: the main gem chained to its support sockets, like a socketed item.
     const main = SKILLS[hero.skill];
     const links = h("div", { class: "links" },
-        h("div", { class: "sock main", title: main?.blurb ?? "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main?.name ?? hero.skill })));
+        h("div", { class: "sock main", title: main ? skillBlurb(main.id) : "" }, gem(colourOf(cur.skill.tags), true), h("b", { text: main ? skillName(main.id) : hero.skill })));
     [1, 1, 8, 18, 32].forEach((lvl, i) => {
         links.append(h("span", { class: `link${i < slots ? "" : " off"}`, attrs: { "aria-hidden": "true" } }));
         const id = active[i];
         const sup = id ? SUPPORTS[id] : undefined;
         if (sup) {
             const row = rows.find(r => r.s.id === id);
-            links.append(h("button", { class: "sock", title: `${sup.name}: ${sup.blurb} Click to take it out.${row?.d != null ? ` Worth ${fmtPct(-(row.d))} pack DPS.` : ""}`,
-                on: { click: () => c.act(st => setSupports(st, active.filter(x => x !== id)), `${sup.name} removed`) } },
-                gem(colourOf(sup.requires)), h("b", { text: sup.name })));
+            links.append(h("button", { class: "sock", title: t("skills.sockTip", { name: supportName(sup.id), blurb: supportBlurb(sup.id) }) + (row?.d != null ? " " + t("skills.sockWorth", { pct: fmtPct(-(row.d)) }) : ""),
+                on: { click: () => c.act(st => setSupports(st, active.filter(x => x !== id)), t("skills.removed", { name: supportName(sup.id) })) } },
+                gem(colourOf(sup.requires)), h("b", { text: supportName(sup.id) })));
         } else if (i < slots) {
-            links.append(h("div", { class: "sock empty", title: "An empty socket: pick a support below" }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: "Empty" })));
+            links.append(h("div", { class: "sock empty", title: t("skills.emptyTip") }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("skills.empty") })));
         } else {
-            links.append(h("div", { class: "sock locked", title: `Opens at level ${lvl}` }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: `Level ${lvl}` })));
+            links.append(h("div", { class: "sock locked", title: t("skills.opensAt", { n: lvl }) }, h("span", { class: "hole" }, glyph("socket", 26)), h("b", { text: t("common.level", { n: lvl }) })));
         }
     });
-    const bar = h("div", { class: "card socketbar" }, h("h3", { text: "Skill links" }), links);
+    const bar = h("div", { class: "card socketbar" }, h("h3", { text: t("skills.links") }), links);
+    // A label whose word doesn't fit its socket whole (long Russian and Ukrainian names) drops to the small size.
+    requestAnimationFrame(() => { for (const b of links.querySelectorAll<HTMLElement>(".sock b")) if (b.scrollWidth > b.clientWidth + 1) b.classList.add("long"); });
     return h("div", { class: "col", style: "gap:14px" }, bar, h("div", { class: "grid2" },
-        h("div", null, h("div", { class: "sec", text: "Main skill" }), skills),
-        h("div", null, h("div", { class: "sec" }, "Supports ", h("span", { class: "num", text: `${active.length}/${slots}` }),
-            next ? h("span", { class: "muted", text: `next slot at level ${next}` }) : null), sups)));
+        h("div", null, h("div", { class: "sec", text: t("skills.mainSkill") }), skills),
+        h("div", null, h("div", { class: "sec" }, t("skills.supports") + " ", h("span", { class: "num", text: `${active.length}/${slots}` }),
+            next ? h("span", { class: "muted", text: t("skills.nextSlot", { n: next }) }) : null), sups)));
 }
 
 // ---- World -----------------------------------------------------------------
@@ -802,9 +817,9 @@ function worldView(c: Ctx): HTMLElement {
     const inMaps = st.activity.mode === "map";
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
-        h("i"), h("span", null, h("b", { text: "Auto-push" }), h("small", { text: "Move on after 3 clean clears, fall back after 3 deaths (in maps: 2 failed maps), take trials when out-levelled." })));
+        h("i"), h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") })));
     root.append(push, contractBoard(c), shrineCard(c));
-    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: "The hero is running maps (Atlas tab). Picking a place here leaves the maps after the current one." })));
+    if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
     const hc = HERO_CAST[st.hero.cls];
     for (const act of ACTS) {
         if (!act.zones.some(z => st.world.unlocked.includes(z))) continue;
@@ -814,9 +829,9 @@ function worldView(c: Ctx): HTMLElement {
         if (done && !current && !openActs.has(act.id)) {
             const total = act.zones.reduce((a, z) => a + (st.world.clears[z] ?? 0), 0);
             root.append(h("div", { class: "card act folded" },
-                h("h3", { text: `Act ${act.id} - ${act.name}` }),
-                h("div", { class: "row" }, h("span", { class: "tag done", text: "Cleared" }), h("span", { class: "muted grow", text: `${act.zones.length} places, ${fmt(total)} clears. Open it to go back and farm.` }),
-                    h("button", { class: "btn alt small", text: "Open road", on: { click: () => { openActs.add(act.id); c.rerender(); } } }))));
+                h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
+                h("div", { class: "row" }, h("span", { class: "tag done", text: t("world.cleared") }), h("span", { class: "muted grow", text: t("world.folded", { places: act.zones.length, clears: fmt(total) }) }),
+                    h("button", { class: "btn alt small", text: t("world.openRoad"), on: { click: () => { openActs.add(act.id); c.rerender(); } } }))));
             continue;
         }
         const road = h("div", { class: "road" });
@@ -827,30 +842,31 @@ function worldView(c: Ctx): HTMLElement {
             const clears = st.world.clears[id] ?? 0;
             const thumb = scenery(z, 112, 62);
             thumb.className = "thumb";
+            const name = zoneName(id);
             const el = h("button", { class: `stop${here ? " here" : ""}${open ? "" : " locked"}${z.trial ? " trial" : ""}${z.boss ? " boss" : ""}`,
-                attrs: { "aria-label": `${z.name}, area level ${z.level}${open ? `, ${clears} clears` : ", locked"}` },
-                title: open ? (z.story ?? z.name) : "Not reached yet",
-                on: { click: () => { if (open && !here) c.act(s => setZone(s, id), `Travelling to ${z.name}`); } } },
+                attrs: { "aria-label": open ? t("world.stopAria", { name, level: z.level, clears }) : t("world.stopAriaLocked", { name, level: z.level }) },
+                title: open ? (z.story ? zoneStory(id) : name) : t("world.notReached"),
+                on: { click: () => { if (open && !here) c.act(s => setZone(s, id), t("world.travelling", { zone: name })); } } },
                 h("div", { class: "pic" }, thumb,
                     h("span", { class: "num-badge", text: n }),
-                    z.boss ? h("span", { class: "flag boss", text: "Boss" }) : z.trial ? h("span", { class: "flag trial", text: "Trial" }) : null,
+                    z.boss ? h("span", { class: "flag boss", text: t("world.boss") }) : z.trial ? h("span", { class: "flag trial", text: t("world.trial") }) : null,
                     here && hc ? (() => { const a = spriteCanvas(hc.idle); if (a) a.className = "hero-mark"; return a; })() : null,
                     open ? null : h("span", { class: "lock" }, glyph("block", 18))),
-                h("b", { text: z.name }),
-                h("span", { class: "meta" }, h("span", { class: "tag", text: `L${z.level}` }), h("span", { text: open ? `${clears} clear${clears === 1 ? "" : "s"}` : "locked" })));
+                h("b", { text: name }),
+                h("span", { class: "meta" }, h("span", { class: "tag", text: t("world.lvl", { n: z.level }) }), h("span", { text: open ? tn("world.clears", clears) : t("world.locked") })));
             return el;
         };
         act.zones.forEach((id, i) => {
             if (i) road.append(h("span", { class: `path${st.world.unlocked.includes(id) ? "" : " dim"}`, attrs: { "aria-hidden": "true" } }));
             road.append(stop(id, String(i + 1)));
         });
-        const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: "Off the road" }), stop(act.trial, "T"));
+        const trial = h("div", { class: "trialrow" }, h("span", { class: "sub", text: t("world.offRoad") }), stop(act.trial, "T"));
         root.append(h("div", { class: "card act" },
-            h("h3", { text: `Act ${act.id} - ${act.name}` }),
-            h("div", { class: "story muted", text: done ? act.outro : act.intro }),
+            h("h3", { text: t("world.act", { n: act.id, name: actName(act.id) }) }),
+            h("div", { class: "story muted", text: done ? actOutro(act.id) : actIntro(act.id) }),
             road, trial,
             done && !current ? h("div", { class: "row", style: "justify-content:flex-end;margin-top:8px" },
-                h("button", { class: "btn alt small", text: "Fold road", on: { click: () => { openActs.delete(act.id); c.rerender(); } } })) : null));
+                h("button", { class: "btn alt small", text: t("world.foldRoad"), on: { click: () => { openActs.delete(act.id); c.rerender(); } } })) : null));
     }
     // Opening the tab lands on the hero's stop, not the top of Act 1.
     requestAnimationFrame(() => {
@@ -876,14 +892,22 @@ function contractBoard(c: Ctx): HTMLElement {
         rows.append(h("div", { class: `contract${done ? " done" : ""}` },
             h("span", { class: "cg" }, glyph(CONTRACT_GLYPH[k.kind], 16)),
             h("div", { class: "grow col", style: "gap:3px;min-width:0" },
-                h("b", { text: contractText(k) }),
+                h("b", { text: contractGoal(k.kind, k.target, k.tier) }),
                 h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, (k.n / k.target) * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(k.n)} / ${fmt(k.target)}` })),
-                h("span", { class: "muted", style: "font-size:12px", text: `Reward: ${rewardText(k, st)}` })),
-            done ? h("button", { class: "btn small", text: "Claim", on: { click: () => c.act(s => claimContract(s, i), "Contract claimed") } })
-                : h("button", { class: "btn alt small", text: `Reroll ${fmt(cost)}`, title: `A different contract for ${fmt(cost)} ember dust; progress on this one is lost`, attrs: st.dust >= cost ? {} : { disabled: "" },
+                h("span", { class: "muted", style: "font-size:12px", text: t("contracts.reward", { text: rewardLine(k, st) }) })),
+            done ? h("button", { class: "btn small", text: t("contracts.claim"), on: { click: () => c.act(s => claimContract(s, i), t("contracts.claimed")) } })
+                : h("button", { class: "btn alt small", text: t("contracts.reroll", { cost: fmt(cost) }), title: t("contracts.rerollTip", { cost: fmt(cost) }), attrs: st.dust >= cost ? {} : { disabled: "" },
                     on: { click: () => c.act(s => rerollContract(s, i)) } })));
     });
-    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Contract board" }), h("span", { class: "num", text: `${fmt(st.contracts.done)} done` })), rows);
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("contracts.title") }), h("span", { class: "num", text: t("contracts.done", { n: fmt(st.contracts.done) }) })), rows);
+}
+
+/** What a contract pays, in words: "300 dust, 3 Kindling, a relic not in your codex". */
+function rewardLine(k: Contract, s: GameState): string {
+    const parts = [t("reward.dust", { n: contractDust(s, k) })];
+    if (k.currency && CURRENCIES[k.currency[0]]) parts.push(t("reward.currency", { n: k.currency[1], name: currencyName(k.currency[0]) }));
+    if (k.extra) parts.push(t(`reward.${k.extra}`));
+    return parts.join(t("common.list"));
 }
 
 /** Minutes left on each blessing, what can be paid, the switches: the shrine card is rebuilt when these change. */
@@ -907,48 +931,48 @@ function shrineCard(c: Ctx): HTMLElement {
         rows.append(h("div", { class: `contract bless${left ? " done" : ""}` },
             h("span", { class: "cg" }, glyph(BLESS_GLYPH[b.id] ?? "gem", 16)),
             h("div", { class: "grow col", style: "gap:2px;min-width:0" },
-                h("b", { text: `${b.name}: ${b.text.replace("{0}", String(b.value))}` }),
-                h("span", { class: "muted", style: "font-size:12px", text: left ? `${fmtDuration(left)} left${keep ? ", kept up" : ""}` : keep ? "Kept up: renews when it can be paid" : "Not running" })),
-            h("button", { class: `chip${keep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(keep) }, title: "Offer again on its own whenever it runs out (while it can be paid)",
-                on: { click: () => c.act(s => { setKeep(s, b.id, !keep); if (!keep && !left) return bless(s, b.id); }) } }, "Keep up"),
-            h("button", { class: "btn small", text: `+1 h`, title: `An hour of ${b.name} for ${fmt(cost)} dust${st.shrine.orbs ? " (spare orbs pay first)" : ""}`, attrs: canPay ? {} : { disabled: "" },
-                on: { click: () => c.act(s => bless(s, b.id), `${b.name} blessed`) } })));
+                h("b", { text: t("shrine.line", { name: blessingName(b.id), text: blessingText(b.id, b.value) }) }),
+                h("span", { class: "muted", style: "font-size:12px", text: left ? t(keep ? "shrine.leftKept" : "shrine.left", { time: fmtDuration(left) }) : keep ? t("shrine.keptUp") : t("shrine.notRunning") })),
+            h("button", { class: `chip${keep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(keep) }, title: t("shrine.keepTip"),
+                on: { click: () => c.act(s => { setKeep(s, b.id, !keep); if (!keep && !left) return bless(s, b.id); }) } }, t("shrine.keep")),
+            h("button", { class: "btn small", text: t("shrine.hour"), title: t(st.shrine.orbs ? "shrine.hourTipOrbs" : "shrine.hourTip", { name: blessingName(b.id), cost: fmt(cost) }), attrs: canPay ? {} : { disabled: "" },
+                on: { click: () => c.act(s => bless(s, b.id), t("shrine.blessed", { name: blessingName(b.id) })) } })));
     }
     const orbs = h("button", { class: `toggle${st.shrine.orbs ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.shrine.orbs) },
         on: { click: () => c.act(s => { s.shrine.orbs = !s.shrine.orbs; }) } },
-        h("i"), h("span", null, h("b", { text: "Spare orbs pay first" }), h("small", { text: `Orbs above ${ORB_RESERVE} of a kind count at their shop price (now worth ${fmt(spare)} dust).` })));
-    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: "Ember shrine" }), h("span", { class: "num", text: `${fmt(cost)} dust / hour` })),
-        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: "Blessings run on the hero's time, so they count while you are away too." }), rows, h("div", { style: "margin-top:8px" }, orbs));
+        h("i"), h("span", null, h("b", { text: t("shrine.orbs") }), h("small", { text: t("shrine.orbsNote", { n: ORB_RESERVE, v: fmt(spare) }) })));
+    return h("div", { class: "card" }, h("h3", { class: "split" }, h("span", { text: t("shrine.title") }), h("span", { class: "num", text: t("shrine.cost", { cost: fmt(cost) }) })),
+        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("shrine.note") }), rows, h("div", { style: "margin-top:8px" }, orbs));
 }
 
 // ---- Log -------------------------------------------------------------------
 
 const LOG_GLYPH: Record<string, Parameters<typeof glyph>[0]> = { level: "regen", loot: "gem", death: "chaos", zone: "world", boss: "atlas", info: "log" };
-const LOG_KINDS: Record<string, [string, string]> = { level: ["Level", "var(--gold)"], loot: ["Loot", "var(--r-enchanted)"], death: ["Death", "var(--ember)"], zone: ["Road", "var(--teal)"], boss: ["Boss", "var(--violet)"], info: ["Note", "var(--paper2)"] };
+const LOG_KINDS: Record<string, string> = { level: "var(--gold)", loot: "var(--r-enchanted)", death: "var(--ember)", zone: "var(--teal)", boss: "var(--violet)", info: "var(--paper2)" };
 let logFilter = "all";
 
 function logView(c: Ctx): HTMLElement {
     const log = c.state.log;
     const n = (k: string) => log.filter(e => e.kind === k).length;
-    const filter = chips<string>([["all", "All", log.length], ...Object.entries(LOG_KINDS).filter(([k]) => n(k)).map(([k, [label]]) => [k, label, n(k)] as [string, string, number])],
+    const filter = chips<string>([["all", t("log.all"), log.length], ...Object.keys(LOG_KINDS).filter(k => n(k)).map(k => [k, t(`logkind.${k}`), n(k)] as [string, string, number])],
         logFilter, v => { logFilter = v; c.rerender(); });
-    const el = h("div", { class: "card log" }, h("h3", { text: "Chronicle" }), h("div", { style: "margin-bottom:8px" }, filter));
+    const el = h("div", { class: "card log" }, h("h3", { text: t("log.title") }), h("div", { style: "margin-bottom:8px" }, filter));
     const now = Date.now();
     for (const e of [...log].reverse()) {
         if (logFilter !== "all" && e.kind !== logFilter) continue;
-        const [label, color] = LOG_KINDS[e.kind] ?? [e.kind, "var(--paper2)"];
-        el.append(h("div", { class: `entry k-${e.kind}` }, h("span", { class: "lg", style: `background:${color}`, title: label }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)), h("span", { class: "grow", text: e.text }),
+        const color = LOG_KINDS[e.kind] ?? "var(--paper2)";
+        el.append(h("div", { class: `entry k-${e.kind}` }, h("span", { class: "lg", style: `background:${color}`, title: t(`logkind.${e.kind}`) }, glyph(LOG_GLYPH[e.kind] ?? "log", 14)), h("span", { class: "grow", text: logText(e) }),
             h("span", { class: "muted num when", text: e.t > 1e12 ? `${fmtAgo(now - e.t)}` : "" })));
     }
     return el;
 }
 
 function fmtAgo(ms: number): string {
-    if (ms < 60e3) return "now";
+    if (ms < 60e3) return t("ago.now");
     const m = Math.floor(ms / 60e3);
-    if (m < 60) return `${m}m`;
+    if (m < 60) return t("ago.m", { n: m });
     const hh = Math.floor(m / 60);
-    return hh < 48 ? `${hh}h` : `${Math.floor(hh / 24)}d`;
+    return hh < 48 ? t("ago.h", { n: hh }) : t("ago.d", { n: Math.floor(hh / 24) });
 }
 
 // ---- Menu ------------------------------------------------------------------
@@ -956,41 +980,41 @@ function fmtAgo(ms: number): string {
 function menuView(c: Ctx): HTMLElement {
     const st = c.state;
     const keep = h("select");
-    for (const [v, label] of [["plain", "Keep everything"], ["enchanted", "Keep enchanted and better"], ["rare", "Keep rares only"]] as const) {
+    for (const [v, label] of [["plain", t("menu.keepAll")], ["enchanted", t("menu.keepEnchanted")], ["rare", t("menu.keepRares")]] as const) {
         const o = h("option", { text: label, attrs: { value: v } });
         if (st.settings.keep === v) o.selected = true;
         keep.append(o);
     }
     keep.addEventListener("change", () => c.act(s => { s.settings.keep = keep.value as typeof s.settings.keep; }));
     const auto = h("button", { class: `toggle${st.settings.autoEquip ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.autoEquip) }, on: { click: () => c.act(s => { s.settings.autoEquip = !s.settings.autoEquip; }) } },
-        h("i"), h("span", null, h("b", { text: "Equip upgrades" }), h("small", { text: "Wear a drop straight away when it raises the build score; on level-ups, the stash's too." })));
+        h("i"), h("span", null, h("b", { text: t("menu.autoEquip") }), h("small", { text: t("menu.autoEquipNote") })));
     const upkeep = h("button", { class: `toggle${st.settings.upkeep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.upkeep) }, on: { click: () => c.act(s => { s.settings.upkeep = !s.settings.upkeep; }) } },
-        h("i"), h("span", null, h("b", { text: "Stash upkeep" }), h("small", { text: "When the stash is full, a better keeper replaces its least-worth unlocked item instead of being salvaged." })));
+        h("i"), h("span", null, h("b", { text: t("menu.upkeep") }), h("small", { text: t("menu.upkeepNote") })));
 
-    const out = h("textarea", { attrs: { readonly: "", placeholder: "Press Export" } });
-    const inp = h("textarea", { attrs: { placeholder: "Paste an HM1: export here" } });
-    const t = st.totals;
+    const out = h("textarea", { attrs: { readonly: "", placeholder: t("menu.exportPh") } });
+    const inp = h("textarea", { attrs: { placeholder: t("menu.importPh") } });
+    const tot = st.totals;
     return h("div", { class: "grid2" },
-        h("div", { class: "card col" }, h("h3", { text: "Loot" }),
+        h("div", { class: "card col" }, h("h3", { text: t("menu.loot") }),
             auto, upkeep,
             filterEditor(c),
-            h("div", { class: "row" }, "Otherwise", keep),
-            h("div", { class: "muted", style: "font-size:12px", text: "Rules run top to bottom; the first match decides. Salvaged items become ember dust." })),
-        h("div", { class: "card col" }, h("h3", { text: "Save" }),
-            h("div", { class: "muted", style: "font-size:12px", text: `Saved in ${c.storeKind === "indexeddb" ? "this Discord profile (IndexedDB)" : "memory only: export to keep it"}.` }),
-            h("div", { class: "row" }, h("button", { class: "btn", text: "Export", on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
-                h("button", { class: "btn alt", text: "Copy", on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast("Copied"), () => c.toast("Select and copy it by hand")); } } })),
+            h("div", { class: "row" }, t("menu.otherwise"), keep),
+            h("div", { class: "muted", style: "font-size:12px", text: t("menu.rulesNote") })),
+        h("div", { class: "card col" }, h("h3", { text: t("menu.save") }),
+            h("div", { class: "muted", style: "font-size:12px", text: c.storeKind === "indexeddb" ? t("menu.savedIdb") : t("menu.savedMem") }),
+            h("div", { class: "row" }, h("button", { class: "btn", text: t("menu.export"), on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
+                h("button", { class: "btn alt", text: t("menu.copy"), on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast(t("menu.copied")), () => c.toast(t("menu.copyByHand"))); } } })),
             out, inp,
-            h("div", { class: "row" }, h("button", { class: "btn alt", text: "Import", on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ?? "Save loaded")); } } }))),
-        h("div", { class: "card" }, h("h3", { text: "Totals" }), kv([
-            ["Runs", fmt(t.runs)], ["Kills", fmt(t.kills)], ["Deaths", fmt(t.deaths)], ["Items found", fmt(t.items)], ["Salvaged", fmt(t.salvaged)], ["Swapped out by upkeep", fmt(t.swapped ?? 0)],
-            ["Time simulated", `${(t.simMs / 3600e3).toFixed(1)} h`]])),
-        h("div", { class: "card col" }, h("h3", { text: "Danger" }),
-            h("button", { class: "btn hot", text: "Start a new hero", on: { click: () => {
-                const close = c.modal(h("div", { class: "card col" }, h("h3", { text: "Start over?" }),
-                    h("div", { text: "This deletes the current hero. Export first if you want to keep it." }),
-                    h("div", { class: "row" }, h("button", { class: "btn hot", text: "Delete and start over", on: { click: () => { close(); c.resetGame(); } } }),
-                        h("button", { class: "btn alt", text: "Cancel", on: { click: () => close() } }))));
+            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }))),
+        h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
+            [t("menu.runs"), fmt(tot.runs)], [t("menu.kills"), fmt(tot.kills)], [t("menu.deaths"), fmt(tot.deaths)], [t("menu.items"), fmt(tot.items)], [t("menu.salvaged"), fmt(tot.salvaged)], [t("menu.swapped"), fmt(tot.swapped ?? 0)],
+            [t("menu.time"), t("menu.hours", { n: (tot.simMs / 3600e3).toFixed(1) })]])),
+        h("div", { class: "card col" }, h("h3", { text: t("menu.danger") }),
+            h("button", { class: "btn hot", text: t("menu.newHero"), on: { click: () => {
+                const close = c.modal(h("div", { class: "card col" }, h("h3", { text: t("menu.startOver") }),
+                    h("div", { text: t("menu.startOverNote") }),
+                    h("div", { class: "row" }, h("button", { class: "btn hot", text: t("menu.deleteStart"), on: { click: () => { close(); c.resetGame(); } } }),
+                        h("button", { class: "btn alt", text: t("common.cancel"), on: { click: () => close() } }))));
             } } })),
     );
 }
@@ -1004,25 +1028,25 @@ function filterEditor(c: Ctx): HTMLElement {
         on.checked = r.on;
         on.addEventListener("change", () => edit(rs => { rs[i]!.on = on.checked; }));
         box.append(h("div", { class: "row", style: "gap:4px;flex-wrap:nowrap" }, on,
-            h("span", { class: "grow", style: `font-size:12px;${r.on ? "" : "opacity:.5"}`, text: describeRule(r) }),
-            h("button", { class: "x", text: "^", title: "Move up", attrs: i === 0 ? { disabled: "", "aria-label": "Move up" } : { "aria-label": "Move up" }, on: { click: () => edit(rs => { if (i > 0) [rs[i - 1], rs[i]] = [rs[i]!, rs[i - 1]!]; }) } }),
-            h("button", { class: "x", text: "x", title: "Delete", attrs: { "aria-label": `Delete rule: ${describeRule(r)}` }, on: { click: () => edit(rs => { rs.splice(i, 1); }) } })));
+            h("span", { class: "grow", style: `font-size:12px;${r.on ? "" : "opacity:.5"}`, text: ruleText(r) }),
+            h("button", { class: "x", text: "^", title: t("filter.moveUp"), attrs: i === 0 ? { disabled: "", "aria-label": t("filter.moveUp") } : { "aria-label": t("filter.moveUp") }, on: { click: () => edit(rs => { if (i > 0) [rs[i - 1], rs[i]] = [rs[i]!, rs[i - 1]!]; }) } }),
+            h("button", { class: "x", text: "x", title: t("filter.delete"), attrs: { "aria-label": t("filter.deleteAria", { rule: ruleText(r) }) }, on: { click: () => edit(rs => { rs.splice(i, 1); }) } })));
     });
     const action = h("select");
-    for (const a of ["keep", "salvage"]) action.append(h("option", { text: a, attrs: { value: a } }));
+    for (const a of ["keep", "salvage"]) action.append(h("option", { text: t(`filter.${a}`), attrs: { value: a } }));
     const rarity = h("select");
-    for (const [v, t] of [["", "any rarity"], ["plain", "plain"], ["enchanted", "enchanted"], ["rare", "rare"], ["relic", "relic"]] as const) rarity.append(h("option", { text: t, attrs: { value: v } }));
+    for (const v of ["", "plain", "enchanted", "rare", "relic"]) rarity.append(h("option", { text: v ? t(`rarity.${v}`) : t("filter.anyRarity"), attrs: { value: v } }));
     const slot = h("select");
-    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v || "any slot", attrs: { value: v } }));
+    for (const v of ["", "weapon", "offhand", "helmet", "body", "gloves", "boots", "belt", "amulet", "ring"]) slot.append(h("option", { text: v ? t(`slot.${v}`).toLowerCase() : t("filter.anySlot"), attrs: { value: v } }));
     const minAff = h("select");
-    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? "any affixes" : `${v}+ affixes`, attrs: { value: v } }));
-    const behind = h("select", { attrs: { "aria-label": "Base level behind the hero" } });
-    for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? "any base" : `base ${v}+ behind`, attrs: { value: v } }));
-    const group = h("select", { attrs: { "aria-label": "Has an affix" } });
-    group.append(h("option", { text: "any affix", attrs: { value: "" } }));
-    for (const g of AFFIX_GROUPS()) group.append(h("option", { text: `with ${g.label}`, attrs: { value: g.group } }));
+    for (const v of ["0", "3", "4", "5", "6"]) minAff.append(h("option", { text: v === "0" ? t("filter.anyAffixes") : t("filter.minAffixes", { n: v }), attrs: { value: v } }));
+    const behind = h("select", { attrs: { "aria-label": t("filter.behindAria") } });
+    for (const v of ["0", "5", "10", "20"]) behind.append(h("option", { text: v === "0" ? t("filter.anyBase") : t("filter.behind", { n: v }), attrs: { value: v } }));
+    const group = h("select", { attrs: { "aria-label": t("filter.groupAria") } });
+    group.append(h("option", { text: t("filter.anyAffix"), attrs: { value: "" } }));
+    for (const g of affixGroups()) group.append(h("option", { text: t("filter.with", { group: g.label }), attrs: { value: g.group } }));
     box.append(h("div", { class: "row", style: "gap:4px" }, action, rarity, slot, minAff, behind, group,
-        h("button", { class: "btn alt", text: "Add rule", on: { click: () => edit(rs => {
+        h("button", { class: "btn alt", text: t("filter.add"), on: { click: () => edit(rs => {
             const r: FilterRule = { on: true, action: action.value as FilterRule["action"] };
             if (rarity.value) r.rarity = [rarity.value as Item["rarity"]];
             if (slot.value) r.slots = [slot.value];
@@ -1031,13 +1055,49 @@ function filterEditor(c: Ctx): HTMLElement {
             if (group.value) r.group = group.value;
             rs.push(r);
         }) } }),
-        h("button", { class: "btn alt", text: "Reset", on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER)); }) } })));
+        h("button", { class: "btn alt", text: t("filter.reset"), on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(DEFAULT_FILTER)); }) } })));
     // Presets: one click replaces the rules with a ready-made set.
     const same = (a: FilterRule[], b: FilterRule[]) => JSON.stringify(a) === JSON.stringify(b);
-    box.append(h("div", { class: "row presets", style: "gap:4px;margin-top:4px" }, h("span", { class: "muted", style: "font-size:12px", text: "Presets:" }),
-        ...FILTER_PRESETS.map(p => h("button", { class: `chip${same(rules, p.rules) ? " on" : ""}`, text: p.name, title: p.blurb,
+    box.append(h("div", { class: "row presets", style: "gap:4px;margin-top:4px" }, h("span", { class: "muted", style: "font-size:12px", text: t("filter.presets") }),
+        ...FILTER_PRESETS.map(p => h("button", { class: `chip${same(rules, p.rules) ? " on" : ""}`, text: presetName(p.id), title: presetBlurb(p.id),
             on: { click: () => edit(rs => { rs.splice(0, rs.length, ...structuredClone(p.rules)); }) } }))));
     return box;
+}
+
+/** Affix groups for the rule editor, by their name in the current language. */
+function affixGroups(): { group: string; label: string }[] {
+    return [...new Set(Object.values(AFFIXES).map(a => a.group))].map(group => ({ group, label: groupName(group) })).sort((a, b) => a.label.localeCompare(b.label, lang()));
+}
+
+/** A loot rule in words: "Salvage plain/enchanted, base 10+ levels behind". */
+export function ruleText(r: FilterRule): string {
+    const parts: string[] = [];
+    parts.push(r.rarity?.length ? r.rarity.map(x => t(`rarity.${x}`)).join("/") : t("filter.anyRarity"));
+    if (r.slots?.length) parts.push(r.slots.map(x => t(`slot.${x}`).toLowerCase()).join("/"));
+    if (r.minIlvl) parts.push(t("rule.ilvl", { n: r.minIlvl }));
+    if (r.behind) parts.push(t("rule.behind", { n: r.behind }));
+    if (r.minAffixes) parts.push(t("rule.affixes", { n: r.minAffixes }));
+    if (r.group) parts.push(t("rule.with", { group: groupName(r.group) }));
+    return t(r.action === "keep" ? "rule.keep" : "rule.salvage", { what: parts.join(t("common.list")) });
+}
+
+/**
+ * Stat breakdown sources are English names (a class, an attribute, a passive, a support, an item);
+ * this turns them into the current language, items by what the hero wears.
+ */
+function sourceNames(st: GameState): (src: string) => string {
+    const map = new Map<string, string>();
+    const add = (en: string, local: string) => { if (!map.has(en)) map.set(en, local); };
+    for (const c0 of Object.values(CLASSES)) add(c0.name, className(c0.id));
+    add("Might", t("attr.str")); add("Grace", t("attr.dex")); add("Wit", t("attr.int"));
+    for (const s of Object.values(SKILLS)) add(s.name, skillName(s.id));
+    for (const s of Object.values(SUPPORTS)) add(s.name, supportName(s.id));
+    for (const n of Object.values(PASSIVES)) add(n.name, nodeName(n));
+    for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
+    for (const p of Object.values(COMPANIONS)) add(`Companion: ${p.name}`, `${t("pets.title")}: ${companionName(p.id)}`);
+    add("Map", t("atlas.maps"));
+    for (const s of SLOTS) { const it = st.hero.equipment[s]; if (it) add(itemLabel(it), itemName(it)); }
+    return src => map.get(src) ?? src;
 }
 
 /** Where each calling is shown on the creation screen. */
@@ -1055,16 +1115,17 @@ function callingScene(cls: string, bg: HTMLCanvasElement, into: HTMLCanvasElemen
     g.fillStyle = "rgba(0,0,0,.35)";
     g.beginPath(); g.ellipse(SCENE_W / 2, ground, 14, 3, 0, 0, Math.PI * 2); g.fill();
     // The art may not be in yet (a first open): say so rather than show an empty stage.
-    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, "LOADING", SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
+    if (!drawSprite(g, hc.idle, frame, SCENE_W / 2, ground)) drawText(g, t("create.loading"), SCENE_W / 2, SCENE_H / 2 - 3, "#b5a48b", "center");
 }
 
 /** Character creation: the three callings side by side, each in its own scenery; the picked one breathes. */
 export function creationView(onStart: (name: string, cls: string) => void): HTMLElement {
-    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": "Hero name", spellcheck: "false", autocomplete: "off" } });
+    const name = h("input", { attrs: { type: "text", maxlength: "20", value: "Ashling", "aria-label": t("create.nameAria"), spellcheck: "false", autocomplete: "off" } });
     let cls = Object.keys(CLASSES)[0]!;
-    const start = () => onStart(name.value.replace(/[^ -~]/g, "").trim().slice(0, 20) || "Ashling", cls);
+    // Printable ASCII and the Cyrillic letters the pixel font draws (the regex stays ASCII for the build).
+    const start = () => onStart(name.value.replace(/[^ -~\u0401\u0404\u0406\u0407\u0410-\u044f\u0451\u0454\u0456\u0457\u0490\u0491]/g, "").trim().slice(0, 20) || "Ashling", cls);
     name.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); start(); } });
-    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": "Calling" } });
+    const grid = h("div", { class: "callings", attrs: { role: "radiogroup", "aria-label": t("create.calling") } });
     let live: { cls: string; bg: HTMLCanvasElement; c: HTMLCanvasElement } | null = null;
     const draw = () => {
         clear(grid);
@@ -1075,15 +1136,15 @@ export function creationView(onStart: (name: string, cls: string) => void): HTML
             const pic = h("canvas", { class: "cscene", attrs: { width: String(SCENE_W), height: String(SCENE_H), "aria-hidden": "true" } });
             callingScene(k.id, bg, pic, 0);
             if (on) live = { cls: k.id, bg, c: pic };
-            const attrs = ([["might", "Might", k.str], ["grace", "Grace", k.dex], ["wit", "Wit", k.int]] as const)
+            const attrs = ([["might", t("attr.str"), k.str], ["grace", t("attr.dex"), k.dex], ["wit", t("attr.int"), k.int]] as const)
                 .map(([gl, label, v]) => h("span", { class: `cattr ${gl}`, title: label }, glyph(gl, 14), h("b", { class: "num", text: String(v) }), h("small", { text: label })));
             grid.append(h("button", { class: `calling${on ? " on" : ""}`, style: `--cc:${k.color}`, attrs: { role: "radio", "aria-checked": String(on) },
                 on: { click: () => { if (cls !== k.id) { cls = k.id; draw(); (grid.querySelector(".calling.on") as HTMLElement | null)?.focus(); } } } },
-                h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: "Chosen" }) : null),
-                h("span", { class: "cname", text: k.name }),
+                h("span", { class: "cpic" }, pic, on ? h("span", { class: "cpick", text: t("create.chosen") }) : null),
+                h("span", { class: "cname", text: className(k.id) }),
                 h("span", { class: "cattrs" }, ...attrs),
-                h("span", { class: "ds", text: k.blurb }),
-                h("span", { class: "ds muted", text: `Starts with ${SKILLS[k.startSkill]!.name} and a ${BASES[k.startWeapon]!.name}.` })));
+                h("span", { class: "ds", text: classBlurb(k.id) }),
+                h("span", { class: "ds muted", text: t("create.starts", { skill: skillName(k.startSkill), weapon: baseName(k.startWeapon) }) })));
         }
     };
     draw();
@@ -1097,11 +1158,11 @@ export function creationView(onStart: (name: string, cls: string) => void): HTML
         if (live) callingScene(live.cls, live.bg, live.c, f);
     }, 150);
     const root = h("div", { class: "create" },
-        h("div", { class: "card story", text: "The sun of the March went out three hundred years ago. What is left of it fell as embers, and whoever holds one does not stay dead." }),
-        h("div", { class: "sec", text: "Choose a calling" }),
+        h("div", { class: "card story", text: t("create.story") }),
+        h("div", { class: "sec", text: t("create.choose") }),
         grid,
-        h("div", { class: "card col" }, h("h3", { text: "Name your Kindled" }),
-            h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: "Wake up", on: { click: start } })),
-            h("div", { class: "muted", style: "font-size:12px", text: "Up to 20 letters, numbers and spaces. Enter wakes them." })));
+        h("div", { class: "card col" }, h("h3", { text: t("create.name") }),
+            h("div", { class: "row namebar" }, name, h("button", { class: "btn hot", text: t("create.wake"), on: { click: start } })),
+            h("div", { class: "muted", style: "font-size:12px", text: t("create.nameNote") })));
     return root;
 }
