@@ -16,6 +16,7 @@ import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
 import { blessing, tickShrine } from "../shrine";
 import { addStone, autoSetStones, rollSockets, rollStone } from "../sockets";
 import { tickMarket } from "../market";
+import { pinnacleEcho, rollMapEcho } from "../echoes";
 import { ACT_COMPANION } from "../data";
 
 export const STEP_MS = 100;
@@ -50,6 +51,8 @@ export interface SimEvents {
     companion?(id: string, isNew: boolean): void;
     /** An ember stone went into the pouch. */
     stone?(key: string): void;
+    /** An echo (lore page) was found. */
+    echo?(id: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -327,7 +330,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         ev.stone?.(key);
         if (state.settings.autoStones && autoSetStones(state)) changed = true;
     }
-    endgameDrops(state, run, m, rng);
+    endgameDrops(state, run, m, rng, ev);
     // Companions: rarely from bosses, more often from map bosses, often from pinnacles.
     if (d.boss) {
         const had = { ...state.companions };
@@ -339,7 +342,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
 }
 
 /** Maps drop in the endgame and in the last act; sigils from map bosses. */
-function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng): void {
+function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng, ev: SimEvents = {}): void {
     const d = MONSTERS[m.def]!;
     const inMap = !!run.map && !run.map.pinnacle;
     const act3 = !run.map && ZONES[run.zone]?.act === 3;
@@ -351,6 +354,7 @@ function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng
     if (rng.chance(chance)) {
         if (addMap(state, rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas)))) state.totals.maps = (state.totals.maps ?? 0) + 1;
     }
+    if (inMap && d.boss) { const echo = rollMapEcho(state, rng); if (echo) ev.echo?.(echo); }
     if (inMap && d.boss && tier > 0) {
         const eligible = Object.values(PINNACLES).filter(p => tier >= p.minTier);
         if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
@@ -476,6 +480,8 @@ export function reconcileRewards(state: GameState, ev: SimEvents = {}): void {
             pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
         }
     }
+    // Pinnacles beaten before echoes existed leave theirs now.
+    for (const id of Object.keys(state.pinnacleKills ?? {})) if ((state.pinnacleKills[id] ?? 0) > 0) pinnacleEcho(state, id);
     // The road: every zone after a cleared one is open.
     ZONE_ORDER.forEach((z, i) => {
         const next = ZONE_ORDER[i + 1];

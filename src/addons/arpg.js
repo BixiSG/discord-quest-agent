@@ -2416,6 +2416,78 @@
     });
   }
 
+  // src/core/data/echoes.ts
+  var list8 = [
+    {
+      id: "bell",
+      who: "The bell keeper",
+      text: "Every evening I rang the sun down, and every morning it came back up the hill. The last evening I rang and rang. The rope wore through my hands. I am still ringing. Someone has to be ready when it answers."
+    },
+    {
+      id: "saltchild",
+      who: "A child of Saltmire",
+      text: "Mother said the tide gives back what it takes. It gave her back on the fourth day. She sat by the fire and didn't feel it. I stopped asking her to come to bed."
+    },
+    {
+      id: "warden",
+      who: "The Tide-Warden",
+      text: "The order was to hold the gate until the light returned. Nobody said what to do if it didn't. So I held it. The sea was patient. So was I. Only one of us was dead."
+    },
+    {
+      id: "lamplighter",
+      who: "A lamplighter",
+      text: "I lit the road from the shore to the chapel so the dead could find their way home. In the twelfth year the oil ran out. They still walk it in the dark. They know it by heart now."
+    },
+    {
+      id: "sandwright",
+      who: "The Sandwright",
+      text: "Glass remembers light. I built towers to hold the last noon, mirror on mirror, so the Barrens would never be dark. They held it for a year. Then the light got bored of us and went looking for the sun."
+    },
+    {
+      id: "regent",
+      who: "The Glass Regent",
+      text: "The Choir offered a bargain: a song that would keep the glass warm forever. The price was every voice in the Barrens but theirs. I thought it was a fair trade. I was the only one they let keep a mouth, so I could say yes."
+    },
+    {
+      id: "judge",
+      who: "The Ember Judge",
+      text: "When the embers fell someone had to decide who deserved to wake. I weighed them: the brave, the kind, the useful. The embers did not care for my scales. They woke whoever they landed on. I have been judging the embers ever since."
+    },
+    {
+      id: "matron",
+      who: "The Cinder Matron",
+      text: "My hounds were pups when the sun came down. They were cold, so I let them sleep in the crater. Now they are made of it. They still come when I whistle. They still bite what comes near the fire."
+    },
+    {
+      id: "drownedsun",
+      who: "The Drowned Sun",
+      pinnacle: "drownedsun",
+      text: "They could not bring the sun back, so the Warden's people made one. They sank the light of a thousand lamps into the sea and pulled up something round and bright and cold. It rose. It did not warm anything. It has been rising ever since, and I am what it rises through."
+    },
+    {
+      id: "glasschoir",
+      who: "The Glass Choir",
+      pinnacle: "glasschoir",
+      text: "We are the last noon, broken into a thousand pieces, each singing the note it heard as the sun fell. Together we are almost the sound of daylight. Almost. Every voice we take gets us closer."
+    },
+    {
+      id: "ashenking",
+      who: "The Ashen King",
+      pinnacle: "ashenking",
+      text: "I was crowned at the moment the sun hit the ground. I swore to rule until it rose again, and I have kept every oath I ever made. Do you understand what you are asking, Kindled? To end my reign you must keep my promise for me."
+    },
+    {
+      id: "hollowcrown",
+      who: "The Hollow Crown",
+      pinnacle: "hollowcrown",
+      text: "Before the March had kings it had me: a crown waiting for a head. The sun sat on my brow for a thousand years and I was full. Then I was hungry. I ate the light because it was there, as the tide takes the shore. You carry a spark of it in your chest. I can smell it."
+    }
+  ];
+  var ECHOES = Object.fromEntries(list8.map((e2) => [e2.id, e2]));
+  var ECHO_ORDER = list8.map((e2) => e2.id);
+  var MAP_ECHOES = list8.filter((e2) => !e2.pinnacle).map((e2) => e2.id);
+  var ECHOES_PER_POINT = 3;
+
   // src/core/stats.ts
   var StatBag = class _StatBag {
     by = /* @__PURE__ */ new Map();
@@ -2423,9 +2495,9 @@
       for (const m4 of mods) this.add(m4);
     }
     add(m4) {
-      let list8 = this.by.get(m4.stat);
-      if (!list8) this.by.set(m4.stat, list8 = []);
-      list8.push(m4);
+      let list9 = this.by.get(m4.stat);
+      if (!list9) this.by.set(m4.stat, list9 = []);
+      list9.push(m4);
     }
     addAll(mods) {
       for (const m4 of mods) this.add(m4);
@@ -3242,6 +3314,7 @@
       shrine: { keep: [], orbs: true },
       stones: {},
       market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] },
+      echoes: [],
       totals: newTotals(),
       nextUid: 1,
       craftSeq: 0,
@@ -3612,6 +3685,35 @@
     return null;
   }
 
+  // src/core/echoes.ts
+  function grantEcho(s, id) {
+    if (!ECHOES[id]) return false;
+    s.echoes ??= [];
+    if (s.echoes.includes(id)) return false;
+    s.echoes.push(id);
+    const earned = Math.floor(s.echoes.length / ECHOES_PER_POINT);
+    s.world.rewards ??= [];
+    for (let k = 1; k <= earned; k++) {
+      const key = `echo:${k}`;
+      if (!s.world.rewards.includes(key)) {
+        s.world.rewards.push(key);
+        s.atlas.points++;
+      }
+    }
+    return true;
+  }
+  function rollMapEcho(s, rng) {
+    const unfound = MAP_ECHOES.filter((id2) => !(s.echoes ?? []).includes(id2));
+    if (!unfound.length || !rng.chance(0.03)) return null;
+    const id = rng.pick(unfound);
+    grantEcho(s, id);
+    return id;
+  }
+  function pinnacleEcho(s, pinnacle) {
+    const e2 = Object.values(ECHOES).find((x) => x.pinnacle === pinnacle);
+    return e2 && grantEcho(s, e2.id) ? e2.id : null;
+  }
+
   // src/core/maps.ts
   var endgameOpen = (state) => !!state.world.clears.a3_sunfall;
   function atlasEffects(state) {
@@ -3829,6 +3931,7 @@
         state.atlas.points += 2;
         pushLog(state, "boss", `${PINNACLES[m4.pinnacle].name} is defeated: +2 atlas points.`);
       }
+      pinnacleEcho(state, m4.pinnacle);
       return;
     }
     if (m4.tier > 0 && !state.atlas.tiers.includes(m4.tier)) {
@@ -4675,7 +4778,7 @@
       ev.stone?.(key);
       if (state.settings.autoStones && autoSetStones(state)) changed = true;
     }
-    endgameDrops(state, run, m4, rng);
+    endgameDrops(state, run, m4, rng, ev);
     if (d.boss) {
       const had = { ...state.companions };
       const pet = rollCompanionDrop(state, rng, m4.level, run.map?.pinnacle ? 0.15 : run.map ? 4e-3 : 3e-3);
@@ -4687,7 +4790,7 @@
     }
     return changed ? runSheet(state) : sheet;
   }
-  function endgameDrops(state, run, m4, rng) {
+  function endgameDrops(state, run, m4, rng, ev = {}) {
     const d = MONSTERS[m4.def];
     const inMap = !!run.map && !run.map.pinnacle;
     const act3 = !run.map && ZONES[run.zone]?.act === 3;
@@ -4698,6 +4801,10 @@
     const chance = base * (act3 ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
     if (rng.chance(chance)) {
       if (addMap(state, rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas)))) state.totals.maps = (state.totals.maps ?? 0) + 1;
+    }
+    if (inMap && d.boss) {
+      const echo = rollMapEcho(state, rng);
+      if (echo) ev.echo?.(echo);
     }
     if (inMap && d.boss && tier > 0) {
       const eligible = Object.values(PINNACLES).filter((p) => tier >= p.minTier);
@@ -4810,6 +4917,7 @@
         pushLog(state, "info", `${zoneOf(trial).name} passed: +${TRIAL_POINTS} ascendancy points.`);
       }
     }
+    for (const id of Object.keys(state.pinnacleKills ?? {})) if ((state.pinnacleKills[id] ?? 0) > 0) pinnacleEcho(state, id);
     ZONE_ORDER.forEach((z, i) => {
       const next = ZONE_ORDER[i + 1];
       if (next && cleared(z) && !w2.unlocked.includes(next)) w2.unlocked.push(next);
@@ -5022,11 +5130,13 @@
       s.shrine ??= { keep: [], orbs: true };
       return s;
     },
-    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use).
+    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use), echoes
+    // (pinnacles already beaten give theirs through reconcileRewards on load).
     6: (s) => {
       s.stones ??= {};
       s.settings.autoStones ??= true;
       s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
+      s.echoes ??= [];
       return s;
     }
   };
@@ -5272,6 +5382,7 @@
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === void 0)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]) };
+    s.echoes = [...new Set(strs(s.echoes, (id) => !!ECHOES[id]) ?? [])];
     s.stones = Object.fromEntries(Object.entries(counts(s.stones)).filter(([k, v]) => parseStone(k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
     const mk = s.market && typeof s.market === "object" ? s.market : {};
     const okGear = (o) => {
@@ -7821,10 +7932,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       if (it.locked) cell.append(h("span", { class: "lockb", attrs: { "aria-hidden": "true" } }, glyph("lock", 9)));
       return cell;
     };
-    const group = (label, list8, worn = false) => {
-      if (!list8.length) return;
-      rack.append(h("div", { class: "gridsep", text: `${label} (${list8.length})` }));
-      for (const it of list8) {
+    const group = (label, list9, worn = false) => {
+      if (!list9.length) return;
+      rack.append(h("div", { class: "gridsep", text: `${label} (${list9.length})` }));
+      for (const it of list9) {
         const cell = cellFor(it);
         if (worn) markWorn(cell, SLOTS.find((s) => st.hero.equipment[s] === it));
         rack.append(cell);
@@ -8420,14 +8531,14 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       tierChips(st.atlas.tiers),
       h("div", { class: "muted", style: "font-size:12px", text: `Dying in a map loses it and ${MAP_DEATH_XP * 100}% of a level's experience. Mods make maps harder and richer.` })
     ));
-    const list8 = h("div", { class: "col", style: "gap:4px" });
+    const list9 = h("div", { class: "col", style: "gap:4px" });
     const maps = [...st.maps].sort((a, b) => b.tier - a.tier || b.mods.length - a.mods.length);
     for (const m4 of maps.slice(0, 40)) {
       const on = c.sel.uid === m4.uid;
       const area = MAP_AREAS[m4.area];
       const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
       if (thumb) thumb.className = "mthumb";
-      list8.append(h(
+      list9.append(h(
         "div",
         { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => {
           c.sel = { uid: m4.uid };
@@ -8442,7 +8553,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
         )
       ));
     }
-    if (!maps.length) list8.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
+    if (!maps.length) list9.append(h("div", { class: "muted", text: "No maps yet. The Outskirts and Act 3 drop them." }));
     const sel = st.maps.find((m4) => m4.uid === c.sel.uid);
     const bench = h("div", { class: "row", style: "gap:4px" });
     if (sel) {
@@ -8461,7 +8572,7 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
       "div",
       { class: "card col" },
       h("h3", { text: "Maps" }),
-      list8,
+      list9,
       sel ? h("div", { class: "col" }, h("div", { class: "muted", text: `Craft ${mapLabel(sel)}:` }), bench) : null
     ));
     const left = atlasPointsLeft(st);
@@ -8630,10 +8741,10 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
     const critFactor = 1 + sk.critChance / 100 * (sk.critMulti / 100 - 1);
     const breakdown = (stat, title) => () => {
       const mods = s.bag.mods(stat);
-      const list8 = h("div", { class: "kv" });
-      for (const m4 of mods) list8.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
-      if (!mods.length) list8.append(h("div", { text: "No modifiers" }), h("div"));
-      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list8, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
+      const list9 = h("div", { class: "kv" });
+      for (const m4 of mods) list9.append(h("div", { text: m4.src ?? "?" }), h("div", { class: "num", text: `${m4.kind === "flat" ? "+" : ""}${m4.value}${m4.kind === "flat" ? "" : "% " + m4.kind}${m4.tags ? " [" + m4.tags.join(",") + "]" : ""}` }));
+      if (!mods.length) list9.append(h("div", { text: "No modifiers" }), h("div"));
+      const close = c.modal(h("div", { class: "card" }, h("h3", { text: title }), list9, h("div", { style: "margin-top:8px" }, h("button", { class: "btn", text: "Close", on: { click: () => close() } }))));
     };
     const run = st.activity.run;
     const zone = run ? runZone(st, run) : ZONES[st.activity.zone];

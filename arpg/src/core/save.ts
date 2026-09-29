@@ -73,11 +73,13 @@ export const MIGRATIONS: Record<number, Migration> = {
         s.shrine ??= { keep: [], orbs: true };
         return s;
     },
-    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use).
+    // v7 (round 5): the stone pouch, auto-set, the Wandering Market (rolled on first use), echoes
+    // (pinnacles already beaten give theirs through reconcileRewards on load).
     6: (s: any) => {
         s.stones ??= {};
         s.settings.autoStones ??= true;
         s.market ??= { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] };
+        s.echoes ??= [];
         return s;
     },
 };

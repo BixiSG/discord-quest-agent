@@ -154,6 +154,8 @@ export interface GameState {
     stones: Record<string, number>;
     /** The Wandering Market (v7). */
     market: MarketState;
+    /** Echoes found (v7): lore pages from map bosses and pinnacles. */
+    echoes: string[];
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */

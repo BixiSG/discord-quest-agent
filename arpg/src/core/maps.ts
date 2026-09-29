@@ -4,6 +4,7 @@ import { MAX_LEVEL, ATLAS, CURRENCIES, MAP_AREAS, MAP_MODS, MAX_TIER, PINNACLES,
 import { Rng, hashSeed } from "./rng";
 import { pushLog } from "./game";
 import type { GameState, MapItem, RunMap } from "./state";
+import { pinnacleEcho } from "./echoes";
 import type { DamageType, Mod } from "./types";
 
 /** The endgame opens once the Sunfall is cleared. */
@@ -217,6 +218,8 @@ export function completeMap(state: GameState, m: RunMap): void {
         const first = !state.pinnacleKills[m.pinnacle];
         state.pinnacleKills[m.pinnacle] = (state.pinnacleKills[m.pinnacle] ?? 0) + 1;
         if (first) { state.atlas.points += 2; pushLog(state, "boss", `${PINNACLES[m.pinnacle]!.name} is defeated: +2 atlas points.`); }
+        // Its echo and its piece of the sun (the shard is the kill itself).
+        pinnacleEcho(state, m.pinnacle);
         return;
     }
     if (m.tier > 0 && !state.atlas.tiers.includes(m.tier)) {

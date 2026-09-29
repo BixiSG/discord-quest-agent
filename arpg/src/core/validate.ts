@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { COMPANIONS, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, ECHOES, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
@@ -191,6 +191,8 @@ export function validateState(raw: unknown): GameState {
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
+    // Echoes (v7): known, once each.
+    s.echoes = [...new Set(strs(s.echoes, id => !!ECHOES[id]) ?? [])];
     // Stone pouch (v7): known stones, whole counts.
     s.stones = Object.fromEntries(Object.entries(counts(s.stones)).filter(([k, v]) => parseStone(k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
     // Market (v7): offers must be sound, else the stock is rolled again on the next tick.
