@@ -1,5 +1,12 @@
 # Hollowmarch - roadmap and design notes (after round 4)
 
+**Status (round 5 built):** the Market (Pedlar, Jeweller), sockets and ember stones, twelve
+echoes, three sun shards and the Rekindling with ten dawn perks are in the game, in
+en/ru/uk. Changes from the plan below: the Cartographer is not built (maps already drop
+plenty); relighting needs the three pinnacles that hold a piece of the sun, not the Hollow
+Crown (it ate the light; it stays the optional fight); pinnacles were retuned so an
+invested level-85 build can beat them (`tools/pinnacles.ts`).
+
 Where the game is: three acts (about 8 hours idle), maps T1-16 and the endless Depths,
 an atlas tree, four pinnacles, 26 relics with a codex, nine companions, contracts, the
 ember shrine, crafting (10 orbs, hone, bench), an upkeeping stash. Ru/uk localisation is

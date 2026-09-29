@@ -181,9 +181,11 @@ new text goes into the en/ru/uk tables from the start.
       +10% xp/dust, +1 passive point, world 15% tougher/20% richer per dawn; ten dawn perks).
 - [x] Pinnacle balance: they were unbeatable past the Drowned Sun; now an invested level-85 build
       wins the Choir 2/3 and nearly the King (tools/pinnacles.ts). The Hollow Crown stays optional.
-- [ ] UI for 5a-5c (Market tab on key 0, sockets on item cards and in the Forge, stone pouch,
-      echoes in the Log, the relight dialog and dawn perk pick, dawn title) - after the localisation
-      merge, with en/ru/uk strings. Then docs, shots, live hot-swap.
+- [x] Localisation merged (ru/uk, Cyrillic pixel font, 1,748+ keys; bundle 1.39 MB because the
+      ASCII build escapes Cyrillic).
+- [x] UI for 5a-5c in en/ru/uk: Market tab (key 0), sockets on item cards and in the Forge, the
+      stone pouch with cutting, echoes in the Log, the Rekindling card, relight dialog, dawn story,
+      perk pick, Menu badge. Checked in headless Chrome (en and ru). 197 tests.
 
 ## Next updates (roadmap, 2026-09-29)
 

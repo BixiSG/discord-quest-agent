@@ -149,6 +149,50 @@ the rarer orbs; some add a relic the codex is missing, three maps or a sigil.
 A finished contract waits to be claimed (its dust follows the hero's level at
 claim time); one you don't want can be rerolled for dust.
 
+## Sockets and ember stones (round 5)
+
+Gear carries 0-3 sockets (two-handers and body armour 3, other gear 2,
+jewellery 1); rares drop with 0-2 and the Forge drills one more for dust.
+Six stones in five tiers set into them, and a stone's effect depends on where
+it sits:
+
+| Stone | In a weapon | In armour | In jewellery |
+|---|---|---|---|
+| Ruby | increased fire damage | fire resistance | maximum life |
+| Sapphire | increased cold damage | cold resistance | mana regeneration |
+| Topaz | increased lightning damage | lightning resistance | item rarity |
+| Emerald | increased critical chance | increased evasion | Grace |
+| Onyx | ignores elemental resistance | chaos resistance | life leech |
+| Diamond | attack and cast speed | armour and energy shield | all elemental resistances |
+
+Stones drop rarely (tier by monster level, never Radiant - that is cut from
+three Flawless) and live in a pouch; setting and prying out are free, salvage
+returns them, and auto-set fills empty sockets in worn gear with the stone
+that helps the build most.
+
+## The Wandering Market (round 5)
+
+After the Tide-Warden a caravan camps by the road (the Market tab, key 0).
+The Pedlar sells six pieces of gear at the highest item level reached - two
+for the weakest slots, one socketed, sometimes an unfound relic - and the
+Jeweller five stones. Stock rotates every two hours of the hero's time; a
+refresh now costs dust, doubling within a rotation. Bought gear is worn at
+once if it is an upgrade.
+
+## Echoes and the Rekindling (round 5)
+
+Twelve echoes tell what happened the day the sun fell: eight from map bosses
+(3% each, unfound first), one from each pinnacle's first kill. Every third is
+an atlas point. Three pinnacles - the Drowned Sun, the Glass Choir, the Ashen
+King - each hold a piece of the sun; with all three the hero can **relight the
+sun**. The March starts again one dawn later: a new hero (any calling) on a
+warm shore. Kept: the relic case and codex, companions and their bond, echoes,
+the stone pouch (with the stones of gear left behind), bought stash room,
+settings, totals and one heirloom. Each dawn: 10% more experience and dust, a
+passive point, a world 15% tougher and 20% richer, and one of ten perks (kept
+for every dawn after). The Hollow Crown, which ate the light, is the optional
+fight beyond.
+
 ## Pinnacles: scouting (round 4)
 
 The Atlas can scout a pinnacle: five fights on a copy of the hero, nothing

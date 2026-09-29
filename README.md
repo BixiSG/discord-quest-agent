@@ -202,6 +202,10 @@ endgame. Nothing runs while the window is closed: the time away is replayed thro
 simulation when you open it, with a "while you were away" report. Fold it into a mini strip
 to keep the fight in a corner, or give it its own button in Discord's title bar.
 
+Traders with rotating stock, gear sockets and ember stones, companions, and a story that
+ends with relighting the sun (a new dawn that keeps what you collected). It follows the
+agent's language: English, Russian or Ukrainian.
+
 It has nothing to do with quests and never reads quest data or orbs. Details, controls and
 the design notes are in [`arpg/README.md`](arpg/README.md).
 

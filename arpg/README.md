@@ -30,6 +30,12 @@ It has nothing to do with quests: it never reads quest data or orbs.
   that turn late dust and spare orbs into progress.
 - Loot filter presets and affix rules; a pinnacle scout that fights five times
   on a copy of the hero before you spend sigils.
+- Sockets and six ember stones whose effect depends on the slot; the
+  Wandering Market (a Pedlar and a Jeweller with stock that rotates).
+- An ending: twelve echoes of the day the sun fell, three sun shards, and the
+  Rekindling - relight the sun and start a new dawn, keeping the collection.
+- English, Russian and Ukrainian (the hub's language), in a pixel font with
+  Cyrillic.
 - A 129-node passive tree with keystones.
 - Endgame: maps tier 1-16 with mods, the endless Depths past tier 16, an
   atlas tree and four pinnacle bosses.
