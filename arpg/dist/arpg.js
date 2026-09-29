@@ -4381,94 +4381,208 @@
   var CSS = `
 :host { all: initial; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 .hm {
-  --paper: #fff4dc; --paper2: #ffe3a8; --card: #ffffff; --text: #111111; --muted: #5b5446; --line: #111111;
+  --paper: #f6ecd6; --paper2: #ecd9b0; --card: #fffaf0; --nav: #efe1c1; --text: #1a1410; --muted: #6b5d4b; --line: #1a1410; --ink: #1a1410;
   --ember: #ff5a36; --gold: #ffc233; --teal: #19b3a3; --blue: #3a7bff; --violet: #8b5cf6; --green: #3fbf5f; --red: #e5383b;
-  --r-plain: #d8d8d8; --r-enchanted: #5aa9ff; --r-rare: #ffd23f; --r-relic: #ff8a1f;
+  --r-plain: #d8d2c6; --r-enchanted: #5aa9ff; --r-rare: #ffd23f; --r-relic: #ff8a1f;
   --sh: 4px 4px 0 var(--line);
-  font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; color: var(--text);
+  --display: Bahnschrift, "DIN Alternate", "Arial Narrow", "Segoe UI", sans-serif;
+  --body: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+  font: 13px/1.4 var(--body); color: var(--text);
 }
-.hm.dark { --paper: #2a2533; --paper2: #3a3346; --card: #342e40; --text: #f7f1e6; --muted: #bdb3a3; --line: #000000; }
+.hm.dark { --paper: #221b15; --paper2: #2d241c; --card: #30271f; --nav: #1a1410; --text: #f3e7d3; --muted: #b5a48b; --line: #050403;
+  --r-plain: #8f877b; }
+.cap { font-family: var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+
+/* ---- frame ---- */
 .win {
-  position: fixed; z-index: 10050; display: flex; flex-direction: column; min-width: 360px; min-height: 320px;
-  background: var(--paper); border: 3px solid var(--line); box-shadow: 8px 8px 0 var(--line); overflow: hidden;
+  position: fixed; z-index: 10050; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr);
+  min-width: 380px; min-height: 340px; background: var(--paper); border: 3px solid var(--line);
+  box-shadow: 8px 8px 0 var(--line); overflow: hidden; container: win / inline-size;
 }
-.bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--ember); border-bottom: 3px solid var(--line); cursor: move; user-select: none; touch-action: none; }
-.bar .logo { font-weight: 900; letter-spacing: 1px; font-size: 14px; color: #111; text-transform: uppercase; }
-.bar .who { flex: 1; font-weight: 700; color: #111; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
 .win:focus { outline: none; }
-.x { cursor: pointer; background: var(--card); color: var(--text); border: 2px solid var(--line); width: 26px; height: 26px; font-weight: 900; box-shadow: 2px 2px 0 var(--line); }
-.x:hover { background: var(--gold); color: #111; }
-.grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
+.win.flash { animation: flash .5s cubic-bezier(.2,.8,.3,1); }
+@keyframes flash { 0% { box-shadow: 8px 8px 0 var(--line), 0 0 0 6px var(--gold); } 100% { box-shadow: 8px 8px 0 var(--line), 0 0 0 0 var(--gold); } }
+.bar { display: flex; align-items: center; gap: 10px; height: 34px; padding-right: 5px; background: var(--ember); color: #1a1410;
+  border-bottom: 3px solid var(--line); cursor: move; user-select: none; touch-action: none; }
+.logo { align-self: stretch; display: flex; align-items: center; padding: 0 11px; background: #1a1410; color: var(--ember);
+  font: 700 16px/1 var(--display); font-stretch: condensed; letter-spacing: 2.5px; text-transform: uppercase; }
+.who { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 9px; white-space: nowrap; overflow: hidden; }
+.who b { font: 700 15px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .6px; }
+.who span { font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.ctls { display: flex; gap: 5px; }
+.ctl { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; cursor: pointer; background: #fff4dc; color: #1a1410;
+  border: 2px solid #1a1410; box-shadow: 2px 2px 0 #1a1410; }
+.ctl:hover { background: var(--gold); }
+.ctl.x:hover { background: #1a1410; color: var(--ember); }
+.ctl:active { transform: translate(2px, 2px); box-shadow: none; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .win:focus-visible { outline: 3px dashed var(--ember); outline-offset: 2px; }
+.grip { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none; z-index: 4;
   background: linear-gradient(135deg, transparent 50%, var(--line) 50%, var(--line) 60%, transparent 60%, transparent 70%, var(--line) 70%, var(--line) 80%, transparent 80%); }
-.stage { position: relative; border-bottom: 3px solid var(--line); background: #111; flex: none; }
-.stage canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-.hud { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; padding: 6px 8px; border-bottom: 3px solid var(--line); background: var(--paper2); flex: none; }
-.meter { position: relative; height: 16px; border: 2px solid var(--line); background: var(--card); overflow: hidden; }
-.meter i { position: absolute; left: 0; top: 0; bottom: 0; }
-.meter span { position: relative; font-size: 11px; font-weight: 800; padding-left: 4px; line-height: 12px; color: var(--text); text-shadow: 1px 1px 0 var(--paper); white-space: nowrap; }
-.tabs { display: flex; gap: 0; border-bottom: 3px solid var(--line); background: var(--paper); flex: none; overflow-x: auto; }
-.tabs button { flex: 1; min-width: 60px; padding: 6px 4px; background: transparent; border: 0; border-right: 3px solid var(--line); font-weight: 800; color: var(--text); cursor: pointer; font-size: 12px; text-transform: uppercase; }
-.tabs button:last-child { border-right: 0; }
-.tabs button.on { background: var(--gold); color: #111; }
-.tabs button:hover:not(.on) { background: var(--paper2); }
-.body { flex: 1; overflow: auto; padding: 10px; }
+.win.max .grip { display: none; }
+
+/* stage + vitals */
+.top { display: grid; grid-template-columns: minmax(0, 1fr) 216px; border-bottom: 3px solid var(--line); }
+.stage { position: relative; background: #111; border-right: 3px solid var(--line); overflow: hidden; min-height: 60px; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+.top.nostage { grid-template-columns: 1fr; }
+.top.nostage .stage { display: none; }
+.top.nostage .vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+.top.nostage .where { border-top: 0; padding-top: 0; }
+.vitals { display: flex; flex-direction: column; gap: 7px; padding: 8px 10px 9px; background: var(--paper2); min-width: 0; position: relative; }
+.vt { display: grid; grid-template-columns: 1fr auto; align-items: baseline; row-gap: 3px; min-width: 0; }
+.vt .k { font: 700 11px/1 var(--display); font-stretch: condensed; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+.vt .v { font: 700 11px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.vt .track { grid-column: 1 / -1; position: relative; height: 10px; border: 2px solid var(--line); background: var(--card); overflow: hidden; }
+.vt .track i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .12s linear; }
+.vt.life .track { height: 14px; } .vt.life i { background: var(--red); }
+.vt.es i { background: #7fd1ff; } .vt.mana i { background: var(--blue); } .vt.flask i { background: var(--green); }
+.vt.mlife .track { height: 12px; } .vt.mlife i { background: var(--red); } .vt.mxp i { background: var(--gold); }
+.where { margin-top: auto; padding-top: 7px; border-top: 2px dashed var(--line); display: flex; flex-direction: column; gap: 1px; font-size: 12px; min-width: 0; }
+.where > b { font: 700 14px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.where .dps { margin-top: 3px; font-size: 11px; color: var(--muted); }
+.where .dps b { font-size: 13px; color: var(--text); margin-right: 2px; }
+
+/* experience strip */
+.xp { display: flex; align-items: stretch; height: 24px; border-bottom: 3px solid var(--line); background: var(--card); }
+.xp .lv { display: flex; align-items: center; padding: 0 11px; background: #1a1410; color: var(--gold); font: 700 14px/1 var(--display); font-stretch: condensed; letter-spacing: 1.5px; }
+.xp .track { flex: 1; position: relative; overflow: hidden; }
+.xp .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); box-shadow: 2px 0 0 var(--line); transition: width .2s linear; }
+.xp .track .v { position: relative; display: block; padding-left: 9px; font: 700 11px/21px var(--mono); white-space: nowrap; color: var(--text); }
+.hm.dark .xp .track .v { text-shadow: 0 0 3px #1a1410, 0 0 3px #1a1410; }
+.xp .eta { display: flex; align-items: center; padding: 0 10px; font: 700 11px/1 var(--mono); border-left: 3px solid var(--line); background: var(--paper2); white-space: nowrap; }
+.xp .eta:empty { display: none; }
+
+/* nav rail + content */
+.main { display: grid; grid-template-columns: 124px minmax(0, 1fr); min-height: 0; }
+.nav { display: flex; flex-direction: column; background: var(--nav); border-right: 3px solid var(--line); overflow: auto; scrollbar-width: none; }
+.nav button { position: relative; display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 8px; padding: 8px 10px 8px 12px;
+  background: transparent; color: var(--text); border: 0; border-bottom: 2px solid var(--line); cursor: pointer; text-align: left;
+  font: 700 14px/1 var(--display); font-stretch: condensed; letter-spacing: 1.2px; text-transform: uppercase; }
+.nav button svg { opacity: .8; }
+.nav button .key { font: 700 10px/1 var(--mono); color: var(--muted); }
+.nav button:hover:not(.on) { background: var(--paper2); }
+.nav button.on { background: var(--gold); color: #1a1410; box-shadow: inset 5px 0 0 #1a1410; }
+.nav button.on svg { opacity: 1; } .nav button.on .key { color: #1a1410; }
+.nav .badge { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); min-width: 17px; height: 15px; padding: 0 3px; background: var(--ember); color: #1a1410;
+  border: 2px solid var(--line); font: 800 9px/11px var(--mono); text-align: center; }
+.body { overflow: auto; padding: 14px 16px 22px; min-width: 0; position: relative; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.body::-webkit-scrollbar { width: 12px; } .body::-webkit-scrollbar-thumb { background: var(--line); border: 3px solid var(--paper); }
+.win.creating .top, .win.creating .xp, .win.creating .nav { display: none; }
+.win.creating .main { grid-template-columns: 1fr; }
+
+/* mini mode: a strip that keeps playing */
+.minibox { display: none; }
+.win.mini { grid-template-rows: auto auto; min-width: 0; min-height: 0; box-shadow: 6px 6px 0 var(--line); }
+.win.mini .top, .win.mini .xp, .win.mini .main, .win.mini .grip, .win.mini .who span, .win.mini .ctl.sz, .win.mini .ctl.mx { display: none; }
+.win.mini .logo { font-size: 13px; letter-spacing: 1.5px; padding: 0 8px; }
+.win.mini .minibox { display: grid; gap: 6px; padding: 8px 10px 9px; background: var(--paper2); }
+.minibox .mline { font: 700 12px/1.2 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.minibox .mlast { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.minibox .mlast:empty { display: none; }
+
+/* one column when the window is narrow */
+@container win (max-width: 640px) {
+  .top { grid-template-columns: 1fr; }
+  .stage { border-right: 0; border-bottom: 3px solid var(--line); }
+  .vitals { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .where { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .where .dps { margin-top: 0; }
+  .main { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .nav { flex-direction: row; border-right: 0; border-bottom: 3px solid var(--line); overflow-x: auto; }
+  .nav button { flex: 1 0 auto; grid-template-columns: auto; justify-items: center; padding: 8px 10px; border-bottom: 0; border-right: 2px solid var(--line); }
+  .nav button .lbl, .nav button .key { display: none; }
+  .nav button.on { box-shadow: inset 0 -5px 0 #1a1410; }
+  .nav .badge { right: 1px; top: 1px; transform: none; min-width: 15px; }
+}
+
+/* toasts */
+.toasts { position: absolute; left: 136px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; z-index: 6; pointer-events: none; max-width: calc(100% - 160px); }
+.win.mini .toasts, .win.creating .toasts { left: 10px; max-width: calc(100% - 20px); }
+@container win (max-width: 640px) { .toasts { left: 12px; max-width: calc(100% - 24px); } }
+.toast { background: var(--card); color: var(--text); border: 3px solid var(--line); box-shadow: 4px 4px 0 var(--line); padding: 6px 11px;
+  font: 700 13px/1.2 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .6px; animation: tin .22s cubic-bezier(.2,.8,.3,1); }
+.toast.out { animation: tout .22s ease forwards; }
+.toast.t-rare { background: var(--r-rare); color: #1a1410; } .toast.t-relic { background: var(--r-relic); color: #1a1410; }
+.toast.t-enchanted { background: var(--r-enchanted); color: #1a1410; } .toast.t-level { background: #1a1410; color: var(--gold); }
+.toast.t-road { background: var(--teal); color: #1a1410; } .toast.t-err { background: var(--ember); color: #1a1410; }
+@keyframes tin { from { transform: translateX(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tout { to { transform: translateX(-14px); opacity: 0; } }
+
+/* ---- content ---- */
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .col { display: flex; flex-direction: column; gap: 8px; }
 .grow { flex: 1; }
-.card { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); padding: 8px 10px; }
-.card h3 { margin: 0 0 6px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; }
-.btn { cursor: pointer; font: inherit; font-weight: 800; padding: 5px 10px; background: var(--gold); color: #111; border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); }
+.card { background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); padding: 9px 11px; min-width: 0; }
+.card h3 { margin: 0 0 7px; font: 700 13px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: 1.4px; }
+.card > h3:first-child { margin: -9px -11px 9px; padding: 7px 11px 6px; background: var(--paper2); border-bottom: 3px solid var(--line); }
+.btn { cursor: pointer; font: 700 13px/1 var(--display); font-stretch: condensed; text-transform: uppercase; letter-spacing: .9px; padding: 7px 12px 6px;
+  background: var(--gold); color: #1a1410; border: 3px solid var(--line); box-shadow: 3px 3px 0 var(--line); }
 .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--line); }
 .btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
 .btn.alt { background: var(--card); color: var(--text); }
-.btn.hot { background: var(--ember); color: #111; }
+.btn.hot { background: var(--ember); color: #1a1410; }
 .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: 3px 3px 0 var(--line); }
-.tag { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 5px; border: 2px solid var(--line); background: var(--paper2); text-transform: uppercase; }
+.x { cursor: pointer; background: var(--card); color: var(--text); border: 2px solid var(--line); width: 24px; height: 24px; font-weight: 900; box-shadow: 2px 2px 0 var(--line); padding: 0; }
+.x:hover { background: var(--gold); color: #1a1410; }
+.tag { display: inline-block; font: 700 11px/1.3 var(--display); font-stretch: condensed; letter-spacing: .8px; padding: 1px 6px; border: 2px solid var(--line); background: var(--paper2); text-transform: uppercase; }
 .muted { color: var(--muted); }
-.num { font-variant-numeric: tabular-nums; font-family: "Cascadia Mono", Consolas, "Courier New", monospace; }
-.kv { display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; }
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; }
+.kv > * { padding: 2px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 18%, transparent); }
 .kv > :nth-child(odd) { color: var(--muted); }
 .kv > :nth-child(even) { text-align: right; font-weight: 700; }
-.kv .click { cursor: pointer; text-decoration: underline dotted; }
-.big { font-size: 22px; font-weight: 900; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.kv .click { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.kv .click:hover { color: var(--text); }
+.big { font: 700 26px/1 var(--display); font-stretch: condensed; letter-spacing: .5px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; align-items: start; }
 .slots { display: grid; grid-template-columns: repeat(4, 56px); gap: 6px; }
 .cell { position: relative; width: 56px; height: 56px; border: 3px solid var(--line); background: var(--card); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.cell:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--line); }
 .cell canvas { width: 36px; height: 36px; image-rendering: pixelated; }
-.cell .lbl { position: absolute; bottom: 1px; left: 2px; font-size: 9px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+.cell .lbl { position: absolute; bottom: 1px; left: 3px; font: 700 9px/1 var(--display); font-stretch: condensed; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; }
 .cell.sel { outline: 3px solid var(--ember); outline-offset: 1px; }
 .cell.plain { background: var(--r-plain); } .cell.enchanted { background: var(--r-enchanted); } .cell.rare { background: var(--r-rare); } .cell.relic { background: var(--r-relic); }
-.cell.empty { background: repeating-linear-gradient(45deg, var(--paper), var(--paper) 6px, var(--paper2) 6px, var(--paper2) 12px); }
-.stash { display: grid; grid-template-columns: repeat(auto-fill, 48px); gap: 4px; }
+.cell.plain .lbl, .cell.enchanted .lbl, .cell.rare .lbl, .cell.relic .lbl { color: #1a1410; }
+.cell.empty { cursor: default; background: repeating-linear-gradient(45deg, var(--paper), var(--paper) 6px, var(--paper2) 6px, var(--paper2) 12px); }
+.cell.empty:hover { transform: none; box-shadow: none; }
+.stash { display: grid; grid-template-columns: repeat(auto-fill, 48px); gap: 5px; }
 .stash .cell { width: 48px; height: 48px; }
 .stash .cell canvas { width: 30px; height: 30px; }
 .item { min-width: 220px; }
-.item .name { font-weight: 900; font-size: 14px; padding: 4px 6px; border: 3px solid var(--line); margin: -8px -10px 6px; }
-.item .name.plain { background: var(--r-plain); color: #111; } .item .name.enchanted { background: var(--r-enchanted); color: #111; }
-.item .name.rare { background: var(--r-rare); color: #111; } .item .name.relic { background: var(--r-relic); color: #111; }
+.item .name { font: 700 15px/1.15 var(--display); font-stretch: condensed; letter-spacing: .4px; padding: 6px 9px 5px; border-bottom: 3px solid var(--line); margin: -9px -11px 7px; }
+.item .name.plain { background: var(--r-plain); color: #1a1410; } .item .name.enchanted { background: var(--r-enchanted); color: #1a1410; }
+.item .name.rare { background: var(--r-rare); color: #1a1410; } .item .name.relic { background: var(--r-relic); color: #1a1410; }
 .item .aff { font-size: 12px; }
-.item .aff b { font-size: 9px; color: var(--muted); margin-left: 4px; }
-.item hr { border: 0; border-top: 2px dashed var(--line); margin: 6px 0; }
+.item .aff b { font: 700 9px var(--mono); color: var(--muted); margin-left: 5px; }
+.item hr { border: 0; border-top: 2px dashed var(--line); margin: 7px 0; }
 .up { color: var(--green); font-weight: 800; } .down { color: var(--red); font-weight: 800; }
-.skill { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 3px solid var(--line); background: var(--card); cursor: pointer; box-shadow: 3px 3px 0 var(--line); }
-.skill.on { background: var(--gold); color: #111; }
+.hm.dark .up { color: #6fe08a; } .hm.dark .down { color: #ff6b6d; }
+.skill { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; border: 3px solid var(--line); background: var(--card); cursor: pointer; box-shadow: 3px 3px 0 var(--line); }
+.skill:hover:not(.locked):not(.on) { background: var(--paper2); }
+.skill.on { background: var(--gold); color: #1a1410; }
+.skill.on .muted { color: #4d4030; }
 .skill.locked { opacity: .5; cursor: default; }
-.skill .nm { font-weight: 900; }
-.skill .ds { font-size: 11px; }
-.zone { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 3px solid var(--line); background: var(--card); cursor: pointer; margin-bottom: 6px; }
-.zone.on { background: var(--teal); color: #111; }
+.skill .nm { font: 700 15px/1.1 var(--display); font-stretch: condensed; letter-spacing: .4px; text-transform: uppercase; }
+.skill .ds { font-size: 11.5px; }
+.zone { display: flex; gap: 8px; align-items: center; padding: 7px 9px; border: 3px solid var(--line); background: var(--card); cursor: pointer; margin-bottom: 6px; }
+.zone:hover:not(.locked):not(.on) { background: var(--paper2); }
+.zone.on { background: var(--teal); color: #1a1410; }
+.zone.on .muted { color: #16433e; }
 .zone.locked { opacity: .45; cursor: default; }
-.log div { padding: 2px 0; border-bottom: 1px dashed var(--muted); font-size: 12px; }
-.modal { position: absolute; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
-.modal .card { max-width: 440px; width: 100%; max-height: 100%; overflow: auto; }
+.log div { padding: 3px 0; border-bottom: 1px dashed color-mix(in srgb, var(--line) 25%, transparent); font-size: 12px; }
+.modal { position: absolute; inset: 0; background: rgba(26, 20, 16, .55); display: flex; align-items: center; justify-content: center; z-index: 5; padding: 16px; }
+.modal .card { max-width: 460px; width: 100%; max-height: 100%; overflow: auto; animation: pop .2s cubic-bezier(.2,.8,.3,1); }
+@keyframes pop { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 input[type=text], textarea, select { font: inherit; padding: 5px 7px; border: 3px solid var(--line); background: var(--card); color: var(--text); }
-textarea { width: 100%; min-height: 70px; font-family: Consolas, monospace; font-size: 11px; }
+textarea { width: 100%; min-height: 70px; font-family: var(--mono); font-size: 11px; }
 label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-weight: 700; }
-.toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--card); border: 3px solid var(--line); box-shadow: var(--sh); padding: 6px 12px; font-weight: 800; z-index: 6; pointer-events: none; }
+input[type=checkbox] { accent-color: var(--ember); width: 15px; height: 15px; }
 .progress { height: 18px; border: 3px solid var(--line); background: var(--card); } .progress i { display: block; height: 100%; background: var(--teal); }
-.story { font-style: italic; border-left: 6px solid var(--ember); padding-left: 8px; }
+.story { font-style: italic; border-left: 6px solid var(--ember); padding-left: 9px; }
+@media (prefers-reduced-motion: reduce) { .hm *, .hm *::before, .hm *::after { animation: none !important; transition: none !important; } }
 `;
 
   // src/ui/dom.ts
@@ -4507,6 +4621,184 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     return `${s}s`;
   }
   var pct = (x, digits = 0) => (x * 100).toFixed(digits) + "%";
+
+  // src/ui/glyphs.ts
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var BITMAPS = {
+    hero: [
+      "..#####..",
+      ".#######.",
+      "##.....##",
+      "##.#.#.##",
+      "##.....##",
+      ".#######.",
+      "..#...#..",
+      ".###.###.",
+      "#########"
+    ],
+    gear: [
+      ".......##",
+      "......###",
+      ".....###.",
+      "....###..",
+      "#..###...",
+      "##.##....",
+      ".###.....",
+      ".####....",
+      "##..#...."
+    ],
+    forge: [
+      ".........",
+      "#######..",
+      "#########",
+      ".#######.",
+      "...###...",
+      "...###...",
+      "..#####..",
+      ".#######.",
+      "........."
+    ],
+    skills: [
+      "....#....",
+      "...##....",
+      "...###...",
+      "..####.#.",
+      ".#######.",
+      ".###.###.",
+      "###...###",
+      "###...###",
+      ".#######."
+    ],
+    tree: [
+      "###......",
+      "###......",
+      ".#.......",
+      "..#...###",
+      "...####.#",
+      "......###",
+      ".....#...",
+      "....###..",
+      "....###.."
+    ],
+    world: [
+      "##.......",
+      "######...",
+      "########.",
+      "######...",
+      "##.......",
+      "##.......",
+      "##.......",
+      "##.......",
+      "####....."
+    ],
+    atlas: [
+      "....#....",
+      "....#....",
+      "...###...",
+      "..#####..",
+      "#########",
+      "..#####..",
+      "...###...",
+      "....#....",
+      "....#...."
+    ],
+    log: [
+      "#######..",
+      "#.....#..",
+      "#.###.#..",
+      "#.....#..",
+      "#.####.##",
+      "#......##",
+      "#.###..##",
+      "#......#.",
+      "########."
+    ],
+    menu: [
+      ".........",
+      "#########",
+      "#########",
+      ".........",
+      "#########",
+      "#########",
+      ".........",
+      "#########",
+      "#########"
+    ],
+    min: [
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      ".......",
+      "#######",
+      "#######"
+    ],
+    max: [
+      "#######",
+      "#######",
+      "#.....#",
+      "#.....#",
+      "#.....#",
+      "#.....#",
+      "#######"
+    ],
+    restore: [
+      "..#####",
+      "..#####",
+      "#####.#",
+      "#####.#",
+      "#...###",
+      "#...#..",
+      "#####.."
+    ],
+    close: [
+      "##...##",
+      "###.###",
+      ".#####.",
+      "..###..",
+      ".#####.",
+      "###.###",
+      "##...##"
+    ],
+    stage: [
+      "#######",
+      "#.....#",
+      "#.#...#",
+      "#.##..#",
+      "#.###.#",
+      "#.....#",
+      "#######"
+    ]
+  };
+  function glyph(name, size = 16) {
+    const rows = BITMAPS[name];
+    const n = rows.length;
+    let d = "";
+    rows.forEach((row, y) => {
+      let x = 0;
+      while (x < row.length) {
+        if (row[x] !== "#") {
+          x++;
+          continue;
+        }
+        let end = x;
+        while (end < row.length && row[end] === "#") end++;
+        d += `M${x} ${y}h${end - x}v1h-${end - x}z`;
+        x = end;
+      }
+    });
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${n} ${n}`);
+    svg.setAttribute("width", String(size));
+    svg.setAttribute("height", String(size));
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("shape-rendering", "crispEdges");
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "currentColor");
+    svg.append(path);
+    return svg;
+  }
 
   // src/ui/icons.ts
   var P = { k: "#111111", a: "#c9ced6", b: "#8a5a2b", c: "#ff5a36", w: "#ffffff", g: "#ffc233", t: "#19b3a3", v: "#8b5cf6" };
@@ -5858,11 +6150,20 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
 
   // src/ui/app.ts
   var GEO_KEY = "window";
+  var UI_KEY = "frame";
   var QUICK_KEY = "quicksave";
   var BACKUP_MS = 5 * 6e4;
   var AUTOSAVE_MS = 2e4;
   var REPORT_MIN_MS = 6e4;
+  var VITALS_W = 216;
+  var NARROW = 640;
+  var MINI_W = 320;
+  var XP_WINDOW_MS = 10 * 6e4;
+  var STAGE_FRAC = { l: 0.42, m: 0.28 };
+  var STAGE_NEXT = { m: "l", l: "off", off: "m" };
+  var STAGE_TITLE = { m: "Battle view: normal (click for large)", l: "Battle view: large (click to hide)", off: "Battle view: hidden (click to show)" };
   var STOP_EVENTS = ["keydown", "keyup", "keypress", "paste", "copy", "cut", "input"];
+  var NAV_GLYPH = { hero: "hero", gear: "gear", forge: "forge", skills: "skills", tree: "tree", world: "world", atlas: "atlas", log: "log", menu: "menu" };
   var GameWindow = class _GameWindow {
     constructor(store2, kv2, hooks = {}) {
       this.store = store2;
@@ -5876,9 +6177,19 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     root;
     win;
     body;
-    hud;
-    tabs;
+    top;
+    stage;
+    stageBtn;
+    vitals;
+    where;
+    xpLv;
+    xpEta;
+    nav;
     who;
+    miniBtn;
+    maxBtn;
+    miniBox;
+    toasts;
     battle = new Battle();
     state = null;
     view = "hero";
@@ -5890,6 +6201,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     busy = false;
     ctx;
     stopKeys = null;
+    frame = { stage: "m", mini: false, max: false };
+    meters = {};
+    xpLog = [];
+    lastEvent = "";
     onUnload = () => {
       if (!this.state) return;
       this.kv.set(QUICK_KEY, wrap(this.state, Date.now()));
@@ -5899,10 +6214,15 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     get isOpen() {
       return !!this.host;
     }
+    get isMini() {
+      return this.frame.mini;
+    }
     async open() {
       if (this.host) {
         this.win.style.display = "";
         this.refit();
+        this.win.focus();
+        this.flash();
         return;
       }
       this.build();
@@ -5929,6 +6249,14 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       this.state = null;
       this.hooks.onClose?.();
     }
+    /** Like a taskbar button: opens the game, or folds it to mini mode and back. */
+    async toggle() {
+      if (!this.host) {
+        await this.open();
+        return;
+      }
+      this.setMini(!this.frame.mini);
+    }
     // ---- frame ----------------------------------------------------------------
     build() {
       const host = document.createElement("div");
@@ -5940,25 +6268,63 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       this.root.append(style);
       this.stopKeys = (e) => e.stopPropagation();
       for (const k of STOP_EVENTS) host.addEventListener(k, this.stopKeys);
+      const f = this.kv.get(UI_KEY);
+      if (f && typeof f === "object") {
+        if (f.stage === "l" || f.stage === "m" || f.stage === "off") this.frame.stage = f.stage;
+        this.frame.mini = f.mini === true;
+        this.frame.max = f.max === true;
+      }
       const shell = h("div", { class: `hm${this.hooks.theme?.() === "dark" ? " dark" : ""}` });
+      const ctl = (g, title, fn, cls = "") => {
+        const b = h("button", { class: `ctl ${cls}`, title, attrs: { "aria-label": title }, on: { click: fn } }, glyph(g, 12));
+        return b;
+      };
       this.who = h("span", { class: "who" });
+      this.stageBtn = ctl("stage", STAGE_TITLE.m, () => this.setStage(STAGE_NEXT[this.frame.stage]), "sz");
+      this.miniBtn = ctl("min", "Mini mode: keeps playing in a small strip", () => this.setMini(!this.frame.mini));
+      this.maxBtn = ctl("max", "Maximize (double-click the title)", () => this.setMax(!this.frame.max), "mx");
       const bar2 = h(
         "div",
         { class: "bar" },
         h("span", { class: "logo", text: "Hollowmarch" }),
         this.who,
-        h("button", { class: "x", text: "x", title: "Close (progress keeps counting while closed)", on: { click: () => void this.close() } })
+        h("span", { class: "ctls" }, this.stageBtn, this.miniBtn, this.maxBtn, ctl("close", "Close (the road keeps going; it is replayed on open)", () => void this.close(), "x"))
       );
-      this.hud = h("div", { class: "hud" });
-      this.tabs = h("div", { class: "tabs" });
-      this.body = h("div", { class: "body" });
-      const stage = h("div", { class: "stage" }, this.battle.canvas);
-      const grip = h("div", { class: "grip" });
-      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, stage, this.hud, this.tabs, this.body, grip);
+      bar2.addEventListener("dblclick", (e) => {
+        if (!e.target.closest("button")) this.setMax(!this.frame.max);
+      });
+      this.stage = h("div", { class: "stage" }, this.battle.canvas);
+      this.vitals = h("div", { class: "vitals" });
+      for (const [k, label] of [["life", "Life"], ["es", "Shield"], ["mana", "Mana"], ["flask", "Flask"]]) this.vitals.append(this.meter(k, label, "vt " + k));
+      this.where = h("div", { class: "where" });
+      this.vitals.append(this.where);
+      this.top = h("div", { class: "top" }, this.stage, this.vitals);
+      this.xpLv = h("span", { class: "lv" });
+      this.xpEta = h("span", { class: "eta" });
+      const xpM = this.meter("xp", "", "track");
+      const xp = h("div", { class: "xp" }, this.xpLv, xpM, this.xpEta);
+      this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": "Game sections" } });
+      VIEWS.forEach((v, i) => {
+        this.nav.append(h("button", { attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${i + 1})` }, on: { click: () => {
+          this.view = v.id;
+          this.sig = "";
+          if (this.ctx) this.ctx.sel = {};
+          this.renderTab(true);
+          this.body.scrollTop = 0;
+        } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: v.label }), h("span", { class: "key", text: String(i + 1) }), h("span", { class: "badge", attrs: { hidden: "" } })));
+      });
+      this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
+      const main = h("div", { class: "main" }, this.nav, this.body);
+      this.miniBox = h("div", { class: "minibox" });
+      for (const [k, label] of [["mlife", "Life"], ["mxp", "Level"]]) this.miniBox.append(this.meter(k, label, "vt " + k));
+      this.miniBox.append(h("div", { class: "mline" }), h("div", { class: "mlast" }));
+      this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
+      const grip = h("div", { class: "grip", attrs: { "aria-hidden": "true" } });
+      this.win = h("div", { class: "win", attrs: { role: "dialog", "aria-label": "Hollowmarch" } }, bar2, this.top, xp, main, this.miniBox, this.toasts, grip);
       shell.append(this.win);
       this.root.append(shell);
       document.body.append(host);
-      this.placeWindow(stage);
+      this.placeWindow();
       this.dragger(bar2, (dx, dy, g) => {
         g.x += dx;
         g.y += dy;
@@ -5967,7 +6333,6 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         g.w += dx;
         g.h += dy;
       });
-      this.tabs.setAttribute("role", "tablist");
       this.win.tabIndex = -1;
       this.win.addEventListener("keydown", (e) => {
         const t = e.target;
@@ -5982,43 +6347,111 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
           return;
         }
         const n = Number(e.key);
-        if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey) {
-          this.tabs.children[n - 1]?.click();
+        if (n >= 1 && n <= VIEWS.length && !e.ctrlKey && !e.altKey && !e.metaKey && !this.frame.mini) {
+          this.nav.children[n - 1]?.click();
           e.preventDefault();
         }
       });
-      for (const v of VIEWS) {
-        this.tabs.append(h("button", { text: v.label, attrs: { "data-v": v.id, role: "tab", "aria-selected": "false", title: `${v.label} (${VIEWS.indexOf(v) + 1})` }, on: { click: () => {
-          this.view = v.id;
-          this.sig = "";
-          if (this.ctx) this.ctx.sel = {};
-          this.renderTab(true);
-          this.body.scrollTop = 0;
-        } } }));
-      }
+      this.applyFrame();
     }
-    geo = { x: 80, y: 60, w: 760, h: 620 };
-    placeWindow(stage) {
+    /** A labelled bar ("vt" rows in the vitals), or with cls "track" a bare bar carrying its own text. */
+    meter(key, label, cls) {
+      const fill = h("i"), val = h("span", { class: "v" });
+      const track = cls === "track" ? h("div", { class: "track" }, fill, val) : h("div", { class: "track" }, fill);
+      const root = cls === "track" ? track : h("div", { class: cls }, h("span", { class: "k", text: label }), val, track);
+      this.meters[key] = { root, fill, val, last: "", w: "" };
+      return root;
+    }
+    geo = { x: 80, y: 60, w: 900, h: 660 };
+    placeWindow() {
       const g = this.kv.get(GEO_KEY);
       if (g && [g.x, g.y, g.w, g.h].every((v) => typeof v === "number" && Number.isFinite(v))) this.geo = { x: g.x, y: g.y, w: g.w, h: g.h };
+      else {
+        this.geo.w = Math.min(920, window.innerWidth - 48);
+        this.geo.h = Math.min(700, window.innerHeight - 72);
+        this.geo.x = Math.max(8, Math.round((window.innerWidth - this.geo.w) / 2));
+        this.geo.y = Math.max(40, Math.round((window.innerHeight - this.geo.h) / 2));
+      }
       const fit = () => {
         const vw = window.innerWidth, vh = window.innerHeight;
         const g2 = this.geo;
-        g2.w = Math.max(360, Math.min(g2.w, vw - 8));
-        g2.h = Math.max(320, Math.min(g2.h, vh - 8));
-        g2.x = Math.max(0, Math.min(g2.x, vw - g2.w));
-        g2.y = Math.max(0, Math.min(g2.y, vh - g2.h));
-        Object.assign(this.win.style, { left: g2.x + "px", top: g2.y + "px", width: g2.w + "px", height: g2.h + "px" });
-        stage.style.height = Math.round(Math.min(g2.w * H / W, g2.h * 0.36)) + "px";
+        g2.w = Math.max(380, Math.min(g2.w, vw - 8));
+        g2.h = Math.max(340, Math.min(g2.h, vh - 8));
+        g2.x = Math.max(0, Math.min(g2.x, vw - (this.frame.mini ? MINI_W : g2.w)));
+        g2.y = Math.max(0, Math.min(g2.y, vh - (this.frame.mini ? 120 : g2.h)));
+        if (this.frame.mini) {
+          Object.assign(this.win.style, { left: g2.x + "px", top: g2.y + "px", width: MINI_W + "px", height: "" });
+          return;
+        }
+        const box2 = this.frame.max ? { x: 8, y: 8, w: vw - 16, h: vh - 16 } : g2;
+        Object.assign(this.win.style, { left: box2.x + "px", top: box2.y + "px", width: box2.w + "px", height: box2.h + "px" });
+        if (this.frame.stage === "off") {
+          this.stage.style.height = "";
+          return;
+        }
+        const inner = box2.w - 6;
+        const stageW = inner <= NARROW ? inner : inner - VITALS_W - 3;
+        this.stage.style.height = Math.round(Math.min(stageW * H / W, box2.h * STAGE_FRAC[this.frame.stage])) + "px";
       };
       fit();
       this.refit = fit;
     }
     refit = () => {
     };
+    applyFrame() {
+      const f = this.frame;
+      this.win.classList.toggle("mini", f.mini);
+      this.win.classList.toggle("max", f.max && !f.mini);
+      this.top.classList.toggle("nostage", f.stage === "off");
+      this.stageBtn.title = STAGE_TITLE[f.stage];
+      this.stageBtn.setAttribute("aria-label", STAGE_TITLE[f.stage]);
+      const setGlyph = (b, g, title) => {
+        b.replaceChildren(glyph(g, 12));
+        b.title = title;
+        b.setAttribute("aria-label", title);
+      };
+      setGlyph(this.miniBtn, f.mini ? "max" : "min", f.mini ? "Back to the full window" : "Mini mode: keeps playing in a small strip");
+      setGlyph(this.maxBtn, f.max ? "restore" : "max", f.max ? "Restore size (double-click the title)" : "Maximize (double-click the title)");
+      this.refit();
+    }
+    saveFrame() {
+      this.kv.set(UI_KEY, { ...this.frame });
+    }
+    setMini(on) {
+      this.frame.mini = on;
+      this.saveFrame();
+      this.applyFrame();
+      if (!on) {
+        this.sig = "";
+        this.renderTab(true);
+      }
+    }
+    setMax(on) {
+      if (this.frame.mini) return;
+      this.frame.max = on;
+      this.saveFrame();
+      this.applyFrame();
+    }
+    setStage(s) {
+      this.frame.stage = s;
+      this.saveFrame();
+      this.applyFrame();
+    }
+    /** A short pulse on the frame, so a click on the launcher visibly finds the window. */
+    flash() {
+      this.win.classList.remove("flash");
+      void this.win.offsetWidth;
+      this.win.classList.add("flash");
+    }
     dragger(handle, apply) {
       handle.addEventListener("pointerdown", (e) => {
-        if (e.target.closest("button")) return;
+        if (e.target.closest("button") || e.button !== 0) return;
+        if (this.frame.max && handle !== this.win.querySelector(".grip")) {
+          this.frame.max = false;
+          this.saveFrame();
+          this.applyFrame();
+        }
+        if (this.frame.max) return;
         e.preventDefault();
         handle.setPointerCapture(e.pointerId);
         let lx = e.clientX, ly = e.clientY;
@@ -6111,6 +6544,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         if (!this.host) return;
       }
       this.battle.quiet = false;
+      this.xpLog = [];
       closeModal();
       this.busy = false;
       const report = rep.finish(s);
@@ -6119,14 +6553,38 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     startLoop() {
       this.stopLoop();
+      this.win.classList.remove("creating");
       this.makeCtx();
       this.sig = "";
       this.renderTab(true);
+      const be = this.battle.events(() => performance.now(), () => this.state);
       const ev = {
-        ...this.battle.events(() => performance.now(), () => this.state),
+        ...be,
         story: (text) => this.showStory(text),
         zone: (_from, to, why) => {
-          if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`);
+          if (why === "unlock") this.toast(`New road: ${ZONES[to]?.name ?? to}`, "road");
+        },
+        kill: (_m, xp) => {
+          if (xp > 0) this.xpLog.push([Date.now(), xp]);
+        },
+        level: (l) => {
+          be.level?.(l);
+          this.toast(`Level ${l}`, "level");
+          this.lastEvent = `Reached level ${l}`;
+        },
+        loot: (item, kept, equipped) => {
+          if (!kept) return;
+          const name = itemLabel(item);
+          if (equipped) {
+            this.toast(`Equipped: ${name}`, item.rarity);
+            this.lastEvent = `Equipped ${name}`;
+          } else if (item.rarity === "rare" || item.rarity === "relic") {
+            this.toast(`${item.rarity === "relic" ? "Relic" : "Rare"}: ${name}`, item.rarity);
+            this.lastEvent = `Found ${name}`;
+          }
+        },
+        death: () => {
+          this.lastEvent = "Died. The ember relights.";
         }
       };
       this.timer = window.setInterval(() => {
@@ -6141,9 +6599,9 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       const frame = () => {
         this.raf = requestAnimationFrame(frame);
         if (!this.state || document.hidden) return;
-        this.battle.draw(this.state, runSheet(this.state), performance.now());
+        if (!this.frame.mini && this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
         this.drawHud();
-        this.renderTab(false);
+        if (!this.frame.mini) this.renderTab(false);
       };
       this.raf = requestAnimationFrame(frame);
     }
@@ -6162,7 +6620,7 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         sheet: () => sheetOf(this.state),
         act: (fn, ok) => {
           const err = fn(this.state);
-          if (typeof err === "string") this.toast(err);
+          if (typeof err === "string") this.toast(err, "err");
           else if (ok) this.toast(ok);
           this.sig = "";
           this.renderTab(true);
@@ -6209,10 +6667,11 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
         if (t - this.lastSigCheck < 250) return;
         this.lastSigCheck = t;
       }
+      this.updateBadges();
       const sig = this.view + ":" + viewSig(this.view, this.ctx);
       if (!force && sig === this.sig) return;
       this.sig = sig;
-      for (const b of this.tabs.querySelectorAll("button")) {
+      for (const b of this.nav.querySelectorAll("button")) {
         const on = b.getAttribute("data-v") === this.view;
         b.classList.toggle("on", on);
         b.setAttribute("aria-selected", String(on));
@@ -6222,45 +6681,113 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
       this.body.append(renderView(this.view, this.ctx));
       this.body.scrollTop = top;
     }
-    hudEls = {};
+    /** Small counters on the tabs: things waiting for a decision. */
+    updateBadges() {
+      const s = this.state;
+      const hero = s.hero;
+      const freeSupport = supportSlots(hero.level) > hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= hero.level).length && Object.values(SUPPORTS).some((x) => x.level <= hero.level && !hero.supports.includes(x.id));
+      const tree = Math.max(0, pointsLeft(hero)) + Math.max(0, ascPointsLeft(hero));
+      const atlas = Math.max(0, atlasPointsLeft(s));
+      const marks = {
+        skills: freeSupport ? ["!", "A support slot is free"] : void 0,
+        tree: tree ? [String(tree), `${tree} passive point${tree > 1 ? "s" : ""} to spend`] : void 0,
+        atlas: atlas ? [String(atlas), `${atlas} atlas point${atlas > 1 ? "s" : ""} to spend`] : void 0,
+        gear: s.stashFull || s.stash.length >= s.stashCap ? ["!", "Stash is full: drops are being salvaged"] : void 0
+      };
+      for (const b of this.nav.children) {
+        const id = b.getAttribute("data-v");
+        const badge = b.querySelector(".badge");
+        const m4 = marks[id];
+        const text = m4?.[0] ?? "";
+        if (badge.textContent !== text) {
+          badge.textContent = text;
+          badge.toggleAttribute("hidden", !m4);
+          badge.title = m4?.[1] ?? "";
+        }
+      }
+    }
+    setMeter(k, f, text) {
+      const m4 = this.meters[k];
+      if (!m4) return;
+      const w2 = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
+      if (m4.w !== w2) {
+        m4.fill.style.width = w2;
+        m4.w = w2;
+      }
+      if (m4.last !== text) {
+        m4.val.textContent = text;
+        m4.last = text;
+      }
+    }
+    whereKey = "";
     drawHud() {
       const s = this.state;
       const sh = runSheet(s);
       const run = s.activity.run;
-      if (!this.hud.childElementCount) {
-        for (const k of ["life", "es", "mana", "flask", "xp", "zone"]) {
-          const fill = h("i"), text = h("span");
-          this.hud.append(h("div", { class: "meter" }, fill, text));
-          this.hudEls[k] = { fill, text };
-        }
-      }
-      const set = (k, f, color, text) => {
-        const e = this.hudEls[k];
-        e.fill.style.width = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + "%";
-        e.fill.style.background = color;
-        if (e.text.textContent !== text) e.text.textContent = text;
-      };
       const hh = run?.hero;
       const n = (x) => fmt(Math.floor(Math.max(0, x)));
-      set("life", hh ? hh.life / sh.life : 1, "#e5383b", `Life ${n(hh?.life ?? sh.life)} / ${n(sh.life)}`);
-      set("es", sh.es ? (hh?.es ?? sh.es) / sh.es : 0, "#7fd1ff", sh.es ? `Shield ${n(hh?.es ?? sh.es)} / ${n(sh.es)}` : "No energy shield");
-      set("mana", hh ? hh.mana / sh.mana : 1, "#3a7bff", `Mana ${n(hh?.mana ?? sh.mana)} / ${n(sh.mana)}`);
-      set("flask", (hh?.flask ?? 30) / 30, "#3fbf5f", `Flask ${Math.floor(hh?.flask ?? 30)} / 30`);
+      const life = hh?.life ?? sh.life;
+      this.setMeter("life", life / sh.life, `${n(life)} / ${n(sh.life)}`);
+      this.meters.es.root.hidden = !sh.es;
+      if (sh.es) this.setMeter("es", (hh?.es ?? sh.es) / sh.es, `${n(hh?.es ?? sh.es)} / ${n(sh.es)}`);
+      this.setMeter("mana", (hh?.mana ?? sh.mana) / sh.mana, `${n(hh?.mana ?? sh.mana)} / ${n(sh.mana)}`);
+      this.setMeter("flask", (hh?.flask ?? 30) / 30, `${Math.floor(hh?.flask ?? 30)} / 30`);
       const need = xpToNext(s.hero.level);
-      set("xp", isFinite(need) ? s.hero.xp / need : 1, "#ffc233", `Level ${s.hero.level}  ${isFinite(need) ? (s.hero.xp / need * 100).toFixed(1) + "%" : "max"}`);
+      const xpF = isFinite(need) ? s.hero.xp / need : 1;
+      this.setMeter("xp", xpF, isFinite(need) ? `${fmt(s.hero.xp)} / ${fmt(need)} xp  (${(xpF * 100).toFixed(1)}%)` : "max level");
+      const lv = `LV ${s.hero.level}`;
+      if (this.xpLv.textContent !== lv) this.xpLv.textContent = lv;
+      const eta = this.eta(need - s.hero.xp);
+      if (this.xpEta.textContent !== eta) {
+        this.xpEta.textContent = eta;
+        this.xpEta.title = eta ? "At the pace of the last few minutes" : "";
+      }
       const z = run ? runZone(s, run) : ZONES[s.activity.zone];
-      const packs = run ? run.packs + (run.boss ? 1 : 0) : 1;
-      set("zone", run ? run.pack / packs : 0, "#19b3a3", run?.map ? `${z.name} (L${z.level})  ${s.maps.length} maps left` : `${z.name} (L${z.level})  ${s.world.clears[z.id] ?? 0} clears`);
-      const free = supportSlots(s.hero.level) > s.hero.supports.filter((id) => SUPPORTS[id] && SUPPORTS[id].level <= s.hero.level).length && Object.values(SUPPORTS).some((x) => x.level <= s.hero.level && !s.hero.supports.includes(x.id));
-      const skillsTab = this.tabs.querySelector('[data-v="skills"]');
-      if (skillsTab && skillsTab.textContent !== (free ? "Skills !" : "Skills")) skillsTab.textContent = free ? "Skills !" : "Skills";
-      const who = `${s.hero.name}, level ${s.hero.level} ${CLASSES[s.hero.cls]?.name ?? ""}  |  ${fmt(sh.skill.packDps)} pack DPS`;
-      if (this.who.textContent !== who) this.who.textContent = who;
+      const detail = run?.map ? `${s.maps.length} maps left` : `${s.world.clears[z.id] ?? 0} clears`;
+      const wk = `${z.id}|${z.name}|${z.level}|${detail}|${fmt(sh.skill.packDps)}`;
+      if (wk !== this.whereKey) {
+        this.whereKey = wk;
+        this.where.replaceChildren(
+          h("b", { text: z.name }),
+          h("span", { class: "muted", text: `Area level ${z.level}  /  ${detail}` }),
+          h("span", { class: "dps" }, h("b", { class: "num", text: fmt(sh.skill.packDps) }), " pack DPS")
+        );
+        const [sky, ground] = z.palette;
+        this.stage.style.background = `linear-gradient(to bottom, ${sky} 0 83.4%, #111 83.4% 85%, ${ground} 85% 100%)`;
+      }
+      const cls = CLASSES[s.hero.cls]?.name ?? "";
+      const who = `${s.hero.name}|${s.hero.level}|${cls}`;
+      if (this.who.dataset.k !== who) {
+        this.who.dataset.k = who;
+        this.who.replaceChildren(h("b", { text: s.hero.name }), h("span", { text: `Level ${s.hero.level} ${cls}` }));
+      }
+      if (this.frame.mini) {
+        this.setMeter("mlife", life / sh.life, `${n(life)} / ${n(sh.life)}`);
+        this.setMeter("mxp", xpF, `${s.hero.level}  ${(xpF * 100).toFixed(0)}%${eta ? "  " + eta : ""}`);
+        const line = this.miniBox.querySelector(".mline"), last = this.miniBox.querySelector(".mlast");
+        const lt = `${z.name}  /  ${fmt(sh.skill.packDps)} DPS`;
+        if (line.textContent !== lt) line.textContent = lt;
+        if (last.textContent !== this.lastEvent) last.textContent = this.lastEvent;
+      }
     }
-    toast(msg) {
-      const t = h("div", { class: "toast", text: msg });
-      this.win.append(t);
-      setTimeout(() => t.remove(), 2200);
+    /** "~12m to go" from the kill XP of the last few minutes; blank until there is enough to go on. */
+    eta(left) {
+      const now = Date.now();
+      while (this.xpLog.length && now - this.xpLog[0][0] > XP_WINDOW_MS) this.xpLog.shift();
+      if (!isFinite(left) || this.xpLog.length < 3) return "";
+      const span = Math.max(3e4, now - this.xpLog[0][0]);
+      const rate = this.xpLog.reduce((a, [, x]) => a + x, 0) / span;
+      if (rate <= 0) return "";
+      return `~${fmtDuration(left / rate)} to level`;
+    }
+    toast(msg, kind = "") {
+      const t = h("div", { class: `toast${kind ? " t-" + kind : ""}`, text: msg });
+      this.toasts.prepend(t);
+      while (this.toasts.childElementCount > 4) this.toasts.lastElementChild.remove();
+      setTimeout(() => {
+        t.classList.add("out");
+        setTimeout(() => t.remove(), 220);
+      }, kind === "err" ? 3200 : 2600);
     }
     modal(content) {
       const m4 = h("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, content);
@@ -6269,9 +6796,10 @@ label.chk { display: flex; gap: 6px; align-items: center; cursor: pointer; font-
     }
     showCreation() {
       clear(this.body);
-      clear(this.hud);
-      this.hudEls = {};
-      this.who.textContent = "A new Kindled";
+      this.win.classList.add("creating");
+      if (this.frame.mini) this.setMini(false);
+      this.who.dataset.k = "";
+      this.who.replaceChildren(h("b", { text: "A new Kindled" }));
       let started = false;
       this.body.append(creationView(async (name, cls) => {
         if (started) return;
@@ -6553,10 +7081,11 @@ button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #111; }
       hub = api;
       generation++;
     },
-    /** The hub's title-bar button: straight into the game window, no panel card in between. */
+    /** The hub's title-bar button works like a taskbar button: opens the game, then folds it to mini mode and back. */
     launch(api) {
       hub = api;
-      void openGame();
+      if (game?.isOpen) void game.toggle();
+      else void openGame();
     },
     mount(el, api) {
       hub = api;

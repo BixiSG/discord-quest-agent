@@ -70,8 +70,8 @@ const def = {
     icon: ICON,
     strings: STRINGS,
     init(api: HubApi) { hub = api; generation++; },
-    /** The hub's title-bar button: straight into the game window, no panel card in between. */
-    launch(api: HubApi) { hub = api; void openGame(); },
+    /** The hub's title-bar button works like a taskbar button: opens the game, then folds it to mini mode and back. */
+    launch(api: HubApi) { hub = api; if (game?.isOpen) void game.toggle(); else void openGame(); },
     mount(el: HTMLElement, api: HubApi) {
         hub = api;
         let view: { unmount(): void } | null = null;

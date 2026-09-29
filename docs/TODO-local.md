@@ -45,6 +45,17 @@ Play-feel review (user's call):
       Passed on 5.1.26100 (7/7).
 - [ ] `arpg\install\Install-Hollowmarch.bat` against a real install warns that the old launcher ignores `addons\`, then the uninstaller removes it.
 
+## QoL and UI loop (2026-09-29, local commits only, nothing pushed)
+- [x] Hub: any switched-on addon can get its own button in Discord's title bar (Settings > Addons,
+      nested row). Addons may define `launch(api)` for what that button does.
+- [x] Hollowmarch frame: pixel-glyph nav rail with hotkeys and counters, vitals column next to the
+      battle, XP strip with time-to-level, stage size toggle (normal/large/hidden), mini strip that
+      keeps playing, maximize (double-click title), stacked toasts for rares, relics, levels, roads.
+- [ ] Hollowmarch views: gear/stash side by side with filters, skills/supports without nested cards,
+      clearer support deltas, hero sheet grouping.
+- [ ] Orbling QoL pass.
+- [ ] Live check of each iteration in Discord (copy `arpg\dist\arpg.js` to `addons\`, reload Discord).
+
 ## 4. Before shipping
 - [ ] Fix whatever sections 1-3 turn up; for Hollowmarch run `cd arpg && npm install && npm run check`.
 - [ ] Decide release shape: merge branch -> `main` with VERSION/CHANGELOG bump (the updater ships it to every user), or keep Hollowmarch as a separate install.

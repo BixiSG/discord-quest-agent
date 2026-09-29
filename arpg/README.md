@@ -41,8 +41,16 @@ an agent that has not been updated yet ignores the folder.
 
 ## Playing
 
-- The window can be dragged by its title bar and resized from the corner.
-  Keys: 1-9 switch tabs, Esc closes a dialog.
+- The window can be dragged by its title bar and resized from the corner;
+  double-click the title to maximize. The title-bar buttons cycle the battle
+  view (normal, large, hidden), fold the game into a mini strip that keeps
+  playing, maximize and close. Keys: 1-9 switch tabs, Esc closes a dialog.
+- Tabs carry a counter when something waits for you: unspent passive or
+  atlas points, a free support slot, a full stash. The strip under the battle
+  estimates the time to the next level from the last few minutes.
+- In Quest Agent, Settings > Addons can give Hollowmarch its own button in
+  Discord's title bar. It opens the game, then works like a taskbar button:
+  mini strip and back.
 - Nothing runs while the window is closed. Opening it replays the time since
   the last save (up to 24 hours), so the hero is never "paused".
 - Auto-push moves on after three clean clears, falls back after three deaths,
