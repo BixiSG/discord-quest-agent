@@ -186,3 +186,31 @@ tests (287 at the end, from 250):
   a fire-breathing dragon), and the Chapel Keeper takes the freed shrieking
   shade. The packer gained "order" (RPG-maker walks play 0-1-2-1); every
   sprite was checked facing the hero, idle and attacking, in the battle view.
+
+## 9 - Round 9: mastery, omens, the pinnacle gate
+Plan in docs/ROADMAP.md ("Round 9"); 1.8.0 went live first (PR #2). Built, each
+with tests (305 at the end, from 287), save v10:
+- Skill mastery: kills made with a skill (a boss ten) raise it to mastery 10
+  (1000 x n^2 points a level): 1.5% more damage a level, 10% less mana from 5,
+  10% faster at 10. Kept across dawns; the Skills tab tags every skill, a new
+  level is a toast, a chronicle line and an away-report line; feat Weaponmaster
+  (38 feats, 13 titles, 69 renown).
+- Weekly omens: seven, one per local week (Monday to Sunday, the player's
+  clock), the same for everyone, never twice in a row; each a trade-off with a
+  reward. The omen sits on the hero (sheet stays pure), leaves pinnacles as
+  they are, and shows on the World tab with next week's.
+- Review C: the omen order ran A-B-A-B across a cycle, a week that turned
+  while the game was closed was never announced, pinnacles took the omen's
+  hero side too, a clock moved back re-announced the week, the Hero tab's
+  breakdowns missed supports and mastery, and the Salvage button showed dust
+  without the dawn, perk and omen shares.
+- Balance: Iron Vow's armour came free to casters (it slowed attacks only); it
+  now slows both. A sun pinnacle with 35% more life and a 10% dawn step were
+  measured and dropped (weak builds walled for days, strong ones barely
+  slowed). EHP counted evasion against physical hits only, while the fight
+  evades whole attacks; auto-equip swapped the Strider's evasion for energy
+  shield and seed 777 stood at dawn 0 for 70 h. Fixed: first relight 15-22 h
+  for every calling, dawns VI at 103-148 h (GDD, "The dawn loop after round
+  8"). Left for round 10: the upgrade score (offence 0.6, defence 0.4) trades
+  a shield for a glass cannon at dawn III.
+- Screenshots 19 (omen card) and 20 (mastery tags) from a 40 h Arcanist save.

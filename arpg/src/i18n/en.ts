@@ -3,7 +3,7 @@
 // the data files stay the one place their English lives. ru.ts and uk.ts
 // translate every key (a test holds them to it).
 
-import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, DAWN_PERKS, DAWN_TEXT, ECHOES, FEATS, SHARDS_TEXT, STONES, STONE_TIERS, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
+import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, DAWN_PERKS, DAWN_TEXT, ECHOES, FEATS, SHARDS_TEXT, STONES, STONE_TIERS, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, OMENS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
 import { FILTER_PRESETS, groupLabel } from "../core/filter";
 import { BLESSINGS } from "../core/shrine";
 import { DAMAGE_TYPES } from "../core/types";
@@ -79,6 +79,7 @@ function content(): Record<string, string> {
     for (const e of Object.values(ECHOES)) { o[`echo.${e.id}.who`] = e.who; o[`echo.${e.id}.text`] = e.text; }
     for (const p of DAWN_PERKS) { o[`perk.${p.id}.name`] = p.name; o[`perk.${p.id}.text`] = p.text; }
     for (const f of Object.values(FEATS)) { o[`feat.${f.id}.name`] = f.name; o[`feat.${f.id}.text`] = f.text; }
+    for (const om of Object.values(OMENS)) { o[`omen.${om.id}.name`] = om.name; o[`omen.${om.id}.text`] = om.text; }
     o["echo.shards"] = SHARDS_TEXT;
     o["dawn.story"] = DAWN_TEXT;
     for (const a of Object.values(MAP_AREAS)) o[`mapArea.${a.id}.name`] = a.name;
@@ -442,6 +443,12 @@ const UI: Record<string, string> = {
 
     // ---- skills
     "skills.levelTag": "level {n}",
+    "skills.mastery": "mastery {n}",
+    "skills.masteryNow": "Mastery {n} of {max}: {dmg}% more damage with this skill.",
+    "skills.masteryNext": "{pct}% of the way to mastery {next}: it grows with every kill made with this skill (a boss counts {boss}).",
+    "skills.masteryTop": "Mastered.",
+    "skills.masteryPerks": "From mastery {at}: {mana}% reduced mana cost; at mastery {max}: {speed}% increased attack or cast speed.",
+    "skills.masteryName": "Mastery",
     "skills.dps": "{dps} dps",
     "skills.unlocksAt": "Unlocks at level {n}",
     "skills.main": "Your main skill",
@@ -635,6 +642,8 @@ const UI: Record<string, string> = {
     "log.levelUp": "Reached level {level}.",
     "log.levelUpNew": "Reached level {level}. New to learn: {list}.",
     "log.featEarned": "Feat: {feat} (renown +{n}).",
+    "log.masteryUp": "{skill} reaches mastery {n}.",
+    "log.omen": "A new week, a new omen: {omen}.",
     "log.featsBefore": "{n} feat earned for what was already done (renown +{renown}).|{n} feats earned for what was already done (renown +{renown}).",
     "log.errandDust": "{pet} came back from scavenging with {n} ember dust.",
     "log.errandOrbs": "{pet} came back from foraging with {n} orb.|{pet} came back from foraging with {n} orbs.",
@@ -681,6 +690,8 @@ const UI: Record<string, string> = {
     "err.unknownErrand": "unknown errand",
     "err.awayErrand": "away on an errand",
     "toast.feat": "Feat: {feat}",
+    "toast.mastery": "{skill}: mastery {n}",
+    "toast.omen": "Omen: {omen}",
     "log.feats": "Feats",
     "feats.title": "Feats",
     "feats.count": "{n} / {total}",
@@ -701,6 +712,8 @@ const UI: Record<string, string> = {
     "feats.noTitle": "No title worn",
     "feats.renownName": "Renown",
     "report.feats": "Feats: {list}",
+    "report.mastery": "Mastery: {list}",
+    "report.omen": "A new week's omen: {omen}",
     "log.died": "Died in {place}.",
     "log.tooDeep": "Too deep: running {tier} and below for now.",
     "log.fellBack": "Fell back to {zone}.",
@@ -1049,6 +1062,10 @@ const UI: Record<string, string> = {
     "hollow.story": "Every October the March remembers the night the sun went out, and lights lanterns against it. This year something took the lanterns. Monsters carry them now, grinning: tougher, brighter, worth twice the lesson. Snuff enough of them and one may leave its grin with you, or follow you home.",
     "hollow.title": "Hollow Night",
     "hollow.nights": "{n} night left|{n} nights left",
+    "omen.title": "Omen of the week: {name}",
+    "omen.days": "{n} day left|{n} days left",
+    "omen.next": "Next week: {name}",
+    "omen.note": "Every week brings an omen, the same for every player. It leaves the pinnacles as they are.",
     "hollow.blurb": "Until the last night of October some monsters carry a lantern: half again as tough, double experience, better loot.",
     "hollow.snuffed": "Lanterns snuffed",
     "hollow.found": "found",

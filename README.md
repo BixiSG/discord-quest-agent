@@ -206,8 +206,9 @@ simulation when you open it, with a "while you were away" report. Fold it into a
 to keep the fight in a corner, or give it its own button in Discord's title bar.
 
 Traders with rotating stock, gear sockets and ember stones, companions (the ones not at the
-hero's side run errands), feats kept across every dawn, and a story that ends with
-relighting the sun (a new dawn that keeps what you collected). Every October
+hero's side run errands), feats kept across every dawn, skills that grow with use, an omen
+each week that is the same for every player, and a story that ends with relighting the sun
+(a new dawn that keeps what you collected). Every October
 brings Hollow Night: monsters carrying lanterns, lantern-lit maps and two finds that exist
 only then. It follows the agent's language: English, Russian or Ukrainian.
 

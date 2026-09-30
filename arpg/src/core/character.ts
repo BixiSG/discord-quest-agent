@@ -2,7 +2,7 @@
 // Never saved; recomputed when hero.rev changes.
 
 import { StatBag, tagSet } from "./stats";
-import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, RENOWN_DAMAGE, RENOWN_LIFE, companionMod, DAWN_PERK, DAWN_XP, dawnName, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
+import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, RENOWN_DAMAGE, RENOWN_LIFE, companionMod, masteryMods, OMENS, DAWN_PERK, DAWN_XP, dawnName, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
 import { itemStats, levelReq } from "./items";
 import { passiveMods } from "./passives";
 import type { Hero } from "./state";
@@ -37,6 +37,8 @@ export interface SkillCalc {
     /** dps times targets. */
     packDps: number;
     supports: string[];
+    /** Every modifier on the skill: the hero's, the skill's own, its supports' and its mastery (breakdowns read it). */
+    bag: StatBag;
 }
 
 export interface Sheet {
@@ -85,6 +87,12 @@ function renownMods(hero: Hero): Mod[] {
     return r > 0 ? [{ stat: "damage", kind: "inc", value: RENOWN_DAMAGE * r, src: "Renown" }, { stat: "life", kind: "inc", value: RENOWN_LIFE * r, src: "Renown" }] : [];
 }
 
+/** This week's omen, on the hero (named for the breakdown). */
+function omenMods(hero: Hero): Mod[] {
+    const o = hero.omen ? OMENS[hero.omen] : undefined;
+    return o?.hero ? o.hero.map(m => ({ ...m, src: o.name })) : [];
+}
+
 /** The companion at the hero's side: its one bonus. */
 function petMods(hero: Hero): Mod[] {
     const m = hero.pet ? companionMod(hero.pet.id, hero.pet.level) : null;
@@ -95,7 +103,7 @@ function petMods(hero: Hero): Mod[] {
 export function heroMods(hero: Hero, extra: Mod[] = []): { mods: Mod[]; armour: number; evasion: number; es: number; block: number; problems: string[] } {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods: Mod[] = [...extra, ...passiveMods(hero), ...petMods(hero), ...dawnMods(hero), ...renownMods(hero)];
+    const mods: Mod[] = [...extra, ...passiveMods(hero), ...petMods(hero), ...dawnMods(hero), ...renownMods(hero), ...omenMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems: string[] = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });
@@ -197,7 +205,10 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
 
     const skill = calcSkill(hero, bag, problems, manaRegen, link);
 
-    // EHP (COMBAT.md 7): pool over the share of a reference hit that gets through.
+    // EHP (COMBAT.md 7): pool over the share of a reference attack that gets through. An evaded
+    // attack deals none of its damage, elements included (the sim's rule; spells can't be evaded),
+    // so evasion counts for every type - counted for phys only, it lost every comparison to energy
+    // shield and auto-equip dressed the Strider in silk.
     const ref = monsterDamage(L) * 1.5;
     const pool = life + es;
     const evade = 1 - Math.max(0.25, hitChance(monsterDefence(L), evasion));
@@ -205,7 +216,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     const dmgTaken = bag.incMult("dmgTaken") * bag.more("dmgTaken");
     const ehp = zeroes();
     for (const t of DAMAGE_TYPES) {
-        const through = t === "phys" ? (1 - armourReduction(armour, ref)) * (1 - evade) : (1 - res[t] / 100);
+        const through = (t === "phys" ? 1 - armourReduction(armour, ref) : 1 - res[t] / 100) * (1 - evade);
         ehp[t] = Math.round(pool / Math.max(0.01, through * (1 - blk) * dmgTaken));
     }
 
@@ -234,6 +245,8 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     const bag = new StatBag();
     bag.addAll(allMods(heroBag));
     for (const m of def.mods ?? []) bag.add(m);
+    // Mastery: this skill's own, from use (round 9).
+    for (const m of masteryMods(hero.mastery?.[def.id] ?? 0, def.kind)) bag.add(m);
     const tags = link.tags;
     const used = link.used;
     let manaMult = 1, extraTargets = 0;
@@ -318,7 +331,7 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     return {
         id: def.id, name: def.name, kind: def.kind, shape: def.shape, fx: def.fx, tags: [...tags],
         hit, avgHit, critChance, critMulti, speed, sustain, hitChance: hc, accuracy, targets, manaCost,
-        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: [...used],
+        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: [...used], bag,
     };
 }
 

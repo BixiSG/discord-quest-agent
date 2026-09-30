@@ -69,3 +69,12 @@ Branch: `claude/nifty-gauss-gv1g8h`. Design notes: docs/ROADMAP.md, "Round 8".
 - [x] Asked for on the way: sprite facing (lantern ghost, white-haired swordsman), Forge previews, a bigger passive tree
 - [x] Balance pass with the bot, review B, docs, screenshots, changelog
 - [x] More enemy sprites: three CC0 packs, five monsters with art of their own and a boss dragon
+
+## Round 9 - mastery, omens, the pinnacle gate
+Branch: `claude/nifty-gauss-gv1g8h` (restarted from main after 1.8.0). Design notes: docs/ROADMAP.md, "Round 9".
+- [x] Skill mastery: skills grow with use, kept across dawns; a feat for mastery 10
+- [x] Weekly omens: one per local week, shared by every player, never on pinnacles
+- [x] Balance: attack builds' late pinnacle survival (Iron Vow's cost), first relight toward 18-24 h (15-22 h, via the EHP evasion fix)
+- [x] Review C (mastery, omens) and fixes
+- [x] Docs, screenshots, changelog 1.9.0
+- [ ] Round 10: a pinnacle-aware upgrade score (offence 0.6 / defence 0.4 trades a shield for a glass cannon at dawn III)

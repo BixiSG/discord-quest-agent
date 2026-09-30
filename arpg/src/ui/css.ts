@@ -221,6 +221,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .li .ds { grid-column: 1; font-size: 12px; }
 .li .tags { grid-column: 1; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
 .li .tags .tag { font-size: 8px; padding: 0 5px; }
+.li .tags .tag.mastery.on { background: #f1d98a; color: #1a1410; border-color: #1a1410; }
+.li .tags .tag.mastery.top { background: #1a1410; color: #ffc233; border-color: #1a1410; }
 .delta { font: 700 12px/1 var(--mono); }
 .li.on .up { color: #146b2c; } .li.on .down { color: #9e1d1f; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }

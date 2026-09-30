@@ -80,6 +80,10 @@ Single-target skills hit one.
 - Block: chance capped at 50%; a blocked hit deals no damage.
 - Energy shield takes damage before life and starts recharging (20% of max
   per second) after 2 s without taking damage.
+- EHP (the sheet): `(life + ES) / (through * (1 - block) * damageTaken)`
+  against a reference attack of 1.5x the level's monster hit, where `through`
+  is armour's or the resistance's share times `(1 - evade)`: an evaded attack
+  deals none of its damage, elements included (spells can't be evaded).
 
 ## 8. Recovery
 

@@ -4,7 +4,7 @@
 import { returnStones } from "./sockets";
 import { dawnOf, hasPerk } from "./dawn";
 import { deriveSheet, type Sheet } from "./character";
-import { CLASSES, DAWN_DUST, RELICS, SKILLS, SUPPORTS, ZONES, betterLow, slotsFor } from "./data";
+import { CLASSES, DAWN_DUST, OMENS, RELICS, SKILLS, SUPPORTS, ZONES, betterLow, slotsFor } from "./data";
 import { baseOf, levelReq, salvageValue } from "./items";
 import { logLine } from "../i18n/names";
 import { ref } from "../i18n/refs";
@@ -30,7 +30,7 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
         settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true, errandKeep: true },
         relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true },
-        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], feats: [], errands: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], feats: [], mastery: {}, errands: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", "log.wake", { name: opts.name });
@@ -417,10 +417,14 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
 }
 
 /** Turns an item that is nowhere (not worn, stashed or cased) into dust, stones back to the pouch. */
+/** Ember dust an item salvages for now: its value, a dawn's more, Warm Hands and the week's omen. */
+export function salvageDust(state: GameState, item: Item): number {
+    return Math.round(salvageValue(item) * (1 + (DAWN_DUST * dawnOf(state)) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1) * (1 + (OMENS[state.hero.omen ?? ""]?.dust ?? 0) / 100));
+}
+
 export function salvageItem(state: GameState, item: Item): void {
     returnStones(state, item);
-    const d = dawnOf(state);
-    const v = Math.round(salvageValue(item) * (1 + (DAWN_DUST * d) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1));
+    const v = salvageDust(state, item);
     state.dust += v;
     state.totals.salvaged++;
     state.totals.dust += v;

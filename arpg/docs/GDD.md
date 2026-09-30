@@ -226,18 +226,50 @@ fight beyond.
 
 ## Feats, renown and titles (round 8)
 
-Thirty-seven feats in five groups - the road (acts, trials, levels 50/75/90),
-the hunt (monsters, bosses, lanterns), the collection (relics, companions, a
+Thirty-eight feats in five groups - the road (acts, trials, levels 50/75/90),
+the hunt (monsters, bosses, lanterns, a skill's mastery 10 since round 9), the collection (relics, companions, a
 level-20 bond, the echoes, a Radiant stone), the forge (quality 20, a relic
 tempered five times, contracts, salvage, dust) and the Cinderlands (tiers 8
 and 16, Depths 10 and 25, the three sun pinnacles, dawns I and III, the Hollow
 Crown). Each is earned once and kept across dawns. A feat pays renown (1-3,
-67 in all); each point is 1% increased damage and 0.5% increased maximum life.
-Twelve feats are titles (Crownbreaker among them): a new one is worn when none
+69 in all); each point is 1% increased damage and 0.5% increased maximum life.
+Thirteen feats are titles (Crownbreaker among them): a new one is worn when none
 is, and the Log tab's Feats chip lists them all with their progress, the
 renown and a Wear button. A save from before feats earns what it already did
 the first time it loads, in one chronicle line; the bosses and contracts it
 counted before feats existed are estimated from what the save still shows.
+
+## Skill mastery (round 9)
+
+A skill grows with use. Every kill made with it adds a point (a boss ten); level n needs
+1000 x n^2 points, so mastery 10 is about a day of one skill. Each level is 1.5% more
+damage with that skill; from mastery 5 it costs 10% less mana, and at 10 it attacks or
+casts 10% faster. Mastery is the player's: it carries over every dawn, and a save from
+before it starts from zero (kills weren't counted per skill). The Skills tab tags every
+skill with its mastery (the tooltip gives the bonus and how far the next level is); a new
+level is a toast, a chronicle line and a line in the away report. Weaponmaster, a title,
+asks for mastery 10 (38 feats, 13 titles, 69 renown).
+
+## Weekly omens (round 9)
+
+Each local calendar week (Monday to Sunday, the player's own clock, like Hollow Night)
+has an omen: a trade-off with a reward, the same for every player that week. No omen
+comes twice in a row and all seven pass in seven weeks (the order steps by three, and
+each seven-week cycle starts one further on).
+
+| Omen | The week |
+|---|---|
+| Blood Moon | monsters 25% more life; items found 40% rarer |
+| Ashfall | 25% more fire damage; salvage gives 25% more ember dust |
+| The Long Gale | 25% increased movement speed; monsters deal 15% more damage |
+| The Hungry Dark | monsters 15% more life and damage; 50% more crafting currency |
+| Clear Skies | 15% increased experience |
+| Hard Frost | 25% more cold damage; monsters act 10% slower |
+| Stormfront | 25% more lightning damage; monsters 20% harder to hit; 20% more items |
+
+The omen sits on the hero (its modifiers are in the stat sheet, named in breakdowns);
+its monster side never touches a pinnacle, so the dawn loop keeps its pace. The World tab
+shows it, the days left and next week's; a new week's omen is a chronicle line and a toast.
 
 ## The dawn loop after round 8
 
@@ -259,6 +291,24 @@ reach; 15% is the value kept. Over two simulated weeks (seed 777) it gives dawns
 (136 h), the Strider VI (214 h), and the Vanguard V (73 h) - attack builds still scale
 worse against late pinnacles, and a new dawn can take any calling. The Menu's dawn card
 gives the pinnacles' toughness.
+
+Round 9 (mastery, omens, Iron Vow's cost, evasion counted in EHP), 150 simulated hours
+on seed 777 plus a second Strider seed: the first relight at 15-22 hours (Vanguard 15.0,
+Arcanist 15.8, Strider 18.6 and 22.1), the next four dawns in 11-28 hours each, then
+slower: Arcanist dawn VI at 103 h (and no VII by 150 h), Vanguard VI at 148 h, Strider V
+at 84 h (seed 778). The design's 18-36 hours for the first relight is kept as a ceiling, not forced:
+a sun pinnacle with 35% more life (instead of 15%) walled the weaker builds for days and
+barely slowed the strong ones, and at 10% a dawn the later pinnacles fell too fast.
+What moved the first relight was the EHP fix. EHP had counted evasion against physical
+hits only, while the fight lets an evaded attack's elements through as none, so
+auto-equip swapped the Strider's evasion for energy shield. That Strider stood at dawn
+0 for 70 hours, dying in 20 seconds at level 77. With evasion counted for every type it
+relights at 19-22 hours. Every calling is a little slower now, because every build keeps
+more evasion. The Strider on seed 777 stalls at dawn III: the build score traded its
+shield (34% block) for a bow and quiver, three times the damage at 60% of the EHP, and
+neither build wins dawn III's pinnacles. That is the upgrade score's weights, 0.6 offence
+to 0.4 defence, meeting a gate that asks for both. A pinnacle-aware upgrade score is
+listed for round 10.
 
 ## Hollow Night (October, round 6)
 

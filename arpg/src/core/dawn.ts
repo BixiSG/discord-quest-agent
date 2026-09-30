@@ -77,6 +77,11 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     if (s.errandSeq) fresh.errandSeq = s.errandSeq;
     if (s.title) fresh.title = s.title;
     if (s.hero.renown) fresh.hero.renown = s.hero.renown;
+    // Skill mastery is the player's too; the week (and its omen) goes on.
+    fresh.mastery = s.mastery ?? {};
+    if (s.hero.mastery) fresh.hero.mastery = { ...s.hero.mastery };
+    if (s.hero.omen) fresh.hero.omen = s.hero.omen;
+    if (s.omenWeek !== undefined) fresh.omenWeek = s.omenWeek;
     fresh.stones = s.stones;
     fresh.shrine = s.shrine;
     fresh.settings = s.settings;

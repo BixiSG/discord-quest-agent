@@ -1,5 +1,32 @@
 # Hollowmarch - roadmap and design notes
 
+## Round 9 (plan)
+
+**Status (round 9 built, 1.9.0):** mastery and omens are in (en/ru/uk). Balance: attack
+builds died at the late pinnacles for want of survival, and Iron Vow's armour came free to
+casters, so it now slows spells as much as attacks. A bigger sun-pinnacle life bump was
+measured and dropped: it walled weak builds for days and hardly slowed strong ones. The
+first relight moved to 15-22 hours through a fix, not a tune: EHP now counts evasion
+against every damage type, as the fight does, and auto-equip stopped stripping the
+Strider's evasion (see GDD, "The dawn loop after round 8"). Left for round 10: an
+upgrade score that knows the pinnacle gate. Today's score weighs offence 0.6 to defence
+0.4, and at dawn III it traded a Strider's shield for three times the damage at 60% of
+the EHP.
+
+After 1.8.0 the open items were the dawn loop's shape (every calling relit the sun at
+12-16 hours; the design asks 18-36), attack builds stalling at dawn V against the late
+pinnacles while casters reached VIII, and the two "later" ideas of round 8. In order:
+
+- **Skill mastery.** A skill grows with use (kills made with it), ten levels, kept across
+  dawns: a little more damage per level, then less mana, then speed. It rewards sticking
+  with a skill and gives the boss-skill swap (Glacial Lance, Sunder, Blight Arrow) a
+  reason to be trained.
+- **Weekly omens.** One per local calendar week, the same for everyone: a trade-off with a
+  reward (a Blood Moon, an Ashfall, Clear Skies...). Never on pinnacles, so the dawn loop
+  keeps its pace.
+- **Balance.** Find why attack builds die at the late pinnacles and fix the cause; push the
+  first relight back toward 18-24 hours without making the later dawns harder.
+
 ## Round 8 (plan)
 
 **Status (round 8 built):** everything below is in, in en/ru/uk, plus three things asked

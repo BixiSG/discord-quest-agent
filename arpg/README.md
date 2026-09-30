@@ -29,8 +29,12 @@ It has nothing to do with quests: it never reads quest data or orbs.
 - Ten companions: one walks at the hero's side and gives a bonus that grows
   with its bond; the others go on two-hour errands for dust, currency, stones
   or maps, and grow too.
-- Feats: 37 things done once and kept across every dawn, each paying renown (a
-  small permanent bonus); twelve of them are titles the hero can wear.
+- Feats: 38 things done once and kept across every dawn, each paying renown (a
+  small permanent bonus); thirteen of them are titles the hero can wear.
+- Skill mastery: a skill grows with use (more damage, then less mana, then
+  speed), kept across dawns.
+- A weekly omen, the same for every player: a trade-off with a reward, from
+  a Blood Moon to Clear Skies.
 - An ember shrine: timed blessings (experience, rarity, quantity, currency)
   that turn late dust and spare orbs into progress.
 - Loot filter presets and affix rules; a pinnacle scout that fights five times
@@ -59,6 +63,8 @@ It has nothing to do with quests: it never reads quest data or orbs.
   <img src="docs/shots/16-feats.png" width="420" alt="The chronicle's feats: renown, the title worn, and the road's feats with their renown">
   <img src="docs/shots/17-errands.png" width="420" alt="The Hero tab: companions, three of them away on scavenging errands with the time left and what each brings">
   <img src="docs/shots/18-forge-preview.png" width="420" alt="The Forge previewing a Tempest Shard on a rare quiver: every affix marked rerolled, three to six new affixes to come">
+  <img src="docs/shots/19-omen.png" width="420" alt="The World tab's omen of the week: Blood Moon, five days left, next week The Hungry Dark">
+  <img src="docs/shots/20-mastery.png" width="420" alt="The Skills tab: Chain Spark worn at mastery 10, the other spells tagged with their own mastery">
 </p>
 
 ## Install (Windows, with Discord Quest Agent)
