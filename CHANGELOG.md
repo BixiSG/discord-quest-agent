@@ -4,6 +4,14 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.9.0 - 2026-09-30
+
+- Hollowmarch: skill mastery. A skill grows with every kill made with it, up to mastery 10: a little more damage each level, then less mana, then speed. It stays with you across every dawn, and the Skills tab shows how far each skill has come.
+- Hollowmarch: a weekly omen, the same for every player: a trade-off with a reward, from a Blood Moon (tougher monsters, rarer finds) to Clear Skies (more experience). The World tab shows this week's omen and next week's; pinnacles are left as they are.
+- Hollowmarch: a new feat and title, Weaponmaster, for a skill at mastery 10.
+- Hollowmarch: Iron Vow now slows spells as much as attacks, so casters pay for its armour too.
+- Hollowmarch: the Hero tab's damage, critical and speed breakdowns list supports and mastery, and the Salvage button shows the dust you will really get.
+
 ## 1.8.0 - 2026-09-30
 
 - Hollowmarch: six new skills (levels 28 to 44) and five new supports. Steadfast is the first support that makes the hero tougher, and the Skills tab shows what a defensive support is worth in survival, not only damage.
