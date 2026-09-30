@@ -41,7 +41,7 @@ export const OMEN_ORDER = list.map(x => x.id);
 
 /**
  * The omen of week `w` (weeks counted from the Monday before 1970-01-01): the
- * order steps by three (coprime to seven), and each cycle of seven weeks starts
- * one further on, so neighbours always differ.
+ * order steps by three, which is coprime to seven, so neighbours always differ
+ * and any seven weeks in a row hold all seven omens.
  */
-export const omenOfWeek = (w: number) => OMEN_ORDER[(((3 * w + Math.floor(w / OMEN_ORDER.length)) % OMEN_ORDER.length) + OMEN_ORDER.length) % OMEN_ORDER.length]!;
+export const omenOfWeek = (w: number) => OMEN_ORDER[(((3 * w) % OMEN_ORDER.length) + OMEN_ORDER.length) % OMEN_ORDER.length]!;

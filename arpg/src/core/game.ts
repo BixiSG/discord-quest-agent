@@ -417,10 +417,14 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
 }
 
 /** Turns an item that is nowhere (not worn, stashed or cased) into dust, stones back to the pouch. */
+/** Ember dust an item salvages for now: its value, a dawn's more, Warm Hands and the week's omen. */
+export function salvageDust(state: GameState, item: Item): number {
+    return Math.round(salvageValue(item) * (1 + (DAWN_DUST * dawnOf(state)) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1) * (1 + (OMENS[state.hero.omen ?? ""]?.dust ?? 0) / 100));
+}
+
 export function salvageItem(state: GameState, item: Item): void {
     returnStones(state, item);
-    const d = dawnOf(state);
-    const v = Math.round(salvageValue(item) * (1 + (DAWN_DUST * d) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1) * (1 + (OMENS[state.hero.omen ?? ""]?.dust ?? 0) / 100));
+    const v = salvageDust(state, item);
     state.dust += v;
     state.totals.salvaged++;
     state.totals.dust += v;

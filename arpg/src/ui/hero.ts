@@ -29,8 +29,10 @@ export function heroView(c: Ctx): HTMLElement {
     const hero = st.hero;
     const sk = s.skill;
     const critFactor = 1 + (sk.critChance / 100) * (sk.critMulti / 100 - 1);
+    // Skill stats (damage, crit, speed, accuracy) read the skill's bag: supports and mastery live there.
+    const SKILL_STATS = new Set(["damage", "critChance", "critMulti", "attackSpeed", "castSpeed", "accuracy"]);
     const breakdown = (stat: Parameters<Sheet["bag"]["mods"]>[0], title: string) => () => {
-        const mods = s.bag.mods(stat);
+        const mods = (SKILL_STATS.has(stat) ? sk.bag : s.bag).mods(stat);
         const list = h("div", { class: "kv" });
         const src = sourceNames(st);
         for (const m of mods) {

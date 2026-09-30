@@ -42,7 +42,8 @@ export function tickOmen(s: GameState, opts: { quiet?: boolean; onNew?: (id: str
     const week = weekAt(s.simTo, s.tz ?? 0);
     const changed = s.hero.omen !== id;
     if (changed) { s.hero.omen = id; s.hero.rev++; }
-    if (s.omenWeek !== week) {
+    // Only a week later than the last one is news (a clock or time zone moved back is not).
+    if (s.omenWeek === undefined || week > s.omenWeek) {
         if (!opts.quiet && s.omenWeek !== undefined) { pushLog(s, "info", "log.omen", { omen: ref.omen(id) }); opts.onNew?.(id); }
         s.omenWeek = week;
     }

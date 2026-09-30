@@ -632,6 +632,7 @@ const UI: Record<string, string> = {
     "feats.renownName": "Слава",
     "report.feats": "Подвиги: {list}",
     "report.mastery": "Мастерство: {list}",
+    "report.omen": "Знамение новой недели: {omen}",
     "log.died": "Смерть: {place}.",
     "log.tooDeep": "Слишком глубоко: пока только {tier} и ниже.",
     "log.fellBack": "Отступление: {zone}.",
@@ -1466,7 +1467,7 @@ const CONTENT: Record<string, string> = {
     "keystone.berserker_s_pact": "Бить быстрее, чем враг успеет ответить. Каждый ответ больнее.",
     "keystone.hunter_s_patience": "Дождаться выстрела. Он попадёт туда, где больнее.",
     "keystone.lantern_mind": "Слова быстрее дыхания, и каждое стоит больше.",
-    "keystone.iron_vow": "Броня разрастается; уклоняться вы больше не можете, а шаг тяжелеет.",
+    "keystone.iron_vow": "Броня разрастается; уклоняться вы больше не можете, а удары и чары даются медленнее.",
     "keystone.ember_blood": "Гореть жарко и заживать быстро; огонь ранит сильнее.",
 
     // ascendancies

@@ -38,6 +38,8 @@ describe("skill mastery", () => {
         expect(gainMastery(s, s.hero.skill, masteryNeed(6))).toBe(6);
         expect(sheetOf(s).skill.dps).toBeCloseTo(dps0 * 1.09, 1);
         expect(s.log.some(e => e.key === "log.masteryUp")).toBe(true);
+        // The Hero tab's breakdowns read the skill's bag: mastery is named there.
+        expect(sheetOf(s).skill.bag.mods("damage").some(m => m.src === "Mastery")).toBe(true);
     });
     it("kills with the skill in use add points (a boss more), and a new level is heard", () => {
         const s = g0(5);

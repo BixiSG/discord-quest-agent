@@ -27,6 +27,8 @@ export interface Report {
     feats: string[];
     /** Skill mastery reached: skill -> the highest new level. */
     mastery: Record<string, number>;
+    /** A new week's omen that began while away (the latest). */
+    omen?: string;
     dust: number;
     /** Items put on. */
     equipped: Item[];
@@ -62,6 +64,7 @@ export function startReport(state: GameState): { report: Report; events: SimEven
         companion: (id, isNew) => { if (isNew) report.newCompanions.push(id); },
         feat: id => { report.feats.push(id); },
         mastery: (skill, level) => { report.mastery[skill] = Math.max(report.mastery[skill] ?? 0, level); },
+        omen: id => { report.omen = id; },
     };
     return {
         report, events,

@@ -900,6 +900,7 @@ export class GameWindow {
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list(r.equipped.slice(-4).map(it => itemName(it))) }) }));
         if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r.newCompanions.length, { list: list(r.newCompanions.map(id => companionName(id))) }) }));
         if (r.feats.length) card.append(h("div", { class: "tag gold", text: t("report.feats", { list: list(r.feats.map(id => featName(id))) }) }));
+        if (r.omen) card.append(h("div", { class: "tag", text: t("report.omen", { omen: omenName(r.omen) }) }));
         const mastered = Object.entries(r.mastery);
         if (mastered.length) card.append(h("div", { class: "tag", text: t("report.mastery", { list: list(mastered.map(([id, n]) => t("toast.mastery", { skill: skillName(id), n }))) }) }));
         if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list(r.newRelics.map(id => relicName(id))) }) }));

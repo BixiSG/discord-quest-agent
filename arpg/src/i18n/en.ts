@@ -713,6 +713,7 @@ const UI: Record<string, string> = {
     "feats.renownName": "Renown",
     "report.feats": "Feats: {list}",
     "report.mastery": "Mastery: {list}",
+    "report.omen": "A new week's omen: {omen}",
     "log.died": "Died in {place}.",
     "log.tooDeep": "Too deep: running {tier} and below for now.",
     "log.fellBack": "Fell back to {zone}.",

@@ -37,6 +37,8 @@ export interface SkillCalc {
     /** dps times targets. */
     packDps: number;
     supports: string[];
+    /** Every modifier on the skill: the hero's, the skill's own, its supports' and its mastery (breakdowns read it). */
+    bag: StatBag;
 }
 
 export interface Sheet {
@@ -326,7 +328,7 @@ function calcSkill(hero: Hero, heroBag: StatBag, problems: string[], manaRegen: 
     return {
         id: def.id, name: def.name, kind: def.kind, shape: def.shape, fx: def.fx, tags: [...tags],
         hit, avgHit, critChance, critMulti, speed, sustain, hitChance: hc, accuracy, targets, manaCost,
-        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: [...used],
+        leech: Math.min(20, bag.flat("leech", ctx)), pen, dps, packDps: dps * targets, supports: [...used], bag,
     };
 }
 

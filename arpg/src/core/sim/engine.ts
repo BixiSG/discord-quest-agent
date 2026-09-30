@@ -122,10 +122,12 @@ const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
 export function runSheet(state: GameState): Sheet {
     const run = state.activity.run;
     const eff = run ? effectsOf(state, run) : null;
-    if (!run?.map || !eff?.hero.length) return sheetOf(state);
+    // A pinnacle leaves the week's omen outside, the hero's side of it too (the dawn loop keeps its pace).
+    const bare = !!run?.map?.pinnacle && !!state.hero.omen;
+    if (!run?.map || (!eff?.hero.length && !bare)) return sheetOf(state);
     const c = mapSheets.get(run.map);
     if (c && c.rev === state.hero.rev) return c.sheet;
-    const sheet = deriveSheet(state.hero, eff.hero);
+    const sheet = deriveSheet(bare ? { ...state.hero, omen: undefined } : state.hero, eff?.hero ?? []);
     mapSheets.set(run.map, { rev: state.hero.rev, sheet });
     return sheet;
 }
