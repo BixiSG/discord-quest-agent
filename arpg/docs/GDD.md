@@ -239,6 +239,23 @@ renown and a Wear button. A save from before feats earns what it already did
 the first time it loads, in one chronicle line; the bosses and contracts it
 counted before feats existed are estimated from what the save still shows.
 
+## The dawn loop after round 8
+
+Round 8 made every calling stronger (renown, errands, ascendancy nodes 7-8, late skills
+and supports, masteries). Measured with `tools/dawns.ts` and a bot that clears with pack
+skills and fights pinnacles with its best single-target skill, every calling relit the sun
+at 12-16 hours and then every 10-15 hours for good: a dawn's perk, passive point, renown
+and 20% richer drops outgrew a world only 10% tougher, and the pinnacles fell at level
+70-80 in every dawn. (Before round 8: 17-28 hours, then 17-25, with the Vanguard stuck at
+dawn I for want of survival.)
+
+Two changes put the gate back. The three sun pinnacles have 15% more life. And each dawn
+the pinnacles hold their piece of the sun harder, compounding, on top of the world's 10%:
+life and damage x (1 + 0.1 d) x 1.15^d at dawn d (dawn I 26%, III 98%, V 202%). Measured
+at 20% the loop slowed as intended (dawns I-III 10-20 hours each, dawn IV 20-45, then
+days), but dawn X's pinnacles would be twelve times tougher and the last perks out of
+reach; 15% is the value kept. The Menu's dawn card gives the pinnacles' toughness.
+
 ## Hollow Night (October, round 6)
 
 A seasonal event on the player's own calendar: October 1-31, local date. The

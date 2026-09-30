@@ -2,8 +2,8 @@
 // totals, and the Rekindling.
 
 import { allShards, sunShards, SUN_PINNACLES } from "../core/echoes";
-import { chooseDawnPerk, crownbreaker, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
-import { DAWN_PERKS, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, AFFIXES, CLASSES } from "../core/data";
+import { chooseDawnPerk, crownbreaker, dawnOf, dawnTough, heirloomCandidates, perksToPick, relightSun } from "../core/dawn";
+import { DAWN_PERKS, DAWN_PINNACLE, DAWN_RICHER, DAWN_TOUGHER, DAWN_XP, AFFIXES, CLASSES } from "../core/data";
 import { dawnTitle, perkName, perkText, pinName, storyText, className, groupName, itemName, presetBlurb, presetName } from "../i18n/names";
 import { hint, hintsSeen } from "./hints";
 import { salvage } from "../core/game";
@@ -46,7 +46,7 @@ export function menuView(c: Ctx): HTMLElement {
             h("div", { class: "row" }, h("button", { class: "btn", text: t("menu.export"), on: { click: () => { out.value = c.exportSave(); out.select(); } } }),
                 h("button", { class: "btn alt", text: t("menu.copy"), on: { click: () => { out.select(); void navigator.clipboard?.writeText(out.value).then(() => c.toast(t("menu.copied")), () => c.toast(t("menu.copyByHand"))); } } })),
             out, inp,
-            h("div", { class: "row" }, h("button", { class: "btn alt", text: t("menu.import"), attrs: { "data-act": "import" }, on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }),
+            h("div", { class: "row", style: "flex-wrap:wrap" }, h("button", { class: "btn alt", text: t("menu.import"), attrs: { "data-act": "import" }, on: { click: () => { void c.importSave(inp.value).then(e => c.toast(e ? tErr(e) : t("menu.loaded"))); } } }),
                 h("button", { class: "btn alt", text: t("menu.hintsAgain"), attrs: hintsSeen(st).length ? {} : { disabled: "" },
                     on: { click: () => c.act(s => { delete s.settings.hints; }, t("menu.hintsBack")) } }))),
         h("div", { class: "card" }, h("h3", { text: t("menu.totals") }), kv([
@@ -75,7 +75,7 @@ function rekindleCard(c: Ctx): HTMLElement {
     card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.note", { pins: SUN_PINNACLES.map(p => pinName(p)).join(t("common.list")) }) }));
     if (held.length) { const tip = hint(c, "rekindle"); if (tip) card.append(tip); }
     if (dawn) {
-        card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.world", { tough: DAWN_TOUGHER * dawn, rich: DAWN_RICHER * dawn }) }));
+        card.append(h("div", { class: "muted", style: "font-size:12px", text: t("dawn.world", { tough: DAWN_TOUGHER * dawn, pin: Math.round((dawnTough(dawn, true) - 1) * 100), rich: DAWN_RICHER * dawn }) }));
         const perks = st.hero.dawn?.perks ?? [];
         if (perks.length) card.append(h("div", { style: "font-size:12px", text: t("dawn.perks", { list: perks.map(p => perkName(p)).join(t("common.list")) }) }));
         if (perksToPick(st)) card.append(h("button", { class: "btn hot", text: t("dawn.pickNow"), on: { click: () => perkDialog(c) } }));
@@ -96,7 +96,7 @@ function relightDialog(c: Ctx): void {
     for (const k of Object.keys(CLASSES)) { const o = h("option", { text: className(k), attrs: { value: k } }); if (k === st.hero.cls) o.selected = true; cls.append(o); }
     const next = dawnOf(st) + 1;
     const close = c.modal(h("div", { class: "card col", style: "max-width:560px" }, h("h3", { text: t("dawn.confirm") }),
-        h("div", { style: "font-size:13px", text: t("dawn.gains", { dawn: dawnTitle(next), xp: DAWN_XP, tough: DAWN_TOUGHER, rich: DAWN_RICHER }) }),
+        h("div", { style: "font-size:13px", text: t("dawn.gains", { dawn: dawnTitle(next), xp: DAWN_XP, tough: DAWN_TOUGHER, pin: DAWN_PINNACLE, rich: DAWN_RICHER }) }),
         h("div", { class: "muted", style: "font-size:12px", text: t("dawn.keeps") }),
         h("div", { class: "muted", style: "font-size:12px", text: t("dawn.resets") }),
         h("div", { class: "row" }, h("b", { text: t("dawn.heirloom") }), heir),

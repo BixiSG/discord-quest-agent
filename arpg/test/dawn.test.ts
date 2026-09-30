@@ -1,9 +1,9 @@
 // Round 5: the Rekindling.
 
 import { describe, expect, it } from "vitest";
-import { DAWN_TOUGHER, PINNACLES } from "../src/core/data";
+import { DAWN_PINNACLE, DAWN_TOUGHER, PINNACLES } from "../src/core/data";
 import { enrage } from "../src/core/sim/engine";
-import { chooseDawnPerk, crownbreaker, crownFalls, dawnEffects, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../src/core/dawn";
+import { chooseDawnPerk, crownbreaker, crownFalls, dawnEffects, dawnTough, dawnOf, heirloomCandidates, perksToPick, relightSun } from "../src/core/dawn";
 import { completeMap, queuePinnacle } from "../src/core/maps";
 import { buyStashRoom, newGame, receiveItem, salvage, sheetOf, stashRoomCost } from "../src/core/game";
 import { validateState } from "../src/core/validate";
@@ -72,6 +72,14 @@ describe("relighting the sun", () => {
         const eff = dawnEffects(g, {}, null)!;
         expect(eff.life).toBeCloseTo(1 + DAWN_TOUGHER / 100);
         expect(eff.rarity).toBe(20);
+        // The pinnacles hold their piece of the sun harder each dawn (the loop slows).
+        const pin = dawnEffects(g, {}, null, true)!;
+        expect(pin.life).toBeCloseTo((1 + DAWN_TOUGHER / 100) * (1 + DAWN_PINNACLE / 100));
+        expect(pin.damage).toBeCloseTo(pin.life);
+        expect(pin.rarity).toBe(eff.rarity);
+        // ...and it compounds: a wall that later dawns climb slowly.
+        expect(dawnTough(3, true)).toBeCloseTo((1 + (3 * DAWN_TOUGHER) / 100) * Math.pow(1 + DAWN_PINNACLE / 100, 3));
+        expect(dawnTough(3)).toBeCloseTo(1 + (3 * DAWN_TOUGHER) / 100);
         const plain: Item = { uid: 950, base: "ring_iron", ilvl: 50, rarity: "rare", name: "R", affixes: [] };
         g.stash.push(plain);
         const d0 = g.dust;

@@ -60,10 +60,12 @@ before the next phase starts.
 
 ## Round 8 - builds past level 26, feats, errands
 Branch: `claude/nifty-gauss-gv1g8h`. Design notes: docs/ROADMAP.md, "Round 8".
-- [ ] Ascendancy nodes 7-8: the fourth trial's two points had nothing to buy
-- [ ] Late skills (six, levels 28-44) and supports (five, 28-40); supports with modifiers on the hero (Steadfast)
-- [ ] Ashfold map areas (three) and six map mods
-- [ ] Review A: background bug audit fixes + code review of the above
-- [ ] Feats, renown and titles (account-wide, kept across dawns)
-- [ ] Companion errands (idle companions fetch dust, currency, stones and maps, and grow)
-- [ ] Balance pass with the bot, review B, docs, screenshots, changelog
+- [x] Ascendancy nodes 7-8: the fourth trial's two points had nothing to buy
+- [x] Late skills (six, levels 28-44) and supports (five, 28-40); supports with modifiers on the hero (Steadfast)
+- [x] Ashfold map areas (three) and six map mods
+- [x] Review A: background bug audit fixes + code review of the above
+- [x] Feats, renown and titles (account-wide, kept across dawns)
+- [x] Companion errands (idle companions fetch dust, currency, stones and maps, and grow)
+- [x] Asked for on the way: sprite facing (lantern ghost, white-haired swordsman), Forge previews, a bigger passive tree
+- [x] Balance pass with the bot, review B, docs, screenshots, changelog
+- [ ] More enemy sprites: the packs come from opengameart.org, which this environment's network policy denies

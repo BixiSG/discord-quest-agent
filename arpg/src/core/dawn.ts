@@ -4,7 +4,7 @@
 // companions and their bond, echoes, the stone pouch, bought stash room,
 // settings and totals, and one heirloom item.
 
-import { CLASSES, DAWN_PERK, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from "./data";
+import { CLASSES, DAWN_PERK, DAWN_PINNACLE, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from "./data";
 import { allShards } from "./echoes";
 import { ECHOES_PER_POINT } from "./data";
 import { newGame, pushLog, relicRollScore } from "./game";
@@ -108,15 +108,19 @@ export function chooseDawnPerk(s: GameState, id: string): string | null {
     return null;
 }
 
-/** The world a dawn later: tougher monsters, richer drops, on top of any map's own mods. */
+/** How much tougher (life and damage, a multiplier) monsters are at dawn `d`; pinnacles more so. */
+export const dawnTough = (d: number, pinnacle = false) => (1 + (DAWN_TOUGHER * d) / 100) * (pinnacle ? Math.pow(1 + DAWN_PINNACLE / 100, d) : 1);
+
+/** The world a dawn later: tougher monsters (pinnacles more so), richer drops, on top of any map's own mods. */
 const wrapped = new WeakMap<object, { dawn: number; base: MapEffects | null; eff: MapEffects }>();
-export function dawnEffects(s: GameState, key: object, base: MapEffects | null): MapEffects | null {
+export function dawnEffects(s: GameState, key: object, base: MapEffects | null, pinnacle = false): MapEffects | null {
     const d = dawnOf(s);
     if (!d) return base;
     const c = wrapped.get(key);
     if (c && c.dawn === d && c.base === base) return c.eff;
     const b = base ?? NO_EFFECTS();
-    const eff: MapEffects = { ...b, life: b.life * (1 + (DAWN_TOUGHER * d) / 100), damage: b.damage * (1 + (DAWN_TOUGHER * d) / 100),
+    const tough = dawnTough(d, pinnacle);
+    const eff: MapEffects = { ...b, life: b.life * tough, damage: b.damage * tough,
         quantity: b.quantity + DAWN_RICHER * d, rarity: b.rarity + DAWN_RICHER * d };
     wrapped.set(key, { dawn: d, base, eff });
     return eff;

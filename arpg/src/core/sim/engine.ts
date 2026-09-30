@@ -104,7 +104,7 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
 }
 
-const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null);
+const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, !!run.map?.pinnacle);
 
 // A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
