@@ -34,4 +34,5 @@ for (let s = 1; s <= seeds; s++) {
             String(g.maps.length).padStart(5), String(Math.max(0, ...g.atlas.tiers)).padStart(7), String(Object.values(g.pinnacleKills).reduce((a, b) => a + b, 0)).padStart(4), `D${g.hero.dawn?.level ?? 0}`, g.hero.skill].join(" "));
     }
     console.log(`sim speed: ${(hours * HOUR / (performance.now() - t0) / 1000).toFixed(0)}x real time per ms... ${((performance.now() - t0) / 1000).toFixed(2)} s for ${hours} h; boss kills ${bossKills}`);
+    console.log(`feats ${g.feats.length} (renown ${g.hero.renown ?? 0}${g.title ? `, title ${g.title}` : ""}), errands ${g.errandSeq ?? 0}, companions ${Object.keys(g.companions).length}`);
 }

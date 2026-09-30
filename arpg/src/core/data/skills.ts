@@ -70,13 +70,13 @@ export const SKILLS: Record<string, SkillDef> = {
     // ---- round 8: late melee
     gravecleave: {
         id: "gravecleave", name: "Gravecleave", kind: "attack", shape: "area",
-        tags: ["attack", "melee", "area"], effectiveness: 130, speedMult: 0.9, targets: 4, manaCost: 10, level: 28,
+        tags: ["attack", "melee", "area"], effectiveness: 140, speedMult: 0.95, targets: 4, manaCost: 8, level: 28,
         weapons: MELEE, fx: "arc", blurb: "A heavy downward cleave that splits the pack: up to four enemies, and a critical hit bites deeper.",
-        mods: [{ stat: "critMulti", kind: "flat", value: 25, src: "Gravecleave" }],
+        mods: [{ stat: "critChance", kind: "inc", value: 40, src: "Gravecleave" }, { stat: "critMulti", kind: "flat", value: 30, src: "Gravecleave" }],
     },
     tidalcrash: {
         id: "tidalcrash", name: "Tidal Crash", kind: "attack", shape: "area",
-        tags: ["attack", "melee", "area", "slam", "cold"], effectiveness: 150, speedMult: 0.75, targets: 6, manaCost: 14, level: 40,
+        tags: ["attack", "melee", "area", "slam", "cold"], effectiveness: 155, speedMult: 0.75, targets: 6, manaCost: 10, level: 40,
         weapons: MELEE, fx: "slam", blurb: "Brings the weapon down like the sea on the floodgate. Six enemies feel it; half of its physical damage becomes cold.",
         mods: [{ stat: "convert.cold", kind: "flat", value: 50, src: "Tidal Crash" }],
     },
@@ -112,13 +112,13 @@ export const SKILLS: Record<string, SkillDef> = {
     // ---- round 8: late bow
     sunpiercer: {
         id: "sunpiercer", name: "Sunpiercer", kind: "attack", shape: "projectile",
-        tags: ["attack", "projectile", "bow", "fire"], effectiveness: 120, targets: 2, manaCost: 10, level: 30,
+        tags: ["attack", "projectile", "bow", "fire"], effectiveness: 112, targets: 2, manaCost: 10, level: 30,
         weapons: BOW, fx: "bolt", blurb: "An arrow lit from the dead sun's coal. It passes through two enemies; most of its physical damage becomes fire.",
         mods: [{ stat: "convert.fire", kind: "flat", value: 60, src: "Sunpiercer" }, { stat: "critChance", kind: "inc", value: 30, src: "Sunpiercer" }],
     },
     blightarrow: {
         id: "blightarrow", name: "Blight Arrow", kind: "attack", shape: "single",
-        tags: ["attack", "projectile", "bow", "strike", "chaos"], effectiveness: 240, speedMult: 0.8, manaCost: 11, level: 44,
+        tags: ["attack", "projectile", "bow", "strike", "chaos"], effectiveness: 270, speedMult: 0.85, manaCost: 11, level: 44,
         weapons: BOW, fx: "bolt", blurb: "A slow shot dipped in rot. Half of its physical damage becomes chaos, and it looks for the weak spot.",
         mods: [{ stat: "convert.chaos", kind: "flat", value: 50, src: "Blight Arrow" }, { stat: "critChance", kind: "inc", value: 40, src: "Blight Arrow" }, { stat: "critMulti", kind: "flat", value: 20, src: "Blight Arrow" }],
     },

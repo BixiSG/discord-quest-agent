@@ -22,31 +22,65 @@ import { ascPointsLeft, canAllocate, chooseAscendancy, pointsLeft, takeAscNode }
 import type { GameState, Hero } from "../src/core/state";
 
 const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
+/**
+ * For the skill and its supports: like the build score, with pack damage weighing more. Most of
+ * the road is packs, and a slow single-target hit wastes most of itself on trash (overkill the
+ * sheet can't see): scored the plain way, Heartseeker won the Strider's early skill and cleared
+ * a third slower than Rain of Barbs or Storm Volley.
+ */
+export const clearScore = (hero: Hero) => {
+    // BOT_SCORE=build: the plain build score (the bot before round 8), for comparisons.
+    if (process.env.BOT_SCORE === "build") return score(hero);
+    const s = deriveSheet({ ...hero, rev: -1 });
+    const off = Math.pow(Math.max(0.01, s.skill.dps), 0.3) * Math.pow(Math.max(0.01, s.skill.packDps), 0.7);
+    const def = Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
+    return Math.pow(off, 0.6) * Math.pow(def, 0.4);
+};
+/**
+ * For a pinnacle: one enemy, so only single-target damage counts (and the defences). Like a
+ * player, the bot fights pinnacles with its best boss skill (Glacial Lance, Sunder, Blight Arrow
+ * have a use) and goes back to clearing after. BOT_SCORE=build keeps one skill for both.
+ */
+const bossScore = (hero: Hero) => {
+    if (process.env.BOT_SCORE === "build") return score(hero);
+    const s = deriveSheet({ ...hero, rev: -1 });
+    const def = Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
+    return Math.pow(Math.max(0.01, s.skill.dps), 0.6) * Math.pow(def, 0.4);
+};
 /** BOT_KIND=attack or spell keeps the bot to one kind of skill (balance checks of attacks against spells). */
 const KIND = process.env.BOT_KIND;
+/** BOT_SKILLS=a,b,c keeps it to those skills (a probe of one skill line against another). */
+const ONLY = process.env.BOT_SKILLS?.split(",");
 
-export function botTune(state: GameState): void {
-    const hero = state.hero;
-    // Skill + supports: greedy supports for each usable skill, keep the best.
+/** The best skill by `sc`, each with greedy supports. */
+function bestSkill(hero: Hero, sc: (h: Hero) => number): { skill: string; supports: string[] } {
     let best = { skill: hero.skill, supports: hero.supports, score: -1 };
     for (const sk of Object.values(SKILLS)) {
-        if (sk.level > hero.level || (KIND && sk.kind !== KIND)) continue;
+        if (sk.level > hero.level || (KIND && sk.kind !== KIND) || (ONLY && !ONLY.includes(sk.id))) continue;
         const sup: string[] = [];
         for (let slot = 0; slot < supportSlots(hero.level); slot++) {
-            let pick: string | null = null, ps = score({ ...hero, skill: sk.id, supports: sup });
+            let pick: string | null = null, ps = sc({ ...hero, skill: sk.id, supports: sup });
             for (const s of Object.values(SUPPORTS)) {
                 if (s.level > hero.level || sup.includes(s.id)) continue;
-                const v = score({ ...hero, skill: sk.id, supports: [...sup, s.id] });
+                const v = sc({ ...hero, skill: sk.id, supports: [...sup, s.id] });
                 if (v > ps * 1.001) { ps = v; pick = s.id; }
             }
             if (!pick) break;
             sup.push(pick);
         }
-        const v = score({ ...hero, skill: sk.id, supports: sup });
+        const v = sc({ ...hero, skill: sk.id, supports: sup });
         if (v > best.score) best = { skill: sk.id, supports: sup, score: v };
     }
-    setSkill(state, best.skill);
-    setSupports(state, best.supports);
+    return best;
+}
+const wear = (state: GameState, pick: { skill: string; supports: string[] }) => { setSkill(state, pick.skill); setSupports(state, pick.supports); };
+/** A pinnacle queued or being fought. */
+const atPinnacle = (state: GameState) => !!(state.activity.pinnacle || state.activity.run?.map?.pinnacle);
+
+export function botTune(state: GameState): void {
+    const hero = state.hero;
+    // Skill + supports: for clearing, or for the pinnacle queued.
+    wear(state, bestSkill(hero, atPinnacle(state) ? bossScore : clearScore));
     // Passives: take the open node with the best score gain, notables first on ties.
     while (pointsLeft(hero) > 0) {
         const open = Object.values(PASSIVES).filter(n => !canAllocate(hero, n.id));
@@ -129,9 +163,15 @@ export function botTune(state: GameState): void {
         // Pinnacles only when a scout says the hero wins most fights (like a careful player),
         // a sun shard still missing first, then the hardest the hero can take.
         const order = Object.values(PINNACLES).sort((a, b) => Number((state.pinnacleKills[a.id] ?? 0) > 0) - Number((state.pinnacleKills[b.id] ?? 0) > 0) || b.level - a.level);
-        for (const p of order) {
-            if (state.activity.pinnacle || (state.sigils[p.sigil] ?? 0) < p.cost) continue;
-            if (scoutPinnacle(state, p.id, 3).wins >= 2) queuePinnacle(state, p.id);
+        if (!atPinnacle(state) && order.some(p => (state.sigils[p.sigil] ?? 0) >= p.cost)) {
+            // Scouted (and fought) with the boss skill; back to clearing when none is taken on.
+            const clear = { skill: hero.skill, supports: [...hero.supports] };
+            wear(state, bestSkill(hero, bossScore));
+            for (const p of order) {
+                if (state.activity.pinnacle || (state.sigils[p.sigil] ?? 0) < p.cost) continue;
+                if (scoutPinnacle(state, p.id, 3).wins >= 2) queuePinnacle(state, p.id);
+            }
+            if (!state.activity.pinnacle) wear(state, clear);
         }
     }
     void sheetOf(state);

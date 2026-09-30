@@ -1,21 +1,21 @@
 // Skill balance probe: plays a hero with the balance bot and, at each checkpoint,
-// ranks every skill it could use by build score with its best greedy supports
-// (the way the bot picks), with single-target and pack DPS beside it.
+// ranks every skill it could use by score with its best greedy supports
+// (the way the bot picks: its clear score), with single-target and pack DPS beside it.
 // Usage: node tools/run-ts.mjs tools/skillprobe.ts [class=vanguard] [hours=4,8,16,32] [seed=11]
 
 import { advance } from "../src/core/sim/engine";
-import { buildScore, newGame } from "../src/core/game";
+import { newGame } from "../src/core/game";
 import { deriveSheet, supportSlots } from "../src/core/character";
 import { SKILLS, SUPPORTS } from "../src/core/data";
 import type { Hero } from "../src/core/state";
-import { botTune } from "./bot";
+import { botTune, clearScore } from "./bot";
 
 const HOUR = 3600e3;
 const [cls = "vanguard", hoursArg = "4,8,16,32", seedArg = "11"] = process.argv.slice(2);
 const checkpoints = hoursArg.split(",").map(Number);
 const start = Date.UTC(2026, 5, 1);
 const g = newGame({ name: "Probe", cls, now: start, seed: Number(seedArg) });
-const score = (hero: Hero) => buildScore(deriveSheet({ ...hero, rev: -1 }));
+const score = clearScore;
 
 /** The bot's greedy support pick for one skill. */
 function best(hero: Hero, skill: string): { supports: string[]; score: number } {
