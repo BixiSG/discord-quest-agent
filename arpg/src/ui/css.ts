@@ -429,9 +429,9 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 /* The anvil stays in view (sticky) beside the rack and the shelf: hovering a currency previews on its card. */
 .smithy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 320px) minmax(260px, 1fr); grid-template-areas: "rack anvil shelf"; gap: 14px; align-items: start; }
 .smithy > .rackcard { grid-area: rack; } .smithy > .shelfcard { grid-area: shelf; }
-.smithy > .anvilcard { grid-area: anvil; position: sticky; top: 0; z-index: 1; }
+.smithy > .anvilcard { grid-area: anvil; position: sticky; top: 0; z-index: 1; max-height: calc(var(--bodyh, 100vh) - 36px); overflow: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 @container win (max-width: 1080px) { .smithy { grid-template-columns: minmax(0, 1fr) minmax(250px, 1fr); grid-template-areas: "rack anvil" "shelf anvil"; } }
-@container win (max-width: 700px) { .smithy { grid-template-columns: 1fr; grid-template-areas: "rack" "anvil" "shelf"; } .smithy > .anvilcard { position: static; } }
+@container win (max-width: 700px) { .smithy { grid-template-columns: 1fr; grid-template-areas: "rack" "anvil" "shelf"; } .smithy > .anvilcard { position: static; max-height: none; overflow: visible; } }
 .cell .worn { position: absolute; left: -2px; bottom: -3px; padding: 0 3px; background: #1a1410; color: #ffc233; font: 700 8px/12px var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
 .anvil-plate { display: grid; place-items: center; height: 96px; margin-bottom: 10px; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px;
   background: radial-gradient(ellipse at 50% 100%, rgba(255,120,40,.35), transparent 70%); color: var(--muted); }

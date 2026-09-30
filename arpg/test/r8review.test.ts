@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { BASES, MAP_MODS, RELICS } from "../src/core/data";
 import { deriveSheet } from "../src/core/character";
-import { canEquip, equip, newGame, receiveItem, relicRollScore, upgradeSlot } from "../src/core/game";
+import { canEquip, equip, newGame, paidFits, receiveItem, relicRollScore, upgradeSlot } from "../src/core/game";
 import { forgeCost, forgeRare, forgeUntilUpgrade } from "../src/core/crafting";
 import { relightSun } from "../src/core/dawn";
 import { buyGear, tickMarket } from "../src/core/market";
@@ -124,6 +124,74 @@ describe("review A", () => {
         s.stashCap = s.stash.length;
         expect(buyGear(s, 1)).toMatch(/stash full/);
         expect(s.dust).toBe(900);
+    });
+    it("forge until upgrade (auto-equip on) stops before paying for an upgrade it can neither wear nor keep", () => {
+        let stopped = 0;
+        for (let seed = 1; seed < 60 && stopped < 3; seed++) {
+            const s = g0(seed); s.hero.level = 20; s.dust = 1e6; s.settings.upkeep = false;
+            // Locked gear on, a full stash: an upgrade can't go on (the old helmet has nowhere to go) nor be kept.
+            const helm = Object.values(BASES).filter(b => b.slot === "helmet" && b.level <= 20);
+            s.hero.equipment.helmet = { uid: 50, base: helm[0]!.id, ilvl: 1, rarity: "plain", affixes: [], locked: true };
+            s.hero.rev++;
+            s.stashCap = 1;
+            s.stash.push({ uid: 51, base: helm[0]!.id, ilvl: 1, rarity: "plain", affixes: [] });
+            const dust0 = s.dust, got0 = s.totals.dust, salvaged0 = s.totals.salvaged;
+            const r = forgeUntilUpgrade(s, "helmet", 10);
+            if (!r.err) continue; // ten misses: nothing to test on this seed
+            stopped++;
+            expect(r.err).toMatch(/stash full/);
+            // Paid for the misses only (salvaging them gives some dust back).
+            expect(s.dust).toBe(dust0 - r.made * forgeCost(s) + (s.totals.dust - got0));
+            expect(s.totals.salvaged).toBe(salvaged0 + r.made);
+            expect(s.hero.equipment.helmet!.uid).toBe(50);
+            expect(s.stash.map(x => x.uid)).toEqual([51]);
+            // The next forge rolls the same upgrade again: it was not paid for.
+            s.stashCap = 2;
+            const again = forgeUntilUpgrade(s, "helmet", 1);
+            expect(again.err).toBeNull();
+            expect(again.made).toBe(1);
+            expect(again.item).toBeDefined();
+        }
+        expect(stopped).toBeGreaterThan(0);
+    });
+    it("the Pedlar's Buy is a dry run of buyGear: a wearable upgrade fits a full stash only when it can really go on", () => {
+        const s = g0(3); s.hero.level = 20;
+        const helm = Object.values(BASES).filter(b => b.slot === "helmet" && b.level <= 20);
+        s.hero.equipment.helmet = { uid: 50, base: helm[0]!.id, ilvl: 1, rarity: "plain", affixes: [], locked: true };
+        s.hero.rev++;
+        s.stashCap = 1;
+        s.stash.push({ uid: 51, base: helm[0]!.id, ilvl: 1, rarity: "plain", affixes: [], locked: true });
+        const up: Item = { uid: 53, base: helm[helm.length - 1]!.id, ilvl: 20, rarity: "rare", name: "Grim Bite", affixes: [{ id: "life", tier: 0, rolls: [40] }] };
+        expect(upgradeSlot(s, up)).not.toBeNull();
+        // The locked helmet coming off has nowhere to go, and upkeep can't touch a locked stash item.
+        expect(paidFits(s, up)).toBe(false);
+        s.world.clears.a1_lock = 1; tickMarket(s);
+        s.market.pedlar[0] = { item: up, price: 10 }; s.dust = 100;
+        expect(buyGear(s, 0)).toMatch(/stash full/);
+        expect(s.dust).toBe(100);
+        // Unlocked stash item: upkeep gives it up, the upgrade goes on.
+        s.stash[0]!.locked = false;
+        expect(paidFits(s, up)).toBe(true);
+        expect(buyGear(s, 0)).toBeNull();
+        expect(s.hero.equipment.helmet!.uid).toBe(53);
+        // Auto-equip off: only room in the stash counts.
+        const t = g0(3); t.settings.autoEquip = false; t.stashCap = 0;
+        expect(paidFits(t, up)).toBe(false);
+    });
+    it("losing a pinnacle doesn't break the run of clean maps", async () => {
+        const { queuePinnacle } = await import("../src/core/maps");
+        const { PINNACLES } = await import("../src/core/data");
+        const g = g0(4); g.world.clears.a4_lamphouse = 1; g.hero.level = 70; g.hero.rev++;
+        g.activity.mode = "map"; g.activity.run = null; g.activity.autoPush = true; g.activity.streak = 5;
+        const p = PINNACLES.drownedsun!;
+        g.sigils[p.sigil] = p.cost;
+        expect(queuePinnacle(g, p.id)).toBeNull();
+        step(g);
+        const run = () => g.activity.run!;
+        run().hero.life = -1e9;
+        step(g);
+        expect(run().phase).toBe("dead");
+        expect(g.activity.streak).toBe(5);
     });
     it("map bosses and repeat story bosses stay out of the chronicle", () => {
         const s = g0(9);

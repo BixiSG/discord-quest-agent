@@ -2,7 +2,7 @@
 // seeded by (save seed, craft counter), so crafting is deterministic too.
 
 import { CURRENCIES, ZONES, mapLevel } from "./data";
-import { paidRoom, receivePaid, salvageItem, upgradeSlot, wearableOffhands } from "./game";
+import { receivePaid, salvageItem, upgradeSlot, wearableOffhands } from "./game";
 import { Rng, hashSeed } from "./rng";
 import { MAX_AFFIXES, rollItem, addRandomAffix, affixOf, baseOf, countAffixes, eligibleAffixes, rareName, relicOf, rollAffixes, rollTier } from "./items";
 import { AFFIXES, betterLow, type AffixDef, type RelicDef } from "./data";
@@ -317,10 +317,15 @@ export function forgeRare(state: GameState, slot: string): { err: string | null;
     if (!item) return { err: "nothing to forge for that slot" };
     const r = receivePaid(state, item);
     if (r.err) return { err: r.err };
+    payForge(state, cost);
+    return { err: null, item, equipped: r.equipped };
+}
+
+/** A forged item is paid for: the next forge rolls another. */
+function payForge(state: GameState, cost: number): void {
     state.nextUid++;
     state.craftSeq++;
     state.dust -= cost;
-    return { err: null, item, equipped: r.equipped };
 }
 
 /** The next forged rare for a slot group (deterministic: the save's seed and the craft counter). */
@@ -350,17 +355,16 @@ export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): {
         if (state.dust < cost) return { err: made ? null : `needs ${cost} ember dust`, made };
         const item = forgeRoll(state, slot);
         if (!item) return { err: "nothing to forge for that slot", made };
-        const up = !!upgradeSlot(state, item);
-        // An upgrade that can be neither worn nor kept: stop before paying for it.
-        if (up && !state.settings.autoEquip && !paidRoom(state, item)) return { err: made ? null : "stash full", made };
-        state.nextUid++;
-        state.craftSeq++;
-        state.dust -= cost;
-        made++;
-        if (up) {
+        if (upgradeSlot(state, item)) {
+            // The upgrade is worn or kept; one that can be neither stops the forging before it is
+            // paid for (receivePaid changes nothing when it refuses).
             const r = receivePaid(state, item);
-            if (!r.err) return { err: null, made, item, equipped: r.equipped };
+            if (r.err) return { err: r.err, made };
+            payForge(state, cost);
+            return { err: null, made: made + 1, item, equipped: r.equipped };
         }
+        payForge(state, cost);
+        made++;
         salvageItem(state, item);
     }
     return { err: null, made };

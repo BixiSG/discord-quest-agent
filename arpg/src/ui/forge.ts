@@ -32,6 +32,8 @@ const forgeOpts = { until: false };
 
 export function forgeView(c: Ctx): HTMLElement {
     const st = c.state;
+    // A rebuild takes away whatever the pointer rested on (a preview's hold ends with it).
+    c.hold = false;
     // The rack in three groups: what is worn (framed in gold), the stash, the relic case.
     const rack = h("div", { class: "stash" });
     const cellFor = (it: Item) => {
@@ -68,12 +70,16 @@ export function forgeView(c: Ctx): HTMLElement {
         card.replaceWith(next);
         card = next;
     };
-    /** Shows `make()` on the anvil while `el` is hovered or focused. */
+    /**
+     * Shows `make()` on the anvil while `el` is hovered or focused. A hover holds the view (the
+     * dust ticking up would rebuild it and take the preview away); focus comes back after a
+     * rebuild, and its preview with it.
+     */
     const previewOn = (el: HTMLElement, make: () => CardPreview | null) => {
         const on = () => preview(make());
         const off = (e: Event) => { const to = (e as MouseEvent | FocusEvent).relatedTarget as Node | null; if (!to || !el.contains(to)) preview(null); };
-        el.addEventListener("mouseenter", on); el.addEventListener("focusin", on);
-        el.addEventListener("mouseleave", off); el.addEventListener("focusout", off);
+        el.addEventListener("mouseenter", () => { c.hold = true; on(); }); el.addEventListener("focusin", on);
+        el.addEventListener("mouseleave", e => { c.hold = false; off(e); }); el.addEventListener("focusout", off);
     };
     if (found) {
         const it = found.item;
@@ -90,10 +96,12 @@ export function forgeView(c: Ctx): HTMLElement {
             const btn = h("button", { class: "btn small", text: hc === null ? t("forge.max") : t("forge.honeFor", { cost: fmt(hc) }), attrs: { "data-key": "h", ...(hc === null || st.dust < hc ? { disabled: "" } : {}) },
                 title: hc === null ? t("forge.fullyHoned") : t(baseOf(it).weapon ? "forge.honeTipWeapon" : "forge.honeTipArmour"),
                 on: { click: () => c.act(s => hone(s, it.uid)) } });
-            if (hc !== null) previewOn(btn, () => ({ label: t("forge.hone"), p: { affixes: it.affixes.map(() => "keep"), quality: q + 1 } }));
-            work.append(h("div", { class: "wrow" }, h("b", { text: t("forge.hone") }),
+            const row = h("div", { class: "wrow" }, h("b", { text: t("forge.hone") }),
                 h("div", { class: "qbar", title: t("forge.qualityTip", { q, max: MAX_QUALITY }) }, h("i", { style: `width:${(q / MAX_QUALITY) * 100}%` })),
-                h("span", { class: "num", text: `${q}%` }), btn));
+                h("span", { class: "num", text: `${q}%` }), btn);
+            // On the row: a disabled button (not enough dust yet) gets no pointer events.
+            if (hc !== null) previewOn(row, () => ({ label: t("forge.hone"), p: { affixes: it.affixes.map(() => "keep"), quality: q + 1 } }));
+            work.append(row);
         }
         // Bench: a chosen affix, one per item.
         const opts = benchOptions(it);

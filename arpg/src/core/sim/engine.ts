@@ -430,9 +430,9 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     run.hero.life = 0;
     state.totals.deaths++;
     const act = state.activity;
-    act.streak = 0;
-    // A pinnacle is not a map: losing one must not count towards lowering the device's tier.
-    if (!run.map?.pinnacle) act.deaths++;
+    // A pinnacle is not a map: losing one neither breaks the run of clean maps nor counts
+    // towards lowering the device's tier.
+    if (!run.map?.pinnacle) { act.streak = 0; act.deaths++; }
     pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {

@@ -221,15 +221,8 @@ function leftOver(state: GameState, x: Item): void {
  */
 function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
     const off = displacedItems(state, item, slot);
-    const keep = off.flatMap(o => {
-        if (!o.relic) return o.locked ? [o] : [];
-        const l = caseLoser(state, o);
-        return l?.locked ? [l] : [];
-    });
-    const need = keep.length - (state.stashCap - state.stash.length);
-    // Only upkeep gives stash items up for room; with it off, a full stash keeps the old gear on.
-    const victims = need > 0 && state.settings.upkeep ? upkeepVictims(state, need) : [];
-    if (need > 0 && victims.length < need) return false;
+    const victims = wearRoom(state, item, slot);
+    if (!victims) return false;
     putOn(state, item, slot);
     for (const v of victims) giveUp(state, v);
     for (const o of off) {
@@ -238,6 +231,25 @@ function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
         else stashOrSalvage(state, o);
     }
     return true;
+}
+
+/**
+ * What wearing `item` in `slot` would give up for room (the rule equipWithRoom
+ * applies): locked gear coming off must be kept, and when the stash can't take
+ * it, upkeep gives up stash items. Null when it can't be worn for lack of room.
+ */
+function wearRoom(state: GameState, item: Item, slot: Slot): Item[] | null {
+    const keep = displacedItems(state, item, slot).flatMap(o => {
+        if (!o.relic) return o.locked ? [o] : [];
+        const l = caseLoser(state, o);
+        return l?.locked ? [l] : [];
+    });
+    const need = keep.length - (state.stashCap - state.stash.length);
+    if (need <= 0) return [];
+    // Only upkeep gives stash items up for room; with it off, a full stash keeps the old gear on.
+    if (!state.settings.upkeep) return null;
+    const victims = upkeepVictims(state, need);
+    return victims.length >= need ? victims : null;
 }
 
 /** Puts an item on; returns what it displaced. The item must be out of the stash and the case. */
@@ -368,6 +380,13 @@ export function receivePaid(state: GameState, item: Item): { err: string | null;
 /** Would a paid-for item find room if it isn't worn (the rule receivePaid applies)? */
 export function paidRoom(state: GameState, item: Item): boolean {
     return state.stash.length < state.stashCap || (!!item.relic && !caseLoser(state, item));
+}
+
+/** Would receivePaid take this item (worn as an upgrade, or kept)? A dry run of it, for the buttons. */
+export function paidFits(state: GameState, item: Item): boolean {
+    if (paidRoom(state, item)) return true;
+    const slot = state.settings.autoEquip ? upgradeSlot(state, item) : null;
+    return !!slot && wearRoom(state, item, slot) !== null;
 }
 
 /**

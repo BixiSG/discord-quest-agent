@@ -134,6 +134,8 @@ export class GameWindow {
         void this.save();
     };
     private onResize = () => this.refit();
+    /** The tab's height, for what must fit in it (the Forge's anvil stays in view). */
+    private bodySize: ResizeObserver | null = null;
 
     constructor(private store: SaveStore, private kv: KV, private hooks: AppHooks = {}) {}
 
@@ -158,6 +160,7 @@ export class GameWindow {
         await this.save();
         window.removeEventListener("pagehide", this.onUnload);
         window.removeEventListener("resize", this.onResize);
+        this.bodySize?.disconnect(); this.bodySize = null;
         if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
         this.host.remove();
         this.host = null;
@@ -235,6 +238,8 @@ export class GameWindow {
             } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: navKey(i) }), h("span", { class: "badge", attrs: { hidden: "" } })));
         });
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
+        this.bodySize = new ResizeObserver(() => this.body.style.setProperty("--bodyh", `${this.body.clientHeight}px`));
+        this.bodySize.observe(this.body);
         const main = h("div", { class: "main" }, this.nav, this.body);
 
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });

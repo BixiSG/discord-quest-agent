@@ -62,9 +62,11 @@ export function skillsView(c: Ctx): HTMLElement {
             if (on) [d, e] = judge(active.filter(x => x !== s.id));
             else if (!full) [d, e] = judge([...active, s.id]);
             else for (const out of active) {
-                // Slots full: the best single swap for this one (by DPS; a defensive support by EHP).
+                // Slots full: the best single swap for this one (by DPS; a defensive support by EHP,
+                // ties by DPS: most swaps leave EHP where it is).
                 const [v, w] = judge(active.map(x => x === out ? s.id : x));
-                if (d === null || (s.self ? w > e! : v > d)) { d = v; e = w; swap = out; }
+                const better = s.self ? w > e! + 1e-9 || (Math.abs(w - e!) <= 1e-9 && v > d!) : v > d!;
+                if (d === null || better) { d = v; e = w; swap = out; }
             }
         }
         return { s, on, locked, fits, d, e: s.self ? e : null, swap };

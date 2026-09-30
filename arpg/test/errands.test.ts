@@ -91,7 +91,7 @@ describe("companion errands", () => {
         expect(a.companions).toEqual(b.companions);
         expect(a.dust).toBe(b.dust);
         expect(a.errandSeq).toBeGreaterThanOrEqual(30); // three companions, twelve two-hour errands each
-    });
+    }, 30_000); // two simulated days
     it("validation keeps sound errands only, and relighting keeps them", () => {
         const g = g0();
         g.errands = [

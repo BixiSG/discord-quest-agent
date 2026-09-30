@@ -775,7 +775,7 @@ const UI: Record<string, string> = {
     "forge.smithTip": "Викувати рідкісну річ для комірки «{slot}» за {cost} пилу",
     "forge.needsDust": "Потрібно {cost} пилу жарин",
     "forge.forgedWearing": "Викувано {n}: одягнено {item}",
-    "forge.forgedKept": "Викувано {n}: {item} краще, залишено в схованці",
+    "forge.forgedKept": "Викувано {n}: {item} - покращення, залишено в схованці",
     "forge.offhandBlocked": "Зброя займає обидві руки",
     "forge.forgedNone": "Викувано {n}, нічого кращого за одягнене",
     "forge.forged": "Викувано рідкісну річ",
