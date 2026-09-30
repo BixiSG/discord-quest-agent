@@ -15,3 +15,4 @@ export * from "./companions";
 export * from "./stones";
 export * from "./echoes";
 export * from "./dawn";
+export * from "./feats";

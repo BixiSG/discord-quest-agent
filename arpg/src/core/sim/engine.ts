@@ -2,11 +2,11 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
+import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SUPPORTS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
-import { DAMAGE_TYPES, type Item } from "../types";
+import { DAMAGE_TYPES, type DamageType, type Item } from "../types";
 import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
@@ -21,6 +21,8 @@ import { dawnEffects, hasPerk } from "../dawn";
 import { LANTERN, hollowNight, lanternKill, lanternRate, tickSeason, touch } from "../season";
 import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
+import { checkFeats } from "../feats";
+import { tickErrands } from "../errands";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -64,6 +66,10 @@ export interface SimEvents {
     stone?(key: string): void;
     /** An echo (lore page) was found. */
     echo?(id: string): void;
+    /** A feat was earned. */
+    feat?(id: string): void;
+    /** A companion came back from an errand. */
+    errand?(pet: string, kind: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -98,7 +104,7 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
 }
 
-const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null);
+const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, !!run.map?.pinnacle);
 
 // A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
@@ -126,7 +132,7 @@ function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null, 
     if (run.pack >= run.packs) {
         if (z.boss) {
             const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
-            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE); }
+            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE * (eff?.bossLife ?? 1)); }
             run.monsters.push(b);
         }
         return;
@@ -163,6 +169,9 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
 /** One 100 ms step. */
 export function step(state: GameState, ev: SimEvents = {}): void {
     if (!state.activity.run) state.activity.run = newRun(state, sheetOf(state));
+    // Errands come home on the hero's clock, whatever the run is doing (a hero dying run after run,
+    // or one fight that never ends, must not keep them away).
+    if (state.errands?.some(e => e.until <= state.simTo)) tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     const run = state.activity.run;
     let sheet = runSheet(state);
     const rng = new Rng(run.rng);
@@ -182,7 +191,12 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     switch (run.phase) {
         case "dead":
             run.timer -= DT;
-            if (run.timer <= 0) { state.activity.runIndex++; state.activity.run = newRun(state, sheetOf(state)); }
+            if (run.timer <= 0) {
+                // A hero that keeps dying still levels and kills: its feats are checked as it rises.
+                checkFeats(state, { onFeat: id => ev.feat?.(id) });
+                state.activity.runIndex++;
+                state.activity.run = newRun(state, sheetOf(state));
+            }
             break;
         case "travel":
             run.timer -= DT * sheet.moveSpeed;
@@ -199,7 +213,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
             if (h.cd <= 0) {
                 if (h.mana >= sheet.skill.manaCost) {
                     h.mana -= sheet.skill.manaCost;
-                    sheet = heroAttack(state, run, sheet, rng, ev);
+                    sheet = heroAttack(state, run, sheet, rng, ev, eff);
                     h.cd += 1 / Math.max(0.1, sheet.skill.speed);
                 } else h.cd = 0.2;
             }
@@ -224,7 +238,13 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     if (state.activity.run === run) run.rng = rng.state();
 }
 
-function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents): Sheet {
+/** A monster's evasion, armour and resistance to a damage type, with the map's mods (veiled, armoured, warded). */
+export const monsterEvasion = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.evasion * (eff?.evasion ?? 1);
+/** Monster armour counts at half against the hero's hits (COMBAT.md 9). */
+export const monsterArmour = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.armour * 0.5 * (eff?.armour ?? 1);
+export const monsterRes = (m: MonsterState, t: DamageType, eff: MapEffects | null) => (MONSTERS[m.def]!.res?.[t] ?? 0) + (t !== "phys" && t !== "chaos" ? eff?.res ?? 0 : 0);
+
+function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): Sheet {
     const sk = sheet.skill;
     const alive: number[] = [];
     run.monsters.forEach((m, i) => { if (m.life > 0) alive.push(i); });
@@ -233,8 +253,7 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
     let dealt = 0;
     for (const i of targets) {
         const m = run.monsters[i]!;
-        const d = MONSTERS[m.def]!;
-        if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m.level) * d.evasion))) { ev.heroMiss?.(i); continue; }
+        if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterEvasion(m, eff)))) { ev.heroMiss?.(i); continue; }
         const crit = rng.chance(sk.critChance / 100);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
@@ -242,8 +261,8 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
             if (hi <= 0) continue;
             let x = rng.range(lo, hi);
             if (crit) x *= sk.critMulti / 100;
-            if (t === "phys") x *= 1 - armourReduction(monsterDefence(m.level) * d.armour * 0.5, x);
-            else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
+            if (t === "phys") x *= 1 - armourReduction(monsterArmour(m, eff), x);
+            else x *= 1 - (monsterRes(m, t, eff) - sk.pen[t]) / 100;
             dmg += Math.max(0, x);
         }
         dmg = Math.max(1, dmg);
@@ -275,7 +294,7 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
             if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
         }
         if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
-        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE) : 1;
+        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
         const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
         let dmg = 0;
         for (const t of DAMAGE_TYPES) {
@@ -311,7 +330,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     if (petKill(state)) changed0 = true;
     contractEvent(state, "kills");
     if (m.champion) contractEvent(state, "champions");
-    if (d.boss) contractEvent(state, "bosses");
+    if (d.boss) { contractEvent(state, "bosses"); state.totals.bosses = (state.totals.bosses ?? 0) + 1; }
     let changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
@@ -353,7 +372,9 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
         const had = { ...state.companions };
         const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
-        pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
+        // The chronicle keeps 60 lines: a map boss every minute or two would bury everything else,
+        // so only pinnacles and a story boss's first fall are written down.
+        if (run.map ? !!run.map.pinnacle : !state.world.clears[run.zone]) pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
     if (m.lantern && lanternKill(state, rng, m.level, ev)) changed = true;
     return changed ? runSheet(state) : sheet;
@@ -398,7 +419,11 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         hero.rev++;
         up = true;
         if (state.activity.capBackoff) state.activity.capBackoff = 0; // stronger now: map auto-push may climb sooner
-        pushLog(state, "level", "log.levelUp", { level: hero.level });
+        // The line names what the new level opens: skills and supports nobody would otherwise notice.
+        const opened = [...Object.values(SKILLS).filter(s => s.level === hero.level).map(s => ref.skill(s.id)),
+            ...Object.values(SUPPORTS).filter(s => s.level === hero.level).map(s => ref.support(s.id))];
+        if (opened.length && hero.level > 1) pushLog(state, "level", "log.levelUpNew", { level: hero.level, list: ref.list(opened) });
+        else pushLog(state, "level", "log.levelUp", { level: hero.level });
         ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
@@ -413,8 +438,9 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     run.hero.life = 0;
     state.totals.deaths++;
     const act = state.activity;
-    act.streak = 0;
-    act.deaths++;
+    // A pinnacle is not a map: losing one neither breaks the run of clean maps nor counts
+    // towards lowering the device's tier.
+    if (!run.map?.pinnacle) { act.streak = 0; act.deaths++; }
     pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {
@@ -535,6 +561,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    // Keeps idle companions busy (errands also come home mid-run: step()).
+    tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;
@@ -542,6 +570,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
     if (run.map) {
         completeMap(state, run.map);
         if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
+        // A "clear runs" contract taken before the maps opened would never move otherwise.
+        contractEvent(state, "runs");
         // Eight clean maps in a row: earlier failures are forgiven, and a capped device allows one
         // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;
@@ -553,6 +583,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
             else pushLog(state, "zone", "log.pushDeeper", { tier: ref.tier(act.autoCap) });
         }
         ev.runDone?.(run.zone);
+        // Once the run's results are in (the map's tier, a pinnacle): feats.
+        checkFeats(state, { onFeat: id => ev.feat?.(id) });
         act.runIndex++;
         act.run = newRun(state, sheetOf(state));
         return;
@@ -585,6 +617,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         act.zone = next;
         act.streak = 0;
     }
+    checkFeats(state, { onFeat: id => ev.feat?.(id) });
     act.runIndex++;
     act.run = newRun(state, sheetOf(state));
 }

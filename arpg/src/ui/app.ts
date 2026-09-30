@@ -38,7 +38,8 @@ import { VIEWS, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { creationView } from "./creation";
 import { itemCard } from "./itemui";
 import { lang, setLang, t, tn } from "../i18n";
-import { className, companionName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { className, companionName, featName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { checkFeats } from "../core/feats";
 import { tErr } from "../i18n/errors";
 
 const GEO_KEY = "window";
@@ -133,6 +134,8 @@ export class GameWindow {
         void this.save();
     };
     private onResize = () => this.refit();
+    /** The tab's height, for what must fit in it (the Forge's anvil stays in view). */
+    private bodySize: ResizeObserver | null = null;
 
     constructor(private store: SaveStore, private kv: KV, private hooks: AppHooks = {}) {}
 
@@ -157,6 +160,7 @@ export class GameWindow {
         await this.save();
         window.removeEventListener("pagehide", this.onUnload);
         window.removeEventListener("resize", this.onResize);
+        this.bodySize?.disconnect(); this.bodySize = null;
         if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
         this.host.remove();
         this.host = null;
@@ -234,6 +238,8 @@ export class GameWindow {
             } } }, glyph(NAV_GLYPH[v.id], 16), h("span", { class: "lbl", text: t(`nav.${v.id}`) }), h("span", { class: "key", text: navKey(i) }), h("span", { class: "badge", attrs: { hidden: "" } })));
         });
         this.body = h("div", { class: "body", attrs: { role: "tabpanel" } });
+        this.bodySize = new ResizeObserver(() => this.body.style.setProperty("--bodyh", `${this.body.clientHeight}px`));
+        this.bodySize.observe(this.body);
         const main = h("div", { class: "main" }, this.nav, this.body);
 
         this.toasts = h("div", { class: "toasts", attrs: { "aria-live": "polite" } });
@@ -522,6 +528,13 @@ export class GameWindow {
                 this.lastEvent = ["toast.echo", { who }];
                 sfx("echo", true);
             },
+            errand: (pet, kind) => { this.toast(t("toast.errand", { pet: companionName(pet), errand: t(`errands.doing.${kind}`) }), "relic"); },
+            feat: id => {
+                const feat = featName(id);
+                this.toast(t("toast.feat", { feat }), "relic");
+                this.lastEvent = ["toast.feat", { feat }];
+                sfx("level", true);
+            },
             companion: (id, isNew) => {
                 const pet = companionName(id);
                 this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
@@ -563,7 +576,12 @@ export class GameWindow {
             act: (fn, ok, sound) => {
                 const err = fn(this.state!);
                 if (typeof err === "string") this.toast(tErr(err), "err");
-                else { if (ok) this.toast(ok); if (sound) this.sound.play(sound); }
+                else {
+                    if (ok) this.toast(ok);
+                    if (sound) this.sound.play(sound);
+                    // A feat the player's own action earned (a hone to 20, a relight) shows at once.
+                    checkFeats(this.state!, { onFeat: id => this.toast(t("toast.feat", { feat: featName(id) }), "relic") });
+                }
                 this.sig = "";
                 this.renderTab(true);
                 void this.save();
@@ -606,7 +624,7 @@ export class GameWindow {
             const now = performance.now();
             if (now - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return; // not under a drag or a tooltip
             this.lastSigCheck = now;
-        }
+        } else this.ctx.hold = false; // a forced rebuild takes away what held the view (a hovered cell, a drag)
         this.syncLang();
         this.updateBadges();
         const sig = this.view + ":" + lang() + ":" + viewSig(this.view, this.ctx);
@@ -864,7 +882,7 @@ export class GameWindow {
             [t("report.away"), fmtDuration(r.to - r.from)],
             [t("report.runs"), fmt(r.runs)], [t("report.kills"), fmt(r.kills)], [t("report.bosses"), fmt(r.bosses)], [t("report.deaths"), fmt(r.deaths)],
             [t("report.levels"), r.levelTo > r.levelFrom ? t("report.levelUp", { from: r.levelFrom, to: r.levelTo }) : t("report.noChange", { level: r.levelTo })],
-            [t("report.xp"), fmt(r.xp)], [t("report.kept"), fmt(r.kept)], [t("report.salvaged"), fmt(r.salvaged)], [t("report.dust"), `+${fmt(r.dust)}`],
+            [t("report.xp"), fmt(r.xp)], [t("report.kept"), fmt(r.kept)], [t("report.salvaged"), fmt(r.salvaged)], [t("report.dust"), `${r.dust >= 0 ? "+" : ""}${fmt(r.dust)}`],
             ...(r.swapped ? [[t("report.swapped"), fmt(r.swapped)] as [string, string]] : []),
         ];
         const kvEl = h("div", { class: "kv" });
@@ -875,6 +893,7 @@ export class GameWindow {
         if (r.zones.length) card.append(h("div", { class: "tag teal", text: t("report.roads", { list: list(r.zones.map(id => zoneName(id))) }) }));
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list(r.equipped.slice(-4).map(it => itemName(it))) }) }));
         if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r.newCompanions.length, { list: list(r.newCompanions.map(id => companionName(id))) }) }));
+        if (r.feats.length) card.append(h("div", { class: "tag gold", text: t("report.feats", { list: list(r.feats.map(id => featName(id))) }) }));
         if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list(r.newRelics.map(id => relicName(id))) }) }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;

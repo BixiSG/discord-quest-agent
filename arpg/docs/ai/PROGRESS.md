@@ -137,3 +137,52 @@ One entry per loop iteration, newest last.
   while travelling (fight share 0.6, matches the sim); auto-push's map cap
   only ever goes down. Launcher and installer: no findings. 99 tests.
 - FINAL_REPORT.md written; roadmap complete.
+
+## 8 - Round 8: builds past level 26, feats, errands
+Plan in docs/ROADMAP.md ("Round 8"); items in ROADMAP.md here. Built, each with
+tests (287 at the end, from 250):
+- Ascendancy nodes 7-8 (the fourth trial's points): one offence, one defence
+  each; the attack ascendancies' defence nodes carry life and less damage taken.
+- Six late skills (28-44) and five supports (28-38); Steadfast is the first
+  support with modifiers on the hero, and the Skills tab shows EHP for it.
+  Bows were ~4x behind melee: bow damage 2.0 per base, Grace gives projectile
+  attack damage, Longdraw, stronger late bow skills.
+- Ashfold in the Cinderlands: three map areas (13 in all, each with its own
+  backdrop) and six map mods (18).
+- Feats (37, renown 67 in all, 12 titles), earned retroactively on load; save v9.
+- Companion errands (scavenge, forage, delve, scout; two hours, three at once,
+  "keep them busy" on by default).
+- Asked for on the way: the lantern ghost and the white-haired swordsman face
+  the hero; the Forge previews what a currency, the hone or the bench would
+  do on the item; the passive tree grew to 171 nodes (nine masteries, three
+  far keystones).
+- Review A (a background audit plus a code review of R8.1-R8.3), about 20 bugs,
+  among them a map mod that did nothing, forged items stashed and salvaged at
+  once, relights keeping the worse relic, a shared uid, upkeep ignoring its
+  switch, unwearable off-hands, stale buttons, a Buy that was enabled but
+  refused, and Forge until upgrade paying for an upgrade it then salvaged.
+- Review B (feats, errands, tree, previews): 7 bugs, all fixed with tests - a
+  feat lost when relighting right after the last pinnacle, errands that never
+  came home while the hero kept dying, a scout that brought nothing after a
+  relight, save ids like "toString" accepted (every validate lookup is
+  own-keys only now), Forge previews freezing the tab, the errand picker
+  resetting, unlabelled Wear buttons.
+- Balance: the bot now clears with a pack-weighted score (the build score
+  picked Heartseeker for the Strider's early game, a third slower) and fights
+  pinnacles with its best single-target skill. Late skills retuned on
+  bot-played heroes (Gravecleave, Tidal Crash, Sunpiercer, Blight Arrow).
+  Dawn pacing: round 8 had every calling relight at 12-16 h and then every
+  10-15 h for good; sun pinnacles +15% life and pinnacle toughness compounding
+  per dawn (x1.15^d on top of the world's 10%): over two simulated weeks,
+  dawns I-IV take 11-16 h each, then 15-35 h; Arcanist dawn VIII, Strider VI,
+  Vanguard V - see GDD, "The dawn loop after round 8".
+- Tools: `npm run smoke` was broken on main (a nav selector from before the
+  rail); it tours all ten tabs again and fails on console errors.
+- Enemy sprites: once opengameart.org was allowed, 28 CC0 candidates were
+  compared on a contact sheet against the Gothicvania art; three packs were
+  kept (ansimuz's Sideview Fantasy collection, LetargicDev's hooded ghost,
+  Reemax's zombie). Five monsters that wore a tinted look-alike have their
+  own sprites now (Drowned Wretch, Mire Hag, Gull, Eel, the Cinder Matron as
+  a fire-breathing dragon), and the Chapel Keeper takes the freed shrieking
+  shade. The packer gained "order" (RPG-maker walks play 0-1-2-1); every
+  sprite was checked facing the hero, idle and attacking, in the battle view.

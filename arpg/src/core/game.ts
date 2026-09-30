@@ -28,9 +28,9 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
-        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true },
+        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true, errandKeep: true },
         relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true },
-        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], feats: [], errands: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", "log.wake", { name: opts.name });
@@ -79,6 +79,19 @@ export function canEquip(state: GameState, item: Item, slot: Slot): string | nul
     }
     if (b.kind === "quiver" && (!w || baseOf(w).kind !== "bow")) return "needs a bow";
     return null;
+}
+
+const OFFHANDS = ["shield", "buckler", "focus", "quiver"];
+/**
+ * Off-hand kinds the hero can wear with the weapon in hand (canEquip's rule): only a quiver with
+ * a bow, none behind another two-hander, anything but a quiver otherwise. Null when none.
+ */
+export function wearableOffhands(state: GameState): string[] | null {
+    const w = state.hero.equipment.weapon;
+    const wb = w ? baseOf(w) : undefined;
+    if (wb?.kind === "bow") return ["quiver"];
+    if (wb?.weapon?.hands === 2) return null;
+    return OFFHANDS.filter(k => k !== "quiver");
 }
 
 /** Does putting a weapon in `slot` also take the off-hand off? (Same rule as putOn.) */
@@ -208,14 +221,8 @@ function leftOver(state: GameState, x: Item): void {
  */
 function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
     const off = displacedItems(state, item, slot);
-    const keep = off.flatMap(o => {
-        if (!o.relic) return o.locked ? [o] : [];
-        const l = caseLoser(state, o);
-        return l?.locked ? [l] : [];
-    });
-    const need = keep.length - (state.stashCap - state.stash.length);
-    const victims = need > 0 ? upkeepVictims(state, need) : [];
-    if (need > 0 && victims.length < need) return false;
+    const victims = wearRoom(state, item, slot);
+    if (!victims) return false;
     putOn(state, item, slot);
     for (const v of victims) giveUp(state, v);
     for (const o of off) {
@@ -224,6 +231,25 @@ function equipWithRoom(state: GameState, item: Item, slot: Slot): boolean {
         else stashOrSalvage(state, o);
     }
     return true;
+}
+
+/**
+ * What wearing `item` in `slot` would give up for room (the rule equipWithRoom
+ * applies): locked gear coming off must be kept, and when the stash can't take
+ * it, upkeep gives up stash items. Null when it can't be worn for lack of room.
+ */
+function wearRoom(state: GameState, item: Item, slot: Slot): Item[] | null {
+    const keep = displacedItems(state, item, slot).flatMap(o => {
+        if (!o.relic) return o.locked ? [o] : [];
+        const l = caseLoser(state, o);
+        return l?.locked ? [l] : [];
+    });
+    const need = keep.length - (state.stashCap - state.stash.length);
+    if (need <= 0) return [];
+    // Only upkeep gives stash items up for room; with it off, a full stash keeps the old gear on.
+    if (!state.settings.upkeep) return null;
+    const victims = upkeepVictims(state, need);
+    return victims.length >= need ? victims : null;
 }
 
 /** Puts an item on; returns what it displaced. The item must be out of the stash and the case. */
@@ -327,6 +353,43 @@ export function receiveItem(state: GameState, item: Item): { kept: boolean; equi
 }
 
 /**
+ * A paid-for item (forged at the Forge, bought at the Market) never meets the
+ * loot filter: it is worn when auto-equip is on and it is an upgrade (with room
+ * for what comes off), else it is kept - a relic in the case (the copy that
+ * loses goes to the stash), other gear in the stash. When it would need a stash
+ * slot and there is none, nothing changes and this returns "stash full"; callers
+ * check this before they take payment.
+ */
+export function receivePaid(state: GameState, item: Item): { err: string | null; equipped: boolean } {
+    const slot = state.settings.autoEquip ? upgradeSlot(state, item) : null;
+    if (slot && equipWithRoom(state, item, slot)) {
+        if (item.relic) state.codex[item.relic] = (state.codex[item.relic] ?? 0) + 1;
+        pushLog(state, "loot", "log.equippedNew", { base: ref.base(item.base) });
+        return { err: null, equipped: true };
+    }
+    const needsSlot = !item.relic || !!caseLoser(state, item);
+    if (needsSlot && state.stash.length >= state.stashCap) return { err: "stash full", equipped: false };
+    if (item.relic) {
+        state.codex[item.relic] = (state.codex[item.relic] ?? 0) + 1;
+        const loser = toCase(state, item);
+        if (loser) state.stash.push(loser);
+    } else state.stash.push(item);
+    return { err: null, equipped: false };
+}
+
+/** Would a paid-for item find room if it isn't worn (the rule receivePaid applies)? */
+export function paidRoom(state: GameState, item: Item): boolean {
+    return state.stash.length < state.stashCap || (!!item.relic && !caseLoser(state, item));
+}
+
+/** Would receivePaid take this item (worn as an upgrade, or kept)? A dry run of it, for the buttons. */
+export function paidFits(state: GameState, item: Item): boolean {
+    if (paidRoom(state, item)) return true;
+    const slot = state.settings.autoEquip ? upgradeSlot(state, item) : null;
+    return !!slot && wearRoom(state, item, slot) !== null;
+}
+
+/**
  * The loot filter, then storage. Relics go to the case (the better copy of
  * each stays). Other keepers go to the stash; when it is full, upkeep gives up
  * the least-worth item for a better one.
@@ -353,7 +416,8 @@ function stashOrSalvage(state: GameState, item: Item): boolean {
     return false;
 }
 
-function salvageItem(state: GameState, item: Item): void {
+/** Turns an item that is nowhere (not worn, stashed or cased) into dust, stones back to the pouch. */
+export function salvageItem(state: GameState, item: Item): void {
     returnStones(state, item);
     const d = dawnOf(state);
     const v = Math.round(salvageValue(item) * (1 + (DAWN_DUST * d) / 100) * (hasPerk(state, "warmhands") ? 1.25 : 1));

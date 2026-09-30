@@ -287,7 +287,7 @@ export class Battle {
     private background(zone: { id: string; name: string; palette: [string, string, string] }): void {
         const g = this.g;
         const W = this.W, H = this.H, G = this.GROUND, pal = zone.palette, seedStr = zone.id;
-        const set = setFor(zone.id, zone.name);
+        const set = setFor(zone);
         if (spriteOf(set.layers[0]!.sprite)) {
             // Parallax art: far layers barely move, near ones follow the road.
             g.fillStyle = set.sky; g.fillRect(0, 0, W, H);

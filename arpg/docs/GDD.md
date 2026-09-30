@@ -42,13 +42,24 @@ most four levels above the hero.
 
 - **Class** (P1: Vanguard; P2: Strider, Arcanist). Sets base attributes,
   starting skill and the start node on the passive tree.
-- **Attributes**: Might (life, melee damage), Grace (accuracy, evasion),
-  Wit (mana, energy shield).
+- **Attributes**: Might (life, melee damage), Grace (accuracy, evasion,
+  projectile attack damage), Wit (mana, energy shield).
 - **Level** 1-100. One passive point per level.
+- **Passive tree**: 171 nodes (round 8, from 129): three calling seats, each
+  with three themed branches of 13 nodes (two notables and, at the far end, a
+  stronger mastery), a shared inner ring, bridges with a keystone between each
+  pair of callings, and one more keystone past each calling's middle branch
+  (Berserker's Pact, Hunter's Patience, Lantern Mind). A level-100 hero has
+  about 110 points, so the tree is a choice to the end.
 - **Main skill** plus up to five **supports**. Supports modify the skill
   (more damage, extra targets, conversion, leech). Support slots open at
   levels 1, 1, 8, 18, 32.
 - **Flask**: refills on kills, drunk automatically below half life.
+- **Ascendancy**: after the first trial the hero takes one of its calling's two
+  ascendancies. Each trial's first clear pays two points, a node each; every
+  ascendancy has eight nodes, so the four trials buy all of it. Nodes 7 and 8
+  (round 8, for the Trial of Lanterns) are a little stronger: one offence, one
+  defence.
 
 ## Items
 
@@ -120,6 +131,12 @@ Dust and currency pile up late, so the Forge has sinks that scale:
   one worth wearing; misses are salvaged on the spot.
 - **Reroll until upgrade**: Reshaper, Tempest Shard or Temper Oil on a stash
   item again and again (up to 20) until it beats what is worn.
+- **Previews** (round 8): while the pointer or keyboard focus rests on a
+  currency, the hone or the bench, the item on the anvil shows what it would
+  do: which affixes keep, get new values, are rerolled or removed (or the
+  chance each goes), how many new ones come and of which kind, the rarity it
+  becomes - or why it can't be used, in which case Use is off. The anvil
+  stays in view beside the shelf while scrolling.
 
 ## Companions (round 4)
 
@@ -130,6 +147,20 @@ experience. Levels come from bond - a point per kill while it is out; a
 duplicate adds 4000. Each act boss gives one on its first clear; bosses, map
 bosses and pinnacles rarely bring others (unfound ones first), and contracts
 can pay one. The Hero tab shows the active one and the collection.
+
+## Companion errands (round 8)
+
+Companions that are not at the hero's side run errands of two hours of the
+hero's time (three at once, so time away counts): scavenge (ember dust, about
+a tenth of what two hours of play salvages), forage (crafting orbs, the rarer
+ones weighted up), delve (ember stones) and, once the Cinderlands are open,
+scout (maps a tier deeper than the deepest cleared, and a chance of a sigil).
+What they bring grows with their level, and every errand adds 1500 bond (twice
+with Long Memory), so the whole collection grows, not only the one out. "Keep
+them busy" (on by default) sends a returning companion out again and fills
+free errands with idle companions (scavenging). A companion away can't walk
+with the hero until it is back or recalled (recalling forfeits the haul).
+Errands carry over a new dawn with the companions.
 
 ## The ember shrine (round 4)
 
@@ -192,6 +223,42 @@ settings, totals and one heirloom. Each dawn: 10% more experience and dust, a
 passive point, a world 10% tougher and 20% richer, and one of ten perks (kept
 for every dawn after). The Hollow Crown, which ate the light, is the optional
 fight beyond.
+
+## Feats, renown and titles (round 8)
+
+Thirty-seven feats in five groups - the road (acts, trials, levels 50/75/90),
+the hunt (monsters, bosses, lanterns), the collection (relics, companions, a
+level-20 bond, the echoes, a Radiant stone), the forge (quality 20, a relic
+tempered five times, contracts, salvage, dust) and the Cinderlands (tiers 8
+and 16, Depths 10 and 25, the three sun pinnacles, dawns I and III, the Hollow
+Crown). Each is earned once and kept across dawns. A feat pays renown (1-3,
+67 in all); each point is 1% increased damage and 0.5% increased maximum life.
+Twelve feats are titles (Crownbreaker among them): a new one is worn when none
+is, and the Log tab's Feats chip lists them all with their progress, the
+renown and a Wear button. A save from before feats earns what it already did
+the first time it loads, in one chronicle line; the bosses and contracts it
+counted before feats existed are estimated from what the save still shows.
+
+## The dawn loop after round 8
+
+Round 8 made every calling stronger (renown, errands, ascendancy nodes 7-8, late skills
+and supports, masteries). Measured with `tools/dawns.ts` and a bot that clears with pack
+skills and fights pinnacles with its best single-target skill, every calling relit the sun
+at 12-16 hours and then every 10-15 hours for good: a dawn's perk, passive point, renown
+and 20% richer drops outgrew a world only 10% tougher, and the pinnacles fell at level
+70-80 in every dawn. (Before round 8: 17-28 hours, then 17-25, with the Vanguard stuck at
+dawn I for want of survival.)
+
+Two changes put the gate back. The three sun pinnacles have 15% more life. And each dawn
+the pinnacles hold their piece of the sun harder, compounding, on top of the world's 10%:
+life and damage x (1 + 0.1 d) x 1.15^d at dawn d (dawn I 26%, III 98%, V 202%). Measured
+at 20% the loop slowed as intended (dawns I-III 10-20 hours each, dawn IV 20-45, then
+days), but dawn X's pinnacles would be twelve times tougher and the last perks out of
+reach; 15% is the value kept. Over two simulated weeks (seed 777) it gives dawns I-IV in
+11-16 hours each for every calling, then 15-35 hours each; the Arcanist reaches dawn VIII
+(136 h), the Strider VI (214 h), and the Vanguard V (73 h) - attack builds still scale
+worse against late pinnacles, and a new dawn can take any calling. The Menu's dawn card
+gives the pinnacles' toughness.
 
 ## Hollow Night (October, round 6)
 
@@ -257,9 +324,15 @@ spent, reported as wins, time and a verdict (ready, risky, not yet).
   spark). The Lamplighter opens the Cinderlands; heroes who were past the
   Sunfall before Act 4 keep their maps (save v8, `endgame:early`), and a new
   dawn walks through Ashfold again.
-- **The Cinderlands** (P4): the endgame. Maps are tiers 1-16 with random
-  mods (monster life, damage, extra elements, player curses). Mods raise
-  loot quantity and rarity. Completing a tier grants atlas points. Past
+- **The Cinderlands** (P4): the endgame. Maps are tiers 1-16 in thirteen
+  areas (round 8 added three from Ashfold: the Lantern Lanes, the Hollow
+  Belfry and the Oil Deeps, with its bosses) with random mods: monster life,
+  damage, speed, extra elements, more packs; round 8 added monster armour,
+  evasion and elemental resistance, a monster more in every pack, a map boss
+  with 80% more life and 30% more damage, and skills that cost 40% more
+  mana; the curses on the hero (less regeneration, lower maximum
+  resistances, more damage taken, less damage dealt). Mods raise loot
+  quantity and rarity. Completing a tier grants atlas points. Past
   tier 16 the **Depths** scale forever. Four pinnacle bosses need fragments
   that drop in high tiers.
 

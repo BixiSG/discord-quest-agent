@@ -1,6 +1,6 @@
 // Content validation: every table must be internally consistent.
 import { describe, expect, it } from "vitest";
-import { ACTS, AFFIXES, BASES, CLASSES, MONSTERS, SKILLS, SUPPORTS, ZONES, ZONE_ORDER, xpToNext, monsterLife } from "../src/core/data";
+import { ACTS, AFFIXES, ASCENDANCIES, BASES, CLASSES, MONSTERS, SKILLS, SUPPORTS, TRIAL_POINTS, ZONES, ZONE_ORDER, xpToNext, monsterLife } from "../src/core/data";
 import { DAMAGE_TYPES } from "../src/core/types";
 import { domainsOf } from "../src/core/items";
 
@@ -35,7 +35,7 @@ describe("content", () => {
         }
     });
     it("supports are sane", () => {
-        for (const s of Object.values(SUPPORTS)) { expect(s.manaMult).toBeGreaterThanOrEqual(1); expect(s.mods.length + (s.targets ?? 0)).toBeGreaterThan(0); }
+        for (const s of Object.values(SUPPORTS)) { expect(s.manaMult).toBeGreaterThanOrEqual(1); expect(s.mods.length + (s.targets ?? 0) + (s.self?.length ?? 0)).toBeGreaterThan(0); }
     });
     it("affix tiers climb and every affix can roll somewhere", () => {
         const allDomains = new Set(Object.values(BASES).flatMap(b => [...domainsOf(b)]));
@@ -69,6 +69,16 @@ describe("content", () => {
         }
         expect(new Set(ZONE_ORDER).size).toBe(ZONE_ORDER.length);
         for (const id of ZONE_ORDER) expect(ZONES[id]).toBeDefined();
+    });
+    it("every ascendancy has a node for each point the trials pay, and two per calling", () => {
+        const points = ACTS.length * TRIAL_POINTS;
+        for (const a of Object.values(ASCENDANCIES)) {
+            expect(a.nodes.length, a.id).toBe(points);
+            expect(CLASSES[a.cls], a.id).toBeDefined();
+            for (const n of a.nodes) { expect(n.id).toMatch(ID); expect(n.mods.length, n.id).toBeGreaterThan(0); expect(ascii(n.name)).toBe(true); }
+        }
+        for (const c of Object.keys(CLASSES)) expect(Object.values(ASCENDANCIES).filter(a => a.cls === c).length).toBe(2);
+        expect(new Set(Object.values(ASCENDANCIES).flatMap(a => a.nodes.map(n => n.id))).size).toBe(Object.keys(ASCENDANCIES).length * points);
     });
     it("level curves are increasing", () => {
         for (let l = 1; l < 99; l++) { expect(xpToNext(l + 1)).toBeGreaterThan(xpToNext(l)); expect(monsterLife(l + 1)).toBeGreaterThan(monsterLife(l)); }

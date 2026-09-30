@@ -16,6 +16,11 @@ export const ref = {
     tier: (tier: number) => `@tier:${tier}`,
     base: (id: string) => `@base:${id}`,
     relic: (id: string) => `@relic:${id}`,
+    skill: (id: string) => `@skill:${id}`,
+    support: (id: string) => `@support:${id}`,
+    feat: (id: string) => `@feat:${id}`,
+    /** Several references read as one list ("Sunpiercer, Sunflare"). */
+    list: (refs: string[]) => `@list:${refs.map(r => r.slice(1)).join(",")}`,
     /** A place a run was in: a story zone, or a map (area and tier) or pinnacle. */
     place: (zone: string, map?: { area: string; tier: number; pinnacle?: string }) => (map ? `@map:${map.area}:${map.tier}:${map.pinnacle ?? ""}` : `@zone:${zone}`),
     /** A contract's goal ("Slay 1800 monsters"). */

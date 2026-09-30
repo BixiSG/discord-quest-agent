@@ -19,6 +19,8 @@ export interface ZoneDef {
     trial?: boolean;
     /** Story line logged the first time the boss falls. */
     bossText?: string;
+    /** Battle backdrop for a map built from an area that names one (ui/gfx/scenes.ts). */
+    scene?: string;
 }
 
 export interface ActDef { id: number; name: string; zones: string[]; intro: string; outro: string; trial: string }

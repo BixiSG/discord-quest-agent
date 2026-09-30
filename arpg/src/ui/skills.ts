@@ -1,7 +1,7 @@
 // The Skills tab: the skill and its supports, each with what it would change.
 
 import { SKILLS, SUPPORTS } from "../core/data";
-import { deriveSheet, supportSlots } from "../core/character";
+import { deriveSheet, supportSlots, type Sheet } from "../core/character";
 import { setSkill, setSupports } from "../core/game";
 import { fmt, h, pct } from "./dom";
 import { glyph } from "./glyphs";
@@ -10,6 +10,9 @@ import { skillBlurb, skillName, supportBlurb, supportName, tagName } from "../i1
 import type { Ctx } from "./views";
 
 const pctDelta = (a: number, b: number) => b / Math.max(0.01, a) - 1;
+
+/** One EHP number for a sheet: the geometric mean over physical and the elements (as buildScore weighs it). */
+const ehpOf = (s: Sheet) => Math.pow(s.ehp.phys * s.ehp.fire * s.ehp.cold * s.ehp.lightning, 0.25);
 
 const fmtPct = (d: number) => `${d >= 0 ? "+" : ""}${(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`;
 
@@ -45,40 +48,53 @@ export function skillsView(c: Ctx): HTMLElement {
     const slots = supportSlots(hero.level);
     const active = hero.supports.slice(0, slots);
     const full = active.length >= slots;
-    const trial = (ids: string[]) => deriveSheet({ ...hero, supports: ids, rev: -1 }).skill.packDps;
-    type Row = { s: (typeof SUPPORTS)[string]; on: boolean; locked: boolean; fits: boolean; d: number | null; swap?: string };
+    const trial = (ids: string[]) => deriveSheet({ ...hero, supports: ids, rev: -1 });
+    // Supports with modifiers on the hero (Steadfast) are worth EHP as well as DPS.
+    const curEhp = ehpOf(cur);
+    type Row = { s: (typeof SUPPORTS)[string]; on: boolean; locked: boolean; fits: boolean; d: number | null; e: number | null; swap?: string };
     const rows: Row[] = Object.values(SUPPORTS).map(s => {
         const locked = s.level > hero.level;
         const on = active.includes(s.id);
         const fits = !s.requires.length || s.requires.some(t => cur.skill.tags.includes(t));
-        let d: number | null = null, swap: string | undefined;
+        let d: number | null = null, e: number | null = null, swap: string | undefined;
+        const judge = (ids: string[]) => { const sh = trial(ids); return [pctDelta(cur.skill.packDps, sh.skill.packDps), pctDelta(curEhp, ehpOf(sh))] as const; };
         if (!locked && fits) {
-            if (on) d = pctDelta(cur.skill.packDps, trial(active.filter(x => x !== s.id)));
-            else if (!full) d = pctDelta(cur.skill.packDps, trial([...active, s.id]));
+            if (on) [d, e] = judge(active.filter(x => x !== s.id));
+            else if (!full) [d, e] = judge([...active, s.id]);
             else for (const out of active) {
-                // Slots full: the best single swap for this one.
-                const v = pctDelta(cur.skill.packDps, trial(active.map(x => x === out ? s.id : x)));
-                if (d === null || v > d) { d = v; swap = out; }
+                // Slots full: the best single swap for this one (by DPS; a defensive support by EHP,
+                // ties by DPS: most swaps leave EHP where it is).
+                const [v, w] = judge(active.map(x => x === out ? s.id : x));
+                const better = s.self ? w > e! + 1e-9 || (Math.abs(w - e!) <= 1e-9 && v > d!) : v > d!;
+                if (d === null || better) { d = v; e = w; swap = out; }
             }
         }
-        return { s, on, locked, fits, d, swap };
+        return { s, on, locked, fits, d, e: s.self ? e : null, swap };
     });
     const rank = (r: Row) => (r.on ? 0 : r.locked ? 3 : r.fits ? 1 : 2);
     rows.sort((a, b) => rank(a) - rank(b) || (a.on ? (a.d ?? 0) - (b.d ?? 0) : (b.d ?? -9) - (a.d ?? -9)) || a.s.level - b.s.level);
     const sups = h("div", { class: "list" });
     for (const r of rows) {
-        const { s, on, locked, fits, d, swap } = r;
+        const { s, on, locked, fits, d, e, swap } = r;
         let meta: HTMLElement, tip: string;
         const needs = s.requires.map(x => tagName(x)).join(t("common.or"));
         if (locked) { meta = h("span", { class: "tag", text: t("skills.levelTag", { n: s.level }) }); tip = t("skills.unlocksAt", { n: s.level }); }
         else if (!fits) { meta = h("span", { class: "tag", text: t("skills.noFit") }); tip = t("skills.needs", { tags: needs }); }
-        else if (on) { meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }), h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) })); tip = t("skills.clickRemove", { pct: fmtPct(d ?? 0) }); }
-        else {
+        else if (on) {
+            meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: "tag", text: t("skills.slotted") }),
+                e !== null ? h("span", { class: `delta ${e <= 0 ? "up" : "down"}`, text: t("skills.worthEhp", { pct: fmtPct(-e) }) }) : null,
+                h("span", { class: `delta ${(d ?? 0) <= 0 ? "up" : "down"}`, text: t("skills.worth", { pct: fmtPct(-(d ?? 0)) }) }));
+            tip = e !== null ? t("skills.clickRemoveEhp", { pct: fmtPct(d ?? 0), ehp: fmtPct(e) }) : t("skills.clickRemove", { pct: fmtPct(d ?? 0) });
+        } else {
             const good = (d ?? 0) > 0;
             const swapName = swap && SUPPORTS[swap] ? supportName(swap) : swap ?? "";
-            meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" }, h("span", { class: `delta ${good ? "up" : "down"}`, text: fmtPct(d ?? 0) }),
+            meta = h("span", { class: "col", style: "gap:1px;align-items:flex-end" },
+                e !== null ? h("span", { class: `delta ${e >= 0 ? "up" : "down"}`, text: t("skills.ehp", { pct: fmtPct(e) }) }) : null,
+                h("span", { class: `delta ${good ? "up" : "down"}`, text: e !== null ? t("skills.dpsPct", { pct: fmtPct(d ?? 0) }) : fmtPct(d ?? 0) }),
                 swap ? h("span", { class: "muted", style: "font-size:8px", text: t("skills.for", { name: swapName }) }) : null);
-            tip = swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) });
+            tip = e !== null
+                ? (swap ? t("skills.clickSwapEhp", { name: swapName, pct: fmtPct(d ?? 0), ehp: fmtPct(e) }) : t("skills.clickAddEhp", { pct: fmtPct(d ?? 0), ehp: fmtPct(e) }))
+                : (swap ? t("skills.clickSwap", { name: swapName, pct: fmtPct(d ?? 0) }) : t("skills.clickAdd", { pct: fmtPct(d ?? 0) }));
         }
         sups.append(h("div", { class: `li${on ? " on" : ""}${locked || !fits ? " locked" : ""}`, attrs: { role: "button", tabindex: locked || !fits ? "-1" : "0" }, title: tip, on: { click: () => {
             if (locked || !fits) return;

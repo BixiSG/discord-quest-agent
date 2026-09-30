@@ -20,6 +20,7 @@ const [hoursArg = "160", cls = "vanguard", seedArg = "777"] = process.argv.slice
 const hours = Number(hoursArg);
 const start = Date.UTC(2026, 5, 1); // June: no seasonal event in the way
 const g = newGame({ name: "Dawn", cls, now: start, seed: Number(seedArg) });
+if (process.env.NO_ERRANDS) g.settings.errandKeep = false;
 const events: string[] = [];
 let dawn = 0, dawnAt = 0, killed = new Set<string>();
 const h = () => ((g.simTo - start) / HOUR).toFixed(1);

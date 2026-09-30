@@ -3,7 +3,7 @@
 // references stored in log entries. Pure: the core uses it in English to
 // write the fallback text of log entries.
 
-import { AFFIXES, COMPANIONS, MAP_AREAS, MAX_TIER, RARE_NAMES_A, RARE_NAMES_B, RELICS, companionMod, type PassiveNode } from "../core/data";
+import { AFFIXES, COMPANIONS, FEATS, MAP_AREAS, MAX_TIER, RARE_NAMES_A, RARE_NAMES_B, RELICS, companionMod, type PassiveNode } from "../core/data";
 import { affixOf } from "../core/items";
 import type { GameState, LogEntry, RunMap } from "../core/state";
 import type { AffixRoll, Item, Mod } from "../core/types";
@@ -67,6 +67,11 @@ export function stoneEffectText(key: string, place: "weapon" | "armour" | "jewel
 export const echoWho = (id: string, l?: Lang) => tr(L(l), `echo.${id}.who`);
 export const echoText = (id: string, l?: Lang) => tr(L(l), `echo.${id}.text`);
 export const perkName = (id: string, l?: Lang) => tr(L(l), `perk.${id}.name`);
+export const featName = (id: string, l?: Lang) => tr(L(l), `feat.${id}.name`);
+/** What a feat asks, its goal filled in ("Slay 10k monsters"). */
+export const featText = (id: string, l?: Lang) => tr(L(l), `feat.${id}.text`, { n: goalText(FEATS[id]?.goal ?? 0) });
+/** Round goals read short: 10000 -> 10k, 1000000 -> 1M. */
+export const goalText = (n: number) => (n >= 1e6 && n % 1e6 === 0 ? `${n / 1e6}M` : n >= 1e4 && n % 1e3 === 0 ? `${n / 1e3}k` : String(n));
 export const perkText = (id: string, l?: Lang) => tr(L(l), `perk.${id}.text`);
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 /** "Dawn II". */
@@ -197,6 +202,10 @@ export function resolveParam(v: string | number, l?: Lang): string | number {
         case "tier": return tierName(Number(rest), lg);
         case "base": return baseName(rest, lg);
         case "relic": return relicName(rest, lg);
+        case "skill": return skillName(rest, lg);
+        case "support": return supportName(rest, lg);
+        case "feat": return featName(rest, lg);
+        case "list": return rest.split(",").map(x => resolveParam(`@${x}`, lg)).join(tr(lg, "common.list"));
         case "key": return tr(lg, rest);
         case "map": {
             const [area = "", tier = "0", pin = ""] = rest.split(":");

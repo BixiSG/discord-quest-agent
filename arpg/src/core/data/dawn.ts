@@ -28,6 +28,14 @@ export const DAWN_PERK: Record<string, DawnPerk> = Object.fromEntries(DAWN_PERKS
 
 /** Per dawn: experience and dust, and the world's toughness and riches (percent). */
 export const DAWN_XP = 10, DAWN_DUST = 10, DAWN_TOUGHER = 10, DAWN_RICHER = 20;
+/**
+ * Per dawn, compounding, on top of the world's toughness: the pinnacles hold what is left of the
+ * sun harder (percent life and damage). Without it the loop never slowed: a dawn's perk, passive
+ * point, renown and richer drops outgrew a world only 10% tougher, and every dawn took ~12 hours.
+ * At 15%, dawns I-IV still take half a day each, later ones one to several (GDD, "The dawn loop
+ * after round 8"); at 20% dawn X's pinnacles were twelve times tougher and out of reach.
+ */
+export const DAWN_PINNACLE = 15;
 
 /** The Hollow Crown answers from this dawn on (the optional goal beyond the Rekindling). */
 export const CROWN_DAWN = 2;

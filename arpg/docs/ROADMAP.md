@@ -1,4 +1,62 @@
-# Hollowmarch - roadmap and design notes (after round 4)
+# Hollowmarch - roadmap and design notes
+
+## Round 8 (plan)
+
+**Status (round 8 built):** everything below is in, in en/ru/uk, plus three things asked
+for on the way: two sprites that faced away from the hero, Forge previews (what a
+currency, the hone or the bench would do, marked on the item), and a bigger passive tree
+(171 nodes: nine masteries, three far keystones). The balance pass retuned the late melee
+and bow skills and taught the bot to clear with pack skills and fight pinnacles with its
+best single-target skill; measured that way, round 8 made every calling relight the sun
+at 12-16 hours and then every 10-15 hours for good, so the pinnacles now grow tougher with
+each dawn, compounding (see GDD, "The dawn loop after round 8"). Five monsters that wore a
+tinted look-alike got sprites of their own from three more CC0 packs (see assets/CREDITS.md).
+
+Where the game is after round 7: four acts, maps and the Depths, four pinnacles and the
+Rekindling loop. A bot relights the sun at 20-30 hours for every calling. Three gaps show:
+
+1. **Builds stop growing at level 26.** The last skill unlocks at 20 and the last support at
+   26; a level-90 hero picks from the same fifteen skills as a level-26 one.
+2. **The fourth trial pays for nothing.** Four trials pay eight ascendancy points; every
+   ascendancy has six nodes, so the Trial of Lanterns' two points (since Act 4) buy nothing.
+3. **Long-term goals are thin.** After the first dawn the loop is the same numbers again,
+   nine of the ten companions sit in the collection doing nothing, and nothing records what
+   the player has done beyond the totals.
+
+Round 8, in this order:
+
+- **Ascendancy nodes 7-8.** Two more per ascendancy, a little stronger than the first six
+  (they arrive around level 49): one offence, one defence. The defence nodes of the attack
+  ascendancies give what attack builds lack against pinnacles: life and less damage taken.
+- **Late skills and supports.** Six skills: Gravecleave (28, melee, four targets), Sunpiercer
+  (30, bow, fire, pierces), Sunflare (30, fire spell, five targets), Tidal Crash (40, slam,
+  cold, six targets), Void Lance (42, chaos spell that pierces), Blight Arrow (44, bow strike,
+  chaos, crits). Five supports: Frostbite and Galvanic (28, attacks: half the physical damage
+  becomes cold / lightning), Concentrate (30, area: more damage, less area), Steadfast (34,
+  attacks: you take less damage while it is linked - the first support with modifiers on the
+  hero), Overcharge (38, spells: much more damage for mana and a little speed). The Skills tab
+  shows what a defensive support is worth in EHP, not only DPS.
+- **Ashfold in the Cinderlands.** Three map areas built from Act 4 (the Lantern Lanes, the
+  Hollow Belfry, the Oil Deeps, with its three bosses) and six map mods: armoured, veiled,
+  warded (monster defences), swarming (bigger packs), draining (skills cost more mana) and
+  overlord (a stronger map boss that drops more).
+- **Feats.** Forty-odd feats across the road, the hunt, the collection, the forge and the
+  endgame, earned once and kept across dawns. Each pays renown (1-3), and renown is a small
+  permanent bonus to damage and life. Some feats carry a title the hero can wear (the
+  Crownbreaker name becomes one). Earned retroactively on load, so an old save starts with
+  what it already did.
+- **Companion errands.** Companions that are not at the hero's side can be sent on errands
+  of two hours (the hero's time, so time away counts): scavenge (dust), forage (currency),
+  delve (stones), scout (maps and sigils, endgame). What they bring grows with their level;
+  every errand adds bond, so the whole collection grows. A switch keeps idle companions busy.
+- **Balance** with the bot across callings once the above is in: new skills should win
+  somewhere and not everywhere; the attack callings' pinnacle survival and the Strider.
+
+Later: skill mastery (skills and supports grow with use); a weekly omen.
+
+---
+
+## Round 5 (as planned, for the record)
 
 **Status (round 5 built):** the Market (Pedlar, Jeweller), sockets and ember stones, twelve
 echoes, three sun shards and the Rekindling with ten dawn perks are in the game, in

@@ -125,6 +125,7 @@ export function claimContract(s: GameState, i: number): string | null {
     if (c.n < c.target) return "not finished yet";
     const rng = new Rng(hashSeed(s.seed, 0x636c6169, s.contracts.done));
     const dust = contractDust(s, c);
+    s.totals.contracts = (s.totals.contracts ?? 0) + 1;
     s.dust += dust;
     if (c.currency) s.currency[c.currency[0]] = (s.currency[c.currency[0]] ?? 0) + c.currency[1];
     if (c.extra === "relic") {

@@ -4,8 +4,8 @@
 // orbs on a shelf.
 
 import { CURRENCIES, CURRENCY_ORDER } from "../core/data";
-import { applyCurrency, benchCraft, benchDust, benchOptions, BENCH_GRAFTS, buyCurrency, craftUntilUpgrade, findItem, forgeCost, forgeRare, forgeUntilUpgrade, hone, honeCost, MAX_QUALITY, maxIlvl, REROLLS, temperCost, temperRelic } from "../core/crafting";
-import { setLocked } from "../core/game";
+import { applyCurrency, benchCraft, benchDust, benchOptions, benchPreview, BENCH_GRAFTS, buyCurrency, craftPreview, craftUntilUpgrade, findItem, forgeCost, forgeRare, forgeUntilUpgrade, hone, honeCost, MAX_QUALITY, maxIlvl, REROLLS, temperCost, temperRelic } from "../core/crafting";
+import { setLocked, wearableOffhands } from "../core/game";
 import { baseOf } from "../core/items";
 import { SLOTS, type Item } from "../core/types";
 import type { GameState } from "../core/state";
@@ -13,7 +13,8 @@ import { fmt, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { spriteCanvas } from "./gfx/sprites";
 import { glyph } from "./glyphs";
-import { itemCard, markWorn, withTip } from "./itemui";
+import { itemCard, markWorn, withTip, type CardPreview } from "./itemui";
+import { tErr } from "../i18n/errors";
 import type { Ctx } from "./views";
 import { cutCost, cutStones, drillCost, drillSocket, pouchList, setStone, socketCap } from "../core/sockets";
 import { placeOf } from "../core/items";
@@ -28,6 +29,8 @@ const SLOT_NAMES = (slot: string) => t(`slot.${slot}`);
 
 /** Forge a rare: one at a time, or up to ten until one is worth wearing. Kept for the session. */
 const forgeOpts = { until: false };
+/** The preview source under the pointer (data-pv) and the item it was for: put back after a rebuild. */
+const hover: { key: string | null; uid?: number } = { key: null };
 
 export function forgeView(c: Ctx): HTMLElement {
     const st = c.state;
@@ -57,24 +60,51 @@ export function forgeView(c: Ctx): HTMLElement {
     const found = c.sel.uid !== undefined ? findItem(st, c.sel.uid) : null;
     const inStash = !!found && !found.slot;
 
-    // The anvil: the picked item, big, with its card, then the hone and the bench.
+    // The anvil: the picked item, big, with its card, then the hone and the bench. While the pointer
+    // (or keyboard focus) rests on a currency, the hone or the bench, the card shows what it would do.
     const anvil = h("div", { class: "card anvilcard" }, h("h3", { text: t("forge.anvil") }));
+    let card: HTMLElement | null = null;
+    const preview = (pv: CardPreview | null) => {
+        if (!found || !card?.parentNode) return;
+        const next = itemCard(found.item, null, { preview: pv });
+        card.replaceWith(next);
+        card = next;
+    };
+    // Each preview source has a key (data-pv); the pointer's is followed on the whole view, so the
+    // preview comes back after a rebuild (the dust coming in rebuilds it, and buttons follow).
+    const makers = new Map<string, () => CardPreview | null>();
+    const hovered = () => (hover.key && hover.uid === c.sel.uid ? makers.get(hover.key)?.() ?? null : null);
+    /** Shows `make()` on the anvil while `el` is hovered (the view follows the pointer) or focused. */
+    const previewOn = (el: HTMLElement, key: string, make: () => CardPreview | null) => {
+        el.dataset.pv = key;
+        makers.set(key, make);
+        el.addEventListener("focusin", () => preview(make()));
+        el.addEventListener("focusout", e => { const to = e.relatedTarget as Node | null; if (!to || !el.contains(to)) preview(hovered()); });
+    };
     if (found) {
         const it = found.item;
         const big = itemIcon(it);
         big.classList.add("anvil-art");
-        anvil.append(h("div", { class: `anvil-plate ${it.rarity}` }, big), itemCard(it, null));
+        card = itemCard(it, null);
+        // The card keeps the preview while the pointer is on it: a preview makes it taller and moves
+        // the hone and bench rows out from under the pointer (which would take it away again).
+        anvil.append(h("div", { class: `anvil-plate ${it.rarity}` }, big), h("div", { class: "pvkeep" }, card));
         const work = h("div", { class: "work" });
         // Hone: quality, a point at a time.
         const hc = honeCost(it);
         const q = it.quality ?? 0;
         const canHone = hc !== null || q >= MAX_QUALITY;
-        if (canHone) work.append(h("div", { class: "wrow" }, h("b", { text: t("forge.hone") }),
-            h("div", { class: "qbar", title: t("forge.qualityTip", { q, max: MAX_QUALITY }) }, h("i", { style: `width:${(q / MAX_QUALITY) * 100}%` })),
-            h("span", { class: "num", text: `${q}%` }),
-            h("button", { class: "btn small", text: hc === null ? t("forge.max") : t("forge.honeFor", { cost: fmt(hc) }), attrs: { "data-key": "h", ...(hc === null || st.dust < hc ? { disabled: "" } : {}) },
+        if (canHone) {
+            const btn = h("button", { class: "btn small", text: hc === null ? t("forge.max") : t("forge.honeFor", { cost: fmt(hc) }), attrs: { "data-key": "h", ...(hc === null || st.dust < hc ? { disabled: "" } : {}) },
                 title: hc === null ? t("forge.fullyHoned") : t(baseOf(it).weapon ? "forge.honeTipWeapon" : "forge.honeTipArmour"),
-                on: { click: () => c.act(s => hone(s, it.uid)) } })));
+                on: { click: () => c.act(s => hone(s, it.uid)) } });
+            const row = h("div", { class: "wrow" }, h("b", { text: t("forge.hone") }),
+                h("div", { class: "qbar", title: t("forge.qualityTip", { q, max: MAX_QUALITY }) }, h("i", { style: `width:${(q / MAX_QUALITY) * 100}%` })),
+                h("span", { class: "num", text: `${q}%` }), btn);
+            // On the row: a disabled button (not enough dust yet) gets no pointer events.
+            if (hc !== null) previewOn(row, "hone", () => ({ label: t("forge.hone"), p: { affixes: it.affixes.map(() => "keep"), quality: q + 1 } }));
+            work.append(row);
+        }
         // Bench: a chosen affix, one per item.
         const opts = benchOptions(it);
         if (it.rarity === "enchanted" || it.rarity === "rare") {
@@ -85,11 +115,16 @@ export function forgeView(c: Ctx): HTMLElement {
             }
             const dust = benchDust(it), grafts = st.currency.graft ?? 0;
             const ok = opts.length > 0 && grafts >= BENCH_GRAFTS && st.dust >= dust;
-            work.append(h("div", { class: "wrow" }, h("b", { text: t("forge.bench") }),
+            const row = h("div", { class: "wrow" }, h("b", { text: t("forge.bench") }),
                 opts.length ? pick : h("span", { class: "muted grow", text: t("forge.noRoom") }),
                 h("button", { class: "btn small", text: t(benched ? "forge.benchReplace" : "forge.benchAdd", { n: BENCH_GRAFTS, dust: fmt(dust) }), attrs: ok ? {} : { disabled: "" },
                     title: [t("forge.benchTip"), benched ? t("forge.benchTipReplace") : "", t("forge.benchHave", { n: grafts })].filter(Boolean).join(" "),
-                    on: { click: () => c.act(s => benchCraft(s, it.uid, pick.value), t("forge.benched")) } })));
+                    on: { click: () => c.act(s => benchCraft(s, it.uid, pick.value), t("forge.benched")) } }));
+            // The bench's preview follows the affix picked in the list.
+            const benchPv = (): CardPreview | null => (opts.length ? { label: t("forge.bench"), p: benchPreview(it, pick.value) } : null);
+            previewOn(row, "bench", benchPv);
+            pick.addEventListener("change", () => preview(benchPv()));
+            work.append(row);
         }
         // Relics: temper one roll toward its best.
         if (it.relic) {
@@ -133,17 +168,22 @@ export function forgeView(c: Ctx): HTMLElement {
         const reroll = REROLLS.includes(id);
         const cur = currencyName(id);
         const buy = (e: MouseEvent) => { const n = e.shiftKey ? 10 : 1; c.act(s => buyCurrency(s, id, n), n > 1 ? t("forge.bought", { n, cur }) : undefined); };
-        shelf.append(h("div", { class: `cur${have ? "" : " none"}` },
+        // What it would do to the item on the anvil: Use is off, with the reason, when it can't apply.
+        const pv = found ? craftPreview(found.item, id) : null;
+        const refusal = pv && "err" in pv ? tErr(pv.err) : null;
+        const row = h("div", { class: `cur${have ? "" : " none"}` },
             h("div", { class: "orb" }, art, h("span", { class: "count num", text: have > 999 ? "999+" : String(have) })),
             h("div", { class: "grow" }, h("b", { text: cur }), h("span", { text: currencyBlurb(id) })),
             h("div", { class: "col", style: "gap:4px" },
-                h("button", { class: "btn small", text: t("forge.use"), attrs: have > 0 && found ? {} : { disabled: "" }, title: found ? t("forge.useOn", { item: itemName(found.item) }) : t("forge.pickFirst"),
+                h("button", { class: "btn small", text: t("forge.use"), attrs: have > 0 && found && !refusal ? {} : { disabled: "" }, title: !found ? t("forge.pickFirst") : refusal ?? t("forge.useOn", { item: itemName(found.item) }),
                     on: { click: () => c.act(s => applyCurrency(s, id, c.sel.uid!), t("forge.used", { cur })) } }),
-                reroll ? h("button", { class: "btn small", text: t("forge.until"), attrs: have > 0 && inStash ? {} : { disabled: "" },
-                    title: inStash ? t("forge.untilTip", { cur, item: itemName(found!.item) }) : t("forge.pickStash"),
+                reroll ? h("button", { class: "btn small", text: t("forge.until"), attrs: have > 0 && inStash && !refusal ? {} : { disabled: "" },
+                    title: !inStash ? t("forge.pickStash") : refusal ?? t("forge.untilTip", { cur, item: itemName(found!.item) }),
                     on: { click: () => c.act(s => { const r = craftUntilUpgrade(s, id, c.sel.uid!, 20); if (!r.err) c.toast(t(r.upgrade ? "forge.upAfter" : "forge.noUpAfter", { n: r.used, cur })); return r.err; }) } }) : null,
                 h("button", { class: "btn alt small", text: t("forge.buy", { cost: def.cost }), title: t("forge.buyTip", { cost: def.cost }), attrs: st.dust >= def.cost ? {} : { disabled: "" },
-                    on: { click: buy } }))));
+                    on: { click: buy } })));
+        if (pv) previewOn(row, `cur:${id}`, () => ({ label: cur, p: pv }));
+        shelf.append(row);
     }
 
     // Forge a fresh rare for a slot.
@@ -151,11 +191,12 @@ export function forgeView(c: Ctx): HTMLElement {
     const smith = h("div", { class: "smith" });
     for (const slot of SLOTS) {
         const slotName = SLOT_NAMES(slot).toLowerCase();
-        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES(slot), title: st.dust >= cost ? t(forgeOpts.until ? "forge.smithUntilTip" : "forge.smithTip", { slot: slotName, cost: fmt(cost) }) : t("forge.needsDust", { cost: fmt(cost) }), attrs: st.dust >= cost ? {} : { disabled: "" },
+        const blocked = slot === "offhand" && !wearableOffhands(st);
+        smith.append(h("button", { class: "btn alt small", text: SLOT_NAMES(slot), title: blocked ? t("forge.offhandBlocked") : st.dust >= cost ? t(forgeOpts.until ? "forge.smithUntilTip" : "forge.smithTip", { slot: slotName, cost: fmt(cost) }) : t("forge.needsDust", { cost: fmt(cost) }), attrs: st.dust >= cost && !blocked ? {} : { disabled: "" },
             on: { click: () => c.act(s => {
                 if (forgeOpts.until) {
                     const r = forgeUntilUpgrade(s, slot, 10);
-                    if (!r.err) c.toast(r.item ? t("forge.forgedWearing", { n: r.made, item: itemName(r.item) }) : t("forge.forgedNone", { n: r.made }));
+                    if (!r.err) c.toast(r.item ? t(r.equipped ? "forge.forgedWearing" : "forge.forgedKept", { n: r.made, item: itemName(r.item) }) : t(r.full ? "forge.forgedNoRoom" : "forge.forgedNone", { n: r.made }));
                     return r.err;
                 }
                 const r = forgeRare(s, slot); if (!r.err && r.item) c.sel = { uid: r.item.uid }; return r.err;
@@ -164,6 +205,24 @@ export function forgeView(c: Ctx): HTMLElement {
     const until = h("button", { class: `toggle${forgeOpts.until ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(forgeOpts.until) }, on: { click: () => { forgeOpts.until = !forgeOpts.until; c.rerender(); } } },
         h("i"), h("span", null, h("b", { text: t("forge.until") }), h("small", { text: t("forge.untilNote") })));
     const dust = h("div", { class: "dust" }, glyph("forge", 20), h("b", { class: "num", text: fmt(st.dust) }), h("span", { text: t("forge.dust") }));
+
+    const smithy = h("div", { class: "smithy" },
+        h("div", { class: "card rackcard" }, h("h3", { text: t("forge.rack") }), rack),
+        anvil,
+        h("div", { class: "card shelfcard" }, h("h3", { text: t("forge.currency") }), shelf));
+    smithy.addEventListener("mouseover", e => {
+        const at = e.target as Element;
+        if (at.closest(".pvkeep")) return;
+        const key = at.closest<HTMLElement>("[data-pv]")?.dataset.pv ?? null;
+        if (key === hover.key && hover.uid === c.sel.uid) return;
+        hover.key = key; hover.uid = c.sel.uid;
+        preview(hovered());
+    });
+    smithy.addEventListener("mouseleave", () => { hover.key = null; preview(null); });
+    // Rebuilt under the pointer: its preview goes straight back on.
+    if (!makers.has(hover.key ?? "")) hover.key = null;
+    const back = hovered();
+    if (back) preview(back);
 
     return h("div", { class: "col", style: "gap:14px" },
         hasSockets(st) ? hint(c, "sockets") : null,
@@ -174,10 +233,7 @@ export function forgeView(c: Ctx): HTMLElement {
             smith,
             st.dust < cost ? h("div", { class: "note", style: "margin-top:10px" }, glyph("forge", 16),
                 h("span", { text: t("forge.moreDust", { n: fmt(cost - st.dust) }) })) : null),
-        h("div", { class: "smithy" },
-            h("div", { class: "card" }, h("h3", { text: t("forge.rack") }), rack),
-            anvil,
-            h("div", { class: "card" }, h("h3", { text: t("forge.currency") }), shelf)),
+        smithy,
         pouchCard(c));
 }
 
