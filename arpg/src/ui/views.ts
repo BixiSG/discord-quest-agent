@@ -19,7 +19,7 @@ import { rerollCost } from "../core/contracts";
 import { t } from "../i18n";
 import { gearSig, gearView } from "./gear";
 import { heroView } from "./hero";
-import { logView } from "./log";
+import { logSig, logView } from "./log";
 import { menuView } from "./menu";
 import { skillsView } from "./skills";
 import { hollowSig, shrineSig, worldView } from "./world";
@@ -59,7 +59,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
         case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
         case "atlas": return atlasSig(c);
-        case "log": return `${s.log.length}:${s.log[s.log.length - 1]?.t ?? 0}:${s.echoes.length}`;
+        case "log": return logSig(s);
         case "menu": return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
         case "market": return marketSig(s);
     }

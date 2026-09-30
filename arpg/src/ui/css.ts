@@ -621,6 +621,8 @@ input.search { width: 150px; min-width: 0; flex: 0 1 150px; }
 .perk.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; }
 .perk:hover:not(.on) { filter: brightness(1.08); }
 .contracts { display: flex; flex-direction: column; gap: 6px; }
+.renown { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 3px solid var(--line); background: var(--gold); color: #1a1410; font-size: 12px; box-shadow: 3px 3px 0 var(--line); }
+.feats .sec { margin-top: 4px; }
 .contract { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border: 8px solid transparent; border-image: var(--fr-alt) 8 fill / 8px; }
 .contract.done { border-image-source: var(--fr-gold); color: #1a1410; }
 .contract.done .muted { color: #4d4030; }

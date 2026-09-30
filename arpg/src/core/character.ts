@@ -2,7 +2,7 @@
 // Never saved; recomputed when hero.rev changes.
 
 import { StatBag, tagSet } from "./stats";
-import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, companionMod, DAWN_PERK, DAWN_XP, dawnName, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
+import { BASES, CLASSES, SKILLS, SUPPORTS, SUPPORT_SLOT_LEVELS, RENOWN_DAMAGE, RENOWN_LIFE, companionMod, DAWN_PERK, DAWN_XP, dawnName, heroBaseAccuracy, heroBaseLife, heroBaseMana, monsterDamage, monsterDefence, spellScale, type SkillDef } from "./data";
 import { itemStats, levelReq } from "./items";
 import { passiveMods } from "./passives";
 import type { Hero } from "./state";
@@ -79,6 +79,12 @@ function dawnMods(hero: Hero): Mod[] {
     return out;
 }
 
+/** Renown from feats: a little more damage and life per point. */
+function renownMods(hero: Hero): Mod[] {
+    const r = hero.renown ?? 0;
+    return r > 0 ? [{ stat: "damage", kind: "inc", value: RENOWN_DAMAGE * r, src: "Renown" }, { stat: "life", kind: "inc", value: RENOWN_LIFE * r, src: "Renown" }] : [];
+}
+
 /** The companion at the hero's side: its one bonus. */
 function petMods(hero: Hero): Mod[] {
     const m = hero.pet ? companionMod(hero.pet.id, hero.pet.level) : null;
@@ -89,7 +95,7 @@ function petMods(hero: Hero): Mod[] {
 export function heroMods(hero: Hero, extra: Mod[] = []): { mods: Mod[]; armour: number; evasion: number; es: number; block: number; problems: string[] } {
     const cls = CLASSES[hero.cls];
     if (!cls) throw new Error("unknown class " + hero.cls);
-    const mods: Mod[] = [...extra, ...passiveMods(hero), ...petMods(hero), ...dawnMods(hero)];
+    const mods: Mod[] = [...extra, ...passiveMods(hero), ...petMods(hero), ...dawnMods(hero), ...renownMods(hero)];
     let armour = 0, evasion = 0, es = 0, block = 0;
     const problems: string[] = [];
     mods.push({ stat: "str", kind: "flat", value: cls.str, src: cls.name });

@@ -67,6 +67,10 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     fresh.codex = s.codex;
     fresh.companions = s.companions;
     fresh.echoes = s.echoes;
+    // Feats and their renown are the player's, not the hero's: they carry over whole.
+    fresh.feats = s.feats ?? [];
+    if (s.title) fresh.title = s.title;
+    if (s.hero.renown) fresh.hero.renown = s.hero.renown;
     fresh.stones = s.stones;
     fresh.shrine = s.shrine;
     fresh.settings = s.settings;

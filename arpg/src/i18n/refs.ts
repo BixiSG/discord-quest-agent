@@ -18,6 +18,7 @@ export const ref = {
     relic: (id: string) => `@relic:${id}`,
     skill: (id: string) => `@skill:${id}`,
     support: (id: string) => `@support:${id}`,
+    feat: (id: string) => `@feat:${id}`,
     /** Several references read as one list ("Sunpiercer, Sunflare"). */
     list: (refs: string[]) => `@list:${refs.map(r => r.slice(1)).join(",")}`,
     /** A place a run was in: a story zone, or a map (area and tier) or pinnacle. */

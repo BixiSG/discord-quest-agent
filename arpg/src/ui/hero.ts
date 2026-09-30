@@ -15,11 +15,10 @@ import { glyph } from "./glyphs";
 import { portrait } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
 import { t, tn } from "../i18n";
-import { ascName, ascNodeName, dawnTitle, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
+import { ascName, ascNodeName, dawnTitle, featName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
 import { tErr } from "../i18n/errors";
 import { TYPE_NAME, kv } from "./common";
 import type { Ctx } from "./views";
-import { crownbreaker } from "../core/dawn";
 
 const TYPE_COLOR: Record<DamageType, string> = { phys: "#8d8d8d", fire: "#ff5a36", cold: "#3a9bff", lightning: "#e0b800", chaos: "#8b5cf6" };
 
@@ -56,7 +55,7 @@ export function heroView(c: Ctx): HTMLElement {
         h("div", { class: "portrait-frame" }, por, h("div", { class: "where-tag", text: placeName(st) })),
         h("div", { class: "row", style: "gap:5px;margin-top:8px" },
             h("span", { class: "tag lv", text: t("common.level", { n: hero.level }) }), h("span", { class: "tag", text: CLASSES[hero.cls] ? className(hero.cls) : hero.cls }),
-            asc ? h("span", { class: "tag asc", text: asc }) : null, crownbreaker(st) ? h("span", { class: "tag dawn", text: t("title.crownbreaker") }) : null),
+            asc ? h("span", { class: "tag asc", text: asc }) : null, st.title ? h("span", { class: "tag dawn", title: t("feats.titleTag"), text: featName(st.title) }) : null),
         h("div", { class: "xpbar", title: isFinite(xpNeed) ? t("hero.xpTitle", { xp: fmt(hero.xp), need: fmt(xpNeed) }) : t("hero.maxLevel") }, h("i", { style: `width:${(xpF * 100).toFixed(1)}%` })),
         h("div", { class: "attrs" }, ...([["might", t("attr.str"), s.str], ["grace", t("attr.dex"), s.dex], ["wit", t("attr.int"), s.int]] as const).map(([g, label, v]) =>
             h("div", { class: `attr ${g}`, title: label }, glyph(g, 18), h("b", { class: "num", text: String(v) }), h("span", { text: label })))),
@@ -195,6 +194,7 @@ function sourceNames(st: GameState): (src: string) => string {
     for (const a of Object.values(ASCENDANCIES)) for (const n of a.nodes) add(n.name, ascNodeName(n.id));
     for (const p of Object.values(COMPANIONS)) add(`Companion: ${p.name}`, `${t("pets.title")}: ${companionName(p.id)}`);
     add("Map", t("atlas.maps"));
+    add("Renown", t("feats.renownName"));
     for (const p of DAWN_PERKS) add(p.name, perkName(p.id));
     for (let n = 1; n <= (st.hero.dawn?.level ?? 0); n++) add(dawnName(n), dawnTitle(n));
     for (const s of SLOTS) { const it = st.hero.equipment[s]; if (it) add(itemLabel(it), itemName(it)); }

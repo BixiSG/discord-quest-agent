@@ -3,7 +3,7 @@
 // the data files stay the one place their English lives. ru.ts and uk.ts
 // translate every key (a test holds them to it).
 
-import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, DAWN_PERKS, DAWN_TEXT, ECHOES, SHARDS_TEXT, STONES, STONE_TIERS, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
+import { ACTS, AFFIXES, ASCENDANCIES, ATLAS, BASES, CLASSES, COMPANIONS, CURRENCIES, DAWN_PERKS, DAWN_TEXT, ECHOES, FEATS, SHARDS_TEXT, STONES, STONE_TIERS, KEYSTONE_TEXT, MAP_AREAS, MAP_MODS, MONSTERS, PASSIVES, PINNACLES, RARE_NAMES_A, RARE_NAMES_B, RELICS, SKILLS, SUPPORTS, ZONES } from "../core/data";
 import { FILTER_PRESETS, groupLabel } from "../core/filter";
 import { BLESSINGS } from "../core/shrine";
 import { DAMAGE_TYPES } from "../core/types";
@@ -78,6 +78,7 @@ function content(): Record<string, string> {
     STONE_TIERS.forEach((n, i) => { o[`stone.tier${i}`] = n; });
     for (const e of Object.values(ECHOES)) { o[`echo.${e.id}.who`] = e.who; o[`echo.${e.id}.text`] = e.text; }
     for (const p of DAWN_PERKS) { o[`perk.${p.id}.name`] = p.name; o[`perk.${p.id}.text`] = p.text; }
+    for (const f of Object.values(FEATS)) { o[`feat.${f.id}.name`] = f.name; o[`feat.${f.id}.text`] = f.text; }
     o["echo.shards"] = SHARDS_TEXT;
     o["dawn.story"] = DAWN_TEXT;
     for (const a of Object.values(MAP_AREAS)) o[`mapArea.${a.id}.name`] = a.name;
@@ -633,6 +634,28 @@ const UI: Record<string, string> = {
     "log.sigilFound": "Found a {sigil}.",
     "log.levelUp": "Reached level {level}.",
     "log.levelUpNew": "Reached level {level}. New to learn: {list}.",
+    "log.featEarned": "Feat: {feat} (renown +{n}).",
+    "log.featsBefore": "{n} feat earned for what was already done (renown +{renown}).|{n} feats earned for what was already done (renown +{renown}).",
+    "toast.feat": "Feat: {feat}",
+    "log.feats": "Feats",
+    "feats.title": "Feats",
+    "feats.count": "{n} / {total}",
+    "feats.renown": "Renown {n}: {dmg}% increased damage, {life}% increased maximum life",
+    "feats.note": "Earned once and kept for good, across every dawn. Each pays renown; some give a title the hero can wear.",
+    "feats.group.road": "The road",
+    "feats.group.hunt": "The hunt",
+    "feats.group.collect": "The collection",
+    "feats.group.forge": "The forge",
+    "feats.group.depths": "The Cinderlands",
+    "feats.pill": "renown +{n}",
+    "feats.titleTag": "title",
+    "feats.wear": "Wear",
+    "feats.worn": "Worn",
+    "feats.takeOff": "Take off",
+    "feats.wearing": "Title: {name}",
+    "feats.noTitle": "No title worn",
+    "feats.renownName": "Renown",
+    "report.feats": "Feats: {list}",
     "log.died": "Died in {place}.",
     "log.tooDeep": "Too deep: running {tier} and below for now.",
     "log.fellBack": "Fell back to {zone}.",
@@ -964,6 +987,8 @@ const UI: Record<string, string> = {
     "err.affixNoFit": "that affix doesn't fit",
     "err.needsGraft": "needs {n} Graft",
     "err.nothingToForge": "nothing to forge for that slot",
+    "err.notTitle": "not a title",
+    "err.notEarned": "not earned yet",
     "err.saveNot": "not a save",
     "err.saveNotHm": "not a Hollowmarch save",
     "err.saveVersion": "bad save version",

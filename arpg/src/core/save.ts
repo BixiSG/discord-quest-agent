@@ -2,7 +2,9 @@
 // MIGRATIONS[v] turns a version-v state into version v+1. Never edit an old
 // migration once shipped; add a new one and bump SAVE_VERSION.
 
-export const SAVE_VERSION = 8;
+import { PINNACLES, ZONES } from "./data";
+
+export const SAVE_VERSION = 9;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -87,6 +89,20 @@ export const MIGRATIONS: Record<number, Migration> = {
     7: (s: any) => {
         s.world.rewards ??= [];
         if ((s.world.clears?.a3_sunfall ?? 0) > 0 && !s.world.rewards.includes("endgame:early")) s.world.rewards.push("endgame:early");
+        return s;
+    },
+    // v9 (round 8): feats (earned on load from what the save already did), and the two totals they
+    // count that weren't kept: bosses (at least every boss-zone clear and pinnacle kill) and
+    // contracts (at least this dawn's).
+    8: (s: any) => {
+        s.feats ??= [];
+        s.totals ??= {};
+        if (s.totals.bosses === undefined) {
+            const clears = Object.entries(s.world?.clears ?? {}).reduce((a: number, [z, n]) => a + (ZONES[z]?.boss && typeof n === "number" ? n : 0), 0);
+            const pins = Object.entries(s.pinnacleKills ?? {}).reduce((a: number, [p, n]) => a + (PINNACLES[p] && typeof n === "number" ? n : 0), 0);
+            s.totals.bosses = clears + pins;
+        }
+        s.totals.contracts ??= typeof s.contracts?.done === "number" ? s.contracts.done : 0;
         return s;
     },
 };

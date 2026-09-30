@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { COMPANIONS, DAWN_PERK, ECHOES, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, DAWN_PERK, ECHOES, FEATS, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState, LogEntry } from "./state";
 import { has } from "../i18n";
@@ -14,6 +14,7 @@ import { cleanContracts } from "./contracts";
 import { BLESSING } from "./shrine";
 import { fitStones, socketCap } from "./sockets";
 import { endgameOpen } from "./maps";
+import { checkFeats } from "./feats";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
@@ -255,9 +256,18 @@ export function validateState(raw: unknown): GameState {
     s.shrine = { keep: [...new Set(strs(shr.keep, k => !!BLESSING[k]) ?? [])], orbs: shr.orbs !== false };
     s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
+    for (const k of Object.keys(s.totals) as (keyof GameState["totals"])[]) {
+        const v = s.totals[k];
+        if (typeof v !== "number" || !Number.isFinite(v) || v < 0) { if (k in newTotals()) s.totals[k] = 0; else delete s.totals[k]; }
+    }
+    // Feats (v9): known, once each; the title one of them that is a title.
+    s.feats = [...new Set(strs(s.feats, id => !!FEATS[id]) ?? [])];
+    if (s.title !== undefined && !(typeof s.title === "string" && FEATS[s.title]?.title && s.feats.includes(s.title))) delete s.title;
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = (Array.isArray(s.log) ? s.log : []).map(cleanLog).filter((e): e is LogEntry => !!e).slice(-60);
     reconcileRewards(s);
     cleanContracts(s);
+    // What the save already did earns its feats now (one chronicle line for all); renown follows the list.
+    checkFeats(s, { quiet: true });
     return s;
 }

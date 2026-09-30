@@ -21,6 +21,7 @@ import { dawnEffects, hasPerk } from "../dawn";
 import { LANTERN, hollowNight, lanternKill, lanternRate, tickSeason, touch } from "../season";
 import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
+import { checkFeats } from "../feats";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -64,6 +65,8 @@ export interface SimEvents {
     stone?(key: string): void;
     /** An echo (lore page) was found. */
     echo?(id: string): void;
+    /** A feat was earned. */
+    feat?(id: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -316,7 +319,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     if (petKill(state)) changed0 = true;
     contractEvent(state, "kills");
     if (m.champion) contractEvent(state, "champions");
-    if (d.boss) contractEvent(state, "bosses");
+    if (d.boss) { contractEvent(state, "bosses"); state.totals.bosses = (state.totals.bosses ?? 0) + 1; }
     let changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
@@ -547,6 +550,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    checkFeats(state, { onFeat: id => ev.feat?.(id) });
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;

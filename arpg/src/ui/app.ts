@@ -38,7 +38,8 @@ import { VIEWS, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { creationView } from "./creation";
 import { itemCard } from "./itemui";
 import { lang, setLang, t, tn } from "../i18n";
-import { className, companionName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { className, companionName, featName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { checkFeats } from "../core/feats";
 import { tErr } from "../i18n/errors";
 
 const GEO_KEY = "window";
@@ -522,6 +523,12 @@ export class GameWindow {
                 this.lastEvent = ["toast.echo", { who }];
                 sfx("echo", true);
             },
+            feat: id => {
+                const feat = featName(id);
+                this.toast(t("toast.feat", { feat }), "relic");
+                this.lastEvent = ["toast.feat", { feat }];
+                sfx("level", true);
+            },
             companion: (id, isNew) => {
                 const pet = companionName(id);
                 this.toast(t(isNew ? "toast.petJoins" : "toast.petCloser", { pet }), "relic");
@@ -563,7 +570,12 @@ export class GameWindow {
             act: (fn, ok, sound) => {
                 const err = fn(this.state!);
                 if (typeof err === "string") this.toast(tErr(err), "err");
-                else { if (ok) this.toast(ok); if (sound) this.sound.play(sound); }
+                else {
+                    if (ok) this.toast(ok);
+                    if (sound) this.sound.play(sound);
+                    // A feat the player's own action earned (a hone to 20, a relight) shows at once.
+                    checkFeats(this.state!, { onFeat: id => this.toast(t("toast.feat", { feat: featName(id) }), "relic") });
+                }
                 this.sig = "";
                 this.renderTab(true);
                 void this.save();
@@ -875,6 +887,7 @@ export class GameWindow {
         if (r.zones.length) card.append(h("div", { class: "tag teal", text: t("report.roads", { list: list(r.zones.map(id => zoneName(id))) }) }));
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list(r.equipped.slice(-4).map(it => itemName(it))) }) }));
         if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r.newCompanions.length, { list: list(r.newCompanions.map(id => companionName(id))) }) }));
+        if (r.feats.length) card.append(h("div", { class: "tag gold", text: t("report.feats", { list: list(r.feats.map(id => featName(id))) }) }));
         if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list(r.newRelics.map(id => relicName(id))) }) }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;

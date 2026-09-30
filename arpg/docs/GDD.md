@@ -204,6 +204,21 @@ passive point, a world 10% tougher and 20% richer, and one of ten perks (kept
 for every dawn after). The Hollow Crown, which ate the light, is the optional
 fight beyond.
 
+## Feats, renown and titles (round 8)
+
+Thirty-seven feats in five groups - the road (acts, trials, levels 50/75/90),
+the hunt (monsters, bosses, lanterns), the collection (relics, companions, a
+level-20 bond, the echoes, a Radiant stone), the forge (quality 20, a relic
+tempered five times, contracts, salvage, dust) and the Cinderlands (tiers 8
+and 16, Depths 10 and 25, the three sun pinnacles, dawns I and III, the Hollow
+Crown). Each is earned once and kept across dawns. A feat pays renown (1-3,
+67 in all); each point is 1% increased damage and 0.5% increased maximum life.
+Twelve feats are titles (Crownbreaker among them): a new one is worn when none
+is, and the Log tab's Feats chip lists them all with their progress, the
+renown and a Wear button. A save from before feats earns what it already did
+the first time it loads, in one chronicle line; the bosses and contracts it
+counted before feats existed are estimated from what the save still shows.
+
 ## Hollow Night (October, round 6)
 
 A seasonal event on the player's own calendar: October 1-31, local date. The
