@@ -10,6 +10,7 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 - Hollowmarch: a weekly omen, the same for every player: a trade-off with a reward, from a Blood Moon (tougher monsters, rarer finds) to Clear Skies (more experience). The World tab shows this week's omen and next week's; pinnacles are left as they are.
 - Hollowmarch: a new feat and title, Weaponmaster, for a skill at mastery 10.
 - Hollowmarch: Iron Vow now slows spells as much as attacks, so casters pay for its armour too.
+- Hollowmarch: evasion now counts against fire, cold and lightning hits in the survival numbers, as it always did in the fight. Upgrade marks and auto-equip no longer trade an evasion build's evasion for energy shield, and the Strider reaches its first dawn far sooner.
 - Hollowmarch: the Hero tab's damage, critical and speed breakdowns list supports and mastery, and the Salvage button shows the dust you will really get.
 
 ## 1.8.0 - 2026-09-30

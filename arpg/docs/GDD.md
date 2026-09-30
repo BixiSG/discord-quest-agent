@@ -292,6 +292,24 @@ reach; 15% is the value kept. Over two simulated weeks (seed 777) it gives dawns
 worse against late pinnacles, and a new dawn can take any calling. The Menu's dawn card
 gives the pinnacles' toughness.
 
+Round 9 (mastery, omens, Iron Vow's cost, evasion counted in EHP), 150 simulated hours
+on seed 777 plus a second Strider seed: the first relight at 15-22 hours (Vanguard 15.0,
+Arcanist 15.8, Strider 18.6 and 22.1), the next four dawns in 11-28 hours each, then
+slower: Arcanist dawn VI at 103 h (and no VII by 150 h), Vanguard VI at 148 h, Strider V
+at 84 h (seed 778). The design's 18-36 hours for the first relight is kept as a ceiling, not forced:
+a sun pinnacle with 35% more life (instead of 15%) walled the weaker builds for days and
+barely slowed the strong ones, and at 10% a dawn the later pinnacles fell too fast.
+What moved the first relight was the EHP fix. EHP had counted evasion against physical
+hits only, while the fight lets an evaded attack's elements through as none, so
+auto-equip swapped the Strider's evasion for energy shield. That Strider stood at dawn
+0 for 70 hours, dying in 20 seconds at level 77. With evasion counted for every type it
+relights at 19-22 hours. Every calling is a little slower now, because every build keeps
+more evasion. The Strider on seed 777 stalls at dawn III: the build score traded its
+shield (34% block) for a bow and quiver, three times the damage at 60% of the EHP, and
+neither build wins dawn III's pinnacles. That is the upgrade score's weights, 0.6 offence
+to 0.4 defence, meeting a gate that asks for both. A pinnacle-aware upgrade score is
+listed for round 10.
+
 ## Hollow Night (October, round 6)
 
 A seasonal event on the player's own calendar: October 1-31, local date. The
