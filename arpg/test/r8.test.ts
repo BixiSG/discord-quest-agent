@@ -265,3 +265,31 @@ describe("forge previews", () => {
         expect(benchPreview(it, "no_such_affix")).toEqual({ err: "that affix doesn't fit" });
     });
 });
+
+describe("the passive tree, extended", () => {
+    it("171 nodes: each branch runs on to a mastery, and each calling's middle branch to a keystone of its own", async () => {
+        const { PASSIVES, TREE_CLASSES, KEYSTONE_TEXT } = await import("../src/core/data");
+        const nodes = Object.values(PASSIVES);
+        expect(nodes.length).toBe(171);
+        expect(nodes.filter(n => n.kind === "keystone").length).toBe(6);
+        for (const n of nodes.filter(n => n.kind === "keystone")) expect(KEYSTONE_TEXT[n.name], n.name).toBeTruthy();
+        for (const c of TREE_CLASSES) for (let b = 0; b < 3; b++) {
+            for (const k of [4, 8, 12]) expect(PASSIVES[`${c.cls}_b${b}_${k}`]?.kind).toBe("notable");
+            expect(PASSIVES[`${c.cls}_b${b}_12`]!.name).toBe(c.branches[b]!.mastery[0]);
+        }
+        TREE_CLASSES.forEach((c, i) => expect(PASSIVES[`ks${i + 3}_path`]!.links).toEqual(expect.arrayContaining([`${c.cls}_b1_12`, `keystone${i + 3}`])));
+        // Nothing sits on top of anything else.
+        for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++)
+            expect(Math.hypot(nodes[i]!.x - nodes[j]!.x, nodes[i]!.y - nodes[j]!.y), `${nodes[i]!.id}/${nodes[j]!.id}`).toBeGreaterThan(20);
+    });
+    it("an allocation from before the extension is still whole, and the far keystone can be reached", async () => {
+        const { validateState } = await import("../src/core/validate");
+        const { allocate } = await import("../src/core/passives");
+        const g = hero("vanguard", 100);
+        const path = Array.from({ length: 9 }, (_, k) => `vanguard_b1_${k}`);
+        g.hero.passives = [...path];
+        expect(validateState(structuredClone(g)).hero.passives).toEqual(path);
+        for (const id of ["vanguard_b1_9", "vanguard_b1_10", "vanguard_b1_11", "vanguard_b1_12", "ks3_path", "keystone3"]) expect(allocate(g, id), id).toBeNull();
+        expect(sheetOf(g).bag.mods("attackSpeed").some(m => m.src === "Berserker's Pact")).toBe(true);
+    });
+});

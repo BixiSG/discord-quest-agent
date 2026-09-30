@@ -45,6 +45,12 @@ most four levels above the hero.
 - **Attributes**: Might (life, melee damage), Grace (accuracy, evasion,
   projectile attack damage), Wit (mana, energy shield).
 - **Level** 1-100. One passive point per level.
+- **Passive tree**: 171 nodes (round 8, from 129): three calling seats, each
+  with three themed branches of 13 nodes (two notables and, at the far end, a
+  stronger mastery), a shared inner ring, bridges with a keystone between each
+  pair of callings, and one more keystone past each calling's middle branch
+  (Berserker's Pact, Hunter's Patience, Lantern Mind). A level-100 hero has
+  about 110 points, so the tree is a choice to the end.
 - **Main skill** plus up to five **supports**. Supports modify the skill
   (more damage, extra targets, conversion, leech). Support slots open at
   levels 1, 1, 8, 18, 32.
