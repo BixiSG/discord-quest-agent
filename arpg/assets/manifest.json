@@ -12,7 +12,9 @@
     "I": "assets/.cache/crawl/crawl-tiles Oct-5-2010/item",
     "PL": "assets/.cache/crawl/crawl-tiles Oct-5-2010/player",
     "T": "assets/.cache/town/GothicVania-town-files/PNG",
-    "G": "assets/.cache/magic9/Magic Pack 9 files/sprites"
+    "G": "assets/.cache/magic9/Magic Pack 9 files/sprites",
+    "S": "assets/.cache/sideview/Sideview Fantasy Patreon Collection/Sprites",
+    "X": "assets/.cache/extra"
   },
   "sprites": {
     "hero.vanguard.idle": { "sheet": "P:/Gothic-hero-Files/PNG/gothic-hero-idle.png", "w": 38, "h": 48 },
@@ -55,6 +57,13 @@
     "mon.bearded": { "files": "T:/sprites/bearded-walk/bearded-walk-{1-6}.png" },
     "mon.oldman": { "files": "T:/sprites/oldman-walk/oldman-walk-{1-12}.png" },
     "mon.widow": { "files": "T:/sprites/woman-walk/woman-walk-{1-6}.png", "faces": "left" },
+    "mon.zombie": { "sheet": "X:/zombie_n_skeleton2.png", "w": 32, "h": 64, "frames": 3, "y": 64, "order": [0, 1, 2, 1], "faces": "left" },
+    "mon.icewraith": { "sheet": "X:/ghostIce_all.png", "w": 32, "h": 32, "frames": 4, "y": 64 },
+    "mon.icewraith.attack": { "sheet": "X:/ghostIce_all.png", "w": 32, "h": 32, "frames": 6, "y": 32 },
+    "mon.gull": { "sheet": "S:/flying-bird/sprites/flying-creature-cycle.png", "w": 32, "h": 32 },
+    "mon.serpent": { "sheet": "S:/Grotto-escape-2-snake/PNG/spritesheets/walk.png", "w": 27, "h": 20 },
+    "boss.dragon": { "sheet": "S:/Grotto-escape-2-boss-dragon/PNG/spritesheets/idle.png", "w": 144, "h": 64, "faces": "left" },
+    "boss.dragon.attack": { "sheet": "S:/Grotto-escape-2-boss-dragon/PNG/spritesheets/breath.png", "w": 144, "h": 64, "faces": "left" },
     "fx.darkbolt": { "files": "G:/DarkBolt/Dark-Bolt{1-12}.png", "down": 2, "outline": false },
     "fx.firebomb": { "files": "G:/FireBomb/Fire-bomb{1-15}.png", "down": 2, "outline": false },
     "fx.lightning": { "files": "G:/Lightning/Lightning{1-11}.png", "down": 2, "outline": false },

@@ -68,4 +68,4 @@ Branch: `claude/nifty-gauss-gv1g8h`. Design notes: docs/ROADMAP.md, "Round 8".
 - [x] Companion errands (idle companions fetch dust, currency, stones and maps, and grow)
 - [x] Asked for on the way: sprite facing (lantern ghost, white-haired swordsman), Forge previews, a bigger passive tree
 - [x] Balance pass with the bot, review B, docs, screenshots, changelog
-- [ ] More enemy sprites: the packs come from opengameart.org, which this environment's network policy denies
+- [x] More enemy sprites: three CC0 packs, five monsters with art of their own and a boss dragon

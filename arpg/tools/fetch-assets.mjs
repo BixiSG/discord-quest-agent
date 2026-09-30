@@ -22,8 +22,13 @@ const ZIPS = {
     crawl: "crawl-tiles%20Oct-5-2010.zip",
     town: "gothicvania-town-files.zip",
     magic9: "magic_pack_9_files.zip",
+    sideview: "Sideview%20Fantasy%20Patreon%20Collection.zip",
 };
-const FILES = { desert: ["rocky-far-mountains_0.png", "rocky-nowater-far_0.png", "rocky-nowater-mid_0.png", "rocky-nowater-close_0.png"] };
+const FILES = {
+    desert: ["rocky-far-mountains_0.png", "rocky-nowater-far_0.png", "rocky-nowater-mid_0.png", "rocky-nowater-close_0.png"],
+    // Single sheets: Ghost animated (LetargicDev), Zombie and Skeleton 32x48 (Reemax).
+    extra: ["ghostIce_all.png", "zombie_n_skeleton2.png"],
+};
 
 async function get(url, out) {
     if (existsSync(out)) return;

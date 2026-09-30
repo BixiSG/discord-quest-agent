@@ -9,8 +9,8 @@ currency, the hone or the bench would do, marked on the item), and a bigger pass
 and bow skills and taught the bot to clear with pack skills and fight pinnacles with its
 best single-target skill; measured that way, round 8 made every calling relight the sun
 at 12-16 hours and then every 10-15 hours for good, so the pinnacles now grow tougher with
-each dawn, compounding (see GDD, "The dawn loop after round 8"). Not done: more enemy
-sprites (the packs come from opengameart.org, which the build environment could not reach).
+each dawn, compounding (see GDD, "The dawn loop after round 8"). Five monsters that wore a
+tinted look-alike got sprites of their own from three more CC0 packs (see assets/CREDITS.md).
 
 Where the game is after round 7: four acts, maps and the Depths, four pinnacles and the
 Rekindling loop. A bot relights the sun at 20-30 hours for every calling. Three gaps show:

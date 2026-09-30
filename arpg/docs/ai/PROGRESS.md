@@ -177,5 +177,11 @@ tests (287 at the end, from 250):
   round 8".
 - Tools: `npm run smoke` was broken on main (a nav selector from before the
   rail); it tours all ten tabs again and fails on console errors.
-- Enemy sprites: not done. The packs come from opengameart.org, which this
-  environment's network policy denies (CONNECT 403).
+- Enemy sprites: once opengameart.org was allowed, 28 CC0 candidates were
+  compared on a contact sheet against the Gothicvania art; three packs were
+  kept (ansimuz's Sideview Fantasy collection, LetargicDev's hooded ghost,
+  Reemax's zombie). Five monsters that wore a tinted look-alike have their
+  own sprites now (Drowned Wretch, Mire Hag, Gull, Eel, the Cinder Matron as
+  a fire-breathing dragon), and the Chapel Keeper takes the freed shrieking
+  shade. The packer gained "order" (RPG-maker walks play 0-1-2-1); every
+  sprite was checked facing the hero, idle and attacking, in the battle view.

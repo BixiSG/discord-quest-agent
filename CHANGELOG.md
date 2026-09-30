@@ -15,6 +15,7 @@ below it, no nested lists. Markdown links and emphasis are stripped in the panel
 - Hollowmarch: the passive tree has 171 nodes. Every branch ends in a mastery, and each calling has a keystone far out on the ring.
 - Hollowmarch: in the Forge, resting on a currency, the hone or the bench shows on the item what it would change, add or remove, and a currency that can't be used says why.
 - Hollowmarch: the pinnacles hold the sun harder each dawn, so later dawns take longer to reach. The Menu's dawn card says how much.
+- Hollowmarch: five monsters have art of their own instead of a recoloured look-alike: the Drowned Wretch is a zombie, the Mire Hag a hooded ghost with ice in its hands, the Gull a seabird, the Eel a serpent, and the Cinder Matron a dragon that breathes fire. The Chapel Keeper is a shrieking shade.
 - Hollowmarch: the lantern ghost and the white-haired swordsman now face the hero.
 - Hollowmarch: fixes. A feat for the last pinnacle is no longer lost by relighting straight after it, errands come home even while the hero keeps dying, Forge until upgrade no longer pays for an upgrade it can't keep, and the Pedlar's Buy is off when a purchase has no room.
 
