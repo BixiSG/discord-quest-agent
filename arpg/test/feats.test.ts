@@ -112,14 +112,17 @@ describe("feats", () => {
     });
     it("relighting keeps feats, the title and renown", () => {
         const g = g0();
-        g.feats = ["crown", "kills10k"]; g.title = "crown"; g.hero.renown = 4;
+        const pins = ["drownedsun", "glasschoir", "ashenking"];
+        g.feats = ["crown", "kills10k", ...pins]; g.title = "crown";
+        const renown = FEATS.crown!.renown + FEATS.kills10k!.renown + pins.reduce((a, id) => a + FEATS[id]!.renown, 0);
+        g.hero.renown = renown;
         g.pinnacleKills = { drownedsun: 1, glasschoir: 1, ashenking: 1 };
         expect(relightSun(g)).toBeNull();
-        expect(g.feats).toEqual(["crown", "kills10k"]);
+        expect(g.feats).toEqual(["crown", "kills10k", ...pins]);
         expect(g.title).toBe("crown");
-        expect(g.hero.renown).toBe(4);
+        expect(g.hero.renown).toBe(renown);
         expect(checkFeats(g)).toContain("dawn1");
-        expect(g.hero.renown).toBe(4 + FEATS.dawn1!.renown);
+        expect(g.hero.renown).toBe(renown + FEATS.dawn1!.renown);
     });
     it("level feats follow the hero's level as it is reached", () => {
         const g = g0();

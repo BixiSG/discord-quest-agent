@@ -181,6 +181,9 @@ function errandWhat(st: GameState, kind: ErrandKind, level: number): string {
 }
 
 /** Errands: who is away and until when, a free errand to send an idle companion on, and "keep them busy". */
+/** The companion picked for a free errand, kept for the session. */
+const errandPick = { pet: "" };
+
 function errandsCard(c: Ctx): HTMLElement | null {
     const st = c.state;
     if (!Object.keys(st.companions).length) return null;
@@ -209,6 +212,10 @@ function errandsCard(c: Ctx): HTMLElement | null {
             // One free errand at a time: who goes, then where (each button says what it would bring).
             const pick = h("select", { attrs: { "aria-label": t("errands.pick") } }) as HTMLSelectElement;
             for (const id of idle) pick.append(h("option", { text: `${companionName(id)} (${t("pets.lv", { n: companionLevel(st.companions[id]!) })})`, attrs: { value: id } }));
+            // The choice outlives a rebuild (timers tick the view every minute), and an open list holds the view.
+            if (idle.includes(errandPick.pet)) pick.value = errandPick.pet;
+            pick.addEventListener("focus", () => { c.hold = true; });
+            pick.addEventListener("blur", () => { c.hold = false; });
             const kinds = h("div", { class: "errkinds" });
             const fill = () => {
                 kinds.replaceChildren();
@@ -220,7 +227,7 @@ function errandsCard(c: Ctx): HTMLElement | null {
                         on: { click: () => c.act(s => sendErrand(s, pick.value, k), t("errands.sent", { pet: companionName(pick.value), doing: t(`errands.doing.${k}`) })) } }));
                 }
             };
-            pick.addEventListener("change", fill);
+            pick.addEventListener("change", () => { errandPick.pet = pick.value; fill(); });
             fill();
             rows.append(h("div", { class: "contract errand free" }, h("span", { class: "pic" }, glyph("world", 18)),
                 h("div", { class: "grow col", style: "gap:4px;min-width:0" }, h("b", { text: t("errands.free") }), pick, kinds)));

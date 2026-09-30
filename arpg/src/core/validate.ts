@@ -21,6 +21,8 @@ const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number 
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
     return v;
 };
+/** A known id of a data table: own keys only (a save naming "constructor" or "__proto__" names nothing). */
+const known = <T>(table: Record<string, T>, id: unknown): T | undefined => (typeof id === "string" && Object.hasOwn(table, id) ? table[id] : undefined);
 const obj = (v: unknown, what: string): Record<string, unknown> => {
     if (!v || typeof v !== "object" || Array.isArray(v)) throw new SaveError(`missing ${what}`);
     return v as Record<string, unknown>;
@@ -29,11 +31,11 @@ const obj = (v: unknown, what: string): Record<string, unknown> => {
 function checkItem(it: unknown): Item {
     const i = obj(it, "item") as unknown as Item;
     num(i.uid, "item id"); num(i.ilvl, "item level", 1, 1000);
-    if (!BASES[i.base]) throw new SaveError(`unknown item base ${String(i.base)}`);
+    if (!known(BASES, i.base)) throw new SaveError(`unknown item base ${String(i.base)}`);
     if (!["plain", "enchanted", "rare", "relic"].includes(i.rarity)) throw new SaveError("bad rarity");
     if (!Array.isArray(i.affixes)) throw new SaveError("bad affixes");
     for (const a of i.affixes) {
-        const def = AFFIXES[a?.id];
+        const def = known(AFFIXES, a?.id);
         if (!def || !def.tiers[a.tier] || !Array.isArray(a.rolls) || a.rolls.length !== def.mods.length) throw new SaveError(`bad affix ${String(a?.id)}`);
         a.rolls.forEach((r: unknown) => num(r, "affix roll"));
     }
@@ -42,7 +44,7 @@ function checkItem(it: unknown): Item {
         a.rolls = a.rolls.map((r: number, k: number) => Math.min(t.ranges[k]![1], Math.max(t.ranges[k]![0], Math.round(r))));
     }
     if (i.rarity === "relic") {
-        const def = i.relic ? RELICS[i.relic] : undefined;
+        const def = i.relic ? known(RELICS, i.relic) : undefined;
         if (!def) throw new SaveError(`unknown relic ${String(i.relic)}`);
         if (!Array.isArray(i.relicRolls) || i.relicRolls.length !== def.mods.length) throw new SaveError("bad relic rolls");
         i.relicRolls = i.relicRolls.map((r, k) => { num(r, "relic roll"); const [lo, hi] = def.mods[k]!.range; return Math.min(hi, Math.max(lo, Math.round(r))); });
@@ -116,13 +118,13 @@ function cleanLog(v: unknown): LogEntry | null {
 
 /** Known, unique, connected to the class start, and within the point budget. */
 function cleanPassives(hero: GameState["hero"]): string[] {
-    const wanted = new Set(strs(hero.passives, id => !!PASSIVES[id] && PASSIVES[id]!.kind !== "start") ?? []);
+    const wanted = new Set(strs(hero.passives, id => !!known(PASSIVES, id) && PASSIVES[id]!.kind !== "start") ?? []);
     const start = CLASSES[hero.cls]!.startNode;
     const kept: string[] = [];
     const seen = new Set([start]);
     const queue = [start];
     while (queue.length) {
-        for (const l of PASSIVES[queue.shift()!]?.links ?? []) {
+        for (const l of known(PASSIVES, queue.shift()!)?.links ?? []) {
             if (wanted.has(l) && !seen.has(l)) { seen.add(l); kept.push(l); queue.push(l); }
         }
     }
@@ -134,22 +136,22 @@ export function validateState(raw: unknown): GameState {
     const s = obj(raw, "state") as unknown as GameState;
     num(s.seed, "seed"); num(s.simTo, "time"); num(s.nextUid, "item counter", 0);
     const hero = obj(s.hero, "hero") as unknown as GameState["hero"];
-    if (!CLASSES[hero.cls]) throw new SaveError(`unknown class ${String(hero.cls)}`);
+    if (!known(CLASSES, hero.cls)) throw new SaveError(`unknown class ${String(hero.cls)}`);
     if (typeof hero.name !== "string") throw new SaveError("bad name");
     num(hero.level, "level", 1, 100); num(hero.xp, "xp", 0); num(hero.rev, "revision");
     hero.bonusPoints = typeof hero.bonusPoints === "number" && Number.isFinite(hero.bonusPoints) ? hero.bonusPoints : 0;
-    if (!SKILLS[hero.skill]) hero.skill = CLASSES[hero.cls]!.startSkill;
-    hero.supports = Array.isArray(hero.supports) ? hero.supports.filter(id => SUPPORTS[id]) : [];
+    if (!known(SKILLS, hero.skill)) hero.skill = CLASSES[hero.cls]!.startSkill;
+    hero.supports = Array.isArray(hero.supports) ? hero.supports.filter(id => known(SUPPORTS, id)) : [];
     hero.ascPoints = typeof hero.ascPoints === "number" && Number.isFinite(hero.ascPoints) ? hero.ascPoints : 0;
-    if (hero.asc && (!ASCENDANCIES[hero.asc] || ASCENDANCIES[hero.asc]!.cls !== hero.cls)) delete hero.asc;
-    hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter(id => ASC_NODES[id]?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
+    if (hero.asc && (!known(ASCENDANCIES, hero.asc) || ASCENDANCIES[hero.asc]!.cls !== hero.cls)) delete hero.asc;
+    hero.ascNodes = hero.asc && Array.isArray(hero.ascNodes) ? [...new Set(hero.ascNodes.filter(id => known(ASC_NODES, id)?.asc === hero.asc))].slice(0, hero.ascPoints) : [];
     // Dawns (v7): a whole level, known perks, at most one per dawn.
     if (hero.dawn) {
         const lvl = Number.isInteger(hero.dawn.level) && hero.dawn.level > 0 ? Math.min(99, hero.dawn.level) : 0;
         if (!lvl) delete hero.dawn;
         else {
             const crown = hero.dawn.crown === true;
-            hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, id => !!DAWN_PERK[id]) ?? [])].slice(0, lvl + (crown ? 1 : 0)), ...(crown ? { crown: true } : {}) };
+            hero.dawn = { level: lvl, perks: [...new Set(strs(hero.dawn.perks, id => !!known(DAWN_PERK, id)) ?? [])].slice(0, lvl + (crown ? 1 : 0)), ...(crown ? { crown: true } : {}) };
         }
     }
     hero.passives = cleanPassives(hero);
@@ -176,17 +178,17 @@ export function validateState(raw: unknown): GameState {
     s.currency = s.currency && typeof s.currency === "object" ? s.currency : {};
     for (const [k, v] of Object.entries(s.currency)) if (typeof v !== "number" || !Number.isFinite(v) || v < 0) delete s.currency[k];
     const world = obj(s.world, "world") as unknown as GameState["world"];
-    world.unlocked = Array.isArray(world.unlocked) ? world.unlocked.filter(z => ZONES[z]) : [];
+    world.unlocked = Array.isArray(world.unlocked) ? world.unlocked.filter(z => known(ZONES, z)) : [];
     if (!world.unlocked.length) world.unlocked = ["a1_shore"];
     world.clears = world.clears && typeof world.clears === "object" ? world.clears : {};
     world.storySeen = Array.isArray(world.storySeen) ? world.storySeen : [];
     world.rewards = strs(world.rewards) ?? [];
     world.trialTry = Object.fromEntries(Object.entries(world.trialTry && typeof world.trialTry === "object" ? world.trialTry : {})
-        .filter(([k, v]) => ZONES[k]?.trial && typeof v === "number" && Number.isFinite(v)));
+        .filter(([k, v]) => known(ZONES, k)?.trial && typeof v === "number" && Number.isFinite(v)));
     const act = obj(s.activity, "activity") as unknown as GameState["activity"];
-    if (!ZONES[act.zone] || !world.unlocked.includes(act.zone)) { act.zone = world.unlocked[world.unlocked.length - 1]!; act.run = null; }
-    if (act.run && ((!act.run.map && !ZONES[act.run.zone]) || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
-    if (act.run && act.run.monsters.some(m => !m || !MONSTERS[m.def])) act.run = null;
+    if (!known(ZONES, act.zone) || !world.unlocked.includes(act.zone)) { act.zone = world.unlocked[world.unlocked.length - 1]!; act.run = null; }
+    if (act.run && ((!act.run.map && !known(ZONES, act.run.zone)) || !Array.isArray(act.run.monsters) || !act.run.hero || !Array.isArray(act.run.rng))) act.run = null;
+    if (act.run && act.run.monsters.some(m => !m || !known(MONSTERS, m.def))) act.run = null;
     num(act.runIndex, "run index", 0);
     act.streak = Number.isFinite(act.streak) ? act.streak : 0;
     act.deaths = Number.isFinite(act.deaths) ? act.deaths : 0;
@@ -206,21 +208,21 @@ export function validateState(raw: unknown): GameState {
     act.autoCap = Number.isInteger(act.autoCap) && act.autoCap! > 0 ? act.autoCap : 0;
     act.capBackoff = Number.isInteger(act.capBackoff) ? Math.max(0, Math.min(3, act.capBackoff!)) : 0;
     act.mapTier = Number.isInteger(act.mapTier) && act.mapTier >= 0 ? act.mapTier : 0;
-    if (act.pinnacle !== undefined && !PINNACLES[act.pinnacle]) delete act.pinnacle;
+    if (act.pinnacle !== undefined && !known(PINNACLES, act.pinnacle)) delete act.pinnacle;
     if (act.run?.map) {
         const m = act.run.map;
-        if (!MAP_AREAS[m.area] || !Array.isArray(m.mods) || m.mods.some(x => !MAP_MODS[x]) || !Number.isFinite(m.tier) || !Number.isFinite(m.level)
-            || (m.pinnacle !== undefined && !PINNACLES[m.pinnacle])) act.run = null;
+        if (!known(MAP_AREAS, m.area) || !Array.isArray(m.mods) || m.mods.some(x => !known(MAP_MODS, x)) || !Number.isFinite(m.tier) || !Number.isFinite(m.level)
+            || (m.pinnacle !== undefined && !known(PINNACLES, m.pinnacle))) act.run = null;
     }
-    s.maps = Array.isArray(s.maps) ? s.maps.filter(m => m && Number.isFinite(m.uid) && Number.isInteger(m.tier) && m.tier >= 1 && MAP_AREAS[m.area]
-        && Array.isArray(m.mods) && m.mods.every(x => MAP_MODS[x]) && ["plain", "enchanted", "rare"].includes(m.rarity)) : [];
+    s.maps = Array.isArray(s.maps) ? s.maps.filter(m => m && Number.isFinite(m.uid) && Number.isInteger(m.tier) && m.tier >= 1 && known(MAP_AREAS, m.area)
+        && Array.isArray(m.mods) && m.mods.every(x => known(MAP_MODS, x)) && ["plain", "enchanted", "rare"].includes(m.rarity)) : [];
     s.mapCap = Number.isInteger(s.mapCap) && s.mapCap > 0 ? s.mapCap : 40;
     const atlas = s.atlas && typeof s.atlas === "object" ? s.atlas : { points: 0, nodes: [], tiers: [] };
     atlas.points = Number.isFinite(atlas.points) && atlas.points >= 0 ? atlas.points : 0;
     atlas.tiers = Array.isArray(atlas.tiers) ? [...new Set(atlas.tiers.filter(t => Number.isInteger(t) && t >= 1))] : [];
     const nodes: string[] = [];
     for (const id of Array.isArray(atlas.nodes) ? atlas.nodes : []) {
-        if (ATLAS[id] && !nodes.includes(id) && ATLAS[id]!.requires.every(r => nodes.includes(r)) && nodes.length < atlas.points) nodes.push(id);
+        if (known(ATLAS, id) && !nodes.includes(id) && ATLAS[id]!.requires.every(r => nodes.includes(r)) && nodes.length < atlas.points) nodes.push(id);
     }
     atlas.nodes = nodes;
     s.atlas = atlas;
@@ -228,13 +230,13 @@ export function validateState(raw: unknown): GameState {
     s.sigils = counts(s.sigils);
     s.pinnacleKills = counts(s.pinnacleKills);
     // Companions: known ids, whole non-negative bond; the one out must be owned, its level from its bond.
-    s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
-    if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
+    s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => known(COMPANIONS, k)).map(([k, v]) => [k, Math.floor(v)]));
+    if (hero.pet && !(typeof hero.pet.id === "string" && Object.hasOwn(s.companions, hero.pet.id))) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
     // Errands (v9): owned companions not at the hero's side, once each, a known errand, at most the slots.
     const away = new Set<string>();
     s.errands = (Array.isArray(s.errands) ? s.errands : []).filter(e => {
-        const ok = e && typeof e.pet === "string" && s.companions[e.pet] !== undefined && hero.pet?.id !== e.pet && !away.has(e.pet)
+        const ok = e && typeof e.pet === "string" && Object.hasOwn(s.companions, e.pet) && hero.pet?.id !== e.pet && !away.has(e.pet)
             && ERRAND_KINDS.includes(e.kind) && typeof e.until === "number" && Number.isFinite(e.until);
         if (ok) away.add(e.pet);
         return ok;
@@ -248,7 +250,7 @@ export function validateState(raw: unknown): GameState {
     s.events = Object.fromEntries(Object.entries(counts(s.events)).filter(([k]) => /^hollownight\d{4}$/.test(k)).map(([k, v]) => [k, Math.floor(v)]));
     if (!Object.keys(s.events).length) delete s.events;
     // Echoes (v7): known, once each.
-    s.echoes = [...new Set(strs(s.echoes, id => !!ECHOES[id]) ?? [])];
+    s.echoes = [...new Set(strs(s.echoes, id => !!known(ECHOES, id)) ?? [])];
     // Stone pouch (v7): known stones, whole counts.
     s.stones = Object.fromEntries(Object.entries(counts(s.stones)).filter(([k, v]) => parseStone(k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
     // Market (v7): offers must be sound, else the stock is rolled again on the next tick.
@@ -262,18 +264,18 @@ export function validateState(raw: unknown): GameState {
         jeweller: Array.isArray(mk.jeweller) && mk.jeweller.every(o => o && parseStone(o.key) && Number.isFinite(o.price)) ? mk.jeweller.map(o => ({ key: o.key, price: o.price, ...(o.sold ? { sold: true } : {}) })) : [],
     };
     // Shrine: known blessings with a finite end time; kept-up ones must be known.
-    s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => BLESSING[k]));
+    s.blessings = Object.fromEntries(Object.entries(counts(s.blessings)).filter(([k]) => known(BLESSING, k)));
     const shr = s.shrine && typeof s.shrine === "object" ? s.shrine : { keep: [], orbs: true };
-    s.shrine = { keep: [...new Set(strs(shr.keep, k => !!BLESSING[k]) ?? [])], orbs: shr.orbs !== false };
-    s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => RELICS[k] && v >= 1).map(([k, v]) => [k, Math.round(v)]));
+    s.shrine = { keep: [...new Set(strs(shr.keep, k => !!known(BLESSING, k)) ?? [])], orbs: shr.orbs !== false };
+    s.codex = Object.fromEntries(Object.entries(counts(s.codex)).filter(([k, v]) => known(RELICS, k) && v >= 1).map(([k, v]) => [k, Math.round(v)]));
     s.totals = s.totals && typeof s.totals === "object" ? { ...newTotals(), ...s.totals } : newTotals();
     for (const k of Object.keys(s.totals) as (keyof GameState["totals"])[]) {
         const v = s.totals[k];
         if (typeof v !== "number" || !Number.isFinite(v) || v < 0) { if (k in newTotals()) s.totals[k] = 0; else delete s.totals[k]; }
     }
     // Feats (v9): known, once each; the title one of them that is a title.
-    s.feats = [...new Set(strs(s.feats, id => !!FEATS[id]) ?? [])];
-    if (s.title !== undefined && !(typeof s.title === "string" && FEATS[s.title]?.title && s.feats.includes(s.title))) delete s.title;
+    s.feats = [...new Set(strs(s.feats, id => !!known(FEATS, id)) ?? [])];
+    if (s.title !== undefined && !(typeof s.title === "string" && known(FEATS, s.title)?.title && s.feats.includes(s.title))) delete s.title;
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = (Array.isArray(s.log) ? s.log : []).map(cleanLog).filter((e): e is LogEntry => !!e).slice(-60);
     reconcileRewards(s);

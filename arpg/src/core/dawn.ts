@@ -8,6 +8,7 @@ import { CLASSES, DAWN_PERK, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from ".
 import { allShards } from "./echoes";
 import { ECHOES_PER_POINT } from "./data";
 import { newGame, pushLog, relicRollScore } from "./game";
+import { checkFeats } from "./feats";
 import { hashSeed } from "./rng";
 import { returnStones } from "./sockets";
 import type { GameState } from "./state";
@@ -39,6 +40,8 @@ export function heirloomCandidates(s: GameState): Item[] {
  */
 export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string } = {}): string | null {
     if (!allShards(s)) return "needs the three sun shards";
+    // What this dawn did is earned before it is wiped (the last pinnacle, a first deep map).
+    checkFeats(s);
     const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
     const dawn = dawnOf(s) + 1;
     const heir = opts.heirloom !== undefined ? heirloomCandidates(s).find(x => x.uid === opts.heirloom) : undefined;

@@ -169,6 +169,9 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
 /** One 100 ms step. */
 export function step(state: GameState, ev: SimEvents = {}): void {
     if (!state.activity.run) state.activity.run = newRun(state, sheetOf(state));
+    // Errands come home on the hero's clock, whatever the run is doing (a hero dying run after run,
+    // or one fight that never ends, must not keep them away).
+    if (state.errands?.some(e => e.until <= state.simTo)) tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     const run = state.activity.run;
     let sheet = runSheet(state);
     const rng = new Rng(run.rng);
@@ -188,7 +191,12 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     switch (run.phase) {
         case "dead":
             run.timer -= DT;
-            if (run.timer <= 0) { state.activity.runIndex++; state.activity.run = newRun(state, sheetOf(state)); }
+            if (run.timer <= 0) {
+                // A hero that keeps dying still levels and kills: its feats are checked as it rises.
+                checkFeats(state, { onFeat: id => ev.feat?.(id) });
+                state.activity.runIndex++;
+                state.activity.run = newRun(state, sheetOf(state));
+            }
             break;
         case "travel":
             run.timer -= DT * sheet.moveSpeed;
@@ -553,8 +561,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    // Keeps idle companions busy (errands also come home mid-run: step()).
     tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
-    checkFeats(state, { onFeat: id => ev.feat?.(id) });
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;
@@ -575,6 +583,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
             else pushLog(state, "zone", "log.pushDeeper", { tier: ref.tier(act.autoCap) });
         }
         ev.runDone?.(run.zone);
+        // Once the run's results are in (the map's tier, a pinnacle): feats.
+        checkFeats(state, { onFeat: id => ev.feat?.(id) });
         act.runIndex++;
         act.run = newRun(state, sheetOf(state));
         return;
@@ -607,6 +617,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         act.zone = next;
         act.streak = 0;
     }
+    checkFeats(state, { onFeat: id => ev.feat?.(id) });
     act.runIndex++;
     act.run = newRun(state, sheetOf(state));
 }

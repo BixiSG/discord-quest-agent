@@ -87,7 +87,7 @@ function featsView(c: Ctx): HTMLElement {
                     h("span", { class: "muted", style: "font-size:12px", text: featText(id) }),
                     !done && def.goal > 1 ? h("div", { class: "meter" }, h("i", { style: `width:${Math.min(100, (p / def.goal) * 100).toFixed(1)}%` }), h("span", { class: "num", text: `${fmt(p)} / ${fmt(def.goal)}` })) : null),
                 done && def.title ? (worn ? h("span", { class: "tag dawn", text: t("feats.worn") })
-                    : h("button", { class: "btn small", text: t("feats.wear"), on: { click: () => c.act(s => setTitle(s, id), t("feats.wearing", { name: featName(id) })) } })) : null));
+                    : h("button", { class: "btn small", text: t("feats.wear"), attrs: { "aria-label": t("feats.wearAria", { name: featName(id) }) }, on: { click: () => c.act(s => setTitle(s, id), t("feats.wearing", { name: featName(id) })) } })) : null));
         }
         box.append(h("div", { class: "sec", text: t(`feats.group.${g}`) }), rows);
     }

@@ -624,7 +624,7 @@ export class GameWindow {
             const now = performance.now();
             if (now - this.lastSigCheck < 250 || this.ctx.hold || this.tips.busy()) return; // not under a drag or a tooltip
             this.lastSigCheck = now;
-        }
+        } else this.ctx.hold = false; // a forced rebuild takes away what held the view (a hovered cell, a drag)
         this.syncLang();
         this.updateBadges();
         const sig = this.view + ":" + lang() + ":" + viewSig(this.view, this.ctx);

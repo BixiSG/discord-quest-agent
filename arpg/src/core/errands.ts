@@ -33,11 +33,13 @@ export const errandsOpen = (s: GameState) => Object.keys(s.companions ?? {}).len
 /** Scouting brings maps: the Cinderlands must be open. */
 export const kindOpen = (s: GameState, kind: ErrandKind) => kind !== "scout" || endgameOpen(s);
 export const onErrand = (s: GameState, pet: string) => (s.errands ?? []).some(e => e.pet === pet);
+/** A companion of the game that the player has found (own keys only: never "toString" and the like). */
+export const owns = (s: GameState, pet: string) => Object.hasOwn(COMPANIONS, pet) && Object.hasOwn(s.companions ?? {}, pet);
 /** Companions owned, not out with the hero and not away. */
-export const idleCompanions = (s: GameState) => Object.keys(s.companions ?? {}).filter(id => COMPANIONS[id] && s.hero.pet?.id !== id && !onErrand(s, id));
+export const idleCompanions = (s: GameState) => Object.keys(s.companions ?? {}).filter(id => owns(s, id) && s.hero.pet?.id !== id && !onErrand(s, id));
 
 export function sendErrand(s: GameState, pet: string, kind: ErrandKind): string | null {
-    if (!COMPANIONS[pet] || s.companions?.[pet] === undefined) return "not found yet";
+    if (!owns(s, pet)) return "not found yet";
     if (!ERRAND_KINDS.includes(kind)) return "unknown errand";
     if (!kindOpen(s, kind)) return "clear Ashfold first";
     if (s.hero.pet?.id === pet) return "walks with the hero";
@@ -69,13 +71,13 @@ export function errandYield(s: GameState, kind: ErrandKind, level: number): numb
 /** The tier scouted maps are: one deeper than the deepest cleared. */
 export const scoutTier = (s: GameState) => Math.max(0, ...(s.atlas?.tiers ?? [])) + 1;
 
-/** Brings one errand's haul home. Returns the count brought (dust, orbs, stones or maps). */
-function bringBack(s: GameState, e: Errand): number {
+/** Brings one errand's haul home, of `kind` (the errand's own, unless it can no longer be run). Returns the count brought (dust, orbs, stones or maps). */
+function bringBack(s: GameState, e: Errand, kind: ErrandKind): number {
     const rng = new Rng(hashSeed(s.seed, 0xe44a, s.errandSeq = (s.errandSeq ?? 0) + 1));
     const level = companionLevel(s.companions[e.pet] ?? 0);
-    const n = errandYield(s, e.kind, level);
+    const n = errandYield(s, kind, level);
     const pet = ref.companion(e.pet);
-    switch (e.kind) {
+    switch (kind) {
         case "scavenge":
             s.dust += n; s.totals.dust += n;
             pushLog(s, "loot", "log.errandDust", { pet, n });
@@ -94,7 +96,6 @@ function bringBack(s: GameState, e: Errand): number {
             pushLog(s, "loot", "log.errandStones", { pet, n });
             break;
         case "scout": {
-            if (!endgameOpen(s)) return 0;
             const tier = scoutTier(s);
             let got = 0;
             for (let k = 0; k < n; k++) if (addMap(s, rollMap(rng, s.nextUid++, tier))) got++;
@@ -123,11 +124,13 @@ export function tickErrands(s: GameState, onBack?: (pet: string, kind: ErrandKin
     for (const e of [...s.errands]) {
         if (e.until > s.simTo) continue;
         s.errands.splice(s.errands.indexOf(e), 1);
-        if (s.companions[e.pet] === undefined) continue;
-        bringBack(s, e);
+        if (!owns(s, e.pet)) continue;
+        // A scout sent before a new dawn finds the Cinderlands dark: it scavenges on the way back.
+        const kind = kindOpen(s, e.kind) ? e.kind : "scavenge";
+        bringBack(s, e, kind);
         addBond(s, e.pet, ERRAND_BOND * (hasPerk(s, "longmemory") ? 2 : 1));
         back.push(e.pet);
-        onBack?.(e.pet, e.kind);
+        onBack?.(e.pet, kind);
         if (s.settings.errandKeep && s.hero.pet?.id !== e.pet && kindOpen(s, e.kind)) s.errands.push({ pet: e.pet, kind: e.kind, until: s.simTo + ERRAND_MS });
     }
     if (s.settings.errandKeep) for (const pet of idleCompanions(s)) if (s.errands.length < ERRAND_SLOTS) sendErrand(s, pet, "scavenge");

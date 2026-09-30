@@ -346,9 +346,10 @@ function forgeRoll(state: GameState, slot: string): Item | null {
 /**
  * Forges rares for a slot until one is an upgrade, up to `tries`: it is worn at
  * once (or, with auto-equip off, kept in the stash) and forging stops; the
- * misses are salvaged on the spot. Returns how many were made.
+ * misses are salvaged on the spot. An upgrade with no room stops it unpaid
+ * (`full`; an error when it was the first). Returns how many were made.
  */
-export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): { err: string | null; made: number; item?: Item; equipped?: boolean } {
+export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): { err: string | null; made: number; item?: Item; equipped?: boolean; full?: boolean } {
     let made = 0;
     for (; made < tries; ) {
         const cost = forgeCost(state);
@@ -359,7 +360,7 @@ export function forgeUntilUpgrade(state: GameState, slot: string, tries = 10): {
             // The upgrade is worn or kept; one that can be neither stops the forging before it is
             // paid for (receivePaid changes nothing when it refuses).
             const r = receivePaid(state, item);
-            if (r.err) return { err: r.err, made };
+            if (r.err) return made ? { err: null, made, full: true } : { err: r.err, made };
             payForge(state, cost);
             return { err: null, made: made + 1, item, equipped: r.equipped };
         }

@@ -137,9 +137,10 @@ describe("review A", () => {
             s.stash.push({ uid: 51, base: helm[0]!.id, ilvl: 1, rarity: "plain", affixes: [] });
             const dust0 = s.dust, got0 = s.totals.dust, salvaged0 = s.totals.salvaged;
             const r = forgeUntilUpgrade(s, "helmet", 10);
-            if (!r.err) continue; // ten misses: nothing to test on this seed
+            if (!r.err && !r.full) continue; // ten misses: nothing to test on this seed
             stopped++;
-            expect(r.err).toMatch(/stash full/);
+            // The misses before it are reported (no error), a first-roll upgrade is refused.
+            if (r.made) { expect(r.err).toBeNull(); expect(r.full).toBe(true); } else expect(r.err).toMatch(/stash full/);
             // Paid for the misses only (salvaging them gives some dust back).
             expect(s.dust).toBe(dust0 - r.made * forgeCost(s) + (s.totals.dust - got0));
             expect(s.totals.salvaged).toBe(salvaged0 + r.made);
@@ -251,5 +252,80 @@ describe("review A: contracts and pinnacles in the endgame", () => {
         step(g);
         expect(run().phase).toBe("dead");
         expect(g.activity.deaths).toBe(0);
+    });
+});
+
+describe("review B", () => {
+    const endgame = (seed = 4) => { const g = g0(seed); g.world.clears.a4_lamphouse = 1; g.hero.level = 70; g.hero.rev++; return g; };
+    it("the last pinnacle's feat is earned when the sun is relit straight after it", async () => {
+        const { relightSun } = await import("../src/core/dawn");
+        const g = endgame();
+        g.pinnacleKills = { drownedsun: 1, glasschoir: 1, ashenking: 1 };
+        expect(g.feats).not.toContain("ashenking");
+        expect(relightSun(g)).toBeNull();
+        expect(g.feats).toEqual(expect.arrayContaining(["drownedsun", "glasschoir", "ashenking"]));
+    });
+    it("a first tier-8 map's feat is earned by the run that clears it", () => {
+        const g = endgame();
+        g.activity.mode = "map"; g.activity.run = null;
+        g.maps.push({ uid: 9001, tier: 8, area: "saltflats", mods: [], rarity: "plain" });
+        g.activity.autoPush = false;
+        step(g);
+        const run = () => g.activity.run!;
+        expect(run().map?.tier).toBe(8);
+        run().phase = "done";
+        step(g);
+        expect(g.atlas.tiers).toContain(8);
+        expect(g.feats).toContain("tier8");
+    });
+    it("errands come home on the clock, even while the hero dies run after run", async () => {
+        const { ERRAND_MS } = await import("../src/core/errands");
+        const g = g0(3);
+        g.companions = { saltcrab: 0, bogimp: 0 };
+        g.settings.errandKeep = false;
+        g.errands = [{ pet: "bogimp", kind: "scavenge", until: g.simTo + 1000 }];
+        const dust = g.dust;
+        for (let i = 0; i < 30; i++) {
+            step(g);
+            g.simTo += 100;
+            // Never let a run finish: the hero is dead or fighting forever.
+            const r = g.activity.run!; if (r.phase === "done") r.phase = "fight";
+        }
+        expect(g.errands).toEqual([]);
+        expect(g.dust).toBeGreaterThan(dust);
+        expect(ERRAND_MS).toBeGreaterThan(0);
+    });
+    it("a scout that comes back to a new dawn scavenges instead of bringing nothing", async () => {
+        const { tickErrands } = await import("../src/core/errands");
+        const g = g0(3);
+        g.companions = { saltcrab: 0, bogimp: 5000 };
+        g.settings.errandKeep = false;
+        g.errands = [{ pet: "bogimp", kind: "scout", until: g.simTo }];
+        const dust = g.dust;
+        const kinds: string[] = [];
+        expect(tickErrands(g, (_, k) => kinds.push(k))).toEqual(["bogimp"]);
+        expect(kinds).toEqual(["scavenge"]);
+        expect(g.dust).toBeGreaterThan(dust);
+        expect(g.log.some(e => e.key === "log.errandDust")).toBe(true);
+    });
+    it("a save can't name inherited object keys as companions, errands, feats, skills or zones", async () => {
+        const { validateState } = await import("../src/core/validate");
+        const g = g0(3);
+        const raw = JSON.parse(JSON.stringify(g));
+        raw.companions = { saltcrab: 10, toString: 5, constructor: 3 };
+        raw.errands = [{ pet: "toString", kind: "scavenge", until: g.simTo + 10 }, { pet: "constructor", kind: "forage", until: g.simTo + 10 }];
+        raw.feats = ["act1", "toString", "hasOwnProperty"];
+        raw.title = "constructor";
+        raw.hero.skill = "constructor";
+        raw.hero.supports = ["toString"];
+        raw.world.unlocked.push("valueOf");
+        const s = validateState(raw);
+        expect(Object.keys(s.companions)).toEqual(["saltcrab"]);
+        expect(s.errands).toEqual([]);
+        expect(s.feats.every(id => id === "act1")).toBe(true);
+        expect(s.title).toBeUndefined();
+        expect(s.hero.skill).not.toBe("constructor");
+        expect(s.hero.supports).toEqual([]);
+        expect(s.world.unlocked).not.toContain("valueOf");
     });
 });
