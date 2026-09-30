@@ -44,6 +44,7 @@ const list: FeatDef[] = [
     f("bosses100", "hunt", "Bossbane", "Slay {n} bosses", 100, 1),
     f("bosses1000", "hunt", "Tyrantsbane", "Slay {n} bosses", 1000, 2, true),
     f("lanterns", "hunt", "Snuffer", "Snuff {n} lanterns on Hollow Night", 100, 1),
+    f("mastery", "hunt", "Weaponmaster", "Raise a skill to mastery {n}", 10, 2, true),
 
     f("relics10", "collect", "Collector", "Find {n} different relics", 10, 1),
     f("relics20", "collect", "Curator", "Find {n} different relics", 20, 2),

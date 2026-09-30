@@ -28,6 +28,10 @@ export interface Hero {
     pet?: { id: string; level: number };
     /** Renown from feats (v9), copied here from state.feats so the stat sheet is a function of the hero. */
     renown?: number;
+    /** Skill mastery levels (v10), copied here from state.mastery for the same reason: skill -> level. */
+    mastery?: Record<string, number>;
+    /** This week's omen (v10), put here by tickOmen so the sheet (and the world) can read it. */
+    omen?: string;
     /** Dawns (v7): how many times the sun was relit, and the perks picked (one per dawn). */
     dawn?: { level: number; perks: string[]; /** The Hollow Crown was broken (round 6): one more perk pick, the name Crownbreaker. */ crown?: boolean };
 }
@@ -182,6 +186,10 @@ export interface GameState {
     feats: string[];
     /** The title worn: a titled feat's id. */
     title?: string;
+    /** The week whose omen was last announced (v10). */
+    omenWeek?: number;
+    /** Skill mastery (v10): skill -> points (kills made with it); kept across dawns. */
+    mastery: Record<string, number>;
     /** Companions away on errands (v9), and errands sent so far (seeds their hauls). */
     errands: Errand[];
     errandSeq?: number;

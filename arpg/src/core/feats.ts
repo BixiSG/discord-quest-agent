@@ -4,7 +4,7 @@
 // copied onto the hero (hero.renown) so the stat sheet stays a function of the
 // hero, like the companion's level.
 
-import { ACTS, COMPANIONS, COMPANION_MAX_LEVEL, FEATS, FEAT_ORDER, MAX_TIER, RELICS, parseStone, companionLevel } from "./data";
+import { ACTS, COMPANIONS, COMPANION_MAX_LEVEL, FEATS, FEAT_ORDER, MAX_TIER, RELICS, parseStone, companionLevel, masteryLevel } from "./data";
 import { crownbreaker, dawnOf } from "./dawn";
 import { pushLog } from "./game";
 import type { GameState } from "./state";
@@ -32,6 +32,7 @@ const PROGRESS: Record<string, (s: GameState) => number> = {
     bosses100: s => s.totals.bosses ?? 0,
     bosses1000: s => s.totals.bosses ?? 0,
     lanterns: s => Object.values(s.events ?? {}).reduce((a, b) => a + b, 0),
+    mastery: s => Math.max(0, ...Object.values(s.mastery ?? {}).map(masteryLevel)),
     relics10: s => Object.keys(s.codex).length,
     relics20: s => Object.keys(s.codex).length,
     relicsall: s => Object.keys(s.codex).filter(id => RELICS[id] && !RELICS[id]!.season).length,

@@ -38,7 +38,7 @@ import { VIEWS, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { creationView } from "./creation";
 import { itemCard } from "./itemui";
 import { lang, setLang, t, tn } from "../i18n";
-import { className, companionName, featName, itemName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { className, companionName, featName, itemName, omenName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
 import { checkFeats } from "../core/feats";
 import { tErr } from "../i18n/errors";
 
@@ -529,6 +529,12 @@ export class GameWindow {
                 sfx("echo", true);
             },
             errand: (pet, kind) => { this.toast(t("toast.errand", { pet: companionName(pet), errand: t(`errands.doing.${kind}`) }), "relic"); },
+            omen: id => { const omen = omenName(id); this.toast(t("toast.omen", { omen }), "relic"); this.lastEvent = ["toast.omen", { omen }]; },
+            mastery: (skill, n) => {
+                const msg = { skill: skillName(skill), n };
+                this.toast(t("toast.mastery", msg), "level");
+                this.lastEvent = ["toast.mastery", msg];
+            },
             feat: id => {
                 const feat = featName(id);
                 this.toast(t("toast.feat", { feat }), "relic");
@@ -894,6 +900,8 @@ export class GameWindow {
         if (r.equipped.length) card.append(h("div", { class: "tag gold", text: t("report.equipped", { list: list(r.equipped.slice(-4).map(it => itemName(it))) }) }));
         if (r.newCompanions.length) card.append(h("div", { class: "tag gold", text: tn("report.pets", r.newCompanions.length, { list: list(r.newCompanions.map(id => companionName(id))) }) }));
         if (r.feats.length) card.append(h("div", { class: "tag gold", text: t("report.feats", { list: list(r.feats.map(id => featName(id))) }) }));
+        const mastered = Object.entries(r.mastery);
+        if (mastered.length) card.append(h("div", { class: "tag", text: t("report.mastery", { list: list(mastered.map(([id, n]) => t("toast.mastery", { skill: skillName(id), n }))) }) }));
         if (r.newRelics.length) card.append(h("div", { class: "tag", style: "background:var(--r-relic);color:#1a1410", text: t("report.relics", { list: list(r.newRelics.map(id => relicName(id))) }) }));
         if (r.best.length) {
             const best = r.best[r.best.length - 1]!;

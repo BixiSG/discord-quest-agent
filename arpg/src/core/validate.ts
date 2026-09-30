@@ -1,7 +1,7 @@
 // Checks a loaded or imported state before the game trusts it. Small damage
 // (an unknown support, a stale zone) is repaired; anything structural throws.
 
-import { COMPANIONS, DAWN_PERK, ECHOES, FEATS, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
+import { COMPANIONS, DAWN_PERK, ECHOES, FEATS, OMENS, companionLevel, parseStone, ATLAS, MAP_AREAS, MAP_MODS, PINNACLES, AFFIXES, ASCENDANCIES, ASC_NODES, BASES, CLASSES, MONSTERS, PASSIVES, passivePoints, RELICS, SKILLS, SUPPORTS, ZONES } from "./data";
 import { SaveError } from "./save";
 import type { GameState, LogEntry } from "./state";
 import { has } from "../i18n";
@@ -15,6 +15,8 @@ import { BLESSING } from "./shrine";
 import { fitStones, socketCap } from "./sockets";
 import { endgameOpen } from "./maps";
 import { checkFeats } from "./feats";
+import { syncMastery } from "./mastery";
+import { tickOmen } from "./omens";
 import { ERRAND_KINDS, ERRAND_MS, ERRAND_SLOTS } from "./errands";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
@@ -276,6 +278,15 @@ export function validateState(raw: unknown): GameState {
     // Feats (v9): known, once each; the title one of them that is a title.
     s.feats = [...new Set(strs(s.feats, id => !!known(FEATS, id)) ?? [])];
     if (s.title !== undefined && !(typeof s.title === "string" && known(FEATS, s.title)?.title && s.feats.includes(s.title))) delete s.title;
+    // Skill mastery (v10): known skills, whole points; the hero's levels follow the points.
+    s.mastery = Object.fromEntries(Object.entries(counts(s.mastery)).filter(([k, v]) => known(SKILLS, k) && v >= 1).map(([k, v]) => [k, Math.floor(v)]));
+    delete hero.mastery;
+    syncMastery(s);
+    // This week's omen (v10) goes on the hero again (quietly: no chronicle line for a load).
+    if (hero.omen !== undefined && !known(OMENS, hero.omen)) delete hero.omen;
+    s.omenWeek = Number.isInteger(s.omenWeek) ? s.omenWeek : undefined;
+    if (s.omenWeek === undefined) delete s.omenWeek;
+    tickOmen(s, { quiet: true });
     s.craftSeq = Number.isFinite(s.craftSeq) ? s.craftSeq : 0;
     s.log = (Array.isArray(s.log) ? s.log : []).map(cleanLog).filter((e): e is LogEntry => !!e).slice(-60);
     reconcileRewards(s);

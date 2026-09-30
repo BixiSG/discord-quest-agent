@@ -10,7 +10,7 @@ import { DAMAGE_TYPES, type DamageType, type Item } from "../types";
 import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
-import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES } from "../data";
+import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, MASTERY_BOSS, PINNACLES } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
 import { blessing, tickShrine } from "../shrine";
@@ -23,6 +23,8 @@ import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
 import { checkFeats } from "../feats";
 import { tickErrands } from "../errands";
+import { gainMastery } from "../mastery";
+import { omenCurrency, omenEffects, tickOmen } from "../omens";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -70,6 +72,10 @@ export interface SimEvents {
     feat?(id: string): void;
     /** A companion came back from an errand. */
     errand?(pet: string, kind: string): void;
+    /** A skill reached a new mastery level. */
+    mastery?(skill: string, level: number): void;
+    /** A new week's omen began. */
+    omen?(id: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -104,7 +110,11 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
 }
 
-const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, !!run.map?.pinnacle);
+/** A run's world: the map's mods, then the dawn, then the week's omen. */
+const effectsOf = (state: GameState, run: RunState): MapEffects | null => {
+    const pin = !!run.map?.pinnacle;
+    return omenEffects(state, run, dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, pin), pin);
+};
 
 // A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
@@ -155,6 +165,7 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
     // A new game (or one just claimed empty) gets its contracts before it plays.
     if ((state.contracts?.list.length ?? 0) < BOARD_SIZE) ensureContracts(state);
     tickSeason(state, ev);
+    tickOmen(state, { onNew: id => ev.omen?.(id) });
     let steps = 0;
     while (state.simTo + STEP_MS <= now) {
         if (steps >= maxSteps) return false;
@@ -324,6 +335,8 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
     run.kills++; run.xp += xp;
     state.totals.kills++;
+    // The skill in use grows with every kill (a new level changes the sheet).
+    if (gainMastery(state, hero.skill, d.boss ? MASTERY_BOSS : 1, (sk, l) => ev.mastery?.(sk, l))) changed0 = true;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m, xp);
@@ -352,7 +365,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     }
     // Crafting currency.
     const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100);
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100) * (1 + omenCurrency(state) / 100);
     for (let k = 0; k < cRolls; k++) {
         if (!rng.chance(cChance)) continue;
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
@@ -561,6 +574,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    tickOmen(state, { onNew: id => ev.omen?.(id) });
     // Keeps idle companions busy (errands also come home mid-run: step()).
     tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     // New gear may have empty sockets: fill them from the pouch.

@@ -1,6 +1,6 @@
 // The Hero tab: the character sheet with its breakdowns, and the companions.
 
-import { ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, DAWN_PERKS, PASSIVES, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, dawnName, xpToNext, type CompanionDef } from "../core/data";
+import { ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, DAWN_PERKS, OMENS, PASSIVES, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, dawnName, xpToNext, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
 import { ERRAND_KINDS, ERRAND_MS, ERRAND_SLOTS, errandYield, errandsOpen, idleCompanions, kindOpen, recallErrand, scoutTier, sendErrand, type ErrandKind } from "../core/errands";
 import { drawPumpkin } from "./gfx/pumpkin";
@@ -16,7 +16,7 @@ import { glyph } from "./glyphs";
 import { portrait } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
 import { t, tn } from "../i18n";
-import { tierName, ascName, ascNodeName, dawnTitle, featName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
+import { tierName, ascName, ascNodeName, dawnTitle, featName, omenName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
 import { tErr } from "../i18n/errors";
 import { TYPE_NAME, kv } from "./common";
 import type { Ctx } from "./views";
@@ -267,6 +267,8 @@ function sourceNames(st: GameState): (src: string) => string {
     for (const p of Object.values(COMPANIONS)) add(`Companion: ${p.name}`, `${t("pets.title")}: ${companionName(p.id)}`);
     add("Map", t("atlas.maps"));
     add("Renown", t("feats.renownName"));
+    add("Mastery", t("skills.masteryName"));
+    for (const o of Object.values(OMENS)) add(o.name, omenName(o.id));
     for (const p of DAWN_PERKS) add(p.name, perkName(p.id));
     for (let n = 1; n <= (st.hero.dawn?.level ?? 0); n++) add(dawnName(n), dawnTitle(n));
     for (const s of SLOTS) { const it = st.hero.equipment[s]; if (it) add(itemLabel(it), itemName(it)); }

@@ -4,7 +4,7 @@
 
 import { PINNACLES, ZONES } from "./data";
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -106,6 +106,11 @@ export const MIGRATIONS: Record<number, Migration> = {
             s.totals.bosses = clears + pins;
         }
         s.totals.contracts ??= typeof s.contracts?.done === "number" ? s.contracts.done : 0;
+        return s;
+    },
+    // v10 (round 9): skill mastery, from zero (kills before it weren't counted per skill).
+    9: (s: any) => {
+        s.mastery ??= {};
         return s;
     },
 };

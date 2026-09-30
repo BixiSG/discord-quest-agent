@@ -12,8 +12,8 @@ import type { GameState } from "../src/core/state";
 const g0 = (cls = "vanguard"): GameState => newGame({ name: "F", cls, now: 0, seed: 21 });
 
 describe("feats", () => {
-    it("are well formed: ids, groups, goals, renown 1-3, twelve titles, Crownbreaker last", () => {
-        expect(FEAT_ORDER.length).toBe(37);
+    it("are well formed: ids, groups, goals, renown 1-3, thirteen titles, Crownbreaker last", () => {
+        expect(FEAT_ORDER.length).toBe(38);
         for (const id of FEAT_ORDER) {
             const f = FEATS[id]!;
             expect(f.goal, id).toBeGreaterThan(0);
@@ -21,7 +21,7 @@ describe("feats", () => {
             // The goal is in the text, or said in words ("the third dawn", "every relic").
             expect(f.text.includes("{n}") || f.goal === 1 || ["relicsall", "companions", "dawn3"].includes(id), id).toBe(true);
         }
-        expect(FEAT_ORDER.filter(id => FEATS[id]!.title).length).toBe(12);
+        expect(FEAT_ORDER.filter(id => FEATS[id]!.title).length).toBe(13);
         expect(FEAT_ORDER[FEAT_ORDER.length - 1]).toBe("crown");
     });
     it("a new hero has none, and progress is read from the state", () => {

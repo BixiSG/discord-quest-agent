@@ -16,3 +16,5 @@ export * from "./stones";
 export * from "./echoes";
 export * from "./dawn";
 export * from "./feats";
+export * from "./mastery";
+export * from "./omens";

@@ -68,6 +68,8 @@ export const echoWho = (id: string, l?: Lang) => tr(L(l), `echo.${id}.who`);
 export const echoText = (id: string, l?: Lang) => tr(L(l), `echo.${id}.text`);
 export const perkName = (id: string, l?: Lang) => tr(L(l), `perk.${id}.name`);
 export const featName = (id: string, l?: Lang) => tr(L(l), `feat.${id}.name`);
+export const omenName = (id: string, l?: Lang) => tr(L(l), `omen.${id}.name`);
+export const omenText = (id: string, l?: Lang) => tr(L(l), `omen.${id}.text`);
 /** What a feat asks, its goal filled in ("Slay 10k monsters"). */
 export const featText = (id: string, l?: Lang) => tr(L(l), `feat.${id}.text`, { n: goalText(FEATS[id]?.goal ?? 0) });
 /** Round goals read short: 10000 -> 10k, 1000000 -> 1M. */
@@ -205,6 +207,7 @@ export function resolveParam(v: string | number, l?: Lang): string | number {
         case "skill": return skillName(rest, lg);
         case "support": return supportName(rest, lg);
         case "feat": return featName(rest, lg);
+        case "omen": return omenName(rest, lg);
         case "list": return rest.split(",").map(x => resolveParam(`@${x}`, lg)).join(tr(lg, "common.list"));
         case "key": return tr(lg, rest);
         case "map": {

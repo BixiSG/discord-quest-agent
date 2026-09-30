@@ -22,7 +22,7 @@ import { heroView } from "./hero";
 import { logSig, logView } from "./log";
 import { menuView } from "./menu";
 import { skillsView } from "./skills";
-import { hollowSig, shrineSig, worldView } from "./world";
+import { hollowSig, omenSig, shrineSig, worldView } from "./world";
 
 export interface Ctx {
     state: GameState;
@@ -55,9 +55,10 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}:${s.title ?? ""}:${errandsSig(s)}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== undefined ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map(k => s.hero.equipment[k]).find(x => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
-        case "skills": return `${s.hero.rev}:${s.hero.level}`;
+        // The mastery of the skill in use moves every kill: its tooltip follows every hundred.
+        case "skills": return `${s.hero.rev}:${s.hero.level}:${Math.floor((s.mastery?.[s.hero.skill] ?? 0) / 100)}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}:${omenSig(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return logSig(s);
         case "menu": return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
