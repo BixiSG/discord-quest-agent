@@ -173,8 +173,9 @@ tests (287 at the end, from 250):
   bot-played heroes (Gravecleave, Tidal Crash, Sunpiercer, Blight Arrow).
   Dawn pacing: round 8 had every calling relight at 12-16 h and then every
   10-15 h for good; sun pinnacles +15% life and pinnacle toughness compounding
-  per dawn (x1.15^d on top of the world's 10%) - see GDD, "The dawn loop after
-  round 8".
+  per dawn (x1.15^d on top of the world's 10%): over two simulated weeks,
+  dawns I-IV take 11-16 h each, then 15-35 h; Arcanist dawn VIII, Strider VI,
+  Vanguard V - see GDD, "The dawn loop after round 8".
 - Tools: `npm run smoke` was broken on main (a nav selector from before the
   rail); it tours all ten tabs again and fails on console errors.
 - Enemy sprites: once opengameart.org was allowed, 28 CC0 candidates were

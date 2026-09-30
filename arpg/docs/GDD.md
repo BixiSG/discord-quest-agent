@@ -254,7 +254,11 @@ the pinnacles hold their piece of the sun harder, compounding, on top of the wor
 life and damage x (1 + 0.1 d) x 1.15^d at dawn d (dawn I 26%, III 98%, V 202%). Measured
 at 20% the loop slowed as intended (dawns I-III 10-20 hours each, dawn IV 20-45, then
 days), but dawn X's pinnacles would be twelve times tougher and the last perks out of
-reach; 15% is the value kept. The Menu's dawn card gives the pinnacles' toughness.
+reach; 15% is the value kept. Over two simulated weeks (seed 777) it gives dawns I-IV in
+11-16 hours each for every calling, then 15-35 hours each; the Arcanist reaches dawn VIII
+(136 h), the Strider VI (214 h), and the Vanguard V (73 h) - attack builds still scale
+worse against late pinnacles, and a new dawn can take any calling. The Menu's dawn card
+gives the pinnacles' toughness.
 
 ## Hollow Night (October, round 6)
 
