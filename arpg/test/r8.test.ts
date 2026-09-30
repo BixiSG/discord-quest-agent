@@ -203,3 +203,65 @@ describe("Ashfold map areas and round-8 map mods", () => {
         expect(await bossLife(["overlord"]) / await bossLife([])).toBeCloseTo(1.8, 1);
     });
 });
+
+describe("forge previews", () => {
+    it("say exactly what each currency does: the same refusal, the rarity, kept/rerolled/removed affixes and the count that comes", async () => {
+        const { craftPreview, applyCurrency } = await import("../src/core/crafting");
+        const { rollItem, countAffixes } = await import("../src/core/items");
+        const { Rng } = await import("../src/core/rng");
+        const { CURRENCY_ORDER } = await import("../src/core/data");
+        let checked = 0;
+        for (let seed = 1; seed <= 60; seed++) {
+            const rng = new Rng(seed);
+            const rarity = (["plain", "enchanted", "rare"] as const)[seed % 3]!;
+            const item = rollItem(rng, 1000 + seed, 10 + seed, { rarity });
+            for (const cur of CURRENCY_ORDER) {
+                const g = hero("vanguard", 60);
+                g.stash.push(structuredClone(item));
+                g.currency[cur] = 1;
+                g.craftSeq = seed;
+                const before = structuredClone(g.stash[0]!);
+                const pv = craftPreview(before, cur);
+                const err = applyCurrency(g, cur, before.uid);
+                if ("err" in pv) { expect(err, `${cur} on ${rarity}`).toBe(pv.err); continue; }
+                expect(err, `${cur} on ${rarity}`).toBeNull();
+                const after = g.stash[0]!;
+                if (pv.rarity) expect(after.rarity).toBe(pv.rarity); else expect(after.rarity).toBe(before.rarity);
+                const ids = after.affixes.map(a => a.id);
+                pv.affixes.forEach((f, i) => {
+                    const a = before.affixes[i]!;
+                    if (f === "keep") expect(after.affixes.some(x => x.id === a.id && x.tier === a.tier && x.rolls.join() === a.rolls.join()), `${cur} keeps ${a.id}`).toBe(true);
+                    if (f === "reroll") expect(ids).toContain(a.id);
+                    if (f === "remove") expect(ids).not.toContain(a.id);
+                });
+                const replaced = pv.affixes.includes("replace");
+                const kept = pv.affixes.filter(f => f === "keep" || f === "reroll").length;
+                const removed = before.affixes.length - after.affixes.length;
+                if (pv.affixes.includes("maybe")) expect(removed).toBe(1);
+                const came = replaced || !before.affixes.length ? after.affixes.length : after.affixes.length - kept;
+                if (pv.add) {
+                    expect(came, `${cur}: ${came} in ${pv.add.min}-${pv.add.max}`).toBeGreaterThanOrEqual(pv.add.min);
+                    expect(came).toBeLessThanOrEqual(pv.add.max);
+                    const c = countAffixes(after), b = replaced ? { prefix: 0, suffix: 0 } : countAffixes(before);
+                    if (c.prefix > b.prefix) expect(pv.add.types).toContain("prefix");
+                    if (c.suffix > b.suffix) expect(pv.add.types).toContain("suffix");
+                } else if (!pv.affixes.includes("maybe")) expect(after.affixes.length).toBe(before.affixes.length - pv.affixes.filter(f => f === "remove").length);
+                checked++;
+            }
+        }
+        expect(checked).toBeGreaterThan(200);
+    });
+    it("the bench preview replaces a benched affix and names the new one", async () => {
+        const { benchPreview, benchOptions } = await import("../src/core/crafting");
+        const { rollItem } = await import("../src/core/items");
+        const { Rng } = await import("../src/core/rng");
+        const it = rollItem(new Rng(4), 1, 60, { rarity: "rare" });
+        it.affixes[0]!.bench = true;
+        const opt = benchOptions(it)[0];
+        if (!opt) return;
+        const pv = benchPreview(it, opt.id);
+        expect("err" in pv).toBe(false);
+        if (!("err" in pv)) { expect(pv.affixes[0]).toBe("remove"); expect(pv.affixes.slice(1).every(f => f === "keep")).toBe(true); expect(pv.addAffix).toBe(opt.id); }
+        expect(benchPreview(it, "no_such_affix")).toEqual({ err: "that affix doesn't fit" });
+    });
+});

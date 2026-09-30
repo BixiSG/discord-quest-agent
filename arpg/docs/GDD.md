@@ -125,6 +125,12 @@ Dust and currency pile up late, so the Forge has sinks that scale:
   one worth wearing; misses are salvaged on the spot.
 - **Reroll until upgrade**: Reshaper, Tempest Shard or Temper Oil on a stash
   item again and again (up to 20) until it beats what is worn.
+- **Previews** (round 8): while the pointer or keyboard focus rests on a
+  currency, the hone or the bench, the item on the anvil shows what it would
+  do: which affixes keep, get new values, are rerolled or removed (or the
+  chance each goes), how many new ones come and of which kind, the rarity it
+  becomes - or why it can't be used, in which case Use is off. The anvil
+  stays in view beside the shelf while scrolling.
 
 ## Companions (round 4)
 

@@ -175,6 +175,16 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .item .name.rare { background: var(--r-rare); color: #1a1410; } .item .name.relic { background: var(--r-relic); color: #1a1410; }
 .item .aff { font-size: 12px; }
 .item .aff b { font: 700 8px var(--mono); color: var(--muted); margin-left: 5px; }
+/* Forge previews: what a craft would do, marked on the card before it is done. */
+.item .pvhead { display: flex; flex-wrap: wrap; gap: 2px 6px; margin: -1px 0 7px; padding: 4px 7px; border: 2px dashed var(--line); background: var(--paper2); font-size: 12px; }
+.item .pvhead b { font-weight: 800; } .item .pvhead.err { border-color: var(--red); color: var(--red); }
+.item .aff.pv-reroll { background: rgba(255,194,51,.28); }
+.item .aff.pv-replace, .item .aff.pv-remove { color: var(--red); text-decoration: line-through; text-decoration-thickness: 2px; }
+.item .aff.pv-maybe { background: rgba(229,56,59,.13); }
+.item .aff.pv-new { color: var(--green); font-weight: 800; border: 2px dashed var(--green); padding: 1px 5px; margin-top: 3px; }
+.item .aff .pvt { display: inline-block; font: 700 8px var(--mono); text-transform: uppercase; margin-left: 5px; padding: 1px 3px; background: var(--line); color: var(--card); text-decoration: none; }
+.item .tag.pvq { background: var(--gold); color: #1a1410; }
+.hm.dark .item .aff.pv-new { color: #6fe08a; border-color: #6fe08a; } .hm.dark .item .aff.pv-replace, .hm.dark .item .aff.pv-remove, .hm.dark .item .pvhead.err { color: #ff6b6d; }
 .item hr { border: 0; border-top: 2px dashed var(--line); margin: 7px 0; }
 .up { color: var(--green); font-weight: 800; } .down { color: var(--red); font-weight: 800; }
 .hm.dark .up { color: #6fe08a; } .hm.dark .down { color: #ff6b6d; }
@@ -416,9 +426,12 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .li.locked .gem { filter: grayscale(1); }
 
 /* forge: rack, anvil, shelf */
-.smithy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 320px) minmax(260px, 1fr); gap: 14px; align-items: start; }
-@container win (max-width: 1080px) { .smithy { grid-template-columns: minmax(0, 1fr) minmax(250px, 1fr); } .smithy > :last-child { grid-column: 1 / -1; } }
-@container win (max-width: 700px) { .smithy { grid-template-columns: 1fr; } }
+/* The anvil stays in view (sticky) beside the rack and the shelf: hovering a currency previews on its card. */
+.smithy { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 320px) minmax(260px, 1fr); grid-template-areas: "rack anvil shelf"; gap: 14px; align-items: start; }
+.smithy > .rackcard { grid-area: rack; } .smithy > .shelfcard { grid-area: shelf; }
+.smithy > .anvilcard { grid-area: anvil; position: sticky; top: 0; z-index: 1; }
+@container win (max-width: 1080px) { .smithy { grid-template-columns: minmax(0, 1fr) minmax(250px, 1fr); grid-template-areas: "rack anvil" "shelf anvil"; } }
+@container win (max-width: 700px) { .smithy { grid-template-columns: 1fr; grid-template-areas: "rack" "anvil" "shelf"; } .smithy > .anvilcard { position: static; } }
 .cell .worn { position: absolute; left: -2px; bottom: -3px; padding: 0 3px; background: #1a1410; color: #ffc233; font: 700 8px/12px var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; }
 .anvil-plate { display: grid; place-items: center; height: 96px; margin-bottom: 10px; border: 8px solid transparent; border-image: var(--fr-sunk) 8 fill / 8px;
   background: radial-gradient(ellipse at 50% 100%, rgba(255,120,40,.35), transparent 70%); color: var(--muted); }
