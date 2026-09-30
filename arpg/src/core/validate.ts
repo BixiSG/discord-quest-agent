@@ -15,6 +15,7 @@ import { BLESSING } from "./shrine";
 import { fitStones, socketCap } from "./sockets";
 import { endgameOpen } from "./maps";
 import { checkFeats } from "./feats";
+import { ERRAND_KINDS, ERRAND_MS, ERRAND_SLOTS } from "./errands";
 
 const num = (v: unknown, what: string, min = -Infinity, max = Infinity): number => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new SaveError(`bad ${what}`);
@@ -196,6 +197,7 @@ export function validateState(raw: unknown): GameState {
     set.filter = Array.isArray(set.filter) ? set.filter.map(cleanRule).filter((r): r is FilterRule => !!r) : structuredClone(DEFAULT_FILTER);
     set.upkeep = set.upkeep !== false;
     set.autoStones = set.autoStones !== false;
+    set.errandKeep = set.errandKeep !== false;
     const hints = [...new Set(strs(set.hints, x => /^[a-z]{1,24}$/.test(x)) ?? [])].slice(0, 32);
     if (hints.length) set.hints = hints; else delete set.hints;
     // ---- endgame (v4)
@@ -229,6 +231,15 @@ export function validateState(raw: unknown): GameState {
     s.companions = Object.fromEntries(Object.entries(counts(s.companions)).filter(([k]) => COMPANIONS[k]).map(([k, v]) => [k, Math.floor(v)]));
     if (hero.pet && (!hero.pet.id || s.companions[hero.pet.id] === undefined)) delete hero.pet;
     else if (hero.pet) hero.pet = { id: hero.pet.id, level: companionLevel(s.companions[hero.pet.id]!) };
+    // Errands (v9): owned companions not at the hero's side, once each, a known errand, at most the slots.
+    const away = new Set<string>();
+    s.errands = (Array.isArray(s.errands) ? s.errands : []).filter(e => {
+        const ok = e && typeof e.pet === "string" && s.companions[e.pet] !== undefined && hero.pet?.id !== e.pet && !away.has(e.pet)
+            && ERRAND_KINDS.includes(e.kind) && typeof e.until === "number" && Number.isFinite(e.until);
+        if (ok) away.add(e.pet);
+        return ok;
+    }).slice(0, ERRAND_SLOTS).map(e => ({ pet: e.pet, kind: e.kind, until: Math.min(e.until, s.simTo + ERRAND_MS) }));
+    if (s.errandSeq !== undefined) s.errandSeq = Number.isInteger(s.errandSeq) && s.errandSeq >= 0 ? s.errandSeq : 0;
     // Hollow Night: lantern flags are plain booleans; the UTC offset within a day; tallies by year.
     for (const m of act.run?.monsters ?? []) if (m.lantern !== true) delete m.lantern;
     if (act.run?.map && act.run.map.lit !== true) delete act.run.map.lit;

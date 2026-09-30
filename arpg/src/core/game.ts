@@ -28,9 +28,9 @@ export function newGame(opts: { name: string; cls: string; now: number; seed?: n
         world: { unlocked: ["a1_shore"], clears: {}, storySeen: [], rewards: [] },
         activity: { zone: "a1_shore", autoPush: true, runIndex: 0, streak: 0, deaths: 0, run: null, acc: 0, mode: "zone", mapTier: 0 },
         maps: [], mapCap: 40, atlas: { points: 0, nodes: [], tiers: [] }, sigils: {}, pinnacleKills: {},
-        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true },
+        settings: { keep: "rare", autoEquip: true, filter: structuredClone(DEFAULT_FILTER), upkeep: true, autoStones: true, errandKeep: true },
         relics: [], codex: {}, contracts: { list: [], seq: 0, done: 0 }, companions: {}, blessings: {}, shrine: { keep: [], orbs: true },
-        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], feats: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
+        stones: {}, market: { seq: 0, rolledAt: 0, refreshes: 0, pedlar: [], jeweller: [] }, echoes: [], feats: [], errands: [], totals: newTotals(), nextUid: 1, craftSeq: 0, log: [],
     };
     state.hero.equipment.weapon = { uid: state.nextUid++, base: cls.startWeapon, ilvl: 1, rarity: "plain", affixes: [] };
     pushLog(state, "info", "log.wake", { name: opts.name });

@@ -52,7 +52,7 @@ export const VIEWS: { id: ViewId }[] = [
 export function viewSig(id: ViewId, c: Ctx): string {
     const s = c.state;
     switch (id) {
-        case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}`;
+        case "hero": return `${s.hero.rev}:${s.hero.level}:${s.activity.run ? runZone(s, s.activity.run).name : s.activity.zone}:${Object.keys(s.companions).length}:${s.hero.pet ? Math.floor((s.companions[s.hero.pet.id] ?? 0) / 100) : -1}:${s.title ?? ""}:${errandsSig(s)}`;
         case "gear": return `${s.hero.rev}:${s.stash.length}:${s.stash[s.stash.length - 1]?.uid ?? 0}:${s.dust}:${c.sel.uid}:${c.sel.slot}:${gearSig(s)}`;
         case "forge": return `${s.hero.rev}:${s.stash.length}:${s.dust}:${JSON.stringify(s.currency)}:${c.sel.uid}:${s.craftSeq}:${gearSig(s)}:${JSON.stringify(s.stones)}:${JSON.stringify(c.sel.uid !== undefined ? ownedItem(s, c.sel.uid)?.stones ?? SLOTS.map(k => s.hero.equipment[k]).find(x => x?.uid === c.sel.uid)?.stones ?? null : null)}`;
         case "skills": return `${s.hero.rev}:${s.hero.level}`;
@@ -64,6 +64,9 @@ export function viewSig(id: ViewId, c: Ctx): string {
         case "market": return marketSig(s);
     }
 }
+
+/** The errands card: who is away, the minutes left, the switch, and what scouting would find. */
+const errandsSig = (s: GameState) => `${s.errands.map(e => `${e.pet}.${e.kind}.${Math.ceil(Math.max(0, e.until - s.simTo) / 60e3)}`).join(",")}:${s.settings.errandKeep}:${s.atlas.tiers.length}`;
 
 export function renderView(id: ViewId, c: Ctx): HTMLElement {
     switch (id) {

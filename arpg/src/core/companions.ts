@@ -35,6 +35,7 @@ export function setCompanion(state: GameState, id: string | null): string | null
     if (id === null) { if (state.hero.pet) { delete state.hero.pet; state.hero.rev++; } return null; }
     if (!COMPANIONS[id]) return "unknown companion";
     if (state.companions?.[id] === undefined) return "not found yet";
+    if ((state.errands ?? []).some(e => e.pet === id)) return "away on an errand";
     state.hero.pet = { id, level: companionLevel(state.companions[id]!) };
     state.hero.rev++;
     return null;

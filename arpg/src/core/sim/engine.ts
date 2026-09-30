@@ -22,6 +22,7 @@ import { LANTERN, hollowNight, lanternKill, lanternRate, tickSeason, touch } fro
 import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
 import { checkFeats } from "../feats";
+import { tickErrands } from "../errands";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -67,6 +68,8 @@ export interface SimEvents {
     echo?(id: string): void;
     /** A feat was earned. */
     feat?(id: string): void;
+    /** A companion came back from an errand. */
+    errand?(pet: string, kind: string): void;
 }
 
 const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -550,6 +553,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     checkFeats(state, { onFeat: id => ev.feat?.(id) });
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }

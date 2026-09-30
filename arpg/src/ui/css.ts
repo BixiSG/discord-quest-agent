@@ -571,6 +571,11 @@ button.sock { cursor: pointer; } button.sock:hover { filter: brightness(1.12); }
 .pet .pic .petart { max-height: 40px; max-width: 64px; width: auto !important; height: auto !important; }
 .pet b { font-size: 12px; line-height: 1.1; } .pet span:last-child { font-size: 11px; color: var(--muted); }
 .pet.on { border-image-source: var(--fr-gold); color: #1a1410; cursor: default; } .pet.on span:last-child { color: #4d4030; }
+.pet.away { opacity: .7; } .pet.away span:last-child { color: var(--teal); }
+.errand .pic { flex: none; width: 44px; height: 44px; display: grid; place-items: center; background: #1a1410; border: 2px solid var(--line); color: #ffc233; overflow: hidden; }
+.errand .pic .petart { max-width: 40px; max-height: 40px; width: auto !important; height: auto !important; }
+.errkinds { display: flex; flex-wrap: wrap; gap: 4px; }
+.errand { align-items: flex-start; } .errand .x { flex: none; }
 .pet.unknown { cursor: default; opacity: .6; } .pet.unknown .q { font: 700 22px/1 var(--display); color: var(--muted); }
 .pet:hover:not(.on):not(.unknown) { filter: brightness(1.08); }
 .scout { margin-top: 4px; padding: 2px 6px; display: inline-block; font: 700 12px/1.3 var(--display); font-stretch: condensed; letter-spacing: 1px; text-transform: uppercase; border: 2px solid var(--line); }

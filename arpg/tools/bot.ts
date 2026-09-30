@@ -8,6 +8,7 @@ import { SLOTS } from "../src/core/types";
 import { deriveSheet, supportSlots } from "../src/core/character";
 import { ASCENDANCIES, ATLAS, PASSIVES, PINNACLES, SKILLS, SUPPORTS, companionLevel } from "../src/core/data";
 import { setCompanion } from "../src/core/companions";
+import { recallErrand } from "../src/core/errands";
 import { BLESSINGS, setKeep } from "../src/core/shrine";
 import { scoutPinnacle } from "../src/core/scout";
 import { buyGear, tickMarket } from "../src/core/market";
@@ -80,7 +81,8 @@ export function botTune(state: GameState): void {
         const v = score({ ...hero, pet: { id, level: companionLevel(state.companions[id]!) } });
         if (v > petScore * 1.001) { petScore = v; petPick = id; }
     }
-    if (petPick && petPick !== hero.pet?.id) setCompanion(state, petPick);
+    // (One away on an errand is called back first; "keep them busy" sends the rest.)
+    if (petPick && petPick !== hero.pet?.id) { recallErrand(state, petPick); setCompanion(state, petPick); }
     // Shrine: from level 20, keep every blessing up (spare orbs pay first).
     if (hero.level >= 20 && !state.shrine.keep.length) for (const b of BLESSINGS) setKeep(state, b.id, true);
     // Dawns: relight as soon as all three shards are held; perks in a fixed order.

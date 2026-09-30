@@ -69,6 +69,9 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     fresh.echoes = s.echoes;
     // Feats and their renown are the player's, not the hero's: they carry over whole.
     fresh.feats = s.feats ?? [];
+    // Companions are kept, and so are the errands they are on.
+    fresh.errands = s.errands ?? [];
+    if (s.errandSeq) fresh.errandSeq = s.errandSeq;
     if (s.title) fresh.title = s.title;
     if (s.hero.renown) fresh.hero.renown = s.hero.renown;
     fresh.stones = s.stones;

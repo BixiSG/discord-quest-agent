@@ -2,6 +2,7 @@
 
 import { ASCENDANCIES, CLASSES, COMPANIONS, COMPANION_MAX_LEVEL, COMPANION_ORDER, DAWN_PERKS, PASSIVES, SKILLS, SUPPORTS, ZONES, bondFor, companionLevel, dawnName, xpToNext, type CompanionDef } from "../core/data";
 import { setCompanion } from "../core/companions";
+import { ERRAND_KINDS, ERRAND_MS, ERRAND_SLOTS, errandYield, errandsOpen, idleCompanions, kindOpen, recallErrand, scoutTier, sendErrand, type ErrandKind } from "../core/errands";
 import { drawPumpkin } from "./gfx/pumpkin";
 import { runZone } from "../core/sim/engine";
 import type { Sheet } from "../core/character";
@@ -9,13 +10,13 @@ import { buildScore, codexRarity } from "../core/game";
 import { itemLabel } from "../core/items";
 import type { GameState } from "../core/state";
 import { DAMAGE_TYPES, SLOTS, type DamageType } from "../core/types";
-import { fmt, h, pct } from "./dom";
+import { fmt, fmtDuration, h, pct } from "./dom";
 import { drawSprite, spriteOf } from "./gfx/sprites";
 import { glyph } from "./glyphs";
 import { portrait } from "./gfx/portrait";
 import { pixText } from "./gfx/pix";
 import { t, tn } from "../i18n";
-import { ascName, ascNodeName, dawnTitle, featName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
+import { tierName, ascName, ascNodeName, dawnTitle, featName, nodeName, className, companionBlurb, companionBonus, companionName, companionWhere, itemName, perkName, placeName, skillName, supportName, tagName } from "../i18n/names";
 import { tErr } from "../i18n/errors";
 import { TYPE_NAME, kv } from "./common";
 import type { Ctx } from "./views";
@@ -109,7 +110,7 @@ export function heroView(c: Ctx): HTMLElement {
         ehpBars(s),
         kv([[t("hero.move"), pct(s.moveSpeed)], [t("hero.rarity"), codexRarity(st) ? t("hero.rarityCodex", { total: s.rarity + codexRarity(st), codex: codexRarity(st) }) : `+${s.rarity}%`], [t("hero.flask"), pct(s.flaskHeal)], [t("hero.score"), fmt(buildScore(s))]]));
 
-    return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res), def);
+    return h("div", { class: "sheet" }, h("div", { class: "col", style: "gap:14px" }, who, companionCard(c)), h("div", { class: "col", style: "gap:14px" }, off, res, errandsCard(c)), def);
 }
 
 /** A companion's art at `size` times its atlas size (frame 0, its tint), or a "?" when the art isn't in yet. */
@@ -153,18 +154,82 @@ function companionCard(c: Ctx): HTMLElement {
         const def = COMPANIONS[id]!;
         const has = st.companions[id] !== undefined;
         const out = pet?.id === id;
+        const errand = st.errands.find(e => e.pet === id);
         const lvl = has ? companionLevel(st.companions[id]!) : 0;
         const name = companionName(id), where = companionWhere(id);
-        const tile = h(has ? "button" : "div", { class: `pet${out ? " on" : ""}${has ? "" : " unknown"}`,
+        const tile = h(has ? "button" : "div", { class: `pet${out ? " on" : ""}${has ? "" : " unknown"}${errand ? " away" : ""}`,
             attrs: has ? { "aria-pressed": String(out), "aria-label": t("pets.aria", { name, level: lvl }) } : { role: "img", "aria-label": t("pets.notFoundAria", { where }) },
             on: has && !out ? { click: () => c.act(s => setCompanion(s, id), t("pets.walks", { name })) } : {} },
             h("span", { class: "pic" }, has ? petArt(def, 1) : h("span", { class: "q", text: "?" })),
             h("b", { text: has ? name : t("pets.unknown") }),
-            h("span", { text: has ? t(out ? "pets.lvOut" : "pets.lv", { n: lvl }) : where }));
-        tile.dataset.tip = has ? t(out ? "pets.tipOut" : "pets.tipIn", { name, level: lvl, bonus: companionBonus(id, lvl) }) : t("pets.tipUnknown", { where });
+            h("span", { text: has ? (errand ? `${t("pets.lv", { n: lvl })} - ${t("pets.away")}` : t(out ? "pets.lvOut" : "pets.lv", { n: lvl })) : where }));
+        tile.dataset.tip = !has ? t("pets.tipUnknown", { where })
+            : errand ? t("pets.tipAway", { name, level: lvl, doing: t(`errands.doing.${errand.kind}`), time: fmtDuration(Math.max(0, errand.until - st.simTo)) })
+            : t(out ? "pets.tipOut" : "pets.tipIn", { name, level: lvl, bonus: companionBonus(id, lvl) });
         grid.append(tile);
     }
     card.append(grid);
+    return card;
+}
+
+/** What an errand of this kind would bring a companion of this level, in words. */
+function errandWhat(st: GameState, kind: ErrandKind, level: number): string {
+    const n = errandYield(st, kind, level);
+    if (kind === "scavenge") return t("errands.yield.scavenge", { n: fmt(n) });
+    if (kind === "scout") return tn("errands.yield.scout", n, { tier: tierName(scoutTier(st)) });
+    return tn(`errands.yield.${kind}`, n);
+}
+
+/** Errands: who is away and until when, a free errand to send an idle companion on, and "keep them busy". */
+function errandsCard(c: Ctx): HTMLElement | null {
+    const st = c.state;
+    if (!Object.keys(st.companions).length) return null;
+    const card = h("div", { class: "card errands" }, h("h3", { class: "split" }, h("span", { text: t("errands.title") }), h("span", { class: "num", text: t("errands.count", { n: st.errands.length, max: ERRAND_SLOTS }) })));
+    if (!errandsOpen(st)) { card.append(h("div", { class: "muted", style: "font-size:12px", text: t("errands.none") })); return card; }
+    card.append(h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("errands.note") }));
+    const rows = h("div", { class: "contracts" });
+    for (const e of st.errands) {
+        const def = COMPANIONS[e.pet];
+        if (!def) continue;
+        const lvl = companionLevel(st.companions[e.pet] ?? 0);
+        const left = Math.max(0, e.until - st.simTo);
+        const name = companionName(e.pet);
+        rows.append(h("div", { class: "contract errand" },
+            h("span", { class: "pic" }, petArt(def, 1)),
+            h("div", { class: "grow col", style: "gap:3px;min-width:0" },
+                h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" }, h("b", { text: name }), h("span", { class: "tag", text: t(`errands.kind.${e.kind}`) })),
+                h("div", { class: "meter", title: t("errands.left", { time: fmtDuration(left) }) }, h("i", { style: `width:${Math.min(100, (1 - left / ERRAND_MS) * 100).toFixed(1)}%` }), h("span", { class: "num", text: fmtDuration(left) })),
+                h("span", { class: "muted", style: "font-size:12px", text: t("errands.brings", { what: errandWhat(st, e.kind, lvl) }) })),
+            h("button", { class: "x", text: "x", title: t("errands.recallTip", { pet: name }), attrs: { "aria-label": t("errands.recallTip", { pet: name }) }, on: { click: () => c.act(s => recallErrand(s, e.pet)) } })));
+    }
+    const idle = idleCompanions(st);
+    if (st.errands.length < ERRAND_SLOTS) {
+        if (!idle.length) rows.append(h("div", { class: "muted", style: "font-size:12px", text: t("errands.idleNone") }));
+        else {
+            // One free errand at a time: who goes, then where (each button says what it would bring).
+            const pick = h("select", { attrs: { "aria-label": t("errands.pick") } }) as HTMLSelectElement;
+            for (const id of idle) pick.append(h("option", { text: `${companionName(id)} (${t("pets.lv", { n: companionLevel(st.companions[id]!) })})`, attrs: { value: id } }));
+            const kinds = h("div", { class: "errkinds" });
+            const fill = () => {
+                kinds.replaceChildren();
+                const lvl = companionLevel(st.companions[pick.value] ?? 0);
+                for (const k of ERRAND_KINDS) {
+                    const open = kindOpen(st, k);
+                    kinds.append(h("button", { class: "btn small", text: t(`errands.kind.${k}`), attrs: open ? {} : { disabled: "" },
+                        title: open ? t("errands.sendTip", { pet: companionName(pick.value), doing: t(`errands.doing.${k}`), what: errandWhat(st, k, lvl) }) : t("errands.scoutLocked"),
+                        on: { click: () => c.act(s => sendErrand(s, pick.value, k), t("errands.sent", { pet: companionName(pick.value), doing: t(`errands.doing.${k}`) })) } }));
+                }
+            };
+            pick.addEventListener("change", fill);
+            fill();
+            rows.append(h("div", { class: "contract errand free" }, h("span", { class: "pic" }, glyph("world", 18)),
+                h("div", { class: "grow col", style: "gap:4px;min-width:0" }, h("b", { text: t("errands.free") }), pick, kinds)));
+        }
+    }
+    const keep = h("button", { class: `toggle${st.settings.errandKeep ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.settings.errandKeep) },
+        on: { click: () => c.act(s => { s.settings.errandKeep = !s.settings.errandKeep; }) } },
+        h("i"), h("span", null, h("b", { text: t("errands.keep") }), h("small", { text: t("errands.keepNote") })));
+    card.append(rows, h("div", { style: "margin-top:8px" }, keep));
     return card;
 }
 

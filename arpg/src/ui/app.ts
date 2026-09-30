@@ -523,6 +523,7 @@ export class GameWindow {
                 this.lastEvent = ["toast.echo", { who }];
                 sfx("echo", true);
             },
+            errand: (pet, kind) => { this.toast(t("toast.errand", { pet: companionName(pet), errand: t(`errands.doing.${kind}`) }), "relic"); },
             feat: id => {
                 const feat = featName(id);
                 this.toast(t("toast.feat", { feat }), "relic");

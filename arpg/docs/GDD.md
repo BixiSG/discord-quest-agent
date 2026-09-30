@@ -142,6 +142,20 @@ duplicate adds 4000. Each act boss gives one on its first clear; bosses, map
 bosses and pinnacles rarely bring others (unfound ones first), and contracts
 can pay one. The Hero tab shows the active one and the collection.
 
+## Companion errands (round 8)
+
+Companions that are not at the hero's side run errands of two hours of the
+hero's time (three at once, so time away counts): scavenge (ember dust, about
+a tenth of what two hours of play salvages), forage (crafting orbs, the rarer
+ones weighted up), delve (ember stones) and, once the Cinderlands are open,
+scout (maps a tier deeper than the deepest cleared, and a chance of a sigil).
+What they bring grows with their level, and every errand adds 1500 bond (twice
+with Long Memory), so the whole collection grows, not only the one out. "Keep
+them busy" (on by default) sends a returning companion out again and fills
+free errands with idle companions (scavenging). A companion away can't walk
+with the hero until it is back or recalled (recalling forfeits the haul).
+Errands carry over a new dawn with the companions.
+
 ## The ember shrine (round 4)
 
 Timed blessings for the late game's dust and spare orbs: an hour of Insight

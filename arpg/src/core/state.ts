@@ -5,6 +5,7 @@ import type { Item, Slot } from "./types";
 import type { FilterRule } from "./filter";
 import type { ContractBoard } from "./contracts";
 import type { MarketState } from "./market";
+import type { Errand } from "./errands";
 
 export interface Hero {
     name: string;
@@ -156,6 +157,8 @@ export interface GameState {
         autoStones: boolean;
         /** First-time hints the player dismissed (ui/hints.ts). */
         hints?: string[];
+        /** Companions back from an errand go again, and idle ones fill free errands (v9). */
+        errandKeep: boolean;
     };
     /** Relic case: the best copy of each relic, outside the stash (v5). */
     relics: Item[];
@@ -179,6 +182,9 @@ export interface GameState {
     feats: string[];
     /** The title worn: a titled feat's id. */
     title?: string;
+    /** Companions away on errands (v9), and errands sent so far (seeds their hauls). */
+    errands: Errand[];
+    errandSeq?: number;
     /** The player's UTC offset in minutes, recorded by the UI: seasonal events follow the local calendar. */
     tz?: number;
     /** Seasonal tallies: "hollownight2026" -> lanterns snuffed that October. */
