@@ -3831,7 +3831,7 @@
     const dmgTaken = bag.incMult("dmgTaken") * bag.more("dmgTaken");
     const ehp = zeroes();
     for (const t2 of DAMAGE_TYPES) {
-      const through = t2 === "phys" ? (1 - armourReduction(armour, ref2)) * (1 - evade) : 1 - res[t2] / 100;
+      const through = (t2 === "phys" ? 1 - armourReduction(armour, ref2) : 1 - res[t2] / 100) * (1 - evade);
       ehp[t2] = Math.round(pool / Math.max(0.01, through * (1 - blk) * dmgTaken));
     }
     return {

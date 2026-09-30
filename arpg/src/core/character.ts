@@ -205,7 +205,10 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
 
     const skill = calcSkill(hero, bag, problems, manaRegen, link);
 
-    // EHP (COMBAT.md 7): pool over the share of a reference hit that gets through.
+    // EHP (COMBAT.md 7): pool over the share of a reference attack that gets through. An evaded
+    // attack deals none of its damage, elements included (the sim's rule; spells can't be evaded),
+    // so evasion counts for every type - counted for phys only, it lost every comparison to energy
+    // shield and auto-equip dressed the Strider in silk.
     const ref = monsterDamage(L) * 1.5;
     const pool = life + es;
     const evade = 1 - Math.max(0.25, hitChance(monsterDefence(L), evasion));
@@ -213,7 +216,7 @@ export function deriveSheet(hero: Hero, extra: Mod[] = []): Sheet {
     const dmgTaken = bag.incMult("dmgTaken") * bag.more("dmgTaken");
     const ehp = zeroes();
     for (const t of DAMAGE_TYPES) {
-        const through = t === "phys" ? (1 - armourReduction(armour, ref)) * (1 - evade) : (1 - res[t] / 100);
+        const through = (t === "phys" ? 1 - armourReduction(armour, ref) : 1 - res[t] / 100) * (1 - evade);
         ehp[t] = Math.round(pool / Math.max(0.01, through * (1 - blk) * dmgTaken));
     }
 
