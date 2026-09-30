@@ -74,7 +74,9 @@ const RING_MODS: [string, Mod[]][] = [
 
 const KEYSTONES: [string, Mod[], string][] = [
     ["Glass Oath", [m("damage", "more", 35), m("life", "more", -30)], "Hit much harder. Break much easier."],
-    ["Iron Vow", [m("armour", "more", 60), m("evasion", "more", -100), m("attackSpeed", "more", -8)], "Armour swells; you no longer dodge."],
+    // Round 9: the cost was 8% less attack speed, so the attack callings (whose start is next to it)
+    // left it to casters, who paid nothing. Slower feet cost every build the same.
+    ["Iron Vow", [m("armour", "more", 60), m("evasion", "more", -100), m("moveSpeed", "inc", -10)], "Armour swells; you no longer dodge, and walk heavier."],
     ["Ember Blood", [m("lifeRegenPct", "flat", 3), m("res.fire", "flat", -30), m("life", "more", 15)], "Burn hot and heal fast; fire hurts more."],
 ];
 

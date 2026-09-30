@@ -35,7 +35,7 @@ export const DAWN_XP = 10, DAWN_DUST = 10, DAWN_TOUGHER = 10, DAWN_RICHER = 20;
  * At 15%, dawns I-IV still take half a day each, later ones one to several (GDD, "The dawn loop
  * after round 8"); at 20% dawn X's pinnacles were twelve times tougher and out of reach.
  */
-export const DAWN_PINNACLE = 15;
+export const DAWN_PINNACLE = 10;
 
 /** The Hollow Crown answers from this dawn on (the optional goal beyond the Rekindling). */
 export const CROWN_DAWN = 2;

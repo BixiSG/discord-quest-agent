@@ -29,8 +29,12 @@ It has nothing to do with quests: it never reads quest data or orbs.
 - Ten companions: one walks at the hero's side and gives a bonus that grows
   with its bond; the others go on two-hour errands for dust, currency, stones
   or maps, and grow too.
-- Feats: 37 things done once and kept across every dawn, each paying renown (a
-  small permanent bonus); twelve of them are titles the hero can wear.
+- Feats: 38 things done once and kept across every dawn, each paying renown (a
+  small permanent bonus); thirteen of them are titles the hero can wear.
+- Skill mastery: a skill grows with use (more damage, then less mana, then
+  speed), kept across dawns.
+- A weekly omen, the same for every player: a trade-off with a reward, from
+  a Blood Moon to Clear Skies.
 - An ember shrine: timed blessings (experience, rarity, quantity, currency)
   that turn late dust and spare orbs into progress.
 - Loot filter presets and affix rules; a pinnacle scout that fights five times

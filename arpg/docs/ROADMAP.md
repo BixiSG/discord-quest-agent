@@ -1,5 +1,21 @@
 # Hollowmarch - roadmap and design notes
 
+## Round 9 (plan)
+
+After 1.8.0 the open items were the dawn loop's shape (every calling relit the sun at
+12-16 hours; the design asks 18-36), attack builds stalling at dawn V against the late
+pinnacles while casters reached VIII, and the two "later" ideas of round 8. In order:
+
+- **Skill mastery.** A skill grows with use (kills made with it), ten levels, kept across
+  dawns: a little more damage per level, then less mana, then speed. It rewards sticking
+  with a skill and gives the boss-skill swap (Glacial Lance, Sunder, Blight Arrow) a
+  reason to be trained.
+- **Weekly omens.** One per local calendar week, the same for everyone: a trade-off with a
+  reward (a Blood Moon, an Ashfall, Clear Skies...). Never on pinnacles, so the dawn loop
+  keeps its pace.
+- **Balance.** Find why attack builds die at the late pinnacles and fix the cause; push the
+  first relight back toward 18-24 hours without making the later dawns harder.
+
 ## Round 8 (plan)
 
 **Status (round 8 built):** everything below is in, in en/ru/uk, plus three things asked
