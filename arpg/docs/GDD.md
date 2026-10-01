@@ -271,30 +271,60 @@ The omen sits on the hero (its modifiers are in the stat sheet, named in breakdo
 its monster side never touches a pinnacle, so the dawn loop keeps its pace. The World tab
 shows it, the days left and next week's; a new week's omen is a chronicle line and a toast.
 
-## The Fray (round 10)
+## The Fray (rounds 10-11)
 
 The idle hero fights on its own; the Fray lets the player take the reins for one
-fight. It is opened from the World tab card or the F key and is fought on the
-road's current zone (maps stay in the device). The window becomes an arena and
-the tabs step aside until the fight is over.
+fight, in the manner of a survivors-like with Path of Exile's numbers. It is
+opened from the World tab card or the F key. It is fought on the road's current
+zone, or (the second button, "Fray a map") on the next map from the device. The
+window becomes an arena and the tabs step aside until the fight is over.
 
-- A three-quarter top-down arena, 440 x 280 logical pixels, an isometric
-  diamond floor in the zone's colours. WASD or the arrows walk the hero.
-- The equipped skill fires on its own at whatever is in reach: 28 px for
-  melee, 38 px for area skills (around the hero), 128 px for projectiles. Space
-  drinks the flask, but only below 70% life; it also drinks itself under 20%.
-- Monsters come in waves, one per pack of the road, the next after 12 seconds or
-  when the last is down, spawning at the edges and walking at the hero. They
-  swing only when the hero is in reach, so walking away dodges. Casters stop at
-  72-96 px and back off slowly: a walking hero catches them, a standing one gets
-  shot. The zone's boss comes last, after the final wave.
+- A three-quarter top-down arena, 640 x 400 logical pixels, an isometric
+  diamond floor in the zone's colours. WASD or the arrows walk the hero. The
+  scroll wheel over the arena, or + and -, zooms 1x to 4x (default 2x,
+  remembered).
+- The equipped skill fires on its own at whatever is in reach: 30 px for
+  melee, 44 px for area skills (around the hero), 140 px for projectiles. Area
+  skills hit everything in reach up to the larger of 8 and 3x their targets,
+  projectiles up to the larger of 4 and targets + 2, single-target skills the
+  larger of 2 and their targets, at 1.5x damage.
+- Space is a dodge roll: 0.22 s at 3.5x walking speed, untouchable, then 0.8 s
+  before the next. Q drinks the flask, but only below 70% life; it also drinks
+  itself under 20%.
+- Hordes: each wave is 12x the road's pack, streamed in from the edges over
+  10 seconds. The next wave comes once the last is all in and fewer than 25
+  stand, or after 8 seconds; at most 160 stand at once. Horde monsters have 30%
+  of their life and deal 45% of their damage; champions and bosses are unscaled,
+  and a horde has about a third as many casters. The zone's boss comes last,
+  once fewer than 10 stand. Monsters swing only when the hero is in reach, so
+  walking (or rolling) away dodges. Casters stop at 72-96 px and back off slowly:
+  a walking hero catches them, a standing one gets shot.
+- Motes: a kill leaves its experience on the floor as a mote; walk over it (12 px)
+  to take it, and it drifts in from 48 px. Motes fade after 25 seconds and at
+  most 240 lie about (the oldest merges into a neighbour). Champions and bosses
+  also leave a flask mote worth 10 charges. What is left on the floor when the
+  fray is won comes to the winner.
+- Boons: motes fill a surge meter. When it is full the fight pauses and offers
+  three boons; 1, 2 or 3 takes one. Haste (12% faster), Fury (15% more damage),
+  Reach (20% further), Lodestone (the magnet 60% wider), Vigour (12% more life,
+  healed now), Red Thirst (2% leech), Nimble (rolls 30% sooner and further) and
+  Sweep (two more targets), up to 3 stacks each, for this fray only. The first
+  offer takes 6 horde kills' worth of experience, each pick makes the next 1.6x
+  dearer.
 - The maths is the road's (the same hit, armour and resistance rolls, the same
-  loot path), so a build that works on the road works here; kiting is what the
-  player adds. Each kill pays 1.5x experience and +60 loot rarity.
+  loot path), so a build that works on the road works here; kiting and rolling
+  are what the player adds. A horde kill pays 0.45x the experience of a road
+  kill (about five times a road pack overall) with a fifth of the drop chances,
+  and only one in five counts towards contracts, mastery, feats, totals and flask
+  charges; a champion or boss pays 1.5x, +60 loot rarity, and counts fully.
 - A win adds spoils: one item rolled at +200 rarity, up to two currency drops
   and a lump of experience, and is logged in the chronicle. A fall ends the
   fray and costs nothing: what was earned stays, there is no death penalty and
   no respawn wait. Leaving (Esc twice) counts as a fray fought, not won.
+- A map fray takes the next map from the device as the road would (a queued
+  pinnacle is left queued); the map's mods and boss apply. A win completes the
+  map (atlas, contracts, feats); a fall or leaving loses it, as the map has left
+  the stash.
 - The idle clock stands still while a fray is on, so nothing is caught up
   afterwards: the road neither gains nor loses by it. Esc pauses and a second
   Esc within 3 seconds leaves; P pauses; losing window focus pauses; Enter or Esc
@@ -303,7 +333,12 @@ the tabs step aside until the fight is over.
 - The save keeps tallies (`state.fray`: fought, won, kills, fastest win), which
   the World tab card shows. Save version 11 adds them (older saves migrate).
 - The simulation is 60 fixed steps a second and pure like the rest of the core
-  (its own seeded Rng), so it is tested; see `test/fray.test.ts`.
+  (its own seeded Rng), so it is tested; see `test/fray.test.ts`. A hero of two
+  hours' play walking at the monsters wins in about 131 s with some 490 kills and
+  8 boons on all three test seeds; one that stands still falls.
+
+Round 11 turned the round-10 waves (one pack at a time, walked at) into streamed
+hordes with motes, boons, a dodge roll, map frays and zoom.
 
 ## The dawn loop after round 8
 

@@ -204,7 +204,7 @@ companion at its side - and it clears the road through four acts into an endless
 endgame. Nothing runs while the window is closed: the time away is replayed through the same
 simulation when you open it, with a "while you were away" report. Fold it into a mini strip
 to keep the fight in a corner, or give it its own button in Discord's title bar. Press F to
-step into the Fray and fight the current zone yourself, walking while the skill fires on its own.
+step into the Fray and fight the current zone (or a map) yourself: walk and dodge-roll through hordes while the skill fires on its own, and pick boons as you gather motes.
 
 Traders with rotating stock, gear sockets and ember stones, companions (the ones not at the
 hero's side run errands), feats kept across every dawn, skills that grow with use, an omen

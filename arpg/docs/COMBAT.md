@@ -146,27 +146,55 @@ Runs are seeded from `(saveSeed, runIndex)`, so a run replays exactly.
 ## 12. The Fray
 
 The player-steered fight (`src/core/fray.ts`) uses the same hit, mitigation and
-loot maths as sections 3-8 and 10; it differs in positions and timing.
+loot maths as sections 3-8 and 10; it differs in positions, timing and numbers.
 
 1. Time: 60 steps a second (`FRAY_STEP_MS`), at most 250 ms of wall clock
-   per advance. The arena is 440 x 280 px.
+   per advance. The arena is 640 x 400 px.
 2. Hero speed: `HERO_SPEED` 66 px/s x the sheet's movement speed, clamped to
-   the arena.
-3. Hero reach: 28 px melee, 38 px area (round the hero), 128 px projectiles
-   (bosses count 10 px nearer). The skill fires at the nearest `targets`
-   monsters in reach on its own cooldown and mana, like on the road.
+   the arena. The roll (Space) is `ROLL_S` 0.22 s at `ROLL_SPEED` 3.5x that
+   speed; monster swings during it do nothing; `ROLL_CD` 0.8 s until the next.
+3. Hero reach: 30 px melee, 44 px area (round the hero), 140 px projectiles
+   (bosses count 10 px nearer). The skill fires on its own cooldown and mana, like
+   on the road, at the nearest monsters in reach: area up to max(8, 3 x
+   `targets`), projectiles up to max(4, `targets` + 2), single-target up to
+   max(2, `targets`) at 1.5x damage.
 4. Monster speed: `30 + 16 x attack speed` px/s, +4 for birds, x0.85 for
    bosses, x1.1 for champions. Monster reach is `14 + 8 x size` px (+8 for
    bosses); it walks until within 0.8 of that and swings when within 1.25 of
-   it, a swing at air being a dodge.
+   it, a swing at air being a dodge. Monsters push apart within 14 px.
 5. Casters walk to 96 px, stand between 72 and 96, and back off at 0.35 of
-   their speed when closer; they hit from up to 108 px.
-6. Waves: the first at 0.8 s, one per road pack (the zone's pack size and
-   champion chance), the next when the last is down or after `WAVE_EVERY` 12 s;
-   the zone's boss (one level above the zone) once the last wave is down.
-7. Flask: the key drinks it below 70% life, it drinks itself below 20%; the
-   charges and healing are the road's (section 8).
-8. Bonuses: each kill pays x1.5 experience and +60 loot rarity. A win adds one
-   item at +200 rarity (plus the hero's, +60), two chances at 50% for a
-   currency drop, and experience equal to six kills of the zone's level. A fall
-   ends the fray with no death penalty.
+   their speed when closer; they hit from up to 108 px. A horde re-picks a
+   caster once, so about a third as many.
+6. Waves: the first at 0.8 s, one per road pack (the zone's champion chance),
+   each `HORDE` 12 x the pack size, released evenly over `WAVE_RELEASE_S` 10 s.
+   The next starts once the last is all released and fewer than
+   `WAVE_NEXT_ALIVE` 25 stand, or after `WAVE_EVERY` 8 s; the stream pauses at
+   `ALIVE_CAP` 160 standing. The zone's boss (one level above the zone) comes
+   after the last wave once fewer than `BOSS_ALIVE` 10 stand; the fray is won
+   when it falls.
+7. Horde monsters (not champions, bosses or lantern-bearers) have `HORDE_LIFE`
+   30% of their life and deal `HORDE_DAMAGE` 45% of their damage.
+8. Flask: the key (Q) drinks it below 70% life, it drinks itself below 20%; the
+   charges and healing are the road's (section 8). A flask mote gives 10
+   charges back.
+9. Motes: a kill's experience falls as a mote where it stood, taken within 12
+   px and pulled in from 48 px at 90 px/s; it fades after 25 s; at most 240
+   (the oldest merges into its nearest neighbour). Champions and bosses leave a
+   flask mote as well. What lies about at a win is taken by the winner.
+10. Bonuses: a champion or boss pays x1.5 experience and +60 loot rarity and
+    counts fully for contracts, mastery, feats, totals and flask charges. A
+    horde kill pays x0.45 experience (`1.5 x HORDE_LIFE`), +60 rarity, 20% of
+    the drop chances, and one in five counts for those tallies. A win adds one
+    item at +200 rarity (plus the hero's, +60), two chances at 50% for a
+    currency drop, and experience equal to six kills of the zone's level. A fall
+    ends the fray with no death penalty.
+11. Boons: the experience from motes fills a surge; at `SURGE_KILLS` 6 horde
+    kills' worth the fight pauses and three of the eight boons (up to
+    `BOON_MAX` 3 stacks each) are offered; a pick spends the surge and makes
+    the next need `SURGE_GROWTH` 1.6x more. Haste +12% speed, Fury x1.15
+    damage, Reach +20% reach, Lodestone +60% magnet, Vigour +12% life (and that
+    much healed), Red Thirst +2% leech, Nimble rolls' cooldown x0.7 and speed
+    +25%, Sweep +2 targets; per stack, for this fray only.
+12. Maps: a map fray starts the map the device would (a queued pinnacle is set
+    aside), with its mods and boss; the map leaves the stash at the start. A win
+    completes it (atlas, contracts); a fall or leaving loses it.

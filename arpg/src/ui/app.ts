@@ -25,7 +25,7 @@ import type { SaveStore } from "../platform/store";
 import type { KV } from "../platform/kv";
 import { Battle } from "./battle";
 import { FrayView } from "./fray";
-import { frayAdvance, frayZone, newFray, newFrayTotals, type FrayEvents, type FrayInput, type FrayState } from "../core/fray";
+import { frayAdvance, fraySheet, frayZoneOf, newFray, newFrayTotals, type FrayEvents, type FrayInput, type FrayState } from "../core/fray";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { glyph, type GlyphName } from "./glyphs";
@@ -40,7 +40,7 @@ import { VIEWS, renderView, viewSig, type Ctx, type ViewId } from "./views";
 import { creationView } from "./creation";
 import { itemCard } from "./itemui";
 import { lang, setLang, t, tn } from "../i18n";
-import { className, companionName, featName, itemName, omenName, placeName, relicName, skillName, storyText, zoneName } from "../i18n/names";
+import { className, companionName, featName, itemName, omenName, placeName, relicName, runMapName, skillName, storyText, zoneName } from "../i18n/names";
 import { checkFeats } from "../core/feats";
 import { tErr } from "../i18n/errors";
 
@@ -63,8 +63,11 @@ const STAGE_FRAC: Record<Exclude<StageSize, "off">, number> = { l: 0.42, m: 0.28
 const STAGE_NEXT: Record<StageSize, StageSize> = { m: "l", l: "off", off: "m" };
 const STAGE_TITLE = (s: StageSize) => t(`app.stage.${s}`);
 
-/** `sfx` replaced an older `sound` flag that defaulted to on: sound starts muted, even for old saves. */
-interface Frame { stage: StageSize; mini: boolean; max: boolean; sfx: boolean; volume: number }
+/**
+ * `sfx` replaced an older `sound` flag that defaulted to on: sound starts muted, even for old saves.
+ * `frayZoom`: the Fray's whole-number pixel scale (1 shows the most arena, 4 the closest).
+ */
+interface Frame { stage: StageSize; mini: boolean; max: boolean; sfx: boolean; volume: number; frayZoom: number }
 
 export interface Summary { name: string; cls: string; level: number; zone: string; savedAt: number; xpFrac: number; zoneId?: string; sky?: string }
 
@@ -93,6 +96,16 @@ const FRAY_DIR: Record<string, "up" | "down" | "left" | "right"> = {
 };
 /** Esc arms leaving the Fray; a second Esc inside this window leaves. */
 const FRAY_LEAVE_MS = 3000;
+/** The Fray's zoom steps (whole-number pixel scales) and the default: 2 shows more arena than the old fixed 3. */
+const FRAY_ZOOM_MIN = 1, FRAY_ZOOM_MAX = 4, FRAY_ZOOM_DEFAULT = 2;
+/** Wheel travel (pixels) per zoom step: one mouse-wheel notch, or a deliberate trackpad swipe. */
+const WHEEL_STEP = 60;
+/** The smallest arena view the renderer accepts (FrayView.resize clamps to it). */
+const FRAY_MIN_W = 160, FRAY_MIN_H = 100;
+/** Boon picks by physical key, so the number row and the keypad both work on any layout. */
+const FRAY_PICK: Record<string, 1 | 2 | 3> = { Digit1: 1, Digit2: 2, Digit3: 3, Numpad1: 1, Numpad2: 2, Numpad3: 3 };
+/** The shortest gap between two mote chimes, in ms. */
+const MOTE_SFX_MS = 180;
 
 export class GameWindow {
     private host: HTMLDivElement | null = null;
@@ -123,14 +136,24 @@ export class GameWindow {
     /** The Fray in progress (null on the road). Never saved: closing or folding the window abandons it. */
     private fray: FrayState | null = null;
     private frayView = new FrayView();
-    /** Held fray keys: "up" | "down" | "left" | "right" | "flask". */
+    /** Held fray keys: "up" | "down" | "left" | "right" | "flask", and "roll" while Space is down. */
     private frayKeys = new Set<string>();
+    /** A roll pressed and not yet stepped: the core takes it as an edge, so it stays up until a step has run. */
+    private frayRoll = false;
+    /** A boon pick (1-3) pressed while an offer is up, and that offer: the pick answers it and no later one. */
+    private frayPick: 0 | 1 | 2 | 3 = 0;
+    private frayPickFor: readonly string[] | null = null;
+    /** Wheel travel not yet turned into a zoom step, and when it last moved (a pause starts afresh). */
+    private wheelAcc = 0;
+    private wheelAt = 0;
     private frayPaused = false;
     private frayLeaveArmed = false;
     private frayArmedAt = 0;
     /** performance.now() of the last frayAdvance (or paused frame). */
     private frayLast = 0;
     private frayEv: FrayEvents = {};
+    /** When the last mote chime played (they come in bursts). */
+    private moteSfxAt = 0;
     private view: ViewId = "hero";
     private sig = "";
     private timer: number | null = null;
@@ -140,7 +163,7 @@ export class GameWindow {
     private busy = false;
     private ctx!: Ctx;
     private stopKeys: ((e: Event) => void) | null = null;
-    private frame: Frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35 };
+    private frame: Frame = { stage: "m", mini: false, max: false, sfx: false, volume: 0.35, frayZoom: FRAY_ZOOM_DEFAULT };
     private xpLog: [number, number][] = [];
     /** The strip's last notable event: a string key and params (it follows a language switch), or a toast's text. */
     private lastEvent: [string, Record<string, string | number>] | string | null = null;
@@ -225,6 +248,7 @@ export class GameWindow {
             this.frame.max = f.max === true;
             this.frame.sfx = f.sfx === true;
             if (typeof f.volume === "number" && f.volume >= 0 && f.volume <= 1) this.frame.volume = f.volume;
+            if (Number.isInteger(f.frayZoom) && f.frayZoom! >= FRAY_ZOOM_MIN && f.frayZoom! <= FRAY_ZOOM_MAX) this.frame.frayZoom = f.frayZoom!;
         }
         this.sound.set(this.frame.sfx, this.frame.volume); // open() is a click: audio may start
 
@@ -254,7 +278,31 @@ export class GameWindow {
         this.top = h("div", { class: "top" }, this.stage);
         // In the strip the battle is the handle: drag it to move, double-click for the full window.
         this.stage.addEventListener("dblclick", e => { if (this.frame.mini && !(e.target as HTMLElement).closest("button")) this.setMini(false); });
-        this.stage.addEventListener("pointerdown", () => { if (this.fray && this.frayPaused) this.frayResume(); });
+        this.stage.addEventListener("pointerdown", e => {
+            if (!this.fray) return;
+            if (this.frayPaused) { this.frayResume(); return; }
+            // A boon card can be clicked as well as picked by its number.
+            if (this.fray.offer) {
+                const r = this.frayView.canvas.getBoundingClientRect();
+                if (!r.width || !r.height) return;
+                const pick = this.frayView.cardAt((e.clientX - r.left) * this.frayView.canvas.width / r.width, (e.clientY - r.top) * this.frayView.canvas.height / r.height);
+                if (pick) { this.frayPick = pick; this.frayPickFor = this.fray.offer; }
+            }
+        });
+        // The wheel zooms the arena; it must not scroll Discord underneath (hence passive: false).
+        this.stage.addEventListener("wheel", e => {
+            if (!this.fray) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const now = performance.now();
+            if (now - this.wheelAt > 300) this.wheelAcc = 0;
+            this.wheelAt = now;
+            // Line and page deltas (some mice, Firefox) count as a full step each.
+            this.wheelAcc += e.deltaMode === 0 ? e.deltaY : Math.sign(e.deltaY) * WHEEL_STEP;
+            if (Math.abs(this.wheelAcc) < WHEEL_STEP) return;
+            this.frayZoomBy(this.wheelAcc < 0 ? 1 : -1);
+            this.wheelAcc = 0;
+        }, { passive: false });
         this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": t("app.hudLabel") } }, this.hud.canvas);
 
         this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
@@ -310,7 +358,7 @@ export class GameWindow {
                 return;
             }
             if (e.key === "m" || e.key === "M") { this.setSound(!this.frame.sfx); e.preventDefault(); return; }
-            if (e.code === "KeyF" || e.key === "f" || e.key === "F") { this.startFray(); e.preventDefault(); return; }
+            if (e.code === "KeyF" || e.key === "f" || e.key === "F") { this.startFray(false); e.preventDefault(); return; }
             // Views mark their own shortcuts: <button data-key="e">.
             const k = e.key.length === 1 ? e.key.toLowerCase() : "";
             const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector<HTMLButtonElement>(`[data-key="${k}"]:not([disabled])`) : null;
@@ -371,7 +419,8 @@ export class GameWindow {
                 // the bar, the stage's and the HUD's bottom borders (3 each).
                 const barH = (this.win.querySelector(".bar") as HTMLElement | null)?.offsetHeight ?? 34;
                 const stageH = Math.max(60, box.h - 6 - barH - 3 - (HUD_H * hudScale + 3));
-                const sc = Math.max(1, Math.floor(stageH / 190));
+                // The player's zoom, stepped down only when the window is too small for the renderer's minimum view.
+                const sc = Math.max(1, Math.min(this.frame.frayZoom, Math.floor(inner / FRAY_MIN_W), Math.floor(stageH / FRAY_MIN_H)));
                 this.stage.style.height = stageH + "px";
                 this.frayView.resize(Math.ceil(inner / sc), Math.ceil(stageH / sc));
                 Object.assign(this.frayView.canvas.style, { width: this.frayView.canvas.width * sc + "px", height: this.frayView.canvas.height * sc + "px" });
@@ -604,10 +653,20 @@ export class GameWindow {
             // The end screen has the fall; the road's death line and sound stay out of it.
             death: zone => fe.death?.(zone),
             wave: (n, boss) => { fe.wave?.(n, boss); sfx(boss ? "boss" : "click"); },
+            offer: ids => { fe.offer?.(ids); sfx("loot2", true); },
+            boon: id => { fe.boon?.(id); sfx("click", true); },
+            // A horde drops motes by the dozen: a soft chime at most every MOTE_SFX_MS, never a toast.
+            mote: (xp, flask) => {
+                fe.mote?.(xp, flask);
+                const now = performance.now();
+                if (now - this.moteSfxAt >= MOTE_SFX_MS) { this.moteSfxAt = now; sfx("loot1"); }
+            },
             end: (outcome, f) => {
                 fe.end?.(outcome, f);
                 const kills = fmt(f.run.kills);
                 this.toast(outcome === "won" ? t("toast.frayWon", { kills, time: fmtDuration(f.t * 1000) }) : t("toast.frayFallen", { kills }), outcome === "won" ? "level" : "err");
+                // A map fought in the Fray was used up when it began; a fall says it is gone.
+                if (outcome === "fallen" && f.mode === "map") this.toast(t("toast.frayMapLost"), "err");
                 sfx(outcome === "won" ? "level" : "death", true);
                 void this.save();
             },
@@ -647,19 +706,30 @@ export class GameWindow {
 
     // ---- the Fray -----------------------------------------------------------
 
-    /** Takes the hero into the Fray: the window becomes the arena until the fight is over and the player returns. */
-    private startFray(): void {
+    /**
+     * Takes the hero into the Fray: the window becomes the arena until the fight is over and the player returns.
+     * `map`: fight the next map from the device (it is used up), else the road's current place.
+     */
+    private startFray(map: boolean): void {
         if (!this.state || !this.host || this.fray || this.busy || this.frame.mini || this.win.classList.contains("creating")) return;
         this.state.fray ??= newFrayTotals();
-        this.fray = newFray(this.state, Date.now());
+        let f: FrayState | null = null;
+        try { f = map ? newFray(this.state, Date.now(), { map: true }) : newFray(this.state, Date.now()); }
+        catch (e) { console.warn("[hollowmarch] fray did not start", e); }
+        // No map in the device (or a map the core refused): stay on the road and say why.
+        if (!f) { if (map) this.toast(t("fray.noMaps"), "err"); this.sig = ""; this.renderTab(true); return; }
+        this.fray = f;
         this.frayView.reset();
         this.frayKeys.clear();
+        this.frayRoll = false; this.frayPick = 0; this.frayPickFor = null;
         this.frayPaused = this.frayLeaveArmed = false;
         this.frayLast = performance.now();
         // Focus first: hiding the tab under a focused button would blur it to nowhere, and that pauses.
         this.win.focus();
         this.stage.insertBefore(this.frayView.canvas, this.battle.canvas);
         this.battle.canvas.style.display = "none";
+        // How to zoom, for screen readers (a hover tooltip would sit over the fight; the arena shows it as a hint).
+        this.stage.setAttribute("aria-description", t("fray.zoom"));
         this.win.classList.add("fray");
         this.refit();
     }
@@ -677,9 +747,11 @@ export class GameWindow {
         }
         this.fray = null;
         this.frayKeys.clear();
+        this.frayRoll = false; this.frayPick = 0; this.frayPickFor = null;
         this.frayPaused = this.frayLeaveArmed = false;
         this.frayView.canvas.remove();
         this.battle.canvas.style.display = "";
+        this.stage.removeAttribute("aria-description");
         this.win.classList.remove("fray");
         this.refit();
         this.sig = "";
@@ -690,6 +762,7 @@ export class GameWindow {
     private frayPause(): void {
         if (!this.fray) return;
         this.frayKeys.clear(); // a key released while away would otherwise stay held
+        this.frayRoll = false; // nor does a roll pressed just before the pause go off after it
         if (this.fray.outcome === "fight") this.frayPaused = true;
     }
 
@@ -703,8 +776,26 @@ export class GameWindow {
         if (e.ctrlKey || e.altKey || e.metaKey) return;
         const dir = FRAY_DIR[e.code] ?? FRAY_DIR[e.key];
         if (dir) { this.frayKeys.add(dir); e.preventDefault(); return; }
-        if (e.code === "Space" || e.key === " ") { this.frayKeys.add("flask"); e.preventDefault(); return; }
         const fight = f.outcome === "fight";
+        // Space rolls once per press: a held Space (or its auto-repeat) waits for the release.
+        if (e.code === "Space" || e.key === " ") {
+            e.preventDefault();
+            if (!this.frayKeys.has("roll")) {
+                this.frayKeys.add("roll");
+                // Not under an offer or a pause: the arena is held, and a roll would go off on resuming.
+                if (fight && !f.offer && !this.frayPaused) this.frayRoll = true;
+            }
+            return;
+        }
+        if (e.code === "KeyQ" || e.key === "q" || e.key === "Q") { this.frayKeys.add("flask"); e.preventDefault(); return; }
+        const pick = FRAY_PICK[e.code] ?? (e.key === "1" ? 1 : e.key === "2" ? 2 : e.key === "3" ? 3 : 0);
+        if (pick) {
+            e.preventDefault();
+            if (fight && f.offer && !e.repeat) { this.frayPick = pick; this.frayPickFor = f.offer; }
+            return;
+        }
+        if (e.key === "+" || e.key === "=" || e.code === "Equal" || e.code === "NumpadAdd") { e.preventDefault(); this.frayZoomBy(1); return; }
+        if (e.key === "-" || e.key === "_" || e.code === "Minus" || e.code === "NumpadSubtract") { e.preventDefault(); this.frayZoomBy(-1); return; }
         if (e.key === "Escape") {
             e.preventDefault();
             if (e.repeat) return;
@@ -733,16 +824,34 @@ export class GameWindow {
         const dir = FRAY_DIR[e.code] ?? FRAY_DIR[e.key];
         if (dir) { this.frayKeys.delete(dir); e.preventDefault(); }
         // preventDefault on keyup too: a focused bar button would otherwise click on Space.
-        else if (e.code === "Space" || e.key === " ") { this.frayKeys.delete("flask"); e.preventDefault(); }
+        else if (e.code === "Space" || e.key === " ") { this.frayKeys.delete("roll"); e.preventDefault(); }
+        else if (e.code === "KeyQ" || e.key === "q" || e.key === "Q") { this.frayKeys.delete("flask"); e.preventDefault(); }
     }
 
+    /**
+     * The frame's input; one object reused (the arena asks for it every animation frame). `pick` is read
+     * live: one frame can run several steps, and a pick must not also answer an offer that opens later in them.
+     */
+    private frayIn: FrayInput = (() => {
+        const self = this;
+        return { dx: 0, dy: 0, flask: false, roll: false, get pick() { return self.fray && self.fray.offer === self.frayPickFor ? self.frayPick : 0; } };
+    })();
     private frayInput(): FrayInput {
-        const k = this.frayKeys;
-        return {
-            dx: (k.has("right") ? 1 : 0) - (k.has("left") ? 1 : 0),
-            dy: (k.has("down") ? 1 : 0) - (k.has("up") ? 1 : 0),
-            flask: k.has("flask"),
-        };
+        const k = this.frayKeys, i = this.frayIn;
+        i.dx = (k.has("right") ? 1 : 0) - (k.has("left") ? 1 : 0);
+        i.dy = (k.has("down") ? 1 : 0) - (k.has("up") ? 1 : 0);
+        i.flask = k.has("flask");
+        i.roll = this.frayRoll;
+        return i;
+    }
+
+    /** One zoom step in or out (whole-number scales, kept between sessions). */
+    private frayZoomBy(d: number): void {
+        const z = Math.max(FRAY_ZOOM_MIN, Math.min(FRAY_ZOOM_MAX, this.frame.frayZoom + d));
+        if (z === this.frame.frayZoom) return;
+        this.frame.frayZoom = z;
+        this.saveFrame();
+        this.refit();
     }
 
     /** One animation frame of the Fray: step it to now (unless paused), draw the arena and the HUD. */
@@ -752,9 +861,16 @@ export class GameWindow {
         if (this.frayLeaveArmed && now - this.frayArmedAt >= FRAY_LEAVE_MS) this.frayLeaveArmed = false;
         // A dialog over the arena (a story beat) holds the fight like a pause.
         const held = this.frayPaused || !!this.win.querySelector(":scope > .modal");
-        if (!held) frayAdvance(s, f, now, this.frayLast, this.frayInput(), this.frayEv);
+        if (!held) {
+            const t0 = f.t;
+            frayAdvance(s, f, now, this.frayLast, this.frayInput(), this.frayEv);
+            // Edges last until the core has seen them: a roll until a step has run (a fast
+            // display draws frames with no step in them), a pick until the offer it answered is gone.
+            if (f.t !== t0) this.frayRoll = false;
+            if (f.offer !== this.frayPickFor) { this.frayPick = 0; this.frayPickFor = null; }
+        }
         this.frayLast = now;
-        this.frayView.draw(s, f, sheetOf(s), now, { paused: held && f.outcome === "fight", leaveArmed: this.frayLeaveArmed });
+        this.frayView.draw(s, f, fraySheet(s, f), now, { paused: held && f.outcome === "fight", leaveArmed: this.frayLeaveArmed });
         this.drawHud();
     }
 
@@ -804,7 +920,7 @@ export class GameWindow {
                 void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation());
             },
             storeKind: this.store.kind,
-            startFray: () => this.startFray(),
+            startFray: (map: boolean) => this.startFray(map),
             inFray: () => !!this.fray,
         };
     }
@@ -911,14 +1027,14 @@ export class GameWindow {
         const s = this.state!;
         const fray = this.fray;
         // In the Fray the HUD follows the arena's run, sheet and place; on the road, the idle run's.
-        const sh = fray ? sheetOf(s) : runSheet(s);
+        const sh = fray ? fraySheet(s, fray) : runSheet(s);
         const run = fray ? fray.run : s.activity.run;
         const hh = run?.hero;
         const need = xpToNext(s.hero.level);
         const xpF = isFinite(need) ? s.hero.xp / need : 1;
         const eta = this.eta(need - s.hero.xp);
-        const z = fray ? frayZone(s) : run ? runZone(s, run) : ZONES[s.activity.zone]!;
-        const place = fray ? zoneName(z.id) : placeName(s);
+        const z = fray ? frayZoneOf(s, fray) : run ? runZone(s, run) : ZONES[s.activity.zone]!;
+        const place = fray ? (fray.run.map ? runMapName(fray.run.map) : zoneName(z.id)) : placeName(s);
         const speed = Math.max(0.05, Math.min(sh.skill.speed, sh.skill.sustain));
         const w = s.hero.equipment.weapon;
         const now = performance.now();

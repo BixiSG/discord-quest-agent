@@ -120,7 +120,11 @@ export const effectsOf = (state: GameState, run: RunState): MapEffects | null =>
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
 /** The stat sheet in effect for the current run. */
 export function runSheet(state: GameState): Sheet {
-    const run = state.activity.run;
+    return sheetFor(state, state.activity.run);
+}
+
+/** The stat sheet in effect for `run` (the idle run, or a fray's): the map's hero mods applied, cached by hero.rev. */
+export function sheetFor(state: GameState, run: RunState | null | undefined): Sheet {
     const eff = run ? effectsOf(state, run) : null;
     // A pinnacle leaves the week's omen outside, the hero's side of it too (the dawn loop keeps its pace).
     const bare = !!run?.map?.pinnacle && !!state.hero.omen;
@@ -138,15 +142,26 @@ export function makeMonster(def: string, level: number, champion: boolean, rng: 
     return { def, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
 }
 
+/**
+ * The zone's boss for `run` (the zone must have one): a level above the zone on the road, the
+ * pinnacle's own level, and in a map MAP_BOSS_LIFE times the map's boss mod. Shared with the Fray.
+ */
+export function makeBoss(z: ZoneDef, run: RunState, rng: Rng, eff: MapEffects | null): MonsterState {
+    const b = makeMonster(z.boss!, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
+    if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE * (eff?.bossLife ?? 1)); }
+    return b;
+}
+
+/** What a boss's base damage is multiplied by in `run`: the map boss mod, a pinnacle's enrage; 1 for everything else. Shared with the Fray. */
+export function bossDamageMult(run: RunState, m: MonsterState, eff: MapEffects | null): number {
+    return MONSTERS[m.def]!.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
+}
+
 /** A pack (or the boss); `lantern` is the share of monsters that carry a Hollow Night lantern. */
 function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null, lantern = 0): void {
     run.monsters = [];
     if (run.pack >= run.packs) {
-        if (z.boss) {
-            const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
-            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE * (eff?.bossLife ?? 1)); }
-            run.monsters.push(b);
-        }
+        if (z.boss) run.monsters.push(makeBoss(z, run, rng, eff));
         return;
     }
     const n = rng.int(z.packSize[0], z.packSize[1]);
@@ -352,14 +367,18 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
         m.atk -= DT;
         if (m.atk > 0) return;
         m.atk += monsterSwing(d, rng, eff);
-        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
-        const r = monsterHitRoll(run, m, sheet, rng, eff, mapBoss);
+        const r = monsterHitRoll(run, m, sheet, rng, eff, bossDamageMult(run, m, eff));
         ev.monsterHit?.(i, r.dmg, r.avoided);
     });
 }
 
-/** Extra rewards for a kill: the Fray pays more experience and rolls better loot. */
-export interface KillBonus { xp: number; rarity: number }
+/**
+ * Extra terms for a kill (the Fray's): `xp` and `rarity` pay more experience and roll better loot;
+ * `drop` multiplies every drop chance (not the guaranteed boss drops); `tally` (0..1) is the chance
+ * the kill counts towards the totals, contracts, mastery, companion bond and flask charges (bosses
+ * always count); `xpSink`, when given, receives the experience instead of the hero (the Fray's motes).
+ */
+export interface KillBonus { xp: number; rarity: number; drop?: number; tally?: number; xpSink?: (xp: number) => void }
 
 /**
  * Everything a kill gives: experience, flask charges, loot, currency, stones, maps, companions.
@@ -371,25 +390,35 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
     const atlas = run.map ? atlasEffects(state) : null;
     let changed0 = false;
     const eff = effectsOf(state, run);
+    // A horde is many small kills: only a share of them count towards the tallies (one roll; bosses always count).
+    const counts = d.boss || killBonus?.tally === undefined || rng.chance(killBonus.tally);
+    const dropM = killBonus?.drop ?? 1;
     const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100) * (killBonus?.xp ?? 1));
-    run.kills++; run.xp += xp;
-    state.totals.kills++;
-    // The skill in use grows with every kill (a new level changes the sheet).
-    if (gainMastery(state, hero.skill, d.boss ? MASTERY_BOSS : 1, (sk, l) => ev.mastery?.(sk, l))) changed0 = true;
-    run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
+    run.kills++;
+    if (!killBonus?.xpSink) run.xp += xp;
+    if (counts) {
+        state.totals.kills++;
+        // The skill in use grows with every kill (a new level changes the sheet).
+        if (gainMastery(state, hero.skill, d.boss ? MASTERY_BOSS : 1, (sk, l) => ev.mastery?.(sk, l))) changed0 = true;
+        run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
+    }
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m, xp);
-    if (petKill(state)) changed0 = true;
-    contractEvent(state, "kills");
-    if (m.champion) contractEvent(state, "champions");
+    if (counts) {
+        if (petKill(state)) changed0 = true;
+        contractEvent(state, "kills");
+        if (m.champion) contractEvent(state, "champions");
+    }
     if (d.boss) { contractEvent(state, "bosses"); state.totals.bosses = (state.totals.bosses ?? 0) + 1; }
-    let changed = gainXp(state, xp, ev) || changed0;
+    let changed: boolean;
+    if (killBonus?.xpSink) { killBonus.xpSink(xp); changed = changed0; }
+    else changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
     const qty = 1 + (sheet.quantity + (eff?.quantity ?? 0) + blessing(state, "plenty")) / 100;
     let drops = 0;
-    if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
-    else if (rng.chance((m.champion ? 0.4 : m.lantern ? LANTERN.drop : 0.07) * qty)) drops = 1;
+    if (d.boss) drops = 2 + (rng.chance(0.5 * qty * dropM) ? 1 : 0);
+    else if (rng.chance((m.champion ? 0.4 : m.lantern ? LANTERN.drop : 0.07) * qty * dropM)) drops = 1;
     for (let k = 0; k < drops; k++) {
         const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : m.lantern ? LANTERN.rarity : 0) + (d.boss ? 250 : 0) + (killBonus?.rarity ?? 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
@@ -404,7 +433,7 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
     }
     // Crafting currency.
     const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100) * (1 + omenCurrency(state) / 100);
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100) * (1 + omenCurrency(state) / 100) * dropM;
     for (let k = 0; k < cRolls; k++) {
         if (!rng.chance(cChance)) continue;
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
@@ -412,28 +441,28 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
         ev.currency?.(cur);
     }
     // Ember stones (round 5): like currency, rarer, tier by monster level.
-    if (rng.chance((d.boss ? 0.03 : m.champion ? 0.004 : 0.0004) * qty * (hasPerk(state, "stonefinder") ? 1.5 : 1))) {
+    if (rng.chance((d.boss ? 0.03 : m.champion ? 0.004 : 0.0004) * qty * (hasPerk(state, "stonefinder") ? 1.5 : 1) * dropM)) {
         const key = rollStone(rng, m.level);
         addStone(state, key, 1);
         ev.stone?.(key);
         if (state.settings.autoStones && autoSetStones(state)) changed = true;
     }
-    endgameDrops(state, run, m, rng, ev);
+    endgameDrops(state, run, m, rng, ev, dropM);
     // Companions: rarely from bosses, more often from map bosses, often from pinnacles.
     if (d.boss) {
         const had = { ...state.companions };
-        const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
+        const pet = rollCompanionDrop(state, rng, m.level, (run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003) * dropM);
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
         // The chronicle keeps 60 lines: a map boss every minute or two would bury everything else,
         // so only pinnacles and a story boss's first fall are written down.
         if (run.map ? !!run.map.pinnacle : !state.world.clears[run.zone]) pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
     if (m.lantern && lanternKill(state, rng, m.level, ev)) changed = true;
-    return changed ? runSheet(state) : sheet;
+    return changed ? sheetFor(state, run) : sheet;
 }
 
 /** Maps drop in the endgame and in the last act; sigils from map bosses. */
-function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng, ev: SimEvents = {}): void {
+function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng, ev: SimEvents = {}, drop = 1): void {
     const d = MONSTERS[m.def]!;
     const inMap = !!run.map && !run.map.pinnacle;
     // The last act drops a few maps ahead of the Cinderlands.
@@ -442,7 +471,7 @@ function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng
     const atlas = atlasEffects(state);
     const tier = inMap ? run.map!.tier : 0;
     const base = d.boss ? 0.6 : m.champion ? 0.06 : 0.012;
-    const chance = base * (lastAct ? 0.25 : 1) * (1 + atlas.mapDrop / 100);
+    const chance = base * (lastAct ? 0.25 : 1) * (1 + atlas.mapDrop / 100) * drop;
     if (rng.chance(chance)) {
         const map = rollMap(rng, state.nextUid++, dropTier(rng, tier, atlas));
         if (hollowNight(state) && rng.chance(LANTERN.litMaps)) map.lit = true;
@@ -451,7 +480,7 @@ function endgameDrops(state: GameState, run: RunState, m: MonsterState, rng: Rng
     if (inMap && d.boss) { const echo = rollMapEcho(state, rng); if (echo) ev.echo?.(echo); }
     if (inMap && d.boss && tier > 0) {
         const eligible = Object.values(PINNACLES).filter(p => tier >= p.minTier);
-        if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100))) {
+        if (eligible.length && rng.chance(0.15 * (1 + atlas.fragments / 100) * drop)) {
             const p = eligible[rng.int(0, eligible.length - 1)]!;
             state.sigils[p.sigil] = (state.sigils[p.sigil] ?? 0) + 1;
             pushLog(state, "loot", "log.sigilFound", { sigil: ref.sigil(p.id) });

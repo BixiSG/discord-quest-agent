@@ -5,15 +5,18 @@
 // all of it, centred, on the zone's darkened sky.
 // It only reads the fray and a queue of effects fed by the simulation's
 // events (the same idea as battle.ts); nothing here changes the game.
+// Hordes run to 160 monsters plus their motes, so the frame loop allocates
+// next to nothing: a counting sort into reused buffers, one reused sprite
+// options object, and nothing drawn that is outside the view.
 
 import { BASES, CLASSES, MONSTERS, ZONES, type MonsterDef, type ZoneDef } from "../core/data";
-import { ARENA_W, ARENA_H, type FrayEvents, type FrayState } from "../core/fray";
+import { ARENA_W, ARENA_H, ROLL_CD, boonCount, frayZoneOf, type FrayEvents, type FrayState } from "../core/fray";
 import type { GameState, MonsterState } from "../core/state";
 import type { Sheet } from "../core/character";
-import { drawText, textSprite, textWidth } from "./gfx/pixfont";
+import { GLYPH_H, drawText, textSprite, textWidth } from "./gfx/pixfont";
 import { t } from "../i18n";
 import { monsterName } from "../i18n/names";
-import { drawSprite, loadSprites, spriteOf } from "./gfx/sprites";
+import { drawSprite, loadSprites, spriteOf, type DrawOpts } from "./gfx/sprites";
 import { HERO_CAST, MONSTER_CAST } from "./gfx/cast";
 import { drawPumpkin } from "./gfx/pumpkin";
 import { shade } from "./battle";
@@ -23,16 +26,28 @@ const LANTERN_TINT = "#ff7a1a";
 
 /** How long one-shot animations and effects last, in ms. */
 const HERO_ATTACK_MS = 380, MON_ATTACK_MS = 520, HURT_MS = 220, DEATH_FX_MS = 540;
-const FLASH_MS = 120, BAR_MS = 1500, FX_MS = 350, BOLT_MS = 180, FLOAT_MS = 800, BANNER_MS = 1400, SPAWN_MS = 250;
+const FLASH_MS = 120, FX_MS = 350, BOLT_MS = 180, FLOAT_MS = 800, BANNER_MS = 1400, SPAWN_MS = 250;
 const IMPACT_FRAME_MS = 55;
 /** A monster this close to its swing (seconds) shows it is winding up. */
 const TELEGRAPH = 0.35;
 /** Mirrors the core's swing reach (core/fray.ts: CAST_RANGE + 12 for casters, reach * 1.25 in melee): farther, the swing is air. */
 const CAST_REACH = 108, MELEE_REACH = 1.25;
-/** Seconds of fray time the key hint stays up. */
-const HINT_S = 12;
-/** Caps on the effect queues (a big pack under an area skill makes a lot of numbers). */
-const MAX_FX = 12, MAX_FLOATS = 32, MAX_BURSTS = 16, MAX_IMPACTS = 4;
+/** Seconds of fray time the key hint stays up, then the zoom hint for a few more. */
+const HINT_S = 10, ZOOM_HINT_S = 6;
+/** Caps on the effect queues (a horde under an area skill makes a lot of numbers and deaths). */
+const MAX_FX = 12, MAX_FLOATS = 32, MAX_BURSTS = 32, MAX_IMPACTS = 4, MAX_SPARKS = 12;
+/** A mote pickup's sparkle, in ms. */
+const SPARK_MS = 320;
+/** Roll afterimages: how many, how far apart (px) and how opaque. */
+const GHOSTS = 3, GHOST_STEP = 6, GHOST_ALPHA = 0.3;
+/** Culling margins around the view: sprites reach up and sideways from their feet. */
+const CULL_X = 64, CULL_TOP = 16, CULL_BOTTOM = 100;
+/** Colours of the overlay text. */
+const GOLD = "#ffc233", CREAM = "#f3e9d2";
+/** Boon cards: least width, outer margin, gap and inner padding (px); narrower views stack them. */
+const CARD_MIN_W = 90, CARD_MARGIN = 8, CARD_GAP = 6, CARD_PAD = 4, CARDS_ROW_MIN_W = 300;
+/** Text rows in the pixel font: glyph plus outline. */
+const LINE_H = GLYPH_H + 2;
 /** Floor tiles: 2:1 diamonds. */
 const TILE = 32;
 
@@ -43,6 +58,17 @@ interface Float { x: number; y: number; text: string; color: string; t: number; 
 interface Burst { x: number; y: number; t: number; big: boolean; color: string }
 /** A monster's spell effect bursting on the hero. */
 interface Impact { sprite: string; t: number }
+/** A mote picked up: a sparkle at the hero, gold (experience) or green (flask). */
+interface Spark { t: number; flask: boolean; seed: number }
+/** A boon card laid out for the current offer and view size. */
+interface Card { x: number; y: number; w: number; h: number; name: string[]; text: string[] }
+
+/** One options object for every sprite draw in a frame (drawSprite reads it and keeps nothing). */
+const OPTS: DrawOpts = {};
+function opts(left: boolean, flash = false, tint?: string, strength?: number, scale?: number): DrawOpts {
+    OPTS.left = left; OPTS.flash = flash; OPTS.tint = tint; OPTS.strength = strength; OPTS.scale = scale;
+    return OPTS;
+}
 /**
  * What the view remembers about one monster. Keyed by its state object, not its
  * index: a new wave drops the dead from the lists and every index shifts.
@@ -60,6 +86,7 @@ export class FrayView {
     private floats: Float[] = [];
     private bursts: Burst[] = [];
     private impacts: Impact[] = [];
+    private sparks: Spark[] = [];
     private mons = new WeakMap<MonsterState, MonFx>();
     private seq = 0;
     private heroAtk = -1e9;
@@ -77,13 +104,25 @@ export class FrayView {
     private last: FrayState | null = null;
     /** Floor cache: one offscreen canvas per zone and margin. */
     private floor: HTMLCanvasElement | null = null;
-    private floorZone = "";
+    /** The zone the floor was built for (by identity: a map's zone is built once per map, all with the id "map"). */
+    private floorZone: ZoneDef | null = null;
     private floorMx = -1;
     private floorMy = -1;
-    /** Draw order, reused every frame (-1 is the hero). */
-    private order: number[] = [];
-    private cur: FrayState | null = null;
-    private byY = (a: number, b: number): number => this.footY(a) - this.footY(b);
+    /** Draw order by feet, rebuilt every frame into these buffers (-1 is the hero): a counting sort over pixel rows. */
+    private order = new Int16Array(256);
+    private orderIn = new Int16Array(256);
+    private orderKey = new Uint16Array(256);
+    private rows = new Uint16Array(ARENA_H + 2);
+    /** The longest roll cooldown seen since the last roll began (a boon can shorten it below ROLL_CD). */
+    private rollCdMax = 0;
+    private rollCdLast = 0;
+    /** Boon cards laid out for one offer at one view size. */
+    private cards: Card[] = [];
+    private cardsFor: readonly string[] | null = null;
+    private cardsW = 0;
+    private cardsH = 0;
+    /** Mote art, built once: gold experience, green flask. */
+    private moteArt: [HTMLCanvasElement, HTMLCanvasElement] | null = null;
 
     constructor() {
         this.canvas = document.createElement("canvas");
@@ -102,7 +141,9 @@ export class FrayView {
 
     /** Forget transient fx (called when a fray starts). */
     reset(): void {
-        this.fx.length = 0; this.floats.length = 0; this.bursts.length = 0; this.impacts.length = 0;
+        this.fx.length = 0; this.floats.length = 0; this.bursts.length = 0; this.impacts.length = 0; this.sparks.length = 0;
+        this.rollCdMax = this.rollCdLast = 0;
+        this.cards = []; this.cardsFor = null;
         this.mons = new WeakMap();
         this.heroAtk = -1e9; this.heroHurt = -1e9;
         this.shake = -1e9; this.shakeAmp = 0;
@@ -167,7 +208,12 @@ export class FrayView {
                 const n = now(), m = f.run.monsters[i];
                 if (m) this.monFx(m, n).atk = n;
                 const hx = f.hero.x, hy = f.hero.y - this.heroTop - 2;
-                if (avoided) { this.pushFloat({ x: hx, y: hy, text: t(avoided === "evade" ? "battle.evade" : "battle.block"), color: "#7fd1ff", t: n, big: false }); return; }
+                if (avoided) {
+                    // A blow that met a roll says so: the dodge was the player's, not the evasion roll's.
+                    const rolled = avoided === "evade" && f.hero.roll > 0;
+                    this.pushFloat({ x: hx, y: hy, text: rolled ? t("fray.rolled") : t(avoided === "evade" ? "battle.evade" : "battle.block"), color: rolled ? "#ffe8a0" : "#7fd1ff", t: n, big: false });
+                    return;
+                }
                 this.heroHurt = n;
                 this.kick(n, 1);
                 this.pushFloat({ x: hx - 4, y: hy, text: fmtShort(dmg), color: "#ff5a36", t: n, big: false });
@@ -185,6 +231,12 @@ export class FrayView {
                 const n = now();
                 this.pushFloat({ x: f.hero.x, y: f.hero.y - this.heroTop - 22, text: t("battle.level", { n: l }), color: "#ffc233", t: n, big: true });
                 this.kick(n, 2);
+            },
+            mote: (_xp, flask) => {
+                const f = fray(); if (!f) return;
+                this.sync(f);
+                this.sparks.push({ t: now(), flask: !!flask, seed: this.seq++ % 7 });
+                if (this.sparks.length > MAX_SPARKS) this.sparks.shift();
             },
             wave: (n, boss) => {
                 const f = fray();
@@ -215,19 +267,13 @@ export class FrayView {
         if (this.bursts.length > MAX_BURSTS) this.bursts.shift();
     }
 
-    private footY(i: number): number {
-        const f = this.cur!;
-        return i < 0 ? f.hero.y : f.mons[i]!.y;
-    }
-
     draw(state: GameState, fray: FrayState, sheet: Sheet, now: number, ui: { paused: boolean; leaveArmed: boolean }): void {
         const g = this.g;
         g.imageSmoothingEnabled = false;
         this.sync(fray);
-        this.cur = fray;
         const W = this.W, H = this.H;
-        const zone = ZONES[fray.zone] ?? ZONES.a1_shore!;
-        const hero = fray.hero, run = fray.run;
+        const zone = frayZoneOf(state, fray);
+        const hero = fray.hero;
 
         // Camera: the hero's body in the middle, clamped to the arena; whole pixels only.
         const camX = W >= ARENA_W ? -Math.round((W - ARENA_W) / 2) : Math.round(Math.max(0, Math.min(ARENA_W - W, hero.x - W / 2)));
@@ -246,19 +292,15 @@ export class FrayView {
         g.fillStyle = shade(zone.palette[0], -0.6); g.fillRect(0, 0, W, H);
         g.drawImage(fl, -cx - this.floorMx, -cy - this.floorMy);
 
+        // Motes lie on the floor, under everyone.
+        this.drawMotes(fray, now, cx, cy);
+
         // Entities by their feet: whoever stands lower on the screen is in front.
+        const n = this.sortByFeet(fray, now, cx, cy);
         const ord = this.order;
-        ord.length = 0;
-        for (let i = 0; i < run.monsters.length; i++) {
-            const m = run.monsters[i]!, fm = fray.mons[i];
-            if (!fm) continue;
-            if (m.life <= 0) { this.die(m, fm.x, fm.y, now); continue; }
-            ord.push(i);
-        }
-        ord.push(-1);
-        ord.sort(this.byY);
         const hc = HERO_CAST[state.hero.cls];
-        for (const i of ord) {
+        for (let k = 0; k < n; k++) {
+            const i = ord[k]!;
             if (i < 0) this.drawHero(state, fray, sheet, now, cx, cy);
             else this.drawMon(fray, i, now, cx, cy);
         }
@@ -295,6 +337,19 @@ export class FrayView {
             }
         }
 
+        // Mote pickups sparkle at the hero: four specks flying out of the chest.
+        prune(this.sparks, now, SPARK_MS);
+        for (const sp of this.sparks) {
+            const k = (now - sp.t) / SPARK_MS, r = 3 + k * 9;
+            g.globalAlpha = 1 - k;
+            g.fillStyle = sp.flask ? "#7dff9a" : "#ffe27a";
+            for (let a = 0; a < 4; a++) {
+                const ang = a * 1.571 + sp.seed * 0.4 + 0.785;
+                g.fillRect(Math.round(hx + Math.cos(ang) * r), Math.round(hy - 12 + Math.sin(ang) * r * 0.7), 1, 1);
+            }
+        }
+        g.globalAlpha = 1;
+
         // Floating numbers: pixel font; crits and level-ups twice the size.
         prune(this.floats, now, FLOAT_MS);
         for (const f of this.floats) {
@@ -307,6 +362,64 @@ export class FrayView {
         g.globalAlpha = 1;
 
         this.hud(fray, now, ui);
+    }
+
+    /**
+     * Fills this.order with what is in view (plus the hero, -1), back to front by the feet's pixel row:
+     * a stable counting sort, so a horde costs O(n) and no allocation. Returns how many.
+     */
+    private sortByFeet(fray: FrayState, now: number, cx: number, cy: number): number {
+        const run = fray.run, W = this.W, H = this.H;
+        const need = run.monsters.length + 1;
+        if (this.order.length < need) {
+            const len = Math.max(need, this.order.length * 2);
+            this.order = new Int16Array(len); this.orderIn = new Int16Array(len); this.orderKey = new Uint16Array(len);
+        }
+        const ins = this.orderIn, key = this.orderKey, rows = this.rows, top = rows.length - 1;
+        const x0 = cx - CULL_X, x1 = cx + W + CULL_X, y0 = cy - CULL_TOP, y1 = cy + H + CULL_BOTTOM;
+        let n = 0;
+        for (let i = 0; i < run.monsters.length; i++) {
+            const m = run.monsters[i]!, fm = fray.mons[i];
+            if (!fm) continue;
+            if (m.life <= 0) { this.die(m, fm.x, fm.y, now); continue; }
+            if (fm.x < x0 || fm.x > x1 || fm.y < y0 || fm.y > y1) continue;
+            ins[n] = i; key[n] = Math.max(0, Math.min(top, Math.round(fm.y))); n++;
+        }
+        // The hero last among equals: on the same row it stands in front.
+        ins[n] = -1; key[n] = Math.max(0, Math.min(top, Math.round(fray.hero.y))); n++;
+        rows.fill(0);
+        for (let k = 0; k < n; k++) rows[key[k]!]!++;
+        let sum = 0;
+        for (let r = 0; r <= top; r++) { const c = rows[r]!; rows[r] = sum; sum += c; }
+        const out = this.order;
+        for (let k = 0; k < n; k++) out[rows[key[k]!]!++] = ins[k]!;
+        return n;
+    }
+
+    /** Experience (gold) and flask (green) motes on the floor, pulsing softly; only those in view. */
+    private drawMotes(fray: FrayState, now: number, cx: number, cy: number): void {
+        const motes = fray.motes;
+        if (!motes || !motes.length) return;
+        const g = this.g, W = this.W, H = this.H;
+        const art = this.moteArt ??= [moteSprite("#ffc233", "#fff2b0"), moteSprite("#3fbf5f", "#c8ffd0")];
+        for (let k = 0; k < motes.length; k++) {
+            const m = motes[k]!;
+            const x = Math.round(m.x - cx), y = Math.round(m.y - cy);
+            if (x < -4 || y < -4 || x > W + 4 || y > H + 4) continue;
+            g.globalAlpha = 0.7 + 0.3 * Math.sin(now / 240 + (m.x + m.y) * 0.37);
+            g.drawImage(art[m.flask ? 1 : 0], x - 3, y - 4);
+        }
+        g.globalAlpha = 1;
+    }
+
+    /** Which boon card (1-3) is under a point of the canvas (logical pixels), or 0. */
+    cardAt(x: number, y: number): 0 | 1 | 2 | 3 {
+        if (!this.cardsFor) return 0;
+        for (let i = 0; i < this.cards.length; i++) {
+            const c = this.cards[i]!;
+            if (x >= c.x && x < c.x + c.w && y >= c.y && y < c.y + c.h) return (i + 1) as 1 | 2 | 3;
+        }
+        return 0;
     }
 
     private drawMon(fray: FrayState, i: number, now: number, cx: number, cy: number): void {
@@ -341,11 +454,9 @@ export class FrayView {
                 // The attack art plays its first half as the wind-up, the second half as the blow lands.
                 if (af && since < MON_ATTACK_MS / 2) { name = cast.attack!; f = Math.min(af.n - 0.01, af.n / 2 + (since / (MON_ATTACK_MS / 2)) * (af.n / 2)); showsSwing = true; }
                 else if (af && winding) { name = cast.attack!; f = (1 - Math.max(0, m.atk) / TELEGRAPH) * (af.n / 2); showsSwing = true; }
-                b = drawSprite(g, name, f, x, y - hover, {
-                    left: mf.left, flash: hit, scale: sc,
-                    tint: m.champion ? "#ffc233" : m.lantern ? LANTERN_TINT : cast.tint,
-                    strength: m.champion ? 0.3 : m.lantern ? 0.35 : cast.strength,
-                });
+                b = drawSprite(g, name, f, x, y - hover, opts(mf.left, hit,
+                    m.champion ? "#ffc233" : m.lantern ? LANTERN_TINT : cast.tint,
+                    m.champion ? 0.3 : m.lantern ? 0.35 : cast.strength, sc));
             }
         }
         if (!b) {
@@ -360,7 +471,8 @@ export class FrayView {
         g.globalAlpha = 1;
         mf.h = Math.max(10, y - b.y);
         let top = b.y;
-        if (def.boss || m.champion || now - mf.hit < BAR_MS) {
+        // A horde in bars is a wall of red: only champions and bosses carry one.
+        if (def.boss || m.champion) {
             const w = def.boss ? 30 : Math.max(14, Math.min(28, Math.round(b.w * 0.5)));
             bar(g, Math.round(x - w / 2), top - 4, w, 2, m.life / m.maxLife, m.champion ? "#ffc233" : m.lantern ? "#ff8a1f" : "#e5383b");
             top -= 5;
@@ -374,43 +486,74 @@ export class FrayView {
         const g = this.g;
         const hero = fray.hero;
         const x = Math.round(hero.x - cx), y = Math.round(hero.y - cy);
-        const left = hero.face < 0;
         const dead = fray.outcome === "fallen";
-        const hc = HERO_CAST[state.hero.cls];
-        const atk = now - this.heroAtk, hurt = now - this.heroHurt;
+        const rolling = !dead && hero.roll > 0;
         shadow(g, x, y, 9, 0);
-        let b: Box | null = null;
-        if (hc && spriteOf(hc.idle)) {
-            // Swings win over flinches: in a crowd the hero is hit all the time, so a hit
-            // only washes the frame red; the hurt pose shows when nothing else does.
-            const red = hurt < 70 ? { tint: "#ff2a2a", strength: 0.3 } : {};
-            if (dead) b = drawSprite(g, hc.hurt, 99, x, y, { left, tint: "#1a1410", strength: 0.5 });
-            else if (atk < HERO_ATTACK_MS) b = drawSprite(g, hc.attack, (atk / HERO_ATTACK_MS) * (spriteOf(hc.attack)?.n ?? 1), x, y, { left, ...red });
-            else if (hero.moving) b = drawSprite(g, hc.run, now / 70, x, y, { left, ...red });
-            else if (hurt < HURT_MS) b = drawSprite(g, hc.hurt, (hurt / HURT_MS) * (spriteOf(hc.hurt)?.n ?? 1), x, y, { left, ...red });
-            else b = drawSprite(g, hc.idle, now / 160, x, y, { left });
-        }
-        if (!b) {
-            const last = this.fx[this.fx.length - 1];
-            let lunge = 0;
-            if (last && now - last.t < 160 && (last.kind === "arc" || last.kind === "stab" || last.kind === "slam")) lunge = Math.sin((now - last.t) / 160 * Math.PI) * 5;
-            const wItem = state.hero.equipment.weapon;
-            const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? (BASES[wItem.base]?.kind ?? "sword") : "none", shield: !!state.hero.equipment.offhand };
-            // The drawn hero faces right; mirror it for the left.
-            const hx = x + Math.round(lunge) * (left ? -1 : 1);
-            if (left) { g.save(); g.translate(hx * 2, 0); g.scale(-1, 1); }
-            drawHeroShape(g, hx, y, look, hero.moving ? now : 0, hurt < 120, dead);
-            if (left) g.restore();
-            b = { x: x - 10, y: y - 31, w: 20, h: 31 };
-        }
+        let b: Box;
+        if (rolling) {
+            // Afterimages trail along the path, then the hero squashed along the roll around its feet.
+            const l = Math.hypot(hero.rollDx, hero.rollDy) || 1, ux = hero.rollDx / l, uy = hero.rollDy / l;
+            g.globalAlpha = GHOST_ALPHA;
+            for (let k = GHOSTS; k >= 1; k--) this.heroBody(state, fray, now, Math.round(x - ux * k * GHOST_STEP), Math.round(y - uy * k * GHOST_STEP * 0.6));
+            g.globalAlpha = 1;
+            g.save();
+            g.translate(x, y); g.scale(1.3, 0.8); g.translate(-x, -y);
+            b = this.heroBody(state, fray, now, x, y);
+            g.restore();
+        } else b = this.heroBody(state, fray, now, x, y);
         // Sprite boxes carry padding; cap so numbers don't float far above a small head.
         this.heroTop = Math.max(18, Math.min(40, y - b.y));
-        // Life (and energy shield) under the feet, where the eye already is.
+        // Life (and energy shield) under the feet, where the eye already is; the roll's cooldown under them.
         if (!dead && sheet.life > 0) {
             const h = fray.run.hero;
             bar(g, x - 10, y + 4, 20, 2, h.life / sheet.life, "#e5383b");
             if (sheet.es > 0) { g.fillStyle = "#8fd3ff"; g.fillRect(x - 10, y + 7, Math.round(20 * Math.max(0, Math.min(1, h.es / sheet.es))), 1); }
+            const cd = Math.max(0, hero.rollCd);
+            // A new roll restarts the cooldown higher than it was: that is its full length (a boon can shorten it).
+            if (cd > this.rollCdLast + 1e-6) this.rollCdMax = cd;
+            this.rollCdLast = cd;
+            const full = Math.max(this.rollCdMax || ROLL_CD, cd);
+            const k = cd > 0 ? 1 - cd / full : 1;
+            const py = y + (sheet.es > 0 ? 9 : 8);
+            g.fillStyle = "#111"; g.fillRect(x - 10, py, 20, 1);
+            g.fillStyle = cd > 0 ? "#7a8296" : "#ffe8a0";
+            g.fillRect(x - 10, py, Math.round(20 * Math.max(0, Math.min(1, k))), 1);
         }
+    }
+
+    /** The hero's figure at (x, y), feet there: the class sprite in the pose of the moment, or the drawn shape. */
+    private heroBody(state: GameState, fray: FrayState, now: number, x: number, y: number): Box {
+        const g = this.g;
+        const hero = fray.hero;
+        const left = hero.face < 0;
+        const dead = fray.outcome === "fallen";
+        const hc = HERO_CAST[state.hero.cls];
+        const atk = now - this.heroAtk, hurt = now - this.heroHurt;
+        let b: Box | null = null;
+        if (hc && spriteOf(hc.idle)) {
+            // Swings win over flinches: in a crowd the hero is hit all the time, so a hit
+            // only washes the frame red; the hurt pose shows when nothing else does. A roll runs.
+            const red = hurt < 70;
+            const tint = red ? "#ff2a2a" : undefined, str = red ? 0.3 : undefined;
+            if (dead) b = drawSprite(g, hc.hurt, 99, x, y, opts(left, false, "#1a1410", 0.5));
+            else if (hero.roll > 0) b = drawSprite(g, hc.run, now / 45, x, y, opts(left));
+            else if (atk < HERO_ATTACK_MS) b = drawSprite(g, hc.attack, (atk / HERO_ATTACK_MS) * (spriteOf(hc.attack)?.n ?? 1), x, y, opts(left, false, tint, str));
+            else if (hero.moving) b = drawSprite(g, hc.run, now / 70, x, y, opts(left, false, tint, str));
+            else if (hurt < HURT_MS) b = drawSprite(g, hc.hurt, (hurt / HURT_MS) * (spriteOf(hc.hurt)?.n ?? 1), x, y, opts(left, false, tint, str));
+            else b = drawSprite(g, hc.idle, now / 160, x, y, opts(left));
+        }
+        if (b) return b;
+        const last = this.fx[this.fx.length - 1];
+        let lunge = 0;
+        if (last && now - last.t < 160 && (last.kind === "arc" || last.kind === "stab" || last.kind === "slam")) lunge = Math.sin((now - last.t) / 160 * Math.PI) * 5;
+        const wItem = state.hero.equipment.weapon;
+        const look = { cape: CLASSES[state.hero.cls]?.color ?? "#e2543b", weapon: wItem ? (BASES[wItem.base]?.kind ?? "sword") : "none", shield: !!state.hero.equipment.offhand };
+        // The drawn hero faces right; mirror it for the left.
+        const hx = x + Math.round(lunge) * (left ? -1 : 1);
+        if (left) { g.save(); g.translate(hx * 2, 0); g.scale(-1, 1); }
+        drawHeroShape(g, hx, y, look, hero.moving || hero.roll > 0 ? now : 0, hurt < 120, dead);
+        if (left) g.restore();
+        return { x: x - 10, y: y - 31, w: 20, h: 31 };
     }
 
     private drawFx(f: Fx, now: number, hx: number, hy: number, cx: number, cy: number, face: number, projectile?: "arrow" | "fireball"): void {
@@ -472,49 +615,57 @@ export class FrayView {
         g.lineWidth = 1;
     }
 
-    /** The overlay: wave and kills, the boss plate, banners, hints and the end screens. No shake. */
+    /** The overlay: wave, what is left and the boons, kills and time, the boss plate, banners, hints, the boon offer and the end screens. No shake. */
     private hud(fray: FrayState, now: number, ui: { paused: boolean; leaveArmed: boolean }): void {
         const g = this.g, W = this.W, H = this.H;
         const run = fray.run;
+        // Top left: the wave, what is still to come, and the surge toward the next boon with the boons so far.
         const wx = drawText(g, t("fray.wave", { n: Math.max(1, fray.wave), total: fray.waves }).toUpperCase(), 4, 4, "#ffffff");
         if (fray.bossUp) drawText(g, t("fray.boss").toUpperCase(), 4 + wx + 4, 4, "#ff5a36");
-        drawText(g, t("fray.kills", { n: run.kills }).toUpperCase(), W - 4, 4, "#ffc233", "right");
+        drawText(g, t("fray.left", { n: fmtShort(Math.max(0, fray.total - run.kills)) }).toUpperCase(), 4, 14, "#cfcfcf");
+        bar(g, 5, 26, 60, 2, fray.surgeNeed > 0 ? fray.surge / fray.surgeNeed : 0, GOLD);
+        const lx = drawText(g, t("fray.boons").toUpperCase(), 70, 23, "#9aa0a6");
+        if (fray.boons.length) drawText(g, this.boonInitials(fray), 70 + lx + 3, 23, GOLD);
+        // Top right: kills and the clock.
+        drawText(g, t("fray.kills", { n: run.kills }).toUpperCase(), W - 4, 4, GOLD, "right");
         drawText(g, mmss(fray.t), W - 4, 14, "#ffffff", "right");
 
-        // Boss plate: name over a life bar, under the top line.
+        // Boss plate: name over a life bar, under the top-left block so a narrow view doesn't overlap them.
         if (fray.bossUp) {
             for (const m of run.monsters) {
                 if (m.life <= 0 || !MONSTERS[m.def]?.boss) continue;
                 const bw = Math.min(160, W - 40), bx = Math.round(W / 2 - bw / 2);
-                drawText(g, monsterName(m.def).toUpperCase(), W / 2, 24, "#ffffff", "center");
-                bar(g, bx, 34, bw, 3, m.life / m.maxLife, "#e5383b");
+                drawText(g, monsterName(m.def).toUpperCase(), W / 2, 36, "#ffffff", "center");
+                bar(g, bx, 46, bw, 3, m.life / m.maxLife, "#e5383b");
                 break;
             }
         }
 
         // Wave banner: in fast, holds, fades.
         const bk = (now - this.bannerAt) / BANNER_MS;
-        if (this.banner && bk >= 0 && bk < 1 && fray.outcome === "fight") {
+        if (this.banner && bk >= 0 && bk < 1 && fray.outcome === "fight" && !fray.offer) {
             const a = bk < 0.1 ? bk / 0.1 : bk > 0.65 ? (1 - bk) / 0.35 : 1;
             const text = this.banner.toUpperCase(), sc = fit(text, W - 8);
             const y = Math.round(H * 0.3);
             g.globalAlpha = a * 0.45; g.fillStyle = "#0a0a0e"; g.fillRect(0, y - 4, W, 9 * sc + 8);
             g.globalAlpha = a;
-            drawBig(g, text, W / 2, y, this.bannerBoss ? "#ff5a36" : "#ffc233", sc);
+            drawBig(g, text, W / 2, y, this.bannerBoss ? "#ff5a36" : GOLD, sc);
             g.globalAlpha = 1;
         }
 
-        // Bottom line: the leave prompt wins over the key hint.
-        if (fray.outcome === "fight") {
-            if (ui.leaveArmed) drawText(g, t("fray.leaveHint").toUpperCase(), W / 2, H - 11, Math.floor(now / 400) % 2 ? "#ffc233" : "#ffffff", "center");
-            else if (fray.t < HINT_S) {
-                g.globalAlpha = 0.6 * Math.min(1, HINT_S - fray.t);
-                drawText(g, t("fray.keys").toUpperCase(), W / 2, H - 11, "#cfcfcf", "center");
+        // Bottom line: the leave prompt wins over the hints (the keys first, then how to zoom).
+        if (fray.outcome === "fight" && !fray.offer) {
+            if (ui.leaveArmed) drawText(g, t("fray.leaveHint").toUpperCase(), W / 2, H - 11, Math.floor(now / 400) % 2 ? GOLD : "#ffffff", "center");
+            else if (fray.t < HINT_S + ZOOM_HINT_S) {
+                const key = fray.t < HINT_S;
+                g.globalAlpha = 0.6 * Math.min(1, (key ? HINT_S : HINT_S + ZOOM_HINT_S) - fray.t);
+                drawText(g, t(key ? "fray.keys" : "fray.zoom").toUpperCase(), W / 2, H - 11, "#cfcfcf", "center");
                 g.globalAlpha = 1;
             }
         }
 
         if (fray.outcome !== "fight") {
+            this.cardsFor = null;
             if (!this.endAt) this.endAt = now;
             const a = Math.min(1, (now - this.endAt) / 400);
             g.globalAlpha = 0.65 * a; g.fillStyle = "#0a0a0e"; g.fillRect(0, 0, W, H);
@@ -522,7 +673,7 @@ export class FrayView {
             const won = fray.outcome === "won";
             const title = t(won ? "fray.won" : "fray.fallen").toUpperCase(), sc = fit(title, W - 8);
             const y = Math.round(H / 2) - 22;
-            drawBig(g, title, W / 2, y, won ? "#ffc233" : "#ff5a36", sc);
+            drawBig(g, title, W / 2, y, won ? GOLD : "#ff5a36", sc);
             drawText(g, `${t("fray.kills", { n: run.kills }).toUpperCase()} - ${mmss(fray.t)}`, W / 2, y + 9 * sc + 6, "#ffffff", "center");
             drawText(g, t("fray.back").toUpperCase(), W / 2, y + 9 * sc + 20, "#9aa0a6", "center");
             g.globalAlpha = 1;
@@ -530,7 +681,84 @@ export class FrayView {
             g.globalAlpha = 0.55; g.fillStyle = "#0a0a0e"; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
             const text = t("fray.paused").toUpperCase();
             drawBig(g, text, W / 2, Math.round(H / 2) - 8, "#ffffff", fit(text, W - 8));
+        } else if (fray.offer) this.offer(fray, fray.offer, now);
+        else this.cardsFor = null;
+    }
+
+    /** "HA FU2 RE": each boon picked, by the first two letters of its name, with its stacks past one. */
+    private boonKey = "";
+    private boonText = "";
+    private boonInitials(fray: FrayState): string {
+        const key = fray.boons.join();
+        if (key === this.boonKey) return this.boonText;
+        const seen: string[] = [];
+        for (const id of fray.boons) if (!seen.includes(id)) seen.push(id);
+        this.boonKey = key;
+        this.boonText = seen.map(id => {
+            const n = boonCount(fray, id);
+            return initials(t(`boon.${id}.name`)) + (n > 1 ? n : "");
+        }).join(" ");
+        return this.boonText;
+    }
+
+    /** The boon offer: the arena dimmed, three cards with their key, name (and stacks held) and text. */
+    private offer(fray: FrayState, offer: readonly string[], now: number): void {
+        const g = this.g, W = this.W, H = this.H;
+        g.globalAlpha = 0.6; g.fillStyle = "#0a0a0e"; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+        if (offer !== this.cardsFor || W !== this.cardsW || H !== this.cardsH) this.layoutCards(fray, offer);
+        const cards = this.cards;
+        if (!cards.length) return;
+        drawText(g, t("fray.pick").toUpperCase(), W / 2, Math.max(2, cards[0]!.y - LINE_H - 4), GOLD, "center");
+        const glow = 0.55 + 0.35 * Math.sin(now / 260);
+        for (let i = 0; i < cards.length; i++) {
+            const c = cards[i]!;
+            g.fillStyle = "#111"; g.fillRect(c.x - 1, c.y - 1, c.w + 2, c.h + 2);
+            g.fillStyle = "#1d1813"; g.fillRect(c.x, c.y, c.w, c.h);
+            g.globalAlpha = glow; g.strokeStyle = GOLD; g.lineWidth = 1;
+            g.strokeRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1);
+            g.globalAlpha = 1;
+            // The key badge: a gold square with the number in it.
+            const bx = c.x + CARD_PAD, by = c.y + CARD_PAD;
+            g.fillStyle = GOLD; g.fillRect(bx, by, 9, LINE_H + 1);
+            drawText(g, String(i + 1), bx + 5, by + 1, "#1a1410", "center", "");
+            let y = by;
+            for (const line of c.name) { drawText(g, line, bx + 12, y + 1, GOLD); y += LINE_H; }
+            y = Math.max(y, by + LINE_H + 1) + 3;
+            for (const line of c.text) { drawText(g, line, bx, y, CREAM); y += LINE_H; }
         }
+    }
+
+    /** Lays the offer's cards out for this view: a row of three, or a stack when the view is narrow. */
+    private layoutCards(fray: FrayState, offer: readonly string[]): void {
+        const W = this.W, H = this.H;
+        this.cardsFor = offer; this.cardsW = W; this.cardsH = H;
+        const row = W >= CARDS_ROW_MIN_W;
+        const n = Math.min(3, offer.length);
+        const cw = row ? Math.max(CARD_MIN_W, Math.floor((W - CARD_MARGIN * 2 - CARD_GAP * (n - 1)) / Math.max(1, n))) : Math.min(W - CARD_MARGIN * 2, 240);
+        const inner = cw - CARD_PAD * 2;
+        const cards: Card[] = [];
+        for (let i = 0; i < n; i++) {
+            const id = offer[i]!;
+            const stacks = boonCount(fray, id);
+            const name = t(`boon.${id}.name`).toUpperCase() + (stacks > 0 ? ` X${stacks}` : "");
+            const nameLines = wrap(name, inner - 12);
+            const text = wrap(t(`boon.${id}.text`).toUpperCase(), inner);
+            const h = CARD_PAD * 2 + Math.max(nameLines.length * LINE_H, LINE_H + 1) + 3 + text.length * LINE_H;
+            cards.push({ x: 0, y: 0, w: cw, h, name: nameLines, text });
+        }
+        // A row shares one height; a stack keeps each card's own.
+        if (row) { const hh = Math.max(...cards.map(c => c.h)); for (const c of cards) c.h = hh; }
+        const blockW = row ? n * cw + (n - 1) * CARD_GAP : cw;
+        const blockH = row ? (cards[0]?.h ?? 0) : cards.reduce((a, c) => a + c.h, 0) + (n - 1) * 4;
+        // Centred, under the title line; never above the top-left block's surge bar when there is room.
+        let y = Math.round((H - blockH + LINE_H + 4) / 2);
+        y = Math.max(LINE_H + 6, Math.min(y, H - blockH - 2));
+        let x = Math.round((W - blockW) / 2);
+        for (const c of cards) {
+            c.x = x; c.y = y;
+            if (row) x += cw + CARD_GAP; else y += c.h + 4;
+        }
+        this.cards = cards;
     }
 
     /** The floor and its surroundings for a zone, cached until the zone or the margin changes. */
@@ -538,8 +766,8 @@ export class FrayView {
         // A margin past the arena: the view's overhang when it is wider (or taller), plus room for shake.
         const mx = Math.max(0, Math.ceil((this.W - ARENA_W) / 2)) + 8;
         const my = Math.max(0, Math.ceil((this.H - ARENA_H) / 2)) + 8;
-        if (this.floor && zone.id === this.floorZone && mx === this.floorMx && my === this.floorMy) return this.floor;
-        this.floorZone = zone.id; this.floorMx = mx; this.floorMy = my;
+        if (this.floor && zone === this.floorZone && mx === this.floorMx && my === this.floorMy) return this.floor;
+        this.floorZone = zone; this.floorMx = mx; this.floorMy = my;
         const fw = ARENA_W + mx * 2, fh = ARENA_H + my * 2;
         const c = this.floor ?? document.createElement("canvas");
         c.width = fw; c.height = fh;
@@ -621,6 +849,36 @@ function prune<T extends { t: number }>(a: T[], now: number, ms: number): void {
     let j = 0;
     for (let i = 0; i < a.length; i++) if (now - a[i]!.t < ms) a[j++] = a[i]!;
     a.length = j;
+}
+
+/** Words broken into lines no wider than `maxW` font pixels (a word longer than that gets a line of its own). */
+function wrap(text: string, maxW: number): string[] {
+    const out: string[] = [];
+    let line = "";
+    for (const word of text.split(/\s+/)) {
+        if (!word) continue;
+        const next = line ? `${line} ${word}` : word;
+        if (line && textWidth(next) > maxW) { out.push(line); line = word; }
+        else line = next;
+    }
+    if (line) out.push(line);
+    return out;
+}
+
+/** The first two letters of a name, for the HUD's boon row. */
+const initials = (name: string): string => Array.from(name.replace(/[^\p{L}\p{N}]/gu, "")).slice(0, 2).join("").toUpperCase();
+
+/** A mote: a 3x3 diamond with a bright core and a soft halo, 7 x 7 with the halo. */
+function moteSprite(color: string, core: string): HTMLCanvasElement {
+    const c = document.createElement("canvas");
+    c.width = 7; c.height = 7;
+    const g = c.getContext("2d")!;
+    g.globalAlpha = 0.28; g.fillStyle = color;
+    g.fillRect(3, 0, 1, 7); g.fillRect(0, 3, 7, 1); g.fillRect(2, 1, 3, 5); g.fillRect(1, 2, 5, 3);
+    g.globalAlpha = 1;
+    g.fillRect(3, 2, 1, 3); g.fillRect(2, 3, 3, 1);
+    g.fillStyle = core; g.fillRect(3, 3, 1, 1);
+    return c;
 }
 
 /** Text at `scale` times the font size, top-centre at x, y. */

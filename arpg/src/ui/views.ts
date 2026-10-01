@@ -22,7 +22,7 @@ import { heroView } from "./hero";
 import { logSig, logView } from "./log";
 import { menuView } from "./menu";
 import { skillsView } from "./skills";
-import { hollowSig, omenSig, shrineSig, worldView } from "./world";
+import { fraySig, hollowSig, omenSig, shrineSig, worldView } from "./world";
 
 export interface Ctx {
     state: GameState;
@@ -39,8 +39,8 @@ export interface Ctx {
     importSave(text: string): Promise<string | null>;
     resetGame(): void;
     storeKind: string;
-    /** Takes the hero into the Fray (the window turns into the arena until it ends). */
-    startFray(): void;
+    /** Takes the hero into the Fray (the window turns into the arena until it ends); `map` fights the device's next map. */
+    startFray(map: boolean): void;
     inFray(): boolean;
 }
 
@@ -61,7 +61,7 @@ export function viewSig(id: ViewId, c: Ctx): string {
         // The mastery of the skill in use moves every kill: its tooltip follows every hundred.
         case "skills": return `${s.hero.rev}:${s.hero.level}:${Math.floor((s.mastery?.[s.hero.skill] ?? 0) / 100)}`;
         case "tree": return `${s.hero.rev}:${s.hero.level}:${s.dust >= 5 + s.hero.level * 2}:${s.hero.ascPoints}`;
-        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}:${omenSig(s)}:${s.fray ? `${s.fray.runs}/${s.fray.won}/${s.fray.kills}/${s.fray.best}` : ""}`;
+        case "world": return `${s.activity.mode}:${s.activity.zone}:${s.world.unlocked.length}:${s.activity.autoPush}:${Object.values(s.world.clears).reduce((a, b) => a + b, 0)}:${s.contracts.list.map(x => `${x.kind}${x.n}/${x.target}`).join(",")}:${s.dust >= rerollCost(s)}:${shrineSig(s)}:${hollowSig(s)}:${omenSig(s)}:${s.fray ? `${s.fray.runs}/${s.fray.won}/${s.fray.kills}/${s.fray.best}` : ""}:${fraySig(s)}`;
         case "atlas": return atlasSig(c);
         case "log": return logSig(s);
         case "menu": return `${hintsSeen(s).length}:${s.settings.keep}:${s.settings.autoEquip}:${s.settings.upkeep}:${s.settings.autoStones}:${JSON.stringify(s.settings.filter)}:${sunShards(s).length}:${JSON.stringify(s.hero.dawn ?? null)}`;
