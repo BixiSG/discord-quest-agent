@@ -6,6 +6,7 @@ import type { FilterRule } from "./filter";
 import type { ContractBoard } from "./contracts";
 import type { MarketState } from "./market";
 import type { FrayTotals } from "./fray";
+import type { Errand } from "./errands";
 
 export interface Hero {
     name: string;
@@ -26,6 +27,12 @@ export interface Hero {
     rev: number;
     /** The companion at the hero's side and its level (v6). */
     pet?: { id: string; level: number };
+    /** Renown from feats (v9), copied here from state.feats so the stat sheet is a function of the hero. */
+    renown?: number;
+    /** Skill mastery levels (v10), copied here from state.mastery for the same reason: skill -> level. */
+    mastery?: Record<string, number>;
+    /** This week's omen (v10), put here by tickOmen so the sheet (and the world) can read it. */
+    omen?: string;
     /** Dawns (v7): how many times the sun was relit, and the perks picked (one per dawn). */
     dawn?: { level: number; perks: string[]; /** The Hollow Crown was broken (round 6): one more perk pick, the name Crownbreaker. */ crown?: boolean };
 }
@@ -88,7 +95,11 @@ export interface RunState {
  */
 export interface LogEntry { t: number; kind: "level" | "loot" | "death" | "zone" | "boss" | "info"; text: string; key?: string; params?: Record<string, string | number> }
 
-export interface Totals { kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number; /** Stash items upkeep gave up for better drops. */ swapped?: number }
+export interface Totals {
+    kills: number; deaths: number; runs: number; items: number; salvaged: number; dust: number; simMs: number; maps?: number;
+    /** Stash items upkeep gave up for better drops. */ swapped?: number;
+    /** Bosses slain and contracts finished, across dawns (v9, for feats). */ bosses?: number; contracts?: number;
+}
 
 export interface GameState {
     seed: number;
@@ -151,6 +162,8 @@ export interface GameState {
         autoStones: boolean;
         /** First-time hints the player dismissed (ui/hints.ts). */
         hints?: string[];
+        /** Companions back from an errand go again, and idle ones fill free errands (v9). */
+        errandKeep: boolean;
     };
     /** Relic case: the best copy of each relic, outside the stash (v5). */
     relics: Item[];
@@ -170,11 +183,22 @@ export interface GameState {
     market: MarketState;
     /** Echoes found (v7): lore pages from map bosses and pinnacles. */
     echoes: string[];
+    /** Feats earned (v9), in the order they were; kept across dawns. */
+    feats: string[];
+    /** The title worn: a titled feat's id. */
+    title?: string;
+    /** The week whose omen was last announced (v10). */
+    omenWeek?: number;
+    /** Skill mastery (v10): skill -> points (kills made with it); kept across dawns. */
+    mastery: Record<string, number>;
+    /** Companions away on errands (v9), and errands sent so far (seeds their hauls). */
+    errands: Errand[];
+    errandSeq?: number;
     /** The player's UTC offset in minutes, recorded by the UI: seasonal events follow the local calendar. */
     tz?: number;
     /** Seasonal tallies: "hollownight2026" -> lanterns snuffed that October. */
     events?: Record<string, number>;
-    /** The Fray (round 8): frays fought and won, kills, the fastest win. */
+    /** The Fray (round 10): frays fought and won, kills, the fastest win. */
     fray?: FrayTotals;
     totals: Totals;
     nextUid: number;

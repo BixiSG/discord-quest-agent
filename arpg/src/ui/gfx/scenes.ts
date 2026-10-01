@@ -43,11 +43,11 @@ const ZONE_SET: Record<string, string> = {
 };
 const ROTATION = ["swamp", "cemetery", "forest", "dusk", "desert", "castle"];
 
-/** The set for a zone id (maps and pinnacles pick one from their area name, so it stays put). */
-export function setFor(zoneId: string, name: string): SceneSet {
-    const id = ZONE_SET[zoneId];
-    if (id) return SETS[id]!;
+/** The set for a zone (a map takes its area's, else one picked from its name, so it stays put). */
+export function setFor(zone: { id: string; name: string; scene?: string }): SceneSet {
+    const id = ZONE_SET[zone.id] ?? zone.scene;
+    if (id && SETS[id]) return SETS[id]!;
     let h = 0;
-    for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    for (const c of zone.name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
     return SETS[ROTATION[h % ROTATION.length]!]!;
 }

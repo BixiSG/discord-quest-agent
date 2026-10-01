@@ -176,10 +176,11 @@ export function mapZone(m: RunMap, atlas: AtlasEffects): ZoneDef {
         return { id: "map", act: 4, name: p.name, level: p.level, packs: 0, packSize: [0, 0], monsters: area.monsters, boss: p.boss, champion: 0, palette: p.palette };
     }
     const packs = m.mods.reduce((s, id) => s + (MAP_MODS[id]?.packs ?? 0), 0) + atlas.packs;
+    const swarm = m.mods.reduce((s, id) => s + (MAP_MODS[id]?.swarm ?? 0), 0);
     return {
         id: "map", act: 4, name: `${area.name} - ${tierName(m.tier)}`, level: m.level,
-        packs: Math.round((m.tier === 0 ? 6 : 8) * (1 + packs / 100)), packSize: [4, 6], monsters: area.monsters,
-        ...(m.tier > 0 ? { boss: area.boss } : {}), champion: 0.2, palette: area.palette,
+        packs: Math.round((m.tier === 0 ? 6 : 8) * (1 + packs / 100)), packSize: [4 + swarm, 6 + swarm], monsters: area.monsters,
+        ...(m.tier > 0 ? { boss: area.boss } : {}), champion: 0.2, palette: area.palette, ...(area.scene ? { scene: area.scene } : {}),
     };
 }
 
@@ -191,14 +192,24 @@ export interface MapEffects {
     hero: Mod[];
     quantity: number;
     rarity: number;
+    /** Monster armour and evasion multipliers, and resistance added to the elements (round 8). */
+    armour: number;
+    evasion: number;
+    res: number;
+    /** The map boss's own life and damage multipliers (on top of life and damage). */
+    bossLife: number;
+    bossDamage: number;
 }
+
+/** No modifiers at all (a story zone a dawn later starts from this). */
+export const NO_EFFECTS = (): MapEffects => ({ life: 1, damage: 1, speed: 1, extra: [], hero: [], quantity: 0, rarity: 0, armour: 1, evasion: 1, res: 0, bossLife: 1, bossDamage: 1 });
 
 const effCache = new WeakMap<RunMap, MapEffects>();
 export function mapEffects(m: RunMap, atlas: AtlasEffects): MapEffects {
     const c = effCache.get(m);
     if (c) return c;
     const depth = depthMult(m.tier);
-    const e: MapEffects = { life: depth, damage: depth, speed: 1, extra: [], hero: [], quantity: atlas.quantity, rarity: atlas.rarity };
+    const e: MapEffects = { ...NO_EFFECTS(), life: depth, damage: depth, quantity: atlas.quantity, rarity: atlas.rarity };
     const reward = 1 + atlas.modEffect / 100;
     for (const id of m.mods) {
         const d = MAP_MODS[id];
@@ -208,6 +219,10 @@ export function mapEffects(m: RunMap, atlas: AtlasEffects): MapEffects {
         if (d.speed) e.speed *= 1 + d.speed / 100;
         if (d.extra) e.extra.push(d.extra);
         if (d.hero) e.hero.push(...d.hero.map(x => ({ ...x, src: "Map" })));
+        if (d.armour) e.armour *= 1 + d.armour / 100;
+        if (d.evasion) e.evasion *= 1 + d.evasion / 100;
+        if (d.res) e.res += d.res;
+        if (d.boss) { e.bossLife *= 1 + d.boss.life / 100; e.bossDamage *= 1 + d.boss.damage / 100; }
         e.quantity += d.qty * reward;
         e.rarity += d.rarity * reward;
     }

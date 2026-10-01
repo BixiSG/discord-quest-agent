@@ -1,4 +1,4 @@
-// Round 8: the Fray (src/core/fray.ts).
+// Round 10: the Fray (src/core/fray.ts).
 
 import { describe, expect, it } from "vitest";
 import { ARENA_H, ARENA_W, FRAY_BONUS, FRAY_STEP_MS, HERO_SPEED, frayAdvance, frayStep, frayZone, monsterSpeed, newFray, newFrayTotals, type FrayEvents, type FrayInput, type FrayState } from "../src/core/fray";
@@ -389,12 +389,12 @@ describe("the idle engine's kill rewards", () => {
 });
 
 describe("the Fray in the save", () => {
-    it("MIGRATIONS[8] adds empty tallies and keeps existing ones", () => {
+    it("MIGRATIONS[10] adds empty tallies and keeps existing ones", () => {
         const s = JSON.parse(JSON.stringify(g0())) as any;
         delete s.fray;
-        expect(MIGRATIONS[8]!(s).fray).toEqual({ runs: 0, won: 0, kills: 0, best: 0 });
+        expect(MIGRATIONS[10]!(s).fray).toEqual({ runs: 0, won: 0, kills: 0, best: 0 });
         const t = { fray: { runs: 3, won: 2, kills: 40, best: 95 } };
-        expect(MIGRATIONS[8]!(t).fray).toEqual({ runs: 3, won: 2, kills: 40, best: 95 });
+        expect(MIGRATIONS[10]!(t).fray).toEqual({ runs: 3, won: 2, kills: 40, best: 95 });
     });
     it("validateState keeps good tallies and zeroes bad ones", () => {
         const good = g0() as any;

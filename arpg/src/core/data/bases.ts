@@ -42,7 +42,7 @@ const WEAPONS: WeaponKind[] = [
     { kind: "staff", hands: 2, aps: 1.2, crit: 6, dmg: 1.7, spread: 0.4,
         names: ["Crooked Staff", "Tidecaller Staff", "Coral Staff", "Lighthouse Staff", "Mirage Staff", "Eclipse Staff", "Solar Staff", "Ember Crozier"],
         implicit: (lvl) => [{ stat: "damage", kind: "inc", value: 10 + Math.round(lvl / 3), tags: ["spell"] }] },
-    { kind: "bow", hands: 2, aps: 1.3, crit: 6, dmg: 1.55, spread: 0.55, ranged: true,
+    { kind: "bow", hands: 2, aps: 1.3, crit: 6, dmg: 2.0, spread: 0.55, ranged: true,
         names: ["Fishing Bow", "Gull Bow", "Reed Longbow", "Cliff Bow", "Glasswing Bow", "Storm Bow", "Dawnstring", "Emberflight"] },
     { kind: "wand", hands: 1, aps: 1.4, crit: 7, dmg: 0.75, spread: 0.5, ranged: true,
         names: ["Driftwood Wand", "Candle Wand", "Pearl Wand", "Lantern Wand", "Prism Wand", "Omen Wand", "Corona Wand", "Ember Wand"],

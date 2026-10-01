@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ACTS, ASCENDANCIES, CLASSES, TRIAL_AFTER, ZONES, ZONE_ORDER } from "../src/core/data";
 import { newGame, sheetOf } from "../src/core/game";
 import { ascPointsLeft, chooseAscendancy, takeAscNode } from "../src/core/passives";
-import { step } from "../src/core/sim/engine";
+import { reconcileRewards, step } from "../src/core/sim/engine";
 import { MIGRATIONS, unwrap } from "../src/core/save";
 import type { GameState } from "../src/core/state";
 
@@ -66,6 +66,25 @@ describe("acts, trials, ascendancies", () => {
         expect(takeAscNode(g, "bastion_1")).toBeNull();
         expect(ascPointsLeft(g.hero)).toBe(0);
         expect(takeAscNode(g, "bastion_3")).toMatch(/points/);
+    });
+    it("all four trials pay for a whole ascendancy: every node is taken, the last two make the hero stronger", () => {
+        const g = g0();
+        g.hero.level = 50;
+        for (const a of ACTS) g.world.clears[a.trial] = 1;
+        g.world.unlocked.push(...ACTS.map(a => a.trial));
+        // reconcileRewards runs on load: the ledger pays each trial's points once.
+        reconcileRewards(g);
+        reconcileRewards(g);
+        expect(g.hero.ascPoints).toBe(8);
+        expect(chooseAscendancy(g, "reaver")).toBeNull();
+        for (const n of ASCENDANCIES.reaver!.nodes.slice(0, 6)) expect(takeAscNode(g, n.id)).toBeNull();
+        const s6 = sheetOf(g);
+        expect(takeAscNode(g, "reaver_7")).toBeNull();
+        expect(sheetOf(g).skill.dps).toBeGreaterThan(s6.skill.dps);
+        const s7 = sheetOf(g);
+        expect(takeAscNode(g, "reaver_8")).toBeNull();
+        expect(sheetOf(g).ehp.phys).toBeGreaterThan(s7.ehp.phys * 1.1);
+        expect(ascPointsLeft(g.hero)).toBe(0);
     });
     it("v2 saves migrate to v3", () => {
         const s = g0() as any;

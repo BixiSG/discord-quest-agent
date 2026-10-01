@@ -3,7 +3,8 @@
 // and lock marks.
 
 import { emptySockets, socketPips, socketRows } from "./stones";
-import { slotsFor } from "../core/data";
+import { AFFIXES, slotsFor } from "../core/data";
+import type { AffixFate, CraftPreview } from "../core/crafting";
 import type { Sheet } from "../core/character";
 import { canEquip, trialSheet, buildScore } from "../core/game";
 import { affixOf, baseOf, itemStats, levelReq, tierLabel, relicOf } from "../core/items";
@@ -12,8 +13,8 @@ import { fmt, h } from "./dom";
 import { itemIcon } from "./gfx/itemart";
 import { glyph } from "./glyphs";
 import { modText } from "./text";
-import { t } from "../i18n";
-import { affixLine, baseName, itemName, relicFlavour, relicLines } from "../i18n/names";
+import { t, tn } from "../i18n";
+import { affixLine, affixTemplate, baseName, itemName, relicFlavour, relicLines } from "../i18n/names";
 import { tErr } from "../i18n/errors";
 import { SLOT_LABEL, TYPE_NAME, kv } from "./common";
 import type { Ctx } from "./views";
@@ -59,15 +60,41 @@ export function withTip(cell: HTMLElement, c: Ctx, make: () => HTMLElement): voi
 /** What is being dragged right now: a stash item (uid) or an equipped slot. */
 export const dnd: { drag: { uid?: number; slot?: Slot } | null } = { drag: null };
 
-export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot | null } = {}): HTMLElement {
+/** A craft shown on the item card before it is done: what it is, and what it would do (or why it can't). */
+export interface CardPreview { label: string; p: { err: string } | CraftPreview }
+
+const FATE_TAG: Partial<Record<AffixFate, string>> = { reroll: "forge.pvReroll", replace: "forge.pvReplace", remove: "forge.pvRemove" };
+
+/** The line under the name: the craft, then its outcome in words. */
+function previewHead(pv: CardPreview): HTMLElement {
+    const p = pv.p;
+    if ("err" in p) return h("div", { class: "pvhead err", attrs: { role: "status" } }, h("b", { text: `${pv.label}:` }), h("span", { text: tErr(p.err) }));
+    const parts: string[] = [];
+    if (p.rarity) parts.push(t(`forge.pvTo.${p.rarity}`));
+    if (p.add?.max) parts.push(p.add.max === p.add.min ? tn("forge.pvAddN", p.add.max) : tn("forge.pvAddRange", p.add.max, { min: p.add.min, max: p.add.max }));
+    if (p.addAffix) parts.push(t("forge.pvAddChosen"));
+    const changed = p.affixes.filter(f => f !== "keep").length;
+    if (p.affixes.includes("replace")) parts.push(t("forge.pvReplaced"));
+    if (p.affixes.includes("remove")) parts.push(tn("forge.pvRemoved", p.affixes.filter(f => f === "remove").length));
+    if (p.affixes.includes("maybe")) parts.push(t("forge.pvMaybe", { n: p.affixes.length }));
+    if (p.affixes.includes("reroll")) parts.push(tn("forge.pvRerolled", changed));
+    if (p.quality !== undefined) parts.push(t("forge.pvQuality", { n: p.quality }));
+    return h("div", { class: "pvhead", attrs: { role: "status" } }, h("b", { text: `${pv.label}:` }), h("span", { text: parts.join(t("common.list")) || t("forge.pvNothing") }));
+}
+
+export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot | null; preview?: CardPreview | null } = {}): HTMLElement {
     const b = baseOf(item);
     const st = itemStats(item);
-    const card = h("div", { class: "card item" }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
+    const pv = opts.preview ?? null;
+    const pp = pv && !("err" in pv.p) ? pv.p : null;
+    const card = h("div", { class: `card item${pv ? " pv" : ""}` }, h("div", { class: `name ${item.rarity}`, text: itemName(item) }));
+    if (pv) card.append(previewHead(pv));
     const lines: string[] = [];
     if (item.rarity === "rare" || item.rarity === "relic") lines.push(baseName(b.id));
     card.append(h("div", { class: "muted", text: `${[...lines, b.kind === b.slot ? "" : t(`kind.${b.kind}`)].filter(Boolean).join(" - ")}  ${t("item.levels", { ilvl: item.ilvl, req: levelReq(item) })}` }));
-    if (item.quality || item.locked) card.append(h("div", { class: "row", style: "gap:4px;margin-top:3px" },
-        item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
+    if (item.quality || item.locked || pp?.quality !== undefined) card.append(h("div", { class: "row", style: "gap:4px;margin-top:3px" },
+        pp?.quality !== undefined ? h("span", { class: "tag q pvq", text: t("item.quality", { n: pp.quality }) })
+            : item.quality ? h("span", { class: "tag q", text: t("item.quality", { n: item.quality }) }) : null,
         item.locked ? h("span", { class: "tag lk" }, glyph("lock", 9), " " + t("item.locked")) : null));
     if (st.weapon) {
         const w = st.weapon;
@@ -89,11 +116,25 @@ export function itemCard(item: Item, c: Ctx | null, opts: { compareSlot?: Slot |
         card.append(h("hr"));
         for (const m of b.implicit) card.append(h("div", { class: "aff", text: modText(m) }));
     }
-    if (item.affixes.length) {
+    const adds = pp && (pp.add?.max || pp.addAffix);
+    if (item.affixes.length || adds) {
         card.append(h("hr"));
-        const sorted = [...item.affixes].sort((a, z) => (affixOf(a).type === affixOf(z).type ? 0 : affixOf(a).type === "prefix" ? -1 : 1));
-        for (const a of sorted) card.append(h("div", { class: `aff${a.bench ? " bench" : ""}`, title: a.bench ? t("item.benchTip") : "" }, affixLine(a),
-            h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` })));
+        // Prefixes first; a preview marks each line with what the craft does to it.
+        const sorted = item.affixes.map((a, i) => ({ a, fate: pp?.affixes[i] ?? "keep" }))
+            .sort((x, z) => (affixOf(x.a).type === affixOf(z.a).type ? 0 : affixOf(x.a).type === "prefix" ? -1 : 1));
+        for (const { a, fate } of sorted) {
+            const tag = fate === "maybe" ? t("forge.pvChance", { n: Math.round(100 * (pp?.chance ?? 0)) }) : FATE_TAG[fate] ? t(FATE_TAG[fate]!) : "";
+            card.append(h("div", { class: `aff${a.bench ? " bench" : ""}${fate !== "keep" ? ` pv-${fate}` : ""}`, title: a.bench ? t("item.benchTip") : "" }, affixLine(a),
+                h("b", { text: `${a.bench ? t("item.bench") + " " : ""}${t(affixOf(a).type === "prefix" ? "item.prefix" : "item.suffix")} ${t("item.tier", { n: tierLabel(a) })}` }),
+                tag ? h("span", { class: "pvt", text: tag }) : null));
+        }
+        if (pp?.add?.max) {
+            const kind = pp.add.types.length === 2 ? t("forge.pvKindAny") : t(pp.add.types[0] === "prefix" ? "forge.pvKindPrefix" : "forge.pvKindSuffix");
+            const n = pp.add.min === pp.add.max ? tn("forge.pvNewN", pp.add.max, { kind }) : tn("forge.pvNewRange", pp.add.max, { min: pp.add.min, max: pp.add.max, kind });
+            card.append(h("div", { class: "aff pv-new" }, n));
+        }
+        if (pp?.addAffix && AFFIXES[pp.addAffix]) card.append(h("div", { class: "aff pv-new" }, t("forge.pvNewChosen", { text: affixTemplate(pp.addAffix) }),
+            h("b", { text: t(AFFIXES[pp.addAffix]!.type === "prefix" ? "item.prefix" : "item.suffix") })));
     }
     const sockets = socketRows(item);
     if (sockets) card.append(h("hr"), sockets);

@@ -12,6 +12,7 @@
 //     source:  { "sheet": "P:/a.png", "w": 38, "h": 48, "frames": 4, "x": 0, "y": 0, "dx": 38 }
 //          or  { "files": ["P:/idle1.png", ...] }  or  { "files": "P:/idle{1-6}.png" }
 //     options: "down": 2 (shrink by a whole factor), "faces": "left" (default "right"),
+//              "order": [0, 1, 2, 1] (play the frames in this order: RPG-maker walks),
 //              "outline": false, "trim": false, "alpha": true (keep soft alpha: backgrounds)
 // Frames of a sprite are trimmed to their common bounding box, so they stay
 // aligned. Each sprite records its anchor: the middle of its feet in frame 0
@@ -122,6 +123,7 @@ for (const [name, s] of Object.entries(manifest.sprites)) {
         frames = [];
         for (let f = 0; f < n; f++) frames.push(grab(img, (s.x ?? 0) + f * dx, s.y ?? 0, w, h, s.alpha));
     }
+    if (s.order) frames = s.order.map(i => { if (!frames[i]) throw new Error(`${name}: no frame ${i}`); return frames[i]; });
     if (s.down > 1) frames = frames.map(fr => down(fr, s.down));
     if (s.trim !== false) {
         // Common bounding box of all frames, so the animation doesn't jitter.

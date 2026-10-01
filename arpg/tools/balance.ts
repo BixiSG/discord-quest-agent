@@ -21,7 +21,7 @@ for (let s = 1; s <= seeds; s++) {
     const ev: SimEvents = { death: () => deaths++, kill: m => { kills++; if (MONSTERS[m.def]?.boss) bossKills++; } };
     console.log(`\n== ${cls} seed ${s}`);
     botTune(g);
-    console.log("hours  lvl  zone                      dps      pack    life   ehpPhys  ehpCold  deaths  kills  stash dust  maps deepest pins");
+    console.log("hours  lvl  zone                      dps      pack    life   ehpPhys  ehpCold  deaths  kills  stash dust  maps deepest pins dawn skill");
     const t0 = performance.now();
     let t = 0;
     for (const h of checkpoints) {
@@ -31,7 +31,8 @@ for (let s = 1; s <= seeds; s++) {
         console.log([String(h).padStart(5), String(g.hero.level).padStart(4), (g.activity.run?.map ? `map T${g.activity.run.map.tier}` : ZONES[g.activity.zone]!.name).slice(0, 24).padEnd(24),
             f(sh.skill.dps).padStart(8), f(sh.skill.packDps).padStart(8), f(sh.life).padStart(7), f(sh.ehp.phys).padStart(8), f(sh.ehp.cold).padStart(8),
             String(deaths).padStart(7), String(kills).padStart(6), String(g.stash.length).padStart(6), String(g.dust).padStart(5),
-            String(g.maps.length).padStart(5), String(Math.max(0, ...g.atlas.tiers)).padStart(7), String(Object.values(g.pinnacleKills).reduce((a, b) => a + b, 0)).padStart(4)].join(" "));
+            String(g.maps.length).padStart(5), String(Math.max(0, ...g.atlas.tiers)).padStart(7), String(Object.values(g.pinnacleKills).reduce((a, b) => a + b, 0)).padStart(4), `D${g.hero.dawn?.level ?? 0}`, g.hero.skill].join(" "));
     }
     console.log(`sim speed: ${(hours * HOUR / (performance.now() - t0) / 1000).toFixed(0)}x real time per ms... ${((performance.now() - t0) / 1000).toFixed(2)} s for ${hours} h; boss kills ${bossKills}`);
+    console.log(`feats ${g.feats.length} (renown ${g.hero.renown ?? 0}${g.title ? `, title ${g.title}` : ""}), errands ${g.errandSeq ?? 0}, companions ${Object.keys(g.companions).length}`);
 }

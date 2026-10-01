@@ -4,6 +4,7 @@
 import { ACTS, CURRENCIES, ZONES } from "../core/data";
 import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffed } from "../core/season";
 import { endgameOpen } from "../core/maps";
+import { nextOmen, omenAt, omenDaysLeft } from "../core/omens";
 import { setZone } from "../core/game";
 import { frayZone, newFrayTotals } from "../core/fray";
 import type { GameState } from "../core/state";
@@ -15,7 +16,7 @@ import { scenery } from "./gfx/portrait";
 import { claimContract, contractDust, rerollContract, rerollCost, type Contract } from "../core/contracts";
 import { BLESSINGS, ORB_RESERVE, bless, blessingCost, setKeep, spareOrbValue } from "../core/shrine";
 import { t, tn } from "../i18n";
-import { actIntro, actName, actOutro, blessingName, blessingText, className, companionName, contractGoal, currencyName, relicName, zoneName, zoneStory } from "../i18n/names";
+import { actIntro, actName, actOutro, blessingName, blessingText, className, companionName, contractGoal, currencyName, omenName, omenText, relicName, zoneName, zoneStory } from "../i18n/names";
 import { kv } from "./common";
 import type { Ctx } from "./views";
 
@@ -31,6 +32,7 @@ export function worldView(c: Ctx): HTMLElement {
         h("i"), h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") })));
     root.append(push, frayCard(c));
     if (hollowNight(st)) root.append(hollowCard(c));
+    root.append(omenCard(c));
     root.append(contractBoard(c), shrineCard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
     const hc = HERO_CAST[st.hero.cls];
@@ -127,6 +129,20 @@ function hollowCard(c: Ctx): HTMLElement {
             find(relicName(HOLLOW_RELIC), !!st.codex[HOLLOW_RELIC]),
             find(companionName(HOLLOW_PET), st.companions[HOLLOW_PET] !== undefined)),
         endgameOpen(st) ? h("div", { class: "muted", style: "font-size:12px;margin-top:8px", text: t("hollow.litMaps") }) : null);
+}
+
+/** The omen card changes with the omen and the days left. */
+export const omenSig = (s: GameState) => `${s.hero.omen ?? ""}:${omenDaysLeft(s)}`;
+
+/** This week's omen: what it does, the days left, and next week's. */
+function omenCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const id = st.hero.omen ?? omenAt(st);
+    return h("div", { class: "card omen" },
+        h("h3", { class: "split" }, h("span", { class: "row", style: "gap:6px" }, glyph("sun", 16), h("span", { text: t("omen.title", { name: omenName(id) }) })),
+            h("span", { class: "num", text: tn("omen.days", omenDaysLeft(st)) })),
+        h("div", { text: omenText(id) }),
+        h("div", { class: "muted", style: "font-size:12px;margin-top:6px", text: `${t("omen.next", { name: omenName(nextOmen(st)) })}. ${t("omen.note")}` }));
 }
 
 /** Three standing goals: progress, reward, Claim when done, Reroll for dust otherwise. */

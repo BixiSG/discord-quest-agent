@@ -4,13 +4,37 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
-## 1.8.0 - 2026-10-01
+## 1.10.0 - 2026-10-01
 
 - Hollowmarch has a new mode, the Fray: press F or use the card on the World tab to take the hero's reins in an arena on the road's current zone, walking with WASD or the arrows while the skill fires on its own and Space drinks the flask.
 - Monsters come in waves with the zone's boss last; kills pay half again the experience, a win adds spoils, a fall costs nothing, and the idle road waits while you fight.
 - Esc pauses (a second Esc leaves), P pauses, losing window focus pauses, and the Fray is not available in the mini strip.
-- Progression is tighter: levels 15 to 50 need up to 12% less experience and auto-push moves on when the hero is one level below the next zone instead of two, so maps open about half an hour to an hour earlier.
+- Progression is a little tighter: levels 15 to 50 need up to 12% less experience and auto-push moves on when the hero is one level below the next zone instead of two, so the hero enters zones less under-levelled and maps open somewhat earlier.
 - Saves migrate on their own and keep the Fray's record (fought, won, kills, fastest win).
+
+## 1.9.0 - 2026-09-30
+
+- Hollowmarch: skill mastery. A skill grows with every kill made with it, up to mastery 10: a little more damage each level, then less mana, then speed. It stays with you across every dawn, and the Skills tab shows how far each skill has come.
+- Hollowmarch: a weekly omen, the same for every player: a trade-off with a reward, from a Blood Moon (tougher monsters, rarer finds) to Clear Skies (more experience). The World tab shows this week's omen and next week's; pinnacles are left as they are.
+- Hollowmarch: a new feat and title, Weaponmaster, for a skill at mastery 10.
+- Hollowmarch: Iron Vow now slows spells as much as attacks, so casters pay for its armour too.
+- Hollowmarch: evasion now counts against fire, cold and lightning hits in the survival numbers, as it always did in the fight. Upgrade marks and auto-equip no longer trade an evasion build's evasion for energy shield, and the Strider reaches its first dawn far sooner.
+- Hollowmarch: the Hero tab's damage, critical and speed breakdowns list supports and mastery, and the Salvage button shows the dust you will really get.
+
+## 1.8.0 - 2026-09-30
+
+- Hollowmarch: six new skills (levels 28 to 44) and five new supports. Steadfast is the first support that makes the hero tougher, and the Skills tab shows what a defensive support is worth in survival, not only damage.
+- Hollowmarch: every ascendancy has two more nodes, bought with the fourth trial's points. The attack ascendancies' new defence nodes let two-handed and bow builds live through the pinnacle fights.
+- Hollowmarch: bows were far behind melee and spells; bow damage, Grace and the late bow skills bring them level.
+- Hollowmarch: three map areas built from Ashfold and six new map mods, and every map area has a backdrop of its own.
+- Hollowmarch: feats, 37 things done once and kept across every dawn. Each pays renown, a small permanent bonus, and twelve are titles the hero can wear (Log > Feats). An existing hero earns what it already did the first time it loads.
+- Hollowmarch: companions that are not at the hero's side run two-hour errands for dust, orbs, ember stones or maps, and grow while they do. "Keep them busy" is on by default.
+- Hollowmarch: the passive tree has 171 nodes. Every branch ends in a mastery, and each calling has a keystone far out on the ring.
+- Hollowmarch: in the Forge, resting on a currency, the hone or the bench shows on the item what it would change, add or remove, and a currency that can't be used says why.
+- Hollowmarch: the pinnacles hold the sun harder each dawn, so later dawns take longer to reach. The Menu's dawn card says how much.
+- Hollowmarch: five monsters have art of their own instead of a recoloured look-alike: the Drowned Wretch is a zombie, the Mire Hag a hooded ghost with ice in its hands, the Gull a seabird, the Eel a serpent, and the Cinder Matron a dragon that breathes fire. The Chapel Keeper is a shrieking shade.
+- Hollowmarch: the lantern ghost and the white-haired swordsman now face the hero.
+- Hollowmarch: fixes. A feat for the last pinnacle is no longer lost by relighting straight after it, errands come home even while the hero keeps dying, Forge until upgrade no longer pays for an upgrade it can't keep, and the Pedlar's Buy is off when a purchase has no room.
 
 ## 1.7.0 - 2026-09-29
 

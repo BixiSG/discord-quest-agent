@@ -72,7 +72,7 @@
   in the 400 px panel; the game itself opens in its own **overlay window**: a
   Shadow DOM root on `document.body`, z-index 10050, draggable and resizable,
   which stops key events from reaching Discord.
-- The Fray (round 8) takes over the stage: the app swaps the battle canvas
+- The Fray (round 10) takes over the stage: the app swaps the battle canvas
   for the Fray's arena and the tabs hide while it runs. The idle clock is held
   at `now` (`simTo` follows the wall clock), so nothing is caught up afterwards;
   the sim is stepped from the animation frame, and the keys (WASD, arrows,

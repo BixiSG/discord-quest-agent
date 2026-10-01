@@ -12,20 +12,29 @@ It has nothing to do with quests: it never reads quest data or orbs.
 
 ## What is in it
 
-- Three callings (Vanguard, Strider, Arcanist), 15 skills, 14 supports.
-- Four acts, 28 zones plus four trials, 12 bosses, story beats, six
-  ascendancies. Act 4 is Ashfold, the lantern town before the maps.
-- Items: 300+ bases, 44 affixes with 8 tiers, rares, 26 relics (uniques) with
+- Three callings (Vanguard, Strider, Arcanist), 21 skills, 20 supports (some
+  of them defensive, with the EHP they are worth shown next to the DPS).
+- Four acts, 28 zones plus four trials, story beats, six ascendancies of
+  eight nodes each. Act 4 is Ashfold, the lantern town before the maps.
+- Items: 300+ bases, 44 affixes with 8 tiers, rares, 28 relics (uniques) with
   a relic case and a codex.
 - A stash that looks after itself: upkeep swaps out the least-worth item for
   a better drop, locks keep what you want, bulk salvage, room for dust.
 - Crafting: 10 currencies, hone (quality) and bench (a chosen affix), a forge
   that turns ember dust into rares (or keeps forging until one is an
-  upgrade), and an ordered loot filter.
+  upgrade), and an ordered loot filter. Resting on a currency, the hone or
+  the bench shows on the item what it would change, add or remove.
 - A contract board: three standing goals that pay dust, currency, missing
   relics, companions, maps or sigils.
-- Nine companions: one walks at the hero's side and gives a bonus that grows
-  with its bond.
+- Ten companions: one walks at the hero's side and gives a bonus that grows
+  with its bond; the others go on two-hour errands for dust, currency, stones
+  or maps, and grow too.
+- Feats: 38 things done once and kept across every dawn, each paying renown (a
+  small permanent bonus); thirteen of them are titles the hero can wear.
+- Skill mastery: a skill grows with use (more damage, then less mana, then
+  speed), kept across dawns.
+- A weekly omen, the same for every player: a trade-off with a reward, from
+  a Blood Moon to Clear Skies.
 - An ember shrine: timed blessings (experience, rarity, quantity, currency)
   that turn late dust and spare orbs into progress.
 - Loot filter presets and affix rules; a pinnacle scout that fights five times
@@ -34,14 +43,15 @@ It has nothing to do with quests: it never reads quest data or orbs.
   Wandering Market (a Pedlar and a Jeweller with stock that rotates).
 - An ending: twelve echoes of the day the sun fell, three sun shards, and the
   Rekindling - relight the sun and start a new dawn, keeping the collection.
-- A 129-node passive tree with keystones.
-- Endgame: maps tier 1-16 with mods, the endless Depths past tier 16, an
-  atlas tree and four pinnacle bosses.
+- A 171-node passive tree: nine branches that end in a mastery, six
+  keystones (three far out on the ring).
+- Endgame: maps tier 1-16 in 13 areas with 18 mods, the endless Depths past
+  tier 16, an atlas tree and four pinnacle bosses.
 - Character sheet with DPS and EHP breakdowns (click a stat to see where it
   comes from), compare deltas on every item and support.
 - Hollow Night every October (the player's calendar): lantern-touched
-  monsters, lantern-lit maps, a lantern contract, a seasonal relic and the
-  Pumpkin Wisp.
+  monsters, lantern-lit maps, a lantern contract, a seasonal relic and a
+  seasonal companion, the Pumpkin Wisp.
 - The Fray: take the reins for one fight on the road's current zone. A
   top-down arena, wave after wave of the zone's monsters and its boss last; you
   walk, the skill fires on its own. Kills pay half again the experience, a win
@@ -54,6 +64,11 @@ It has nothing to do with quests: it never reads quest data or orbs.
   <img src="docs/shots/13-sockets.png" width="420" alt="The Forge with a socketed weapon on the anvil: set, swap or remove ember stones, drill another socket">
   <img src="docs/shots/14-echoes.png" width="420" alt="The chronicle's echoes: voices from the day the sun fell, left by map bosses and pinnacles">
   <img src="docs/shots/15-rekindling.png" width="420" alt="The Rekindling card: three sun shards gathered, ready to relight the sun">
+  <img src="docs/shots/16-feats.png" width="420" alt="The chronicle's feats: renown, the title worn, and the road's feats with their renown">
+  <img src="docs/shots/17-errands.png" width="420" alt="The Hero tab: companions, three of them away on scavenging errands with the time left and what each brings">
+  <img src="docs/shots/18-forge-preview.png" width="420" alt="The Forge previewing a Tempest Shard on a rare quiver: every affix marked rerolled, three to six new affixes to come">
+  <img src="docs/shots/19-omen.png" width="420" alt="The World tab's omen of the week: Blood Moon, five days left, next week The Hungry Dark">
+  <img src="docs/shots/20-mastery.png" width="420" alt="The Skills tab: Chain Spark worn at mastery 10, the other spells tagged with their own mastery">
 </p>
 
 ## Install (Windows, with Discord Quest Agent)
@@ -107,7 +122,7 @@ Requirements: Node 20+.
 
     cd arpg
     npm install
-    npm run check      # typecheck + 200-odd tests + build (ASCII-checked)
+    npm run check      # typecheck + 280-odd tests + build (ASCII-checked)
     npm run balance -- 48 3 strider   # headless bot plays 3 heroes for 48 simulated hours
 
 - The build writes two files: `dist/arpg.js` (readable, for the pages below)

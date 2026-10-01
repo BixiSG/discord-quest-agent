@@ -23,7 +23,7 @@ const RCOLOR = { plain: "var(--r-plain)", enchanted: "var(--r-enchanted)", rare:
 
 export function atlasSig(c: Ctx): string {
     const s = c.state;
-    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}`;
+    return `${endgameOpen(s)}:${s.activity.mode}:${s.activity.mapTier}:${s.activity.autoCap}:${s.activity.pinnacle}:${s.maps.length}:${s.maps[s.maps.length - 1]?.uid}:${s.atlas.points}:${s.atlas.nodes.length}:${JSON.stringify(s.sigils)}:${c.sel.uid}:${s.craftSeq}:${JSON.stringify(s.currency)}`;
 }
 
 export function atlasView(c: Ctx): HTMLElement {
@@ -78,7 +78,7 @@ export function atlasView(c: Ctx): HTMLElement {
     for (const m of maps.slice(0, 40)) {
         const on = c.sel.uid === m.uid;
         const area = MAP_AREAS[m.area];
-        const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette }, 84, 44) : null;
+        const thumb = area ? scenery({ id: "map", name: area.name, palette: area.palette, ...(area.scene ? { scene: area.scene } : {}) }, 84, 44, 2) : null;
         if (thumb) thumb.className = "mthumb";
         list.append(h("div", { class: `zone map${on ? " on" : ""}`, style: "margin:0", on: { click: () => { c.sel = { uid: m.uid }; c.rerender(); } } },
             thumb,

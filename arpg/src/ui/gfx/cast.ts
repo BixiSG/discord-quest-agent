@@ -1,5 +1,5 @@
 // Who looks like what: each monster and calling mapped to atlas sprites.
-// A handful of CC0 creatures cover all 29 monsters; a tint in the monster's
+// A couple of dozen CC0 creatures cover every monster; a tint in the monster's
 // own colour (from its data) keeps look-alikes apart. Anything missing here
 // falls back to the code-drawn shapes in battle.ts.
 
@@ -22,11 +22,12 @@ export interface Cast {
 
 export const MONSTER_CAST: Record<string, Cast> = {
     // Act 1: the Drowned Road
-    drowned: { sprite: "mon.thing", tint: "#5f8f86", strength: 0.25, fps: 6 },
+    drowned: { sprite: "mon.zombie", tint: "#5f8f86", strength: 0.15, fps: 5 },
     crab: { sprite: "mon.spider", tint: "#d0643a", strength: 0.45, fps: 10 },
-    gull: { sprite: "mon.flyer", tint: "#e9e4d4", strength: 0.35, hover: 16, fps: 10 },
-    bogwitch: { sprite: "mon.wizard", attack: "mon.wizard.attack", tint: "#4a5a3a", strength: 0.35, fps: 7 },
-    eel: { sprite: "mon.shade", attack: "mon.shade.attack", tint: "#2f6fb8", strength: 0.45, hover: 4, fps: 8 },
+    gull: { sprite: "mon.gull", hover: 16, fps: 10 },
+    // The Mire Hag casts cold: a hood with ice-blue fire in its hands.
+    bogwitch: { sprite: "mon.icewraith", attack: "mon.icewraith.attack", hover: 3, fps: 7 },
+    eel: { sprite: "mon.serpent", fps: 7, scale: 2 },
     lampman: { sprite: "mon.ghoul", fps: 10 },
     // Act 2: the Glass Barrens
     scorpion: { sprite: "mon.spider", tint: "#9fe3ff", strength: 0.4, fps: 10 },
@@ -52,12 +53,13 @@ export const MONSTER_CAST: Record<string, Cast> = {
     lamplighter: { sprite: "mon.lantern", tint: "#ff8a1f", strength: 0.2, hover: 8, fps: 6, scale: 2, castFx: "fx.firebomb" },
     // Bosses and trials
     tidewarden: { sprite: "boss.nightmare", tint: "#2f6fb8", strength: 0.2, fps: 6 },
-    keeper: { sprite: "boss.angel", attack: "boss.angel.attack", tint: "#3c2a52", strength: 0.35, hover: 6, fps: 8 },
+    // The chapel's keeper still shrieks at the door.
+    keeper: { sprite: "mon.shade", attack: "mon.shade.attack", tint: "#3c2a52", strength: 0.3, hover: 6, fps: 7 },
     drownedknight: { sprite: "boss.knight", attack: "boss.knight.attack", tint: "#2f6f6a", strength: 0.35, fps: 6 },
     sandwright: { sprite: "boss.beast", tint: "#d9b77a", strength: 0.4, fps: 8 },
     mirrorwarden: { sprite: "boss.knight", attack: "boss.knight.attack", tint: "#9fe3ff", strength: 0.45, fps: 6 },
     glassregent: { sprite: "boss.angel", attack: "boss.angel.attack", tint: "#9fe3ff", strength: 0.35, hover: 6, fps: 8 },
-    cindermatron: { sprite: "boss.beast", fps: 8 },
+    cindermatron: { sprite: "boss.dragon", attack: "boss.dragon.attack", fps: 7, scale: 2 },
     emberjudge: { sprite: "boss.demon", tint: "#ff7a2e", strength: 0.25, fps: 7 },
     lastdawn: { sprite: "boss.demon", fps: 7 },
     // Pinnacles

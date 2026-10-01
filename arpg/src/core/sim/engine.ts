@@ -2,15 +2,15 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type MonsterDef, type ZoneDef } from "../data";
+import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SUPPORTS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type MonsterDef, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
-import { DAMAGE_TYPES, type Item } from "../types";
+import { DAMAGE_TYPES, type DamageType, type Item } from "../types";
 import { codexRarity, equipUpgrades, sheetOf, receiveItem, pushLog } from "../game";
 import { deriveSheet } from "../character";
 import { addMap, atlasEffects, completeMap, dropTier, mapEffects, mapZone, rollMap, startMapRun, type MapEffects } from "../maps";
-import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, PINNACLES } from "../data";
+import { MAP_BOSS_DAMAGE, MAP_BOSS_LIFE, MASTERY_BOSS, PINNACLES } from "../data";
 import { BOARD_SIZE, contractEvent, ensureContracts } from "../contracts";
 import { grantCompanion, petKill, rollCompanionDrop } from "../companions";
 import { blessing, tickShrine } from "../shrine";
@@ -21,6 +21,10 @@ import { dawnEffects, hasPerk } from "../dawn";
 import { LANTERN, hollowNight, lanternKill, lanternRate, tickSeason, touch } from "../season";
 import { ACT_COMPANION } from "../data";
 import { ref } from "../../i18n/refs";
+import { checkFeats } from "../feats";
+import { tickErrands } from "../errands";
+import { gainMastery } from "../mastery";
+import { omenCurrency, omenEffects, tickOmen } from "../omens";
 
 export const STEP_MS = 100;
 const DT = STEP_MS / 1000;
@@ -64,6 +68,14 @@ export interface SimEvents {
     stone?(key: string): void;
     /** An echo (lore page) was found. */
     echo?(id: string): void;
+    /** A feat was earned. */
+    feat?(id: string): void;
+    /** A companion came back from an errand. */
+    errand?(pet: string, kind: string): void;
+    /** A skill reached a new mastery level. */
+    mastery?(skill: string, level: number): void;
+    /** A new week's omen began. */
+    omen?(id: string): void;
 }
 
 export const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
@@ -98,7 +110,11 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
     return run.map ? mapZone(run.map, atlasEffects(state)) : zoneOf(run.zone);
 }
 
-export const effectsOf = (state: GameState, run: RunState): MapEffects | null => dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null);
+/** A run's world: the map's mods, then the dawn, then the week's omen. */
+export const effectsOf = (state: GameState, run: RunState): MapEffects | null => {
+    const pin = !!run.map?.pinnacle;
+    return omenEffects(state, run, dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, pin), pin);
+};
 
 // A map with hero modifiers (e.g. less regeneration) gets its own stat sheet.
 const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
@@ -106,10 +122,12 @@ const mapSheets = new WeakMap<object, { rev: number; sheet: Sheet }>();
 export function runSheet(state: GameState): Sheet {
     const run = state.activity.run;
     const eff = run ? effectsOf(state, run) : null;
-    if (!run?.map || !eff?.hero.length) return sheetOf(state);
+    // A pinnacle leaves the week's omen outside, the hero's side of it too (the dawn loop keeps its pace).
+    const bare = !!run?.map?.pinnacle && !!state.hero.omen;
+    if (!run?.map || (!eff?.hero.length && !bare)) return sheetOf(state);
     const c = mapSheets.get(run.map);
     if (c && c.rev === state.hero.rev) return c.sheet;
-    const sheet = deriveSheet(state.hero, eff.hero);
+    const sheet = deriveSheet(bare ? { ...state.hero, omen: undefined } : state.hero, eff?.hero ?? []);
     mapSheets.set(run.map, { rev: state.hero.rev, sheet });
     return sheet;
 }
@@ -126,7 +144,7 @@ function spawnPack(run: RunState, z: ZoneDef, rng: Rng, eff: MapEffects | null, 
     if (run.pack >= run.packs) {
         if (z.boss) {
             const b = makeMonster(z.boss, run.map?.pinnacle ? z.level : z.level + 1, false, rng, eff);
-            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE); }
+            if (run.map && !run.map.pinnacle) { b.life = b.maxLife = Math.round(b.maxLife * MAP_BOSS_LIFE * (eff?.bossLife ?? 1)); }
             run.monsters.push(b);
         }
         return;
@@ -149,6 +167,7 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
     // A new game (or one just claimed empty) gets its contracts before it plays.
     if ((state.contracts?.list.length ?? 0) < BOARD_SIZE) ensureContracts(state);
     tickSeason(state, ev);
+    tickOmen(state, { onNew: id => ev.omen?.(id) });
     let steps = 0;
     while (state.simTo + STEP_MS <= now) {
         if (steps >= maxSteps) return false;
@@ -163,6 +182,9 @@ export function advance(state: GameState, now: number, ev: SimEvents = {}, maxSt
 /** One 100 ms step. */
 export function step(state: GameState, ev: SimEvents = {}): void {
     if (!state.activity.run) state.activity.run = newRun(state, sheetOf(state));
+    // Errands come home on the hero's clock, whatever the run is doing (a hero dying run after run,
+    // or one fight that never ends, must not keep them away).
+    if (state.errands?.some(e => e.until <= state.simTo)) tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     const run = state.activity.run;
     let sheet = runSheet(state);
     const rng = new Rng(run.rng);
@@ -182,7 +204,12 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     switch (run.phase) {
         case "dead":
             run.timer -= DT;
-            if (run.timer <= 0) { state.activity.runIndex++; state.activity.run = newRun(state, sheetOf(state)); }
+            if (run.timer <= 0) {
+                // A hero that keeps dying still levels and kills: its feats are checked as it rises.
+                checkFeats(state, { onFeat: id => ev.feat?.(id) });
+                state.activity.runIndex++;
+                state.activity.run = newRun(state, sheetOf(state));
+            }
             break;
         case "travel":
             run.timer -= DT * sheet.moveSpeed;
@@ -199,7 +226,7 @@ export function step(state: GameState, ev: SimEvents = {}): void {
             if (h.cd <= 0) {
                 if (h.mana >= sheet.skill.manaCost) {
                     h.mana -= sheet.skill.manaCost;
-                    sheet = heroAttack(state, run, sheet, rng, ev);
+                    sheet = heroAttack(state, run, sheet, rng, ev, eff);
                     h.cd += 1 / Math.max(0.1, sheet.skill.speed);
                 } else h.cd = 0.2;
             }
@@ -224,8 +251,16 @@ export function step(state: GameState, ev: SimEvents = {}): void {
     if (state.activity.run === run) run.rng = rng.state();
 }
 
-function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents): Sheet {
-    const sk = sheet.skill;
+/** A monster's evasion, armour and resistance to a damage type, with the map's mods (veiled, armoured, warded). */
+export const monsterEvasion = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.evasion * (eff?.evasion ?? 1);
+/** Monster armour counts at half against the hero's hits (COMBAT.md 9). */
+export const monsterArmour = (m: MonsterState, eff: MapEffects | null) => monsterDefence(m.level) * MONSTERS[m.def]!.armour * 0.5 * (eff?.armour ?? 1);
+export const monsterRes = (m: MonsterState, t: DamageType, eff: MapEffects | null) => (MONSTERS[m.def]!.res?.[t] ?? 0) + (t !== "phys" && t !== "chaos" ? eff?.res ?? 0 : 0);
+
+function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): Sheet {
+    // The swing is the skill as it was cast: a kill that changes the sheet (a level, mastery, gear)
+    // counts from the next one, so every target's roll and the leech use `cast`.
+    const cast = sheet, sk = cast.skill;
     const alive: number[] = [];
     run.monsters.forEach((m, i) => { if (m.life > 0) alive.push(i); });
     const targets = alive.slice(0, sk.targets);
@@ -233,22 +268,21 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
     let dealt = 0;
     for (const i of targets) {
         const m = run.monsters[i]!;
-        const roll = heroHitRoll(sheet, m, rng);
+        const roll = heroHitRoll(cast, m, rng, eff);
         if (!roll) { ev.heroMiss?.(i); continue; }
         m.life -= roll.dmg;
         dealt += roll.dmg;
         ev.heroHit?.(i, roll.dmg, roll.crit);
         if (m.life <= 0) sheet = onKill(state, run, m, sheet, rng, ev);
     }
-    applyLeech(run, sheet, dealt);
+    applyLeech(run, sheet, dealt, sk.leech);
     return sheet;
 }
 
-/** One hit of the hero's skill on `m`: null when an attack misses. Shared with the Fray. */
-export function heroHitRoll(sheet: Sheet, m: MonsterState, rng: Rng): { dmg: number; crit: boolean } | null {
+/** One hit of the hero's skill on `m` (through the world's monster mods): null when an attack misses. Shared with the Fray. */
+export function heroHitRoll(sheet: Sheet, m: MonsterState, rng: Rng, eff: MapEffects | null): { dmg: number; crit: boolean } | null {
     const sk = sheet.skill;
-    const d = MONSTERS[m.def]!;
-    if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterDefence(m.level) * d.evasion))) return null;
+    if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterEvasion(m, eff)))) return null;
     const crit = rng.chance(sk.critChance / 100);
     let dmg = 0;
     for (const t of DAMAGE_TYPES) {
@@ -256,19 +290,21 @@ export function heroHitRoll(sheet: Sheet, m: MonsterState, rng: Rng): { dmg: num
         if (hi <= 0) continue;
         let x = rng.range(lo, hi);
         if (crit) x *= sk.critMulti / 100;
-        if (t === "phys") x *= 1 - armourReduction(monsterDefence(m.level) * d.armour * 0.5, x);
-        else x *= 1 - ((d.res?.[t] ?? 0) - sk.pen[t]) / 100;
+        if (t === "phys") x *= 1 - armourReduction(monsterArmour(m, eff), x);
+        else x *= 1 - (monsterRes(m, t, eff) - sk.pen[t]) / 100;
         dmg += Math.max(0, x);
     }
     return { dmg: Math.max(1, dmg), crit };
 }
 
-/** Life leeched from `dealt` damage (COMBAT.md 8: at most 10% of max life per second, a refilling budget). */
-export function applyLeech(run: RunState, sheet: Sheet, dealt: number): void {
-    const sk = sheet.skill;
-    if (sk.leech <= 0 || dealt <= 0) return;
+/**
+ * Life leeched from `dealt` damage (COMBAT.md 8: at most 10% of max life per second, a refilling budget).
+ * `leech` is the casting skill's percentage (the sheet may have changed since: a kill mid-swing).
+ */
+export function applyLeech(run: RunState, sheet: Sheet, dealt: number, leech = sheet.skill.leech): void {
+    if (leech <= 0 || dealt <= 0) return;
     const h = run.hero;
-    const got = Math.min(dealt * sk.leech / 100, h.leech ?? sheet.life * 0.1);
+    const got = Math.min(dealt * leech / 100, h.leech ?? sheet.life * 0.1);
     h.leech = (h.leech ?? sheet.life * 0.1) - got;
     h.life = Math.min(sheet.life, h.life + got);
 }
@@ -316,7 +352,7 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
         m.atk -= DT;
         if (m.atk > 0) return;
         m.atk += monsterSwing(d, rng, eff);
-        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE) : 1;
+        const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
         const r = monsterHitRoll(run, m, sheet, rng, eff, mapBoss);
         ev.monsterHit?.(i, r.dmg, r.avoided);
     });
@@ -338,13 +374,15 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
     const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100) * (killBonus?.xp ?? 1));
     run.kills++; run.xp += xp;
     state.totals.kills++;
+    // The skill in use grows with every kill (a new level changes the sheet).
+    if (gainMastery(state, hero.skill, d.boss ? MASTERY_BOSS : 1, (sk, l) => ev.mastery?.(sk, l))) changed0 = true;
     run.hero.flask = Math.min(FLASK_MAX, run.hero.flask + (d.boss ? 5 : 1) * sheet.flaskCharges);
     run.hero.life = Math.min(sheet.life, run.hero.life + sheet.lifeOnKill);
     ev.kill?.(m, xp);
     if (petKill(state)) changed0 = true;
     contractEvent(state, "kills");
     if (m.champion) contractEvent(state, "champions");
-    if (d.boss) contractEvent(state, "bosses");
+    if (d.boss) { contractEvent(state, "bosses"); state.totals.bosses = (state.totals.bosses ?? 0) + 1; }
     let changed = gainXp(state, xp, ev) || changed0;
 
     // Loot (GDD: items go straight to the stash through the filter).
@@ -366,7 +404,7 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
     }
     // Crafting currency.
     const cRolls = run.map?.pinnacle && d.boss ? 12 : d.boss ? 3 : 1;
-    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100);
+    const cChance = (d.boss ? 0.6 : m.champion ? 0.12 : 0.02) * qty * (1 + (atlas?.currency ?? 0) / 100) * (1 + blessing(state, "hoard") / 100) * (1 + omenCurrency(state) / 100);
     for (let k = 0; k < cRolls; k++) {
         if (!rng.chance(cChance)) continue;
         const cur = rng.weighted(CURRENCY_ORDER, id => CURRENCIES[id]!.drop)!;
@@ -386,7 +424,9 @@ export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: 
         const had = { ...state.companions };
         const pet = rollCompanionDrop(state, rng, m.level, run.map?.pinnacle ? 0.15 : run.map ? 0.004 : 0.003);
         if (pet) { ev.companion?.(pet, had[pet] === undefined); changed = true; }
-        pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
+        // The chronicle keeps 60 lines: a map boss every minute or two would bury everything else,
+        // so only pinnacles and a story boss's first fall are written down.
+        if (run.map ? !!run.map.pinnacle : !state.world.clears[run.zone]) pushLog(state, "boss", "log.bossFalls", { monster: ref.monster(m.def) });
     }
     if (m.lantern && lanternKill(state, rng, m.level, ev)) changed = true;
     return changed ? runSheet(state) : sheet;
@@ -431,7 +471,11 @@ export function gainXp(state: GameState, xp: number, ev: SimEvents = {}): boolea
         hero.rev++;
         up = true;
         if (state.activity.capBackoff) state.activity.capBackoff = 0; // stronger now: map auto-push may climb sooner
-        pushLog(state, "level", "log.levelUp", { level: hero.level });
+        // The line names what the new level opens: skills and supports nobody would otherwise notice.
+        const opened = [...Object.values(SKILLS).filter(s => s.level === hero.level).map(s => ref.skill(s.id)),
+            ...Object.values(SUPPORTS).filter(s => s.level === hero.level).map(s => ref.support(s.id))];
+        if (opened.length && hero.level > 1) pushLog(state, "level", "log.levelUpNew", { level: hero.level, list: ref.list(opened) });
+        else pushLog(state, "level", "log.levelUp", { level: hero.level });
         ev.level?.(hero.level);
     }
     if (hero.level >= MAX_LEVEL) hero.xp = 0;
@@ -446,8 +490,9 @@ function heroDied(state: GameState, run: RunState, ev: SimEvents): void {
     run.hero.life = 0;
     state.totals.deaths++;
     const act = state.activity;
-    act.streak = 0;
-    act.deaths++;
+    // A pinnacle is not a map: losing one neither breaks the run of clean maps nor counts
+    // towards lowering the device's tier.
+    if (!run.map?.pinnacle) { act.streak = 0; act.deaths++; }
     pushLog(state, "death", "log.died", { place: ref.place(run.zone, run.map) });
     ev.death?.(run.zone);
     if (run.map) {
@@ -568,6 +613,9 @@ function finishRun(state: GameState, ev: SimEvents): void {
     tickShrine(state);
     tickMarket(state);
     tickSeason(state, ev);
+    tickOmen(state, { onNew: id => ev.omen?.(id) });
+    // Keeps idle companions busy (errands also come home mid-run: step()).
+    tickErrands(state, (pet, kind) => ev.errand?.(pet, kind));
     // New gear may have empty sockets: fill them from the pouch.
     if (state.settings.autoStones && autoSetStones(state)) { /* the next run's sheet includes them */ }
     const run = act.run!;
@@ -575,6 +623,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
     if (run.map) {
         completeMap(state, run.map);
         if (!run.map.pinnacle) contractEvent(state, "maps", run.map.tier);
+        // A "clear runs" contract taken before the maps opened would never move otherwise.
+        contractEvent(state, "runs");
         // Eight clean maps in a row: earlier failures are forgiven, and a capped device allows one
         // tier more (not straight back to the top); the cap goes once it is above every map held.
         act.streak++;
@@ -586,6 +636,8 @@ function finishRun(state: GameState, ev: SimEvents): void {
             else pushLog(state, "zone", "log.pushDeeper", { tier: ref.tier(act.autoCap) });
         }
         ev.runDone?.(run.zone);
+        // Once the run's results are in (the map's tier, a pinnacle): feats.
+        checkFeats(state, { onFeat: id => ev.feat?.(id) });
         act.runIndex++;
         act.run = newRun(state, sheetOf(state));
         return;
@@ -618,6 +670,7 @@ function finishRun(state: GameState, ev: SimEvents): void {
         act.zone = next;
         act.streak = 0;
     }
+    checkFeats(state, { onFeat: id => ev.feat?.(id) });
     act.runIndex++;
     act.run = newRun(state, sheetOf(state));
 }

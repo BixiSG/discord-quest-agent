@@ -4,15 +4,16 @@
 // companions and their bond, echoes, the stone pouch, bought stash room,
 // settings and totals, and one heirloom item.
 
-import { CLASSES, DAWN_PERK, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from "./data";
+import { CLASSES, DAWN_PERK, DAWN_PINNACLE, DAWN_TOUGHER, DAWN_RICHER, companionLevel } from "./data";
 import { allShards } from "./echoes";
 import { ECHOES_PER_POINT } from "./data";
-import { newGame, pushLog } from "./game";
+import { newGame, pushLog, relicRollScore } from "./game";
+import { checkFeats } from "./feats";
 import { hashSeed } from "./rng";
 import { returnStones } from "./sockets";
 import type { GameState } from "./state";
 import { SLOTS, type Item } from "./types";
-import type { MapEffects } from "./maps";
+import { NO_EFFECTS, type MapEffects } from "./maps";
 
 export const dawnOf = (s: GameState) => s.hero.dawn?.level ?? 0;
 export const hasPerk = (s: GameState, id: string) => !!s.hero.dawn?.perks.includes(id);
@@ -39,21 +40,29 @@ export function heirloomCandidates(s: GameState): Item[] {
  */
 export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string } = {}): string | null {
     if (!allShards(s)) return "needs the three sun shards";
+    // What this dawn did is earned before it is wiped (the last pinnacle, a first deep map).
+    checkFeats(s);
     const cls = opts.cls && CLASSES[opts.cls] ? opts.cls : s.hero.cls;
     const dawn = dawnOf(s) + 1;
     const heir = opts.heirloom !== undefined ? heirloomCandidates(s).find(x => x.uid === opts.heirloom) : undefined;
-    // Gear left behind gives its stones back to the pouch (the pouch is kept); the heirloom keeps its own.
-    for (const it of [...SLOTS.map(k => s.hero.equipment[k]), ...s.stash]) if (it && it !== heir && !it.relic) returnStones(s, it);
-    // Worn relics go back into the case (all relics stay); the case keeps the better copy.
+    // Worn and stashed relics go back into the case (every relic stays): the better-rolled copy of
+    // each, as the case always keeps. Everything left behind gives its stones back to the pouch (the
+    // pouch is kept); the heirloom and the case's relics keep their own.
     const relics = [...s.relics];
-    for (const k of SLOTS) {
-        const it = s.hero.equipment[k];
-        if (!it?.relic) continue;
-        const old = relics.find(x => x.relic === it.relic);
-        if (!old) relics.push(it);
+    const left: Item[] = [];
+    for (const it of [...SLOTS.map(k => s.hero.equipment[k]), ...s.stash]) {
+        if (!it || it === heir) continue;
+        if (!it.relic) { left.push(it); continue; }
+        const i = relics.findIndex(x => x.relic === it.relic);
+        if (i < 0) relics.push(it);
+        else if (relicRollScore(it) > relicRollScore(relics[i]!)) { left.push(relics[i]!); relics[i] = it; }
+        else left.push(it);
     }
+    for (const it of left) returnStones(s, it);
     const fresh = newGame({ name: s.hero.name, cls, now: s.simTo, seed: hashSeed(s.seed, 0xda, dawn) });
     fresh.nextUid = Math.max(fresh.nextUid, s.nextUid);
+    // The new starter weapon takes a fresh id: a kept item (an old starter as the heirloom) may hold its old one.
+    fresh.hero.equipment.weapon!.uid = fresh.nextUid++;
     fresh.hero.dawn = { level: dawn, perks: [...(s.hero.dawn?.perks ?? [])], ...(s.hero.dawn?.crown ? { crown: true } : {}) };
     fresh.hero.bonusPoints = dawn;
     if (s.hero.pet && s.companions[s.hero.pet.id] !== undefined) fresh.hero.pet = { id: s.hero.pet.id, level: companionLevel(s.companions[s.hero.pet.id]!) };
@@ -61,6 +70,18 @@ export function relightSun(s: GameState, opts: { heirloom?: number; cls?: string
     fresh.codex = s.codex;
     fresh.companions = s.companions;
     fresh.echoes = s.echoes;
+    // Feats and their renown are the player's, not the hero's: they carry over whole.
+    fresh.feats = s.feats ?? [];
+    // Companions are kept, and so are the errands they are on.
+    fresh.errands = s.errands ?? [];
+    if (s.errandSeq) fresh.errandSeq = s.errandSeq;
+    if (s.title) fresh.title = s.title;
+    if (s.hero.renown) fresh.hero.renown = s.hero.renown;
+    // Skill mastery is the player's too; the week (and its omen) goes on.
+    fresh.mastery = s.mastery ?? {};
+    if (s.hero.mastery) fresh.hero.mastery = { ...s.hero.mastery };
+    if (s.hero.omen) fresh.hero.omen = s.hero.omen;
+    if (s.omenWeek !== undefined) fresh.omenWeek = s.omenWeek;
     fresh.stones = s.stones;
     fresh.shrine = s.shrine;
     fresh.settings = s.settings;
@@ -92,15 +113,19 @@ export function chooseDawnPerk(s: GameState, id: string): string | null {
     return null;
 }
 
-/** The world a dawn later: tougher monsters, richer drops, on top of any map's own mods. */
+/** How much tougher (life and damage, a multiplier) monsters are at dawn `d`; pinnacles more so. */
+export const dawnTough = (d: number, pinnacle = false) => (1 + (DAWN_TOUGHER * d) / 100) * (pinnacle ? Math.pow(1 + DAWN_PINNACLE / 100, d) : 1);
+
+/** The world a dawn later: tougher monsters (pinnacles more so), richer drops, on top of any map's own mods. */
 const wrapped = new WeakMap<object, { dawn: number; base: MapEffects | null; eff: MapEffects }>();
-export function dawnEffects(s: GameState, key: object, base: MapEffects | null): MapEffects | null {
+export function dawnEffects(s: GameState, key: object, base: MapEffects | null, pinnacle = false): MapEffects | null {
     const d = dawnOf(s);
     if (!d) return base;
     const c = wrapped.get(key);
     if (c && c.dawn === d && c.base === base) return c.eff;
-    const b = base ?? { life: 1, damage: 1, speed: 1, extra: [], hero: [], quantity: 0, rarity: 0 };
-    const eff: MapEffects = { ...b, life: b.life * (1 + (DAWN_TOUGHER * d) / 100), damage: b.damage * (1 + (DAWN_TOUGHER * d) / 100),
+    const b = base ?? NO_EFFECTS();
+    const tough = dawnTough(d, pinnacle);
+    const eff: MapEffects = { ...b, life: b.life * tough, damage: b.damage * tough,
         quantity: b.quantity + DAWN_RICHER * d, rarity: b.rarity + DAWN_RICHER * d };
     wrapped.set(key, { dawn: d, base, eff });
     return eff;

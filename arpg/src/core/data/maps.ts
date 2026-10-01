@@ -24,20 +24,26 @@ export interface MapArea {
     monsters: string[];
     boss: string;
     palette: [string, string, string];
+    /** Battle backdrop (ui/gfx/scenes.ts), the same at every tier and in the Atlas thumbnail. */
+    scene?: string;
 }
 
 export const MAP_AREAS: Record<string, MapArea> = Object.fromEntries(([
-    ["cinderfield", "Cinderfield", ["ashwalker", "hound", "cinderbat"], "cindermatron", ["#4a3a36", "#6a4a3a", "#ffb35c"]],
-    ["saltflats", "Salt Flats", ["crab", "scorpion", "bleached"], "sandwright", ["#d9d2c3", "#bfb5a0", "#ffffff"]],
-    ["drownedspire", "Drowned Spire", ["drowned", "eel", "bogwitch"], "tidewarden", ["#1f3b45", "#335866", "#9ff3ff"]],
-    ["glassmaze", "Glass Maze", ["wasp", "scorpion", "wraith"], "mirrorwarden", ["#b8e6f5", "#86b7c7", "#ff5a36"]],
-    ["lanternrow", "Lantern Row", ["lampman", "drowned", "sunpriest"], "keeper", ["#26262e", "#3e3a36", "#ffd84a"]],
-    ["bonecoast", "Bone Coast", ["gull", "crab", "drowned"], "drownedknight", ["#8aa0ab", "#cfc6b0", "#e9e4d4"]],
-    ["ashcathedral", "Ash Cathedral", ["sunpriest", "ashwalker", "wraith"], "emberjudge", ["#2b2233", "#5b4a4a", "#ffc233"]],
-    ["moltenweir", "Molten Weir", ["magmacrab", "hound", "eel"], "cindermatron", ["#2e1a16", "#7a2e1f", "#ff5a36"]],
-    ["mirrorsea", "Mirror Sea", ["eel", "wasp", "jackal"], "glassregent", ["#6fb3cf", "#4d8aa3", "#ffffff"]],
-    ["sunscar", "The Sunscar", ["hound", "sunpriest", "magmacrab", "cinderbat"], "lastdawn", ["#120c0c", "#3a1a10", "#ffe066"]],
-] as [string, string, string[], string, [string, string, string]][]).map(([id, name, monsters, boss, palette]) => [id, { id, name, monsters, boss, palette }]));
+    ["cinderfield", "Cinderfield", ["ashwalker", "hound", "cinderbat"], "cindermatron", ["#4a3a36", "#6a4a3a", "#ffb35c"], "dusk"],
+    ["saltflats", "Salt Flats", ["crab", "scorpion", "bleached"], "sandwright", ["#d9d2c3", "#bfb5a0", "#ffffff"], "desert"],
+    ["drownedspire", "Drowned Spire", ["drowned", "eel", "bogwitch"], "tidewarden", ["#1f3b45", "#335866", "#9ff3ff"], "swamp"],
+    ["glassmaze", "Glass Maze", ["wasp", "scorpion", "wraith"], "mirrorwarden", ["#b8e6f5", "#86b7c7", "#ff5a36"], "castle"],
+    ["lanternrow", "Lantern Row", ["lampman", "drowned", "sunpriest"], "keeper", ["#26262e", "#3e3a36", "#ffd84a"], "square"],
+    ["bonecoast", "Bone Coast", ["gull", "crab", "drowned"], "drownedknight", ["#8aa0ab", "#cfc6b0", "#e9e4d4"], "dusk"],
+    ["ashcathedral", "Ash Cathedral", ["sunpriest", "ashwalker", "wraith"], "emberjudge", ["#2b2233", "#5b4a4a", "#ffc233"], "castle"],
+    ["moltenweir", "Molten Weir", ["magmacrab", "hound", "eel"], "cindermatron", ["#2e1a16", "#7a2e1f", "#ff5a36"], "desert"],
+    ["mirrorsea", "Mirror Sea", ["eel", "wasp", "jackal"], "glassregent", ["#6fb3cf", "#4d8aa3", "#ffffff"], "swamp"],
+    ["sunscar", "The Sunscar", ["hound", "sunpriest", "magmacrab", "cinderbat"], "lastdawn", ["#120c0c", "#3a1a10", "#ffe066"], "forest"],
+    // Round 8: Ashfold's lanes, belfry and oil cellars, spilled into the Cinderlands.
+    ["lanternlanes", "Lantern Lanes", ["lanternghost", "watchman", "widow"], "nightwatch", ["#18222a", "#2a3a4a", "#ffb000"], "ashfold"],
+    ["hollowbelfry", "The Hollow Belfry", ["risen", "elder", "lanternghost"], "mayor", ["#1c1a26", "#3a3a4a", "#b9a4ff"], "square"],
+    ["oildeeps", "The Oil Deeps", ["smith", "risen", "elder", "widow"], "lamplighter", ["#12141a", "#2a2a30", "#9ef26a"], "castle"],
+] as [string, string, string[], string, [string, string, string], string?][]).map(([id, name, monsters, boss, palette, scene]) => [id, { id, name, monsters, boss, palette, ...(scene ? { scene } : {}) }]));
 
 export interface MapModDef {
     id: string;
@@ -52,6 +58,15 @@ export interface MapModDef {
     hero?: Mod[];
     /** More packs, in percent. */
     packs?: number;
+    /** More monster armour / evasion, in percent (round 8). */
+    armour?: number;
+    evasion?: number;
+    /** Added to monsters' fire, cold and lightning resistances. */
+    res?: number;
+    /** Monsters added to every pack. */
+    swarm?: number;
+    /** The map boss: more life and damage, in percent. */
+    boss?: { life: number; damage: number };
     /** Reward: increased item quantity and rarity, in percent. */
     qty: number;
     rarity: number;
@@ -70,6 +85,13 @@ const list: MapModDef[] = [
     { id: "exposed", text: "-12% to all maximum resistances", hero: (["fire", "cold", "lightning"] as const).map(t => ({ stat: `maxRes.${t}` as const, kind: "flat" as const, value: -12 })), qty: 10, rarity: 12 },
     { id: "brittle", text: "You take 15% more damage", hero: [{ stat: "dmgTaken", kind: "more", value: 15 }], qty: 9, rarity: 10 },
     { id: "dulled", text: "You deal 15% less damage", hero: [{ stat: "damage", kind: "more", value: -15 }], qty: 9, rarity: 10 },
+    // ---- round 8
+    { id: "armoured", text: "Monsters have 60% more armour", armour: 60, qty: 7, rarity: 10 },
+    { id: "veiled", text: "Monsters have 50% more evasion", evasion: 50, qty: 7, rarity: 10 },
+    { id: "warded", text: "Monsters have +20% to elemental resistances", res: 20, qty: 8, rarity: 11 },
+    { id: "swarming", text: "Packs have one more monster", swarm: 1, qty: 10, rarity: 6 },
+    { id: "draining", text: "Your skills cost 40% more mana", hero: [{ stat: "manaCost", kind: "inc", value: 40 }], qty: 7, rarity: 9 },
+    { id: "overlord", text: "The map boss has 80% more life and deals 30% more damage", boss: { life: 80, damage: 30 }, qty: 8, rarity: 20 },
 ];
 export const MAP_MODS: Record<string, MapModDef> = Object.fromEntries(list.map(m => [m.id, m]));
 

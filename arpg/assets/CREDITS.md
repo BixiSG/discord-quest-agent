@@ -20,6 +20,9 @@ packs them into `src/ui/gfx/atlas.gen.ts`. The raw packs are not committed:
 | Dungeon Crawl 32x32 tiles | Dungeon Crawl Stone Soup tile artists (maintained by Chris Hamons) | CC0 | https://opengameart.org/content/dungeon-crawl-32x32-tiles |
 | Gothicvania Town | Luis Zuno (ansimuz) | "Public domain and free to use on whatever you want" (artwork) | https://opengameart.org/content/gothicvania-town |
 | Gothicvania Magic Pack 9 | Luis Zuno (ansimuz) | CC0 | https://opengameart.org/content/gothicvania-magic-pack-9 |
+| Sideview Fantasy Patreon Collection (the dragon, the serpent, the flying creature) | Luis Zuno (ansimuz) | CC0 | https://opengameart.org/content/sideview-fantasy-patreon-collection |
+| Ghost animated (the hooded ice ghost) | LetargicDev | CC0 | https://opengameart.org/content/ghost-animated |
+| Zombie and Skeleton 32x48 (the zombie) | Reemax | CC0 | https://opengameart.org/content/zombie-and-skeleton-32x48 |
 
 The Gothicvania packs also ship music by Pascal Belisle under a
 credit-required license; none of it is used here.

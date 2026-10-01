@@ -180,10 +180,12 @@ export function frayStep(state: GameState, fray: FrayState, input: FrayInput, ev
             const first = fray.mons[targets[0]!]!;
             if (Math.abs(first.x - hero.x) > 4) hero.face = first.x < hero.x ? -1 : 1;
             ev.heroUse?.(sk.fx, targets);
+            // As on the road: the whole swing is the skill as cast, even if a kill changes the sheet.
+            const cast = sheet;
             let dealt = 0;
             for (const i of targets) {
                 const m = run.monsters[i]!;
-                const roll = heroHitRoll(sheet, m, rng);
+                const roll = heroHitRoll(cast, m, rng, eff);
                 if (!roll) { ev.heroMiss?.(i); continue; }
                 m.life -= roll.dmg;
                 dealt += roll.dmg;
@@ -195,7 +197,7 @@ export function frayStep(state: GameState, fray: FrayState, input: FrayInput, ev
                     state.fray!.kills++;
                 }
             }
-            applyLeech(run, sheet, dealt);
+            applyLeech(run, sheet, dealt, sk.leech);
         }
     }
 

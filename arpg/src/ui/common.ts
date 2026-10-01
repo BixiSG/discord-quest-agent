@@ -23,7 +23,7 @@ export const SLOT_LABEL = (s: Slot) => t(`slot.${s === "ring2" ? "ring" : s}`);
 export function chips<T extends string>(opts: [T, string, number?][], cur: T, pick: (v: T) => void): HTMLElement {
     const el = h("div", { class: "chips", attrs: { role: "radiogroup" } });
     for (const [v, label, n] of opts) {
-        el.append(h("button", { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur) }, on: { click: () => pick(v) } },
+        el.append(h("button", { class: `chip${v === cur ? " on" : ""}`, attrs: { role: "radio", "aria-checked": String(v === cur), "data-v": v }, on: { click: () => pick(v) } },
             label, n !== undefined ? h("b", { text: String(n) }) : null));
     }
     return el;

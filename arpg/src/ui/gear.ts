@@ -4,8 +4,8 @@
 import { emptySockets } from "./stones";
 import { RELICS, slotsFor } from "../core/data";
 import { stoneFullName, affixLine, baseName, className, itemName, relicFlavour, relicLines, relicName } from "../i18n/names";
-import { canEquip, equip, salvage, unequip, upgradeSlot, RARITY_RANK, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
-import { baseOf, levelReq, salvageValue } from "../core/items";
+import { salvageDust, canEquip, equip, salvage, unequip, upgradeSlot, RARITY_RANK, buyStashRoom, codexRarity, equipUpgrades, outdatedItems, ownedItem, setLocked, stashRoomCost, STASH_MAX, STASH_STEP } from "../core/game";
+import { baseOf, levelReq } from "../core/items";
 import type { GameState } from "../core/state";
 import { SLOTS, type Item, type Slot } from "../core/types";
 import { clear, fmt, h } from "./dom";
@@ -323,7 +323,7 @@ export function gearView(c: Ctx): HTMLElement {
                 on: { click: () => c.act(s => { const e = equip(s, selItem.uid, ts); if (!e) c.sel = { slot: ts }; return e; }) } }));
         });
         row.append(lockBtn(selItem));
-        row.append(h("button", { class: "btn alt", text: t("gear.salvageFor", { n: salvageValue(selItem) }), title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
+        row.append(h("button", { class: "btn alt", text: t("gear.salvageFor", { n: salvageDust(st, selItem) }), title: selItem.locked ? t("gear.unlockFirst") : t("gear.salvageTip"),
             attrs: { "data-key": "s", ...(selItem.locked ? { disabled: "" } : {}) },
             on: { click: () => c.act(s => { salvage(s, [selItem.uid]); c.sel = {}; }) } }));
         card.append(row);
