@@ -4,6 +4,15 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.11.0 - 2026-10-01
+
+- The Fray is reworked into a survivors-style fight: each wave is a horde streamed in from the edges, up to 160 standing at once, with weaker monsters, and kills leave motes of experience that you walk over.
+- A full surge of motes pauses the fight and offers three boons (haste, fury, reach, lodestone, vigour, red thirst, nimble, sweep) to pick with 1, 2 or 3, for that fray only.
+- Space is now a dodge roll that nothing can touch, Q drinks the flask, and the mouse wheel or + and - zoom the arena from 1x to 4x.
+- A second button, Fray a map, fights the next map from the device: a win completes the map, a fall or leaving loses it, and pinnacles stay queued.
+- A horde kill pays less experience than a road kill (about five times a road pack overall) and only one in five counts towards contracts, mastery, feats and totals; champions and bosses count fully.
+- The arena is larger (640 x 400) and the skill reaches a little further; a hero of two hours' play wins by walking at the monsters, and one that stands still falls.
+
 ## 1.10.0 - 2026-10-01
 
 - Hollowmarch has a new mode, the Fray: press F or use the card on the World tab to take the hero's reins in an arena on the road's current zone, walking with WASD or the arrows while the skill fires on its own and Space drinks the flask.

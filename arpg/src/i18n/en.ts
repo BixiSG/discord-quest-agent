@@ -514,7 +514,6 @@ const UI: Record<string, string> = {
     "toast.frayMapLost": "The map is lost with the fall",
     "fray.record": "{runs} fought, {won} won, {kills} kills. Fastest win: {time}.",
     "fray.none": "Not fought yet.",
-    "fray.mapsNote": "Maps stay in the device: the Fray is fought on the road's current place.",
     "fray.wave": "WAVE {n}/{total}",
     "fray.boss": "BOSS",
     "fray.kills": "{n} KILLS",

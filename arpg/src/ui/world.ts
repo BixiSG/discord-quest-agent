@@ -1,13 +1,13 @@
 // The World tab: auto-push, Hollow Night, the contract board, the ember shrine
 // and the roads of the acts.
 
-import { ACTS, CURRENCIES, ZONES } from "../core/data";
+import { ACTS, CURRENCIES, MAP_AREAS, ZONES } from "../core/data";
 import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffed } from "../core/season";
 import { endgameOpen } from "../core/maps";
 import { nextOmen, omenAt, omenDaysLeft } from "../core/omens";
 import { setZone } from "../core/game";
-import { frayZone, newFrayTotals } from "../core/fray";
-import type { GameState } from "../core/state";
+import { frayMapPreview, frayZone, newFrayTotals } from "../core/fray";
+import type { GameState, MapItem } from "../core/state";
 import { fmt, fmtDuration, h } from "./dom";
 import { spriteCanvas } from "./gfx/sprites";
 import { HERO_CAST } from "./gfx/cast";
@@ -16,7 +16,7 @@ import { scenery } from "./gfx/portrait";
 import { claimContract, contractDust, rerollContract, rerollCost, type Contract } from "../core/contracts";
 import { BLESSINGS, ORB_RESERVE, bless, blessingCost, setKeep, spareOrbValue } from "../core/shrine";
 import { t, tn } from "../i18n";
-import { actIntro, actName, actOutro, blessingName, blessingText, className, companionName, contractGoal, currencyName, omenName, omenText, relicName, zoneName, zoneStory } from "../i18n/names";
+import { actIntro, actName, actOutro, blessingName, blessingText, className, companionName, contractGoal, currencyName, mapAreaName, omenName, omenText, relicName, zoneName, zoneStory } from "../i18n/names";
 import { kv } from "./common";
 import type { Ctx } from "./views";
 
@@ -100,19 +100,34 @@ const CONTRACT_GLYPH: Record<Contract["kind"], Parameters<typeof glyph>[0]> = { 
 /** The Hollow Night card changes with the lanterns snuffed and its two finds (empty outside October). */
 export const hollowSig = (s: GameState) => (hollowNight(s) ? `${lanternsSnuffed(s)}:${hollowNightsLeft(s)}:${!!s.codex[HOLLOW_RELIC]}:${s.companions[HOLLOW_PET] !== undefined}` : "");
 
-/** The Fray: what it is, the record so far and the way in (F from anywhere in the window). */
+/** The map the Fray would take next, or null; a broken device reads as none (the button is just disabled). */
+function nextFrayMap(st: GameState): MapItem | null {
+    try { return frayMapPreview(st) ?? null; } catch { return null; }
+}
+
+/** The Fray card changes with the map it would take next. */
+export const fraySig = (s: GameState) => { const m = nextFrayMap(s); return m ? `${m.uid}:${m.tier}:${m.area}` : "-"; };
+
+/** The Fray: what it is, the record so far and the two ways in: the road (F from anywhere in the window) or a map. */
 function frayCard(c: Ctx): HTMLElement {
     const st = c.state;
     const f = st.fray ?? newFrayTotals();
     // No win yet means no fastest time: a dash, not "0s".
     const record = f.runs ? t("fray.record", { runs: fmt(f.runs), won: fmt(f.won), kills: fmt(f.kills), time: f.best ? `${Math.floor(f.best / 60)}:${String(f.best % 60).padStart(2, "0")}` : "-" }) : t("fray.none");
+    const busy = c.inFray();
+    const map = nextFrayMap(st);
+    const mapNote = map ? t("fray.nextMap", { name: MAP_AREAS[map.area] ? mapAreaName(map.area) : map.area, tier: map.tier }) : t("fray.noMaps");
     return h("div", { class: "card" },
         h("h3", null, h("span", { class: "row", style: "gap:6px" }, glyph("skills", 16), h("span", { text: t("fray.title") }))),
         h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("fray.blurb", { zone: zoneName(frayZone(st).id) }) }),
-        h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" },
-            h("span", { class: "grow", text: record }),
-            h("button", { class: "btn", text: t("fray.enter"), title: `${t("fray.enter")} (F)`, attrs: { "data-key": "f", ...(c.inFray() ? { disabled: "" } : {}) }, on: { click: () => c.startFray() } })),
-        st.activity.mode === "map" ? h("div", { class: "note", style: "margin-top:8px" }, glyph("atlas", 16), h("span", { text: t("fray.mapsNote") })) : null);
+        h("div", { class: "muted", style: "margin-bottom:8px", text: record }),
+        h("div", { class: "row", style: "gap:8px;flex-wrap:wrap;align-items:flex-start" },
+            h("div", { class: "col", style: "gap:3px" },
+                h("button", { class: "btn", text: t("fray.enter"), title: `${t("fray.enter")} (F)`, attrs: { "data-key": "f", ...(busy ? { disabled: "" } : {}) }, on: { click: () => c.startFray(false) } }),
+                h("span", { class: "muted", style: "font-size:12px", text: zoneName(frayZone(st).id) })),
+            h("div", { class: "col", style: "gap:3px" },
+                h("button", { class: "btn alt", text: t("fray.enterMap"), attrs: busy || !map ? { disabled: "" } : {}, on: { click: () => c.startFray(true) } }),
+                h("span", { class: "muted", style: "font-size:12px", text: mapNote }))));
 }
 
 /** Hollow Night (October): what it is, the nights left, lanterns snuffed and its two finds. */

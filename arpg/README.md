@@ -52,10 +52,12 @@ It has nothing to do with quests: it never reads quest data or orbs.
 - Hollow Night every October (the player's calendar): lantern-touched
   monsters, lantern-lit maps, a lantern contract, a seasonal relic and a
   seasonal companion, the Pumpkin Wisp.
-- The Fray: take the reins for one fight on the road's current zone. A
-  top-down arena, wave after wave of the zone's monsters and its boss last; you
-  walk, the skill fires on its own. Kills pay half again the experience, a win
-  adds spoils, a fall costs nothing, and the idle clock waits.
+- The Fray: take the reins for one fight on the road's current zone, or on the
+  next map from the device. A top-down arena, hordes streaming in from the
+  edges and the zone's boss last; you walk and dodge-roll, the skill fires on its
+  own. Kills leave motes: walk over them for experience and, as a surge fills, a
+  boon to pick for the fight. A win adds spoils (a map is completed), a fall
+  costs nothing (a map is lost), and the idle clock waits.
 - English, Russian and Ukrainian, everything included (story, items, the
   chronicle, the pixel font's Cyrillic); it follows Quest Agent's language.
 
@@ -90,8 +92,9 @@ either way; Menu > Export gives you a portable copy.
   double-click the title to maximize. The title-bar buttons cycle the battle
   view (normal, large, hidden), fold the game into a mini strip that keeps
   playing, maximize and close. Keys: 1-9 switch tabs, Esc closes a dialog.
-- The Fray (World tab card, or F): WASD or the arrows walk, Space drinks the
-  flask, P pauses, Esc pauses and a second Esc within 3 seconds leaves, Enter
+- The Fray (World tab card, or F; "Fray a map" for a map): WASD or the arrows
+  walk, Space rolls, Q drinks the flask, 1-3 pick a boon, the wheel over the
+  arena or +/- zoom (1x-4x), P pauses, Esc pauses and a second Esc within 3 seconds leaves, Enter
   or Esc return from the end screen. Losing window focus pauses; it is not
   available in the mini strip.
 - Sound is off until you turn it on with the speaker button (or M).
