@@ -4,7 +4,7 @@
 
 import { PINNACLES, ZONES } from "./data";
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface SaveEnvelope<S = unknown> {
     game: "hollowmarch";
@@ -111,6 +111,11 @@ export const MIGRATIONS: Record<number, Migration> = {
     // v10 (round 9): skill mastery, from zero (kills before it weren't counted per skill).
     9: (s: any) => {
         s.mastery ??= {};
+        return s;
+    },
+    // v11 (round 10): the Fray's tallies.
+    10: (s: any) => {
+        s.fray ??= { runs: 0, won: 0, kills: 0, best: 0 };
         return s;
     },
 };

@@ -2,7 +2,7 @@
 // play and offline catch-up both go through advance().
 
 import { Rng, hashSeed } from "../rng";
-import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SUPPORTS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type ZoneDef } from "../data";
+import { ACTS, ACT_BOSS_POINTS, CURRENCIES, CURRENCY_ORDER, MONSTERS, SKILLS, SUPPORTS, TRIAL_AFTER, TRIAL_POINTS, ZONES, ZONE_ORDER, monsterDamage, monsterDefence, monsterLife, monsterXp, xpPenalty, xpToNext, MAX_LEVEL, type MonsterDef, type ZoneDef } from "../data";
 import { armourReduction, hitChance, type Sheet } from "../character";
 import { rollItem, rollRelic } from "../items";
 import type { GameState, MonsterState, RunState } from "../state";
@@ -31,11 +31,11 @@ const DT = STEP_MS / 1000;
 export const MAX_OFFLINE_MS = 24 * 3600e3;
 const TRAVEL_S = 1.5;
 const RESPAWN_S = 6;
-const FLASK_MAX = 30, FLASK_COST = 10, FLASK_S = 2;
+export const FLASK_MAX = 30, FLASK_COST = 10, FLASK_S = 2;
 /** Map auto-push: failed maps that lower the cap, clean maps in a row that raise it again. */
 const MAP_FAILS = 2, MAP_CLEAN = 8;
 /** Auto-push waits until the hero is at most this many levels below the next zone (full XP range). */
-export const PUSH_LEVEL_MARGIN = 2;
+export const PUSH_LEVEL_MARGIN = 1;
 /** Share of a level's experience lost on a death in a map. */
 export const MAP_DEATH_XP = 0.03;
 /**
@@ -78,7 +78,7 @@ export interface SimEvents {
     omen?(id: string): void;
 }
 
-const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
+export const flaskAmount = (level: number, sheet: Sheet) => (40 + 14 * level) * sheet.flaskHeal;
 
 export function newRun(state: GameState, sheet: Sheet): RunState {
     const act = state.activity;
@@ -111,7 +111,7 @@ export function runZone(state: GameState, run: RunState): ZoneDef {
 }
 
 /** A run's world: the map's mods, then the dawn, then the week's omen. */
-const effectsOf = (state: GameState, run: RunState): MapEffects | null => {
+export const effectsOf = (state: GameState, run: RunState): MapEffects | null => {
     const pin = !!run.map?.pinnacle;
     return omenEffects(state, run, dawnEffects(state, run, run.map ? mapEffects(run.map, atlasEffects(state)) : null, pin), pin);
 };
@@ -132,7 +132,7 @@ export function runSheet(state: GameState): Sheet {
     return sheet;
 }
 
-function makeMonster(def: string, level: number, champion: boolean, rng: Rng, eff: MapEffects | null): MonsterState {
+export function makeMonster(def: string, level: number, champion: boolean, rng: Rng, eff: MapEffects | null): MonsterState {
     const d = MONSTERS[def]!;
     const life = Math.round(monsterLife(level) * d.life * (champion ? 3 : 1) * (eff?.life ?? 1));
     return { def, level, life, maxLife: life, champion, atk: rng.range(0.4, 1.4) / d.speed };
@@ -258,7 +258,9 @@ export const monsterArmour = (m: MonsterState, eff: MapEffects | null) => monste
 export const monsterRes = (m: MonsterState, t: DamageType, eff: MapEffects | null) => (MONSTERS[m.def]!.res?.[t] ?? 0) + (t !== "phys" && t !== "chaos" ? eff?.res ?? 0 : 0);
 
 function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): Sheet {
-    const sk = sheet.skill;
+    // The swing is the skill as it was cast: a kill that changes the sheet (a level, mastery, gear)
+    // counts from the next one, so every target's roll and the leech use `cast`.
+    const cast = sheet, sk = cast.skill;
     const alive: number[] = [];
     run.monsters.forEach((m, i) => { if (m.life > 0) alive.push(i); });
     const targets = alive.slice(0, sk.targets);
@@ -266,32 +268,80 @@ function heroAttack(state: GameState, run: RunState, sheet: Sheet, rng: Rng, ev:
     let dealt = 0;
     for (const i of targets) {
         const m = run.monsters[i]!;
-        if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterEvasion(m, eff)))) { ev.heroMiss?.(i); continue; }
-        const crit = rng.chance(sk.critChance / 100);
-        let dmg = 0;
-        for (const t of DAMAGE_TYPES) {
-            const [lo, hi] = sk.hit[t];
-            if (hi <= 0) continue;
-            let x = rng.range(lo, hi);
-            if (crit) x *= sk.critMulti / 100;
-            if (t === "phys") x *= 1 - armourReduction(monsterArmour(m, eff), x);
-            else x *= 1 - (monsterRes(m, t, eff) - sk.pen[t]) / 100;
-            dmg += Math.max(0, x);
-        }
-        dmg = Math.max(1, dmg);
-        m.life -= dmg;
-        dealt += dmg;
-        ev.heroHit?.(i, dmg, crit);
+        const roll = heroHitRoll(cast, m, rng, eff);
+        if (!roll) { ev.heroMiss?.(i); continue; }
+        m.life -= roll.dmg;
+        dealt += roll.dmg;
+        ev.heroHit?.(i, roll.dmg, roll.crit);
         if (m.life <= 0) sheet = onKill(state, run, m, sheet, rng, ev);
     }
-    if (sk.leech > 0 && dealt > 0) {
-        // COMBAT.md 8: at most 10% of max life per second, tracked as a refilling budget.
-        const h = run.hero;
-        const got = Math.min(dealt * sk.leech / 100, h.leech ?? sheet.life * 0.1);
-        h.leech = (h.leech ?? sheet.life * 0.1) - got;
-        h.life = Math.min(sheet.life, h.life + got);
-    }
+    applyLeech(run, sheet, dealt, sk.leech);
     return sheet;
+}
+
+/** One hit of the hero's skill on `m` (through the world's monster mods): null when an attack misses. Shared with the Fray. */
+export function heroHitRoll(sheet: Sheet, m: MonsterState, rng: Rng, eff: MapEffects | null): { dmg: number; crit: boolean } | null {
+    const sk = sheet.skill;
+    if (sk.kind === "attack" && !rng.chance(hitChance(sk.accuracy, monsterEvasion(m, eff)))) return null;
+    const crit = rng.chance(sk.critChance / 100);
+    let dmg = 0;
+    for (const t of DAMAGE_TYPES) {
+        const [lo, hi] = sk.hit[t];
+        if (hi <= 0) continue;
+        let x = rng.range(lo, hi);
+        if (crit) x *= sk.critMulti / 100;
+        if (t === "phys") x *= 1 - armourReduction(monsterArmour(m, eff), x);
+        else x *= 1 - (monsterRes(m, t, eff) - sk.pen[t]) / 100;
+        dmg += Math.max(0, x);
+    }
+    return { dmg: Math.max(1, dmg), crit };
+}
+
+/**
+ * Life leeched from `dealt` damage (COMBAT.md 8: at most 10% of max life per second, a refilling budget).
+ * `leech` is the casting skill's percentage (the sheet may have changed since: a kill mid-swing).
+ */
+export function applyLeech(run: RunState, sheet: Sheet, dealt: number, leech = sheet.skill.leech): void {
+    if (leech <= 0 || dealt <= 0) return;
+    const h = run.hero;
+    const got = Math.min(dealt * leech / 100, h.leech ?? sheet.life * 0.1);
+    h.leech = (h.leech ?? sheet.life * 0.1) - got;
+    h.life = Math.min(sheet.life, h.life + got);
+}
+
+/** A monster's attack timer: seconds until it swings next. */
+export const monsterSwing = (d: MonsterDef, rng: Rng, eff: MapEffects | null) => rng.range(0.85, 1.15) / (d.speed * (eff?.speed ?? 1));
+
+/**
+ * One swing of `m` at the hero: evade and block first, then damage through armour and
+ * resistances, taken from energy shield before life. `mapBoss` multiplies a boss's base damage.
+ * Returns what the UI needs; the hero's vitals are already changed. Shared with the Fray.
+ */
+export function monsterHitRoll(run: RunState, m: MonsterState, sheet: Sheet, rng: Rng, eff: MapEffects | null, mapBoss: number): { dmg: number; avoided: "evade" | "block" | null } {
+    const h = run.hero;
+    const d = MONSTERS[m.def]!;
+    if (!d.spell) {
+        const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m.level) * d.accuracy, sheet.evasion));
+        if (rng.chance(evade)) return { dmg: 0, avoided: "evade" };
+    }
+    if (rng.chance(sheet.block / 100)) return { dmg: 0, avoided: "block" };
+    const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
+    let dmg = 0;
+    for (const t of DAMAGE_TYPES) {
+        let share = d.split[t] ?? 0;
+        if (eff) for (const [et, es] of eff.extra) if (et === t) share += es;
+        if (!share) continue;
+        let x = base * share;
+        if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
+        else x *= 1 - sheet.res[t] / 100;
+        dmg += x;
+    }
+    dmg *= sheet.dmgTaken;
+    const fromEs = Math.min(h.es, dmg);
+    h.es -= fromEs;
+    h.life -= dmg - fromEs;
+    h.esDelay = 2;
+    return { dmg, avoided: null };
 }
 
 function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: MapEffects | null): void {
@@ -301,40 +351,27 @@ function monstersAct(run: RunState, sheet: Sheet, rng: Rng, ev: SimEvents, eff: 
         const d = MONSTERS[m.def]!;
         m.atk -= DT;
         if (m.atk > 0) return;
-        m.atk += rng.range(0.85, 1.15) / (d.speed * (eff?.speed ?? 1));
-        if (!d.spell) {
-            const evade = Math.min(0.75, 1 - hitChance(monsterDefence(m.level) * d.accuracy, sheet.evasion));
-            if (rng.chance(evade)) { ev.monsterHit?.(i, 0, "evade"); return; }
-        }
-        if (rng.chance(sheet.block / 100)) { ev.monsterHit?.(i, 0, "block"); return; }
+        m.atk += monsterSwing(d, rng, eff);
         const mapBoss = d.boss && run.map ? (run.map.pinnacle ? enrage(run.elapsed) : MAP_BOSS_DAMAGE * (eff?.bossDamage ?? 1)) : 1;
-        const base = monsterDamage(m.level) * d.damage * mapBoss * (m.champion ? 1.5 : 1) * (eff?.damage ?? 1) * rng.range(0.8, 1.2);
-        let dmg = 0;
-        for (const t of DAMAGE_TYPES) {
-            let share = d.split[t] ?? 0;
-            if (eff) for (const [et, es] of eff.extra) if (et === t) share += es;
-            if (!share) continue;
-            let x = base * share;
-            if (t === "phys") x *= 1 - armourReduction(sheet.armour, x);
-            else x *= 1 - sheet.res[t] / 100;
-            dmg += x;
-        }
-        dmg *= sheet.dmgTaken;
-        const fromEs = Math.min(h.es, dmg);
-        h.es -= fromEs;
-        h.life -= dmg - fromEs;
-        h.esDelay = 2;
-        ev.monsterHit?.(i, dmg, null);
+        const r = monsterHitRoll(run, m, sheet, rng, eff, mapBoss);
+        ev.monsterHit?.(i, r.dmg, r.avoided);
     });
 }
 
-function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, rng: Rng, ev: SimEvents): Sheet {
+/** Extra rewards for a kill: the Fray pays more experience and rolls better loot. */
+export interface KillBonus { xp: number; rarity: number }
+
+/**
+ * Everything a kill gives: experience, flask charges, loot, currency, stones, maps, companions.
+ * Shared with the Fray, which passes its own run. Returns the sheet (re-derived when gear changed).
+ */
+export function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, rng: Rng, ev: SimEvents, killBonus?: KillBonus): Sheet {
     const d = MONSTERS[m.def]!;
     const hero = state.hero;
     const atlas = run.map ? atlasEffects(state) : null;
     let changed0 = false;
     const eff = effectsOf(state, run);
-    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100));
+    const xp = Math.round(monsterXp(m.level) * d.xp * (m.champion ? 3 : 1) * (m.lantern ? LANTERN.xp : 1) * xpPenalty(hero.level, m.level) * sheet.xpGain * (1 + (atlas?.xp ?? 0) / 100) * (1 + blessing(state, "insight") / 100) * (killBonus?.xp ?? 1));
     run.kills++; run.xp += xp;
     state.totals.kills++;
     // The skill in use grows with every kill (a new level changes the sheet).
@@ -354,7 +391,7 @@ function onKill(state: GameState, run: RunState, m: MonsterState, sheet: Sheet, 
     if (d.boss) drops = 2 + (rng.chance(0.5 * qty) ? 1 : 0);
     else if (rng.chance((m.champion ? 0.4 : m.lantern ? LANTERN.drop : 0.07) * qty)) drops = 1;
     for (let k = 0; k < drops; k++) {
-        const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : m.lantern ? LANTERN.rarity : 0) + (d.boss ? 250 : 0);
+        const bonus = sheet.rarity + codexRarity(state) + blessing(state, "fortune") + (eff?.rarity ?? 0) + (m.champion ? 100 : m.lantern ? LANTERN.rarity : 0) + (d.boss ? 250 : 0) + (killBonus?.rarity ?? 0);
         const opts = d.boss && k === 0 ? { rarity: "rare" as const } : { rarityBonus: bonus };
         const pin = run.map?.pinnacle && d.boss;
         const relicChance = pin && k === 0 ? 1 : ((d.boss ? 0.04 + (atlas?.bossRelic ?? 0) / 100 : m.champion ? 0.01 : 0.003) * (1 + bonus / 200));

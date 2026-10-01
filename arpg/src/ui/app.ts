@@ -24,6 +24,8 @@ import { claimable } from "../core/contracts";
 import type { SaveStore } from "../platform/store";
 import type { KV } from "../platform/kv";
 import { Battle } from "./battle";
+import { FrayView } from "./fray";
+import { frayAdvance, frayZone, newFray, newFrayTotals, type FrayEvents, type FrayInput, type FrayState } from "../core/fray";
 import { CSS } from "./css";
 import { clear, fmt, fmtDuration, h } from "./dom";
 import { glyph, type GlyphName } from "./glyphs";
@@ -85,6 +87,12 @@ const NAV_GLYPH: Record<ViewId, GlyphName> = { hero: "hero", gear: "gear", forge
 const RIM: Record<string, string> = { plain: "#c9c3b5", enchanted: "#5aa9ff", rare: "#ffd23f", relic: "#ff8a3a" };
 /** Tab keys: 1-9, then 0 for the tenth. */
 const navKey = (i: number) => String((i + 1) % 10);
+/** Fray walking keys by physical key (e.code, so a Cyrillic layout walks the same) and by arrow name. */
+const FRAY_DIR: Record<string, "up" | "down" | "left" | "right"> = {
+    KeyW: "up", KeyS: "down", KeyA: "left", KeyD: "right", ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+};
+/** Esc arms leaving the Fray; a second Esc inside this window leaves. */
+const FRAY_LEAVE_MS = 3000;
 
 export class GameWindow {
     private host: HTMLDivElement | null = null;
@@ -112,6 +120,17 @@ export class GameWindow {
     private toasts!: HTMLDivElement;
     private battle = new Battle();
     private state: GameState | null = null;
+    /** The Fray in progress (null on the road). Never saved: closing or folding the window abandons it. */
+    private fray: FrayState | null = null;
+    private frayView = new FrayView();
+    /** Held fray keys: "up" | "down" | "left" | "right" | "flask". */
+    private frayKeys = new Set<string>();
+    private frayPaused = false;
+    private frayLeaveArmed = false;
+    private frayArmedAt = 0;
+    /** performance.now() of the last frayAdvance (or paused frame). */
+    private frayLast = 0;
+    private frayEv: FrayEvents = {};
     private view: ViewId = "hero";
     private sig = "";
     private timer: number | null = null;
@@ -134,6 +153,9 @@ export class GameWindow {
         void this.save();
     };
     private onResize = () => this.refit();
+    /** Losing the player's attention pauses a fray: a hidden tab or Discord losing focus. */
+    private onVisibility = () => { if (document.hidden) this.frayPause(); };
+    private onBlur = () => this.frayPause();
     /** The tab's height, for what must fit in it (the Forge's anvil stays in view). */
     private bodySize: ResizeObserver | null = null;
 
@@ -147,6 +169,8 @@ export class GameWindow {
         this.build();
         window.addEventListener("pagehide", this.onUnload);
         window.addEventListener("resize", this.onResize);
+        window.addEventListener("blur", this.onBlur);
+        document.addEventListener("visibilitychange", this.onVisibility);
         const loaded = await this.load();
         if (!this.host) return; // closed while loading
         if (!loaded) { this.showCreation(); return; }
@@ -160,6 +184,8 @@ export class GameWindow {
         await this.save();
         window.removeEventListener("pagehide", this.onUnload);
         window.removeEventListener("resize", this.onResize);
+        window.removeEventListener("blur", this.onBlur);
+        document.removeEventListener("visibilitychange", this.onVisibility);
         this.bodySize?.disconnect(); this.bodySize = null;
         if (this.stopKeys) for (const k of STOP_EVENTS) this.host.removeEventListener(k, this.stopKeys);
         this.host.remove();
@@ -228,6 +254,7 @@ export class GameWindow {
         this.top = h("div", { class: "top" }, this.stage);
         // In the strip the battle is the handle: drag it to move, double-click for the full window.
         this.stage.addEventListener("dblclick", e => { if (this.frame.mini && !(e.target as HTMLElement).closest("button")) this.setMini(false); });
+        this.stage.addEventListener("pointerdown", () => { if (this.fray && this.frayPaused) this.frayResume(); });
         this.hudWrap = h("div", { class: "hudw", attrs: { role: "img", "aria-label": t("app.hudLabel") } }, this.hud.canvas);
 
         this.nav = h("div", { class: "nav", attrs: { role: "tablist", "aria-label": t("app.sections") } });
@@ -260,6 +287,8 @@ export class GameWindow {
         this.win.addEventListener("keydown", e => {
             const t = e.target as HTMLElement;
             if (t.closest("input, textarea, select")) return;
+            // The Fray owns the keyboard (a dialog over it still gets Esc first).
+            if (this.fray && !this.win.querySelector(":scope > .modal")) { this.frayKeyDown(e); return; }
             // Rows and item slots drawn as divs act like buttons from the keyboard too.
             if ((e.key === "Enter" || e.key === " ") && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") { t.click(); e.preventDefault(); return; }
             if (e.key === "Escape") {
@@ -281,10 +310,17 @@ export class GameWindow {
                 return;
             }
             if (e.key === "m" || e.key === "M") { this.setSound(!this.frame.sfx); e.preventDefault(); return; }
+            if (e.code === "KeyF" || e.key === "f" || e.key === "F") { this.startFray(); e.preventDefault(); return; }
             // Views mark their own shortcuts: <button data-key="e">.
             const k = e.key.length === 1 ? e.key.toLowerCase() : "";
             const hot = k && /^[a-z]$/.test(k) ? this.body.querySelector<HTMLButtonElement>(`[data-key="${k}"]:not([disabled])`) : null;
             if (hot) { hot.click(); e.preventDefault(); }
+        });
+        this.win.addEventListener("keyup", e => { if (this.fray) this.frayKeyUp(e); });
+        // Focus leaving the game window pauses a fray (moving between the window's own buttons does not).
+        this.win.addEventListener("focusout", e => {
+            const to = e.relatedTarget as Node | null;
+            if (!(to && this.win.contains(to))) this.frayPause();
         });
         this.applyFrame();
         pixelize(this.nav);
@@ -328,7 +364,19 @@ export class GameWindow {
             const box = this.frame.max ? { x: 8, y: top + 8, w: vw - 16, h: vh - top - 16 } : g;
             Object.assign(this.win.style, { left: box.x + "px", top: box.y + "px", width: box.w + "px", height: box.h + "px" });
             const inner = box.w - 6;
-            hudAt(inner, inner >= 1180 ? 3 : inner >= 520 ? 2 : 1);
+            const hudScale = inner >= 1180 ? 3 : inner >= 520 ? 2 : 1;
+            hudAt(inner, hudScale);
+            if (this.win.classList.contains("fray")) {
+                // The arena takes everything under the bar and over the HUD: window borders (6),
+                // the bar, the stage's and the HUD's bottom borders (3 each).
+                const barH = (this.win.querySelector(".bar") as HTMLElement | null)?.offsetHeight ?? 34;
+                const stageH = Math.max(60, box.h - 6 - barH - 3 - (HUD_H * hudScale + 3));
+                const sc = Math.max(1, Math.floor(stageH / 190));
+                this.stage.style.height = stageH + "px";
+                this.frayView.resize(Math.ceil(inner / sc), Math.ceil(stageH / sc));
+                Object.assign(this.frayView.canvas.style, { width: this.frayView.canvas.width * sc + "px", height: this.frayView.canvas.height * sc + "px" });
+                return;
+            }
             if (this.frame.stage === "off") { this.stage.style.height = ""; return; }
             // The scene keeps about 160 logical pixels of height and gets as wide as the window:
             // whole-number scaling, nothing stretched or letterboxed.
@@ -380,6 +428,7 @@ export class GameWindow {
     private saveFrame(): void { this.kv.set(UI_KEY, { ...this.frame }); }
     setMini(on: boolean): void {
         if (on && !this.state) return; // no hero yet: nothing to show in a strip
+        if (on && this.fray) this.endFray(true); // the strip has no arena: folding leaves the fight
         this.frame.mini = on; this.saveFrame(); this.applyFrame();
         if (!on) { this.sig = ""; this.renderTab(true); this.focusModal(); }
         this.syncMini();
@@ -498,9 +547,9 @@ export class GameWindow {
         this.makeCtx();
         this.sig = "";
         this.renderTab(true);
-        const be = this.battle.events(() => performance.now(), () => this.state!);
         const sfx = (x: Sfx, loud = false) => { if (!this.battle.quiet && (loud || !this.frame.mini)) this.sound.play(x); };
-        const ev: SimEvents = {
+        // The app's sounds, toasts and strip line, layered over a renderer's events (the road's or the Fray's).
+        const layer = (be: SimEvents): SimEvents => ({
             ...be,
             heroUse: (fx, targets) => { this.lastUse = performance.now(); be.heroUse?.(fx, targets); },
             heroHit: (i, dmg, crit) => { be.heroHit?.(i, dmg, crit); sfx(crit ? "crit" : "hit"); },
@@ -547,9 +596,30 @@ export class GameWindow {
                 this.lastEvent = [isNew ? "event.petJoined" : "event.petCloser", { pet }];
                 sfx("level", true);
             },
+        });
+        const ev = layer(this.battle.events(() => performance.now(), () => this.state!));
+        const fe = this.frayView.events(() => performance.now(), () => this.fray);
+        this.frayEv = {
+            ...layer(fe),
+            // The end screen has the fall; the road's death line and sound stay out of it.
+            death: zone => fe.death?.(zone),
+            wave: (n, boss) => { fe.wave?.(n, boss); sfx(boss ? "boss" : "click"); },
+            end: (outcome, f) => {
+                fe.end?.(outcome, f);
+                const kills = fmt(f.run.kills);
+                this.toast(outcome === "won" ? t("toast.frayWon", { kills, time: fmtDuration(f.t * 1000) }) : t("toast.frayFallen", { kills }), outcome === "won" ? "level" : "err");
+                sfx(outcome === "won" ? "level" : "death", true);
+                void this.save();
+            },
         };
         this.timer = window.setInterval(() => {
             if (!this.state || this.busy) return;
+            // The road waits while the hero is in the Fray: its clock is held at now, so nothing is caught up afterwards.
+            if (this.fray) {
+                this.state.simTo = Date.now();
+                if (Date.now() - this.lastSave > AUTOSAVE_MS) void this.save();
+                return;
+            }
             // A long gap (sleep, throttled background tab) is replayed quietly, with a report.
             if (Date.now() - this.state.simTo > 30e3) { void this.catchUp(); return; }
             stampTz(this.state);
@@ -559,6 +629,7 @@ export class GameWindow {
         const frame = () => {
             this.raf = requestAnimationFrame(frame);
             if (!this.state || document.hidden) return;
+            if (this.fray) { this.frayFrame(); return; }
             if (this.frame.mini || this.frame.stage !== "off") this.battle.draw(this.state, runSheet(this.state), performance.now());
             this.drawHud();
             if (!this.frame.mini) this.renderTab(false);
@@ -567,9 +638,124 @@ export class GameWindow {
     }
 
     private stopLoop(): void {
+        // Closing or resetting the window leaves the fight; the caller saves (or, resetting, must not).
+        if (this.fray) this.endFray(true, false);
         if (this.timer !== null) clearInterval(this.timer);
         if (this.raf !== null) cancelAnimationFrame(this.raf);
         this.timer = this.raf = null;
+    }
+
+    // ---- the Fray -----------------------------------------------------------
+
+    /** Takes the hero into the Fray: the window becomes the arena until the fight is over and the player returns. */
+    private startFray(): void {
+        if (!this.state || !this.host || this.fray || this.busy || this.frame.mini || this.win.classList.contains("creating")) return;
+        this.state.fray ??= newFrayTotals();
+        this.fray = newFray(this.state, Date.now());
+        this.frayView.reset();
+        this.frayKeys.clear();
+        this.frayPaused = this.frayLeaveArmed = false;
+        this.frayLast = performance.now();
+        // Focus first: hiding the tab under a focused button would blur it to nowhere, and that pauses.
+        this.win.focus();
+        this.stage.insertBefore(this.frayView.canvas, this.battle.canvas);
+        this.battle.canvas.style.display = "none";
+        this.win.classList.add("fray");
+        this.refit();
+    }
+
+    /**
+     * Back to the road. `left`: abandoned mid-fight (Esc twice, closing, folding), which counts as a fray fought.
+     * `save` is off when the caller saves itself or must not (a reset deleting the save right after).
+     */
+    private endFray(left = false, save = true): void {
+        const f = this.fray;
+        if (!f) return;
+        if (left && f.outcome === "fight" && this.state) {
+            (this.state.fray ??= newFrayTotals()).runs++;
+            this.toast(t("toast.frayLeft"));
+        }
+        this.fray = null;
+        this.frayKeys.clear();
+        this.frayPaused = this.frayLeaveArmed = false;
+        this.frayView.canvas.remove();
+        this.battle.canvas.style.display = "";
+        this.win.classList.remove("fray");
+        this.refit();
+        this.sig = "";
+        this.renderTab(true);
+        if (save) void this.save();
+    }
+
+    private frayPause(): void {
+        if (!this.fray) return;
+        this.frayKeys.clear(); // a key released while away would otherwise stay held
+        if (this.fray.outcome === "fight") this.frayPaused = true;
+    }
+
+    private frayResume(): void {
+        this.frayPaused = this.frayLeaveArmed = false;
+        this.frayLast = performance.now();
+    }
+
+    private frayKeyDown(e: KeyboardEvent): void {
+        const f = this.fray!;
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+        const dir = FRAY_DIR[e.code] ?? FRAY_DIR[e.key];
+        if (dir) { this.frayKeys.add(dir); e.preventDefault(); return; }
+        if (e.code === "Space" || e.key === " ") { this.frayKeys.add("flask"); e.preventDefault(); return; }
+        const fight = f.outcome === "fight";
+        if (e.key === "Escape") {
+            e.preventDefault();
+            if (e.repeat) return;
+            if (!fight) { this.endFray(); return; }
+            const now = performance.now();
+            if (this.frayLeaveArmed && now - this.frayArmedAt < FRAY_LEAVE_MS) { this.endFray(true); return; }
+            this.frayPause();
+            this.frayLeaveArmed = true;
+            this.frayArmedAt = now;
+            return;
+        }
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (!fight && !e.repeat) this.endFray();
+            return;
+        }
+        if (e.code === "KeyP" || e.key === "p" || e.key === "P") {
+            e.preventDefault();
+            if (!fight || e.repeat) return;
+            if (this.frayPaused) this.frayResume(); else this.frayPause();
+        }
+        // Anything else does nothing in the Fray: no tab switches, no sound toggle.
+    }
+
+    private frayKeyUp(e: KeyboardEvent): void {
+        const dir = FRAY_DIR[e.code] ?? FRAY_DIR[e.key];
+        if (dir) { this.frayKeys.delete(dir); e.preventDefault(); }
+        // preventDefault on keyup too: a focused bar button would otherwise click on Space.
+        else if (e.code === "Space" || e.key === " ") { this.frayKeys.delete("flask"); e.preventDefault(); }
+    }
+
+    private frayInput(): FrayInput {
+        const k = this.frayKeys;
+        return {
+            dx: (k.has("right") ? 1 : 0) - (k.has("left") ? 1 : 0),
+            dy: (k.has("down") ? 1 : 0) - (k.has("up") ? 1 : 0),
+            flask: k.has("flask"),
+        };
+    }
+
+    /** One animation frame of the Fray: step it to now (unless paused), draw the arena and the HUD. */
+    private frayFrame(): void {
+        const s = this.state!, f = this.fray!;
+        const now = performance.now();
+        if (this.frayLeaveArmed && now - this.frayArmedAt >= FRAY_LEAVE_MS) this.frayLeaveArmed = false;
+        // A dialog over the arena (a story beat) holds the fight like a pause.
+        const held = this.frayPaused || !!this.win.querySelector(":scope > .modal");
+        if (!held) frayAdvance(s, f, now, this.frayLast, this.frayInput(), this.frayEv);
+        this.frayLast = now;
+        this.frayView.draw(s, f, sheetOf(s), now, { paused: held && f.outcome === "fight", leaveArmed: this.frayLeaveArmed });
+        this.drawHud();
     }
 
     // ---- UI -----------------------------------------------------------------
@@ -601,6 +787,7 @@ export class GameWindow {
             importSave: async text => {
                 try {
                     const env = GameWindow.accept(importText(text));
+                    if (this.fray) this.endFray(true, false); // the fray belongs to the hero being replaced (saved next line)
                     await this.save();
                     this.lastBackup = 0; // the next save moves the pre-import hero into the backup
                     this.state = env.state;
@@ -617,6 +804,8 @@ export class GameWindow {
                 void this.store.del("main").then(() => this.store.del("backup")).then(() => this.showCreation());
             },
             storeKind: this.store.kind,
+            startFray: () => this.startFray(),
+            inFray: () => !!this.fray,
         };
     }
 
@@ -720,13 +909,16 @@ export class GameWindow {
     private ariaAt = 0;
     private drawHud(): void {
         const s = this.state!;
-        const sh = runSheet(s);
-        const run = s.activity.run;
+        const fray = this.fray;
+        // In the Fray the HUD follows the arena's run, sheet and place; on the road, the idle run's.
+        const sh = fray ? sheetOf(s) : runSheet(s);
+        const run = fray ? fray.run : s.activity.run;
         const hh = run?.hero;
         const need = xpToNext(s.hero.level);
         const xpF = isFinite(need) ? s.hero.xp / need : 1;
         const eta = this.eta(need - s.hero.xp);
-        const z = run ? runZone(s, run) : ZONES[s.activity.zone]!;
+        const z = fray ? frayZone(s) : run ? runZone(s, run) : ZONES[s.activity.zone]!;
+        const place = fray ? zoneName(z.id) : placeName(s);
         const speed = Math.max(0.05, Math.min(sh.skill.speed, sh.skill.sustain));
         const w = s.hero.equipment.weapon;
         const now = performance.now();
@@ -737,7 +929,8 @@ export class GameWindow {
             ready: run?.phase === "fight" ? (now - this.lastUse) / (1000 / speed) : 1,
             skillName: skillName(sh.skill.id), weaponKind: w ? baseOf(w).kind : null, spell: sh.skill.kind !== "attack",
             weaponArt: w ? this.weaponArt(w) : null, weaponRim: w ? RIM[w.rarity] : undefined,
-            zone: placeName(s), zoneLevel: z.level, packDps: sh.skill.packDps, dead: run?.phase === "dead", respawn: run?.phase === "dead" ? run.timer : 0,
+            // A fall in the Fray has no respawn countdown (its end screen says so), so the HUD's dead state is the road's only.
+            zone: place, zoneLevel: z.level, packDps: sh.skill.packDps, dead: !fray && run?.phase === "dead", respawn: !fray && run?.phase === "dead" ? run.timer : 0,
         }, now);
 
         const wk = `${z.id}|${z.palette.join()}`;
@@ -757,9 +950,10 @@ export class GameWindow {
         if (now - this.ariaAt > 1000) {
             this.ariaAt = now;
             const n = (x: number) => fmt(Math.floor(Math.max(0, x)));
-            const label = (run?.phase === "dead" ? t("hud.ariaDead", { n: Math.ceil(run.timer) }) : "") + t("hud.aria", {
+            const label = (fray ? t("fray.aria", { wave: fray.wave, total: fray.waves, kills: fmt(fray.run.kills), life: n(life), lifeMax: n(sh.life) }) + " "
+                : run?.phase === "dead" ? t("hud.ariaDead", { n: Math.ceil(run.timer) }) : "") + t("hud.aria", {
                 life: n(life), lifeMax: n(sh.life), es: sh.es ? t("hud.ariaEs", { es: n(es), esMax: n(sh.es) }) : "", mana: n(mana), manaMax: n(sh.mana), flask: Math.floor(hh?.flask ?? 30),
-                level: s.hero.level, xp: (xpF * 100).toFixed(1), eta: eta ? ` (${eta})` : "", zone: placeName(s), area: z.level, dps: fmt(sh.skill.packDps) });
+                level: s.hero.level, xp: (xpF * 100).toFixed(1), eta: eta ? ` (${eta})` : "", zone: place, area: z.level, dps: fmt(sh.skill.packDps) });
             this.hudWrap.setAttribute("aria-label", label);
             this.hudWrap.dataset.tip = label;
             this.syncLang();

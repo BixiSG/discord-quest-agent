@@ -9,6 +9,8 @@
           items.ts       item generation and crafting
           character.ts   derive the hero's stat sheet (DPS/EHP breakdown)
           sim/           combat step, runs, offline catch-up
+          fray.ts        the Fray: the player-steered fight on the road's zone
+                         (arena, waves, 60 Hz step; shares sim/engine's maths)
           state.ts       GameState + reducers for player actions
           save.ts        versioned save envelope + migrations
         i18n/            strings: en.ts (source) + ru.ts, uk.ts; content names,
@@ -18,6 +20,7 @@
                          per tab (views.ts dispatches: hero, gear, forge,
                          skills, tree, world, atlas, log, menu, market;
                          itemui.ts and common.ts are what they share)
+          fray.ts        the Fray's canvas renderer (arena, sprites, HUD text)
         main.ts          entry: registers with the hub or boots standalone
       test/              Vitest, one file per core module + content checks
       tools/             balance simulator, ASCII check
@@ -69,6 +72,13 @@
   in the 400 px panel; the game itself opens in its own **overlay window**: a
   Shadow DOM root on `document.body`, z-index 10050, draggable and resizable,
   which stops key events from reaching Discord.
+- The Fray (round 10) takes over the stage: the app swaps the battle canvas
+  for the Fray's arena and the tabs hide while it runs. The idle clock is held
+  at `now` (`simTo` follows the wall clock), so nothing is caught up afterwards;
+  the sim is stepped from the animation frame, and the keys (WASD, arrows,
+  Space, P, Esc, Enter) stay inside the overlay like all the others. Losing
+  focus pauses; closing the window or folding to the mini strip abandons the
+  fray, which is never saved, only its tallies are.
 - While the overlay is closed nothing ticks or draws. The save records
   `savedAt`; opening the overlay (or the card) catches up from it.
 - Saves go to IndexedDB (`hollowmarch`, store `saves`). Export/import is a

@@ -65,7 +65,7 @@ describe("skill mastery", () => {
         expect(s.mastery.quake).toBe(pts);
     });
     it("saves: v9 gains an empty mastery; validation keeps known skills and rebuilds the hero's levels", () => {
-        expect(SAVE_VERSION).toBe(10);
+        expect(SAVE_VERSION).toBeGreaterThanOrEqual(10);
         const s = g0();
         const raw = JSON.parse(JSON.stringify(s));
         delete raw.mastery; delete raw.hero.mastery;
