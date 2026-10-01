@@ -4,6 +4,14 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.8.0 - 2026-10-01
+
+- Hollowmarch has a new mode, the Fray: press F or use the card on the World tab to take the hero's reins in an arena on the road's current zone, walking with WASD or the arrows while the skill fires on its own and Space drinks the flask.
+- Monsters come in waves with the zone's boss last; kills pay half again the experience, a win adds spoils, a fall costs nothing, and the idle road waits while you fight.
+- Esc pauses (a second Esc leaves), P pauses, losing window focus pauses, and the Fray is not available in the mini strip.
+- Progression is tighter: levels 15 to 50 need up to 12% less experience and auto-push moves on when the hero is one level below the next zone instead of two, so maps open about half an hour to an hour earlier.
+- Saves migrate on their own and keep the Fray's record (fought, won, kills, fastest win).
+
 ## 1.7.0 - 2026-09-29
 
 - Addons: Settings > Addons lists optional extras, each off until you switch it on.

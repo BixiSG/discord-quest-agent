@@ -203,7 +203,8 @@ the hero - gear with random affixes, a passive tree, skills and supports, an asc
 companion at its side - and it clears the road through four acts into an endless map
 endgame. Nothing runs while the window is closed: the time away is replayed through the same
 simulation when you open it, with a "while you were away" report. Fold it into a mini strip
-to keep the fight in a corner, or give it its own button in Discord's title bar.
+to keep the fight in a corner, or give it its own button in Discord's title bar. Press F to
+step into the Fray and fight the current zone yourself, walking while the skill fires on its own.
 
 Traders with rotating stock, gear sockets and ember stones, companions, and a story that
 ends with relighting the sun (a new dawn that keeps what you collected). Every October

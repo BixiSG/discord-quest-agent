@@ -34,7 +34,7 @@ the Hollowmarch towards the place where the sun fell.
 A **run** is one clear of a zone: a number of monster packs and, in boss
 zones, the boss. Runs repeat until the player changes zone. With auto-push on,
 the hero moves to the next zone once it has cleared the current one three
-times in a row without dying and is at most two levels below it (so it keeps
+times in a row without dying and is at most one level below it (so it keeps
 earning full experience); in maps it keeps to tiers whose monsters are at
 most four levels above the hero.
 
@@ -237,6 +237,40 @@ attack builds still fall short (they die before the enrage window closes) -
 the next balance item is attack builds' survival against pinnacles, and the
 Strider overall.
 
+## The Fray (round 8)
+
+The idle hero fights on its own; the Fray lets the player take the reins for one
+fight. It is opened from the World tab card or the F key and is fought on the
+road's current zone (maps stay in the device). The window becomes an arena and
+the tabs step aside until the fight is over.
+
+- A three-quarter top-down arena, 440 x 280 logical pixels, an isometric
+  diamond floor in the zone's colours. WASD or the arrows walk the hero.
+- The equipped skill fires on its own at whatever is in reach: 28 px for
+  melee, 38 px for area skills (around the hero), 128 px for projectiles. Space
+  drinks the flask, but only below 70% life; it also drinks itself under 20%.
+- Monsters come in waves, one per pack of the road, the next after 12 seconds or
+  when the last is down, spawning at the edges and walking at the hero. They
+  swing only when the hero is in reach, so walking away dodges. Casters stop at
+  72-96 px and back off slowly: a walking hero catches them, a standing one gets
+  shot. The zone's boss comes last, after the final wave.
+- The maths is the road's (the same hit, armour and resistance rolls, the same
+  loot path), so a build that works on the road works here; kiting is what the
+  player adds. Each kill pays 1.5x experience and +60 loot rarity.
+- A win adds spoils: one item rolled at +200 rarity, up to two currency drops
+  and a lump of experience, and is logged in the chronicle. A fall ends the
+  fray and costs nothing: what was earned stays, there is no death penalty and
+  no respawn wait. Leaving (Esc twice) counts as a fray fought, not won.
+- The idle clock stands still while a fray is on, so nothing is caught up
+  afterwards: the road neither gains nor loses by it. Esc pauses and a second
+  Esc within 3 seconds leaves; P pauses; losing window focus pauses; Enter or Esc
+  return from the end screen. Folding to the mini strip or closing the window
+  leaves the fight; the strip has no arena, so the Fray is not available there.
+- The save keeps tallies (`state.fray`: fought, won, kills, fastest win), which
+  the World tab card shows. Save version 9 adds them (older saves migrate).
+- The simulation is 60 fixed steps a second and pure like the rest of the core
+  (its own seeded Rng), so it is tested; see `test/fray.test.ts`.
+
 ## Pinnacles: scouting (round 4)
 
 The Atlas can scout a pinnacle: five fights on a copy of the hero, nothing
@@ -282,3 +316,9 @@ loop).
   the UI. The report lists runs, kills, deaths, levels, XP, items kept and
   salvaged, and currency found.
 - Nothing is simulated or drawn while the window is closed.
+- Mid-game pacing (round 8): experience to next level is 12% lower, easing in
+  from level 15 to 35, held to level 50 and gone again by level 60 (acts 2-4 and
+  the first maps took the longest). With auto-push moving on at one level
+  below the next zone, maps open at about 5.0 h for the vanguard (was 5.4-5.9)
+  and 6.3-6.8 h for the arcanist (was 6.8-7.4) on seed 777; the first relight
+  stays at 16-32 h.

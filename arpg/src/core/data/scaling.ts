@@ -18,10 +18,15 @@ export function monsterDefence(level: number): number {
 export function monsterXp(level: number): number {
     return 4 * Math.pow(level, 1.9) + 6;
 }
+/** Mid-game discount on xpToNext: none to 15, easing to 12% off by 35, held to 50, gone again by 60 (acts 2-4 and the first maps). */
+function xpMidDiscount(level: number): number {
+    const ramp = level <= 50 ? (level - 15) / 20 : (60 - level) / 10;
+    return 0.12 * Math.min(1, Math.max(0, ramp));
+}
 export function xpToNext(level: number): number {
     if (level >= MAX_LEVEL) return Infinity;
     const late = level > 60 ? Math.pow(1.07, level - 60) : 1;
-    return Math.round(3 * (80 * Math.pow(level, 2.8) + 120 * level) * late);
+    return Math.round(3 * (80 * Math.pow(level, 2.8) + 120 * level) * (1 - xpMidDiscount(level)) * late);
 }
 /** XP multiplier for a kill `monsterLevel` by a hero of `heroLevel`. */
 export function xpPenalty(heroLevel: number, monsterLevel: number): number {

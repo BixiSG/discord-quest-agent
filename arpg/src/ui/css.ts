@@ -77,6 +77,14 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .win.creating .top, .win.creating .hudw, .win.creating .nav, .win.creating .ctl.sz, .win.creating .ctl.mn { display: none; }
 .win.creating .main { grid-template-columns: 1fr; }
 
+/* the Fray: the arena takes the window; no tabs, no stage-size or strip toggles until it ends */
+.win.fray { grid-template-rows: auto minmax(0, 1fr) auto; }
+.win.fray .main, .win.fray .grip, .win.fray .ctl.sz, .win.fray .ctl.mn { display: none; }
+.win.fray .top.nostage { display: block; }
+.win.fray .stage { cursor: crosshair; }
+/* toasts go top-right: the life globe and flask sit along the bottom */
+.win.fray .toasts { left: auto; right: 10px; top: 46px; bottom: auto; align-items: flex-end; max-width: calc(100% - 20px); }
+
 /* mini mode: the battle itself, a strip that keeps playing; tiny buttons over it, no title bar */
 .minibox { display: none; }
 .win.mini { grid-template-rows: auto auto; min-width: 0; min-height: 0; box-shadow: 6px 6px 0 var(--line); }

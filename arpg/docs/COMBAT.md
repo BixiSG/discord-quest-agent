@@ -110,6 +110,10 @@ Keeper: x12 life, x1.6 damage) and 10-40% resistances.
     xpToNext(L)  = round(3 * (80 * L^2.8 + 120 * L) * (L > 60 ? 1.07^(L-60) : 1))
     monsterXp(L) = 4 * L^1.9 + 6
 
+From level 15 to 60 the requirement is also cut by a mid-game discount: 12%
+at most, easing in linearly from level 15 to 35, held to level 50, easing out
+to nothing by level 60.
+
 Kills more than `3 + floor(L/16)` levels away from the hero give less XP:
 the excess distance `d` scales it by `(5 / (5 + d))^2.5`.
 
@@ -127,3 +131,31 @@ The sim advances in fixed 100 ms steps. In a step:
    run complete -> loot and next run.
 
 Runs are seeded from `(saveSeed, runIndex)`, so a run replays exactly.
+
+## 12. The Fray
+
+The player-steered fight (`src/core/fray.ts`) uses the same hit, mitigation and
+loot maths as sections 3-8 and 10; it differs in positions and timing.
+
+1. Time: 60 steps a second (`FRAY_STEP_MS`), at most 250 ms of wall clock
+   per advance. The arena is 440 x 280 px.
+2. Hero speed: `HERO_SPEED` 66 px/s x the sheet's movement speed, clamped to
+   the arena.
+3. Hero reach: 28 px melee, 38 px area (round the hero), 128 px projectiles
+   (bosses count 10 px nearer). The skill fires at the nearest `targets`
+   monsters in reach on its own cooldown and mana, like on the road.
+4. Monster speed: `30 + 16 x attack speed` px/s, +4 for birds, x0.85 for
+   bosses, x1.1 for champions. Monster reach is `14 + 8 x size` px (+8 for
+   bosses); it walks until within 0.8 of that and swings when within 1.25 of
+   it, a swing at air being a dodge.
+5. Casters walk to 96 px, stand between 72 and 96, and back off at 0.35 of
+   their speed when closer; they hit from up to 108 px.
+6. Waves: the first at 0.8 s, one per road pack (the zone's pack size and
+   champion chance), the next when the last is down or after `WAVE_EVERY` 12 s;
+   the zone's boss (one level above the zone) once the last wave is down.
+7. Flask: the key drinks it below 70% life, it drinks itself below 20%; the
+   charges and healing are the road's (section 8).
+8. Bonuses: each kill pays x1.5 experience and +60 loot rarity. A win adds one
+   item at +200 rarity (plus the hero's, +60), two chances at 50% for a
+   currency drop, and experience equal to six kills of the zone's level. A fall
+   ends the fray with no death penalty.

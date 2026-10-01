@@ -5,6 +5,7 @@ import { ACTS, CURRENCIES, ZONES } from "../core/data";
 import { HOLLOW_PET, HOLLOW_RELIC, hollowNight, hollowNightsLeft, lanternsSnuffed } from "../core/season";
 import { endgameOpen } from "../core/maps";
 import { setZone } from "../core/game";
+import { frayZone, newFrayTotals } from "../core/fray";
 import type { GameState } from "../core/state";
 import { fmt, fmtDuration, h } from "./dom";
 import { spriteCanvas } from "./gfx/sprites";
@@ -28,7 +29,7 @@ export function worldView(c: Ctx): HTMLElement {
     const push = h("button", { class: `toggle${st.activity.autoPush ? " on" : ""}`, attrs: { role: "switch", "aria-checked": String(st.activity.autoPush) },
         on: { click: () => c.act(s => { s.activity.autoPush = !s.activity.autoPush; }) } },
         h("i"), h("span", null, h("b", { text: t("world.autoPush") }), h("small", { text: t("world.autoPushNote") })));
-    root.append(push);
+    root.append(push, frayCard(c));
     if (hollowNight(st)) root.append(hollowCard(c));
     root.append(contractBoard(c), shrineCard(c));
     if (inMaps) root.append(h("div", { class: "note" }, glyph("atlas", 16), h("span", { text: t("world.inMaps") })));
@@ -96,6 +97,21 @@ const CONTRACT_GLYPH: Record<Contract["kind"], Parameters<typeof glyph>[0]> = { 
 
 /** The Hollow Night card changes with the lanterns snuffed and its two finds (empty outside October). */
 export const hollowSig = (s: GameState) => (hollowNight(s) ? `${lanternsSnuffed(s)}:${hollowNightsLeft(s)}:${!!s.codex[HOLLOW_RELIC]}:${s.companions[HOLLOW_PET] !== undefined}` : "");
+
+/** The Fray: what it is, the record so far and the way in (F from anywhere in the window). */
+function frayCard(c: Ctx): HTMLElement {
+    const st = c.state;
+    const f = st.fray ?? newFrayTotals();
+    // No win yet means no fastest time: a dash, not "0s".
+    const record = f.runs ? t("fray.record", { runs: fmt(f.runs), won: fmt(f.won), kills: fmt(f.kills), time: f.best ? `${Math.floor(f.best / 60)}:${String(f.best % 60).padStart(2, "0")}` : "-" }) : t("fray.none");
+    return h("div", { class: "card" },
+        h("h3", null, h("span", { class: "row", style: "gap:6px" }, glyph("skills", 16), h("span", { text: t("fray.title") }))),
+        h("div", { class: "muted", style: "font-size:12px;margin-bottom:8px", text: t("fray.blurb", { zone: zoneName(frayZone(st).id) }) }),
+        h("div", { class: "row", style: "gap:8px;flex-wrap:wrap" },
+            h("span", { class: "grow", text: record }),
+            h("button", { class: "btn", text: t("fray.enter"), title: `${t("fray.enter")} (F)`, attrs: { "data-key": "f", ...(c.inFray() ? { disabled: "" } : {}) }, on: { click: () => c.startFray() } })),
+        st.activity.mode === "map" ? h("div", { class: "note", style: "margin-top:8px" }, glyph("atlas", 16), h("span", { text: t("fray.mapsNote") })) : null);
+}
 
 /** Hollow Night (October): what it is, the nights left, lanterns snuffed and its two finds. */
 function hollowCard(c: Ctx): HTMLElement {

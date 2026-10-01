@@ -169,6 +169,11 @@ export function validateState(raw: unknown): GameState {
         else if (relicRollScore(it) > relicRollScore(old)) { s.relics[s.relics.indexOf(old)] = it; s.stash.push(old); }
         else s.stash.push(it);
     }
+    {
+        const f = (s.fray && typeof s.fray === "object" ? s.fray : {}) as Record<string, unknown>;
+        const n = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? Math.floor(x) : 0);
+        s.fray = { runs: n(f.runs), won: n(f.won), kills: n(f.kills), best: n(f.best) };
+    }
     num(s.stashCap, "stash size", 1, 10000);
     num(s.dust, "dust", 0);
     s.currency = s.currency && typeof s.currency === "object" ? s.currency : {};

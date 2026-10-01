@@ -5,6 +5,7 @@ import type { Item, Slot } from "./types";
 import type { FilterRule } from "./filter";
 import type { ContractBoard } from "./contracts";
 import type { MarketState } from "./market";
+import type { FrayTotals } from "./fray";
 
 export interface Hero {
     name: string;
@@ -173,6 +174,8 @@ export interface GameState {
     tz?: number;
     /** Seasonal tallies: "hollownight2026" -> lanterns snuffed that October. */
     events?: Record<string, number>;
+    /** The Fray (round 8): frays fought and won, kills, the fastest win. */
+    fray?: FrayTotals;
     totals: Totals;
     nextUid: number;
     /** Set when a kept drop had to be salvaged; cleared when space is made. */
