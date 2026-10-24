@@ -6,25 +6,36 @@
 <!-- GitHub social preview, 1280 x 640 at 1x. Render: node dev/promo/shoot.mjs promo -->
 <link rel="stylesheet" href="promo.css">
 <style>
-  .left { position: absolute; left: 70px; top: 70px; width: 720px; }
-  h1 { font-size: 104px; margin: 28px 0 26px; }
-  .lede { font-size: 28px; max-width: 640px; margin-bottom: 32px; }
-  .chip { font-size: 17px; }
-  .shot.a { right: 70px; top: 64px; width: 380px; height: 640px; transform: rotate(3deg); }
-  .s1 { right: 420px; top: 452px; width: 140px; height: 140px; background: var(--pink); font-size: 24px; transform: rotate(-12deg); }
+  .left { position: absolute; left: 76px; top: 96px; width: 720px; }
+  h1 { font-size: 70px; margin: 30px 0 24px; }
+  .lede { font-size: 23px; max-width: 580px; margin-bottom: 0; }
+  .repo { position: absolute; left: 76px; bottom: 64px; font: 700 20px/1 "Plus Jakarta Sans", sans-serif; color: rgba(255,255,255,.85); display: flex; align-items: center; gap: 10px; }
+  .repo svg { width: 24px; height: 24px; }
+  .panel { left: 872px; top: 60px; width: 330px; transform: rotate(2deg); }
+  .t1 { left: 712px; top: 372px; }
+  .t2 { left: 764px; top: 476px; }
+  .o1 { left: 1170px; top: 30px; width: 80px; height: 80px; }
+  .o2 { left: 816px; top: 96px; width: 44px; height: 44px; }
+  .o3 { left: 1214px; top: 456px; width: 30px; height: 30px; }
 </style>
 </head>
 <body>
-<div class="frame"></div>
+<div class="stars"></div>
+<i class="spark" style="left:690px;top:70px"></i>
+<i class="spark y" style="left:1236px;top:300px;width:18px;height:18px"></i>
+<i class="spark p" style="left:726px;top:258px;width:16px;height:16px"></i>
+<i class="spark" style="left:44px;top:560px;width:14px;height:14px"></i>
 <div class="left">
-  <span class="tag"><i></i>Windows &middot; open source &middot; MIT</span>
-  <h1>Discord<br><span class="hl">Quest</span> Agent</h1>
-  <p class="lede">Finishes Discord quests <b>on its own</b>, with a live HUD inside the client.</p>
-  <div class="chips">
-    <span class="chip y">Auto-accept</span><span class="chip m">Orb stats</span><span class="chip p">No Vencord</span><span class="chip">EN &middot; RU &middot; UK</span>
-  </div>
+  <span class="kicker"><b>Free</b>Open source &middot; Windows 10 / 11</span>
+  <h1>Your quests,<br><em>on autopilot</em></h1>
+  <p class="lede">Finishes Discord quests in the background and pings you when the <b>orbs are ready to claim</b>.</p>
 </div>
-<div class="shot a"><img src="../../docs/panel.png" alt=""></div>
-<div class="sticker round s1">Set &amp;<br>forget</div>
+<span class="repo"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3Z"/></svg>BixiSG/discord-quest-agent</span>
+<div class="panel"><img src="../../docs/panel.png" alt=""></div>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div class="toast t1"><span class="ic g"><svg viewBox="0 0 24 24"><path fill="#fff" d="M9.6 16.2 5.4 12l1.4-1.4 2.8 2.8 7.6-7.6 1.4 1.4-9 9Z"/></svg></span>
+  <div><b>Quest ready to claim</b><span>Night Runners Trailer</span></div><span class="amt"><i class="gem"></i>700</span></div>
+<div class="toast t2"><span class="ic b"><svg viewBox="0 0 24 24"><path fill="#fff" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5Z"/></svg></span>
+  <div><b>Playing Starfall Tactics</b><span>~9 min left &middot; nothing installed</span></div></div>
 </body>
 </html>

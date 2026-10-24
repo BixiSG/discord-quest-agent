@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="Discord Quest Agent: сам выполняет квесты Discord и показывает живой HUD прямо в клиенте">
+  <a href="../../releases/latest"><img src="docs/banner.png" alt="Discord Quest Agent: сам выполняет квесты Discord и показывает живой HUD прямо в клиенте"></a>
 </p>
 
 # Discord Quest Agent

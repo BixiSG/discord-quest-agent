@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.12.1 - 2026-10-24
+
+- The empty quest list has a small illustration instead of a lone icon, and a reward that turns claimable while the panel is open sends a little burst of sparks off its tile. Both stay still when Windows animations are off.
+
 ## 1.12.0 - 2026-10-24
 
 - Ready-to-claim rewards you don't want can be dismissed (the eye button on the row): they leave the list, the title-bar badge stops counting them and no expiry reminder is sent. Settings > Maintenance > Show dismissed quests brings them back.

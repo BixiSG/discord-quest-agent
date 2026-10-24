@@ -1,38 +1,66 @@
-/* Shared look of the README banner and the GitHub social card (rendered by shoot.mjs). */
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@700&display=block");
+/* Shared look of the README banner and the GitHub social card (rendered by shoot.mjs).
+   Discord's own marketing vibe: a blurple night sky, wide heavy display type, pill
+   buttons, and the real HUD panel floating with quest toasts and orbs around it.
+   Every shape here is drawn in this file; no Discord artwork is used. */
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=block");
 :root {
-    --ink: #0e0e10; --paper: #f2ede1; --acid: #ffd60a; --pink: #ff4fa3; --mint: #2ee59d; --blue: #5b5bff;
-    --line: 5px solid var(--ink);
+    --blurple: #5865f2; --blurple-deep: #3c45c9; --night: #23272a; --ink: #1e1f22; --card: #2b2d31; --card2: #313338;
+    --text: #f2f3f5; --muted: #b5bac1; --green: #23a55a; --amber: #f0b232; --pink: #ff73fa;
 }
-* { box-sizing: border-box; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; height: 100%; overflow: hidden; }
 body {
-    background: var(--paper); color: var(--ink); font-family: "Space Grotesk", sans-serif;
-    /* graph-paper grid */
-    background-image: linear-gradient(rgba(14,14,16,.07) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(14,14,16,.07) 1.5px, transparent 1.5px);
-    background-size: 32px 32px; position: relative;
+    color: #fff; font-family: "Plus Jakarta Sans", sans-serif; position: relative;
+    background:
+        radial-gradient(900px 520px at 88% 110%, rgba(255,115,250,.35), transparent 60%),
+        radial-gradient(700px 500px at 0% -10%, rgba(130,145,255,.55), transparent 60%),
+        linear-gradient(160deg, #6170f5 0%, var(--blurple) 40%, var(--blurple-deep) 100%);
 }
-.frame { position: absolute; inset: 18px; border: var(--line); }
-.tag {
-    display: inline-flex; align-items: center; gap: 10px; background: var(--ink); color: var(--paper);
-    font: 700 15px/1 "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px;
-}
-.tag i { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); display: block; }
-h1 { font-family: "Archivo Black", sans-serif; font-weight: 400; text-transform: uppercase; line-height: .88; letter-spacing: -.02em; }
-h1 .hl { background: var(--acid); padding: 0 .12em; box-decoration-break: clone; -webkit-box-decoration-break: clone; border: var(--line); display: inline-block; transform: rotate(-1.5deg); box-shadow: 6px 6px 0 var(--ink); }
-.lede { font-weight: 500; line-height: 1.3; }
-.lede b { font-weight: 700; }
-.chips { display: flex; flex-wrap: wrap; gap: 10px; }
-.chip {
-    border: 3px solid var(--ink); background: #fff; padding: 7px 12px; font: 700 15px/1 "Space Grotesk", sans-serif;
-    box-shadow: 4px 4px 0 var(--ink); text-transform: uppercase; letter-spacing: .02em;
-}
-.chip.y { background: var(--acid); } .chip.p { background: var(--pink); } .chip.m { background: var(--mint); } .chip.b { background: var(--blue); color: #fff; }
-.shot { position: absolute; border: var(--line); box-shadow: 14px 14px 0 var(--ink); background: #2b2d31; overflow: hidden; }
-.shot img { display: block; width: 100%; }
-.sticker {
-    position: absolute; border: var(--line); box-shadow: 6px 6px 0 var(--ink); font-family: "Archivo Black", sans-serif;
-    text-transform: uppercase; text-align: center; line-height: .95; display: flex; align-items: center; justify-content: center;
-}
-.sticker.round { border-radius: 50%; }
-.foot { font: 700 15px/1 "JetBrains Mono", monospace; letter-spacing: .04em; }
+/* starfield: tiny dots, tiled */
+.stars { position: absolute; inset: 0; opacity: .55;
+    background-image:
+        radial-gradient(1.6px 1.6px at 20px 30px, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 140px 80px, #fff, transparent),
+        radial-gradient(1.8px 1.8px at 90px 160px, #fff, transparent),
+        radial-gradient(1.1px 1.1px at 210px 190px, #fff, transparent),
+        radial-gradient(1.4px 1.4px at 250px 40px, #fff, transparent);
+    background-size: 280px 220px; }
+/* four-point sparkle */
+.spark { position: absolute; width: 26px; height: 26px; background: #fff;
+    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
+.spark.y { background: #fee75c; } .spark.p { background: var(--pink); }
+
+.kicker { display: inline-flex; align-items: center; gap: 10px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28);
+    border-radius: 999px; padding: 8px 16px 8px 10px; font: 700 14px/1 "Plus Jakarta Sans", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.kicker b { background: #fff; color: var(--blurple); border-radius: 999px; padding: 5px 9px; font-weight: 800; letter-spacing: .04em; }
+h1 { font-family: "Unbounded", sans-serif; font-weight: 900; text-transform: uppercase; line-height: .98; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: #fee75c; }
+.lede { font-weight: 500; line-height: 1.45; color: rgba(255,255,255,.92); }
+.lede b { font-weight: 800; color: #fff; }
+.btns { display: flex; gap: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; padding: 15px 26px; font: 700 17px/1 "Plus Jakarta Sans", sans-serif; }
+.btn svg { width: 20px; height: 20px; }
+.btn.light { background: #fff; color: var(--ink); }
+.btn.dark { background: var(--ink); color: #fff; }
+
+/* the real HUD panel, captured from dev/harness.html */
+.panel { position: absolute; border-radius: 14px; overflow: hidden; background: var(--card);
+    box-shadow: 0 30px 60px rgba(20,22,60,.55), 0 0 0 1px rgba(0,0,0,.35); }
+.panel img { display: block; width: 100%; }
+
+/* a Discord-style toast card */
+.toast { position: absolute; display: flex; align-items: center; gap: 12px; background: var(--card2); border-radius: 12px; padding: 12px 16px 12px 12px;
+    box-shadow: 0 18px 40px rgba(20,22,60,.5), 0 0 0 1px rgba(0,0,0,.3); color: var(--text); white-space: nowrap; }
+.toast .ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; }
+.toast .ic svg { width: 20px; height: 20px; }
+.toast .ic.g { background: var(--green); } .toast .ic.b { background: var(--blurple); }
+.toast b { display: block; font: 800 15px/1.2 "Plus Jakarta Sans", sans-serif; }
+.toast span { display: block; font: 500 13px/1.3 "Plus Jakarta Sans", sans-serif; color: var(--muted); }
+.toast .amt { margin-left: 8px; color: var(--amber); font: 800 15px/1 "Plus Jakarta Sans", sans-serif; display: flex; align-items: center; gap: 5px; }
+
+/* our own glossy orb */
+.orb { position: absolute; border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #fff 0 6%, #e3dcff 10%, #a78bfa 32%, #6d28d9 64%, #2e1065 100%);
+    box-shadow: inset -10px -14px 26px rgba(20,0,60,.55), 0 20px 40px rgba(30,10,80,.45); }
+.orb::after { content: ""; position: absolute; inset: 14%; border-radius: 50%; border: 2px solid rgba(255,255,255,.28); }
+.gem { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff 0 8%, #c4b5fd 25%, #7c3aed 70%); }

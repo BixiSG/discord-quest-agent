@@ -6,26 +6,37 @@
 <!-- README hero, 1280 x 560 at 2x. Render: node dev/promo/shoot.mjs promo -->
 <link rel="stylesheet" href="promo.css">
 <style>
-  .left { position: absolute; left: 64px; top: 58px; width: 680px; }
-  h1 { font-size: 92px; margin: 24px 0 22px; }
-  .lede { font-size: 23px; max-width: 580px; margin-bottom: 26px; }
-  .shot.a { right: 70px; top: 46px; width: 380px; height: 600px; transform: rotate(3deg); }
-  .s1 { right: 400px; bottom: 40px; width: 128px; height: 128px; background: var(--pink); font-size: 20px; transform: rotate(-12deg); }
-  .s2 { right: 40px; bottom: 46px; padding: 14px 18px; background: var(--acid); font-size: 21px; transform: rotate(-4deg); }
+  .left { position: absolute; left: 72px; top: 64px; width: 640px; }
+  h1 { font-size: 66px; margin: 26px 0 20px; }
+  .lede { font-size: 20px; max-width: 540px; margin-bottom: 30px; }
+  .panel { left: 846px; top: 52px; width: 330px; transform: rotate(2deg); }
+  .t1 { left: 690px; top: 330px; }
+  .t2 { left: 742px; top: 432px; }
+  .o1 { left: 1176px; top: 22px; width: 76px; height: 76px; }
+  .o2 { left: 792px; top: 82px; width: 44px; height: 44px; }
+  .o3 { left: 1196px; top: 410px; width: 30px; height: 30px; }
 </style>
 </head>
 <body>
-<div class="frame"></div>
+<div class="stars"></div>
+<i class="spark" style="left:640px;top:64px"></i>
+<i class="spark y" style="left:1222px;top:262px;width:18px;height:18px"></i>
+<i class="spark p" style="left:700px;top:224px;width:16px;height:16px"></i>
+<i class="spark" style="left:40px;top:470px;width:14px;height:14px"></i>
 <div class="left">
-  <span class="tag"><i></i>Windows &middot; open source &middot; MIT</span>
-  <h1>Discord<br><span class="hl">Quest</span> Agent</h1>
-  <p class="lede">Finishes Discord quests <b>on its own</b> and shows a live HUD inside the client. You only press <b>Claim</b>.</p>
-  <div class="chips">
-    <span class="chip y">Video</span><span class="chip m">Play</span><span class="chip p">Stream</span><span class="chip b">Activity</span><span class="chip">Mobile</span>
+  <span class="kicker"><b>Free</b>Open source &middot; Windows 10 / 11</span>
+  <h1>Your quests,<br><em>on autopilot</em></h1>
+  <p class="lede">Discord Quest Agent finishes video, game, stream and activity quests in the background and pings you when the <b>orbs are ready to claim</b>.</p>
+  <div class="btns">
+    <span class="btn light"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-5 5a1 1 0 0 1-1.4 0l-5-5a1 1 0 0 1 1.4-1.4l3.3 3.3V4a1 1 0 0 1 1-1ZM5 19a1 1 0 1 0 0 2h14a1 1 0 1 0 0-2H5Z"/></svg>Download for Windows</span>
+    <span class="btn dark"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 .3C5.4.3 0 5.7 0 12.3c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.1 24 17.6 24 12.3 24 5.7 18.6.3 12 .3Z"/></svg>View on GitHub</span>
   </div>
 </div>
-<div class="shot a"><img src="../../docs/panel.png" alt=""></div>
-<div class="sticker round s1">Set &amp;<br>forget</div>
-<div class="sticker s2">Nothing patched<br>on disk</div>
+<div class="panel"><img src="../../docs/panel.png" alt=""></div>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div class="toast t1"><span class="ic g"><svg viewBox="0 0 24 24"><path fill="#fff" d="M9.6 16.2 5.4 12l1.4-1.4 2.8 2.8 7.6-7.6 1.4 1.4-9 9Z"/></svg></span>
+  <div><b>Quest ready to claim</b><span>Night Runners Trailer</span></div><span class="amt"><i class="gem"></i>700</span></div>
+<div class="toast t2"><span class="ic b"><svg viewBox="0 0 24 24"><path fill="#fff" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5Z"/></svg></span>
+  <div><b>Playing Starfall Tactics</b><span>~9 min left &middot; nothing installed</span></div></div>
 </body>
 </html>

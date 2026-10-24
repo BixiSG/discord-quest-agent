@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 23;
+    const AGENT_VERSION = 24;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -1223,6 +1223,22 @@
         ? `<svg class="qb-orb" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${ORB_PATHS.map(p =>
             `<path fill="currentColor"${p.evenodd ? ' fill-rule="evenodd" clip-rule="evenodd"' : ""} d="${p.d}"/>`).join("")}</svg>`
         : svg(ICON.orb, "qb-orb", size);
+    /** Empty quest list: finished quest cards, a check, and an orb dozing above them. Themed by the panel's own tokens. */
+    const EMPTY_ART = `<svg class="qb-art" viewBox="0 0 168 104" width="168" height="104" aria-hidden="true">
+        <rect class="qb-a1" x="36" y="26" width="86" height="58" rx="9" transform="rotate(-9 79 55)"/>
+        <rect class="qb-a1" x="46" y="22" width="86" height="58" rx="9" transform="rotate(6 89 51)"/>
+        <rect class="qb-a2" x="40" y="28" width="86" height="58" rx="9"/>
+        <rect class="qb-a3" x="50" y="38" width="20" height="20" rx="5"/>
+        <rect class="qb-a3" x="76" y="41" width="40" height="5" rx="2.5"/>
+        <rect class="qb-a3 qb-a3b" x="76" y="50" width="26" height="4" rx="2"/>
+        <rect class="qb-a4" x="50" y="68" width="66" height="5" rx="2.5"/>
+        <circle class="qb-a5" cx="124" cy="84" r="12"/>
+        <path class="qb-a6" d="M118.5 84.2l3.6 3.6 7.4-7.4" />
+        <g class="qb-a-orb"><path class="qb-a7" d="M140 16l11 13-11 13-11-13z"/><path class="qb-a8" d="M140 21l6.5 8-6.5 8z"/></g>
+        <text class="qb-az" x="152" y="15">z</text><text class="qb-az qb-az2" x="159" y="8">z</text>
+      </svg>`;
+    /** Sparks that fly off a reward's tile the moment it becomes claimable. */
+    const BURST = `<span class="qb-burst" aria-hidden="true">${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<i style="--a:${a}deg"></i>`).join("")}</span>`;
     /** 380 -> "6:20", 3725 -> "1:02:05". */
     const fmtClock = secs => {
         const x = Math.max(0, Math.round(secs)), h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60);
@@ -1383,6 +1399,13 @@
 #qb-panel .qb-tick{position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;border-radius:50%;background:var(--qb-green);color:#fff;
  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--qb-bg)}
 #qb-panel .qb-row:hover .qb-tick{box-shadow:0 0 0 2px var(--qb-bg3)}
+#qb-panel .qb-flash .qb-tick{animation:qb-pop .5s cubic-bezier(.16,1,.3,1) .15s backwards}
+@keyframes qb-pop{from{transform:scale(0)}to{transform:scale(1)}}
+#qb-panel .qb-burst{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;z-index:1}
+#qb-panel .qb-burst i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;background:var(--qb-green);opacity:0;
+ clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);animation:qb-burst .9s cubic-bezier(.16,1,.3,1) .1s}
+#qb-panel .qb-burst i:nth-child(even){background:var(--qb-amber);width:6px;height:6px;animation-duration:1.1s}
+@keyframes qb-burst{from{opacity:1;transform:rotate(var(--a)) translateX(6px) scale(1)}to{opacity:0;transform:rotate(var(--a)) translateX(26px) scale(.3)}}
 #qb-panel .qb-row.qb-dim:hover{opacity:1}
 #qb-panel .qb-tile{width:32px;height:32px;border-radius:var(--qb-rs);flex:none;object-fit:cover;margin-top:1px;
  background:var(--qb-bg2)}
@@ -1416,6 +1439,22 @@
 #qb-panel .qb-orb{flex:none}
 #qb-panel .qb-empty{padding:28px 16px;text-align:center;color:var(--qb-muted);font-size:12px;line-height:1.6}
 #qb-panel .qb-empty svg{opacity:.35;margin-bottom:8px}
+#qb-panel .qb-empty b{color:var(--qb-text);font-size:13.5px;font-weight:600}
+#qb-panel .qb-empty .qb-art{opacity:1;margin-bottom:4px}
+#qb-panel .qb-art .qb-a1{fill:var(--qb-bg2);stroke:var(--qb-border);stroke-width:1.5}
+#qb-panel .qb-art .qb-a2{fill:var(--qb-bg3);stroke:var(--qb-border);stroke-width:1.5}
+#qb-panel .qb-art .qb-a3{fill:var(--qb-muted);opacity:.4}
+#qb-panel .qb-art .qb-a3b{opacity:.22}
+#qb-panel .qb-art .qb-a4,#qb-panel .qb-art .qb-a5{fill:var(--qb-green)}
+#qb-panel .qb-art .qb-a5{stroke:var(--qb-bg);stroke-width:3}
+#qb-panel .qb-art .qb-a6{fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+#qb-panel .qb-art .qb-a7{fill:var(--qb-brand)}
+#qb-panel .qb-art .qb-a8{fill:#fff;opacity:.25}
+#qb-panel .qb-art .qb-a-orb{animation:qb-bob 2.8s ease-in-out infinite alternate}
+@keyframes qb-bob{from{transform:translateY(1px)}to{transform:translateY(-4px)}}
+#qb-panel .qb-art .qb-az{fill:var(--qb-muted);font:700 10px/1 var(--font-primary,"gg sans",sans-serif);animation:qb-z 2.8s ease-in-out infinite}
+#qb-panel .qb-art .qb-az2{font-size:7px;animation-delay:.7s}
+@keyframes qb-z{0%,100%{opacity:0}50%{opacity:.9}}
 #qb-panel .qb-pending{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--qb-amber);padding:0 14px}
 #qb-panel .qb-pending:not(:empty){padding:9px 14px;border-top:1px solid var(--qb-border);background:rgba(240,178,50,.05);cursor:pointer}
 #qb-panel .qb-pending:not(:empty):hover{background:rgba(240,178,50,.1)}
@@ -1617,7 +1656,7 @@
         const cls = [group === "blocked" && "qb-dim", group === "running" && "qb-live", fresh && "qb-flash"].filter(Boolean).join(" ");
         const accent = group === "running" && /^#[0-9a-f]{3,8}$/i.test(r.color ?? "") ? ` style="--qb-acc:${r.color}"` : "";
         return `<div class="qb-row ${cls}" data-qid="${esc(r.id)}" title="${esc(t("row.open"))}" tabindex="0"${accent}>
-            <span class="qb-tw">${tile}${group === "claimable" ? `<span class="qb-tick">${svg(ICON.check, "", 10)}</span>` : ""}</span>
+            <span class="qb-tw">${tile}${group === "claimable" ? `<span class="qb-tick">${svg(ICON.check, "", 10)}</span>` + (fresh ? BURST : "") : ""}</span>
             <div class="qb-main">
               <div class="qb-r1">
                 <span class="qb-name" title="${esc(r.name)}">${esc(r.name)}</span>
@@ -1692,7 +1731,7 @@
                 ? groups.map(([title, rows, key]) =>
                     `<div class="qb-sec">${esc(title)}<span class="qb-count">${rows.length}</span></div>` +
                     rows.map(r => rowHtml(r, key, key === "claimable" && fresh.has(r.id))).join("")).join("")
-                : `<div class="qb-empty">${orbSvg(26)}<br>${esc(t("empty.title"))}<br>${esc(t("empty.sub"))}</div>`;
+                : `<div class="qb-empty">${EMPTY_ART}<br><b>${esc(t("empty.title"))}</b><br>${esc(t("empty.sub"))}</div>`;
             UI.sig = sig;
         }
         for (const [, rows, key] of groups) {
