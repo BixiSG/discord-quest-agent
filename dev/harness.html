@@ -163,7 +163,7 @@
       }
     }
   };
-  window.__questAgentConfig = { toolVersion: "1.12.0", repo: "BixiSG/discord-quest-agent", installRoot: "C:\\Users\\you\\AppData\\Local\\DiscordQuestAgent" };
+  window.__questAgentConfig = { toolVersion: "1.12.1", repo: "BixiSG/discord-quest-agent", installRoot: "C:\\Users\\you\\AppData\\Local\\DiscordQuestAgent" };
   // What the launcher injects: shipped locales and the changelog, read from the repo.
   const text = url => fetch(url).then(r => r.ok ? r.text() : "").catch(() => "");
   Promise.all([text("../src/locales/ru.json"), text("../src/locales/uk.json"), text("../CHANGELOG.md")]).then(([ru, uk, log]) => {

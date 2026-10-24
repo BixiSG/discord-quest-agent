@@ -520,8 +520,11 @@ function Start-UpdatedCopy {
     exit 0
 }
 
-# 1.12.0 dropped the addons; updates copy over src\ without deleting, so clear what older versions shipped.
-Remove-Item -LiteralPath (Join-Path $PSScriptRoot "addons") -Recurse -Force -ErrorAction SilentlyContinue
+# 1.12.0 dropped the addons; updates copy over src\ without deleting, so clear what older versions
+# shipped (src\addons) and the separately installed ones (<Root>\addons), which nothing loads any more.
+foreach ($dir in @((Join-Path $PSScriptRoot "addons"), (Join-Path $Root "addons"))) {
+    Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue
+}
 if (Invoke-SelfUpdate) { Start-UpdatedCopy }
 
 $branchInfo = Resolve-Branch

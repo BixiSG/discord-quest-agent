@@ -80,7 +80,7 @@ async function hud() {
 
 async function promo() {
     const s = await session();
-    await s.open(`${BASE}/dev/promo/banner.html`, 1280, 560);
+    await s.open(`${BASE}/dev/promo/banner.html`, 1280, 560, 1.5); // 1.5x: sharp on HiDPI, under 1 MB
     await s.sleep(800);
     await s.shot("docs/banner.png");
     // GitHub's social card: 1280 x 640, kept at 1x so it stays well under 1 MB.

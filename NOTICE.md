@@ -28,8 +28,9 @@ own icon.
 ## Screenshots
 
 Images in `docs/` show only this project's own interface, rendered with invented placeholder
-quest names and this project's own icons. They contain no third-party logos, game artwork or
-Discord interface elements.
+quest names and this project's own icons and drawings (the orbs and sparkles in the banner are
+drawn in `dev/promo/`). They contain no game artwork or Discord interface elements, and no
+third-party logo except GitHub's mark on links to this repository.
 
 ## Sound
 

@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 25;
+    const AGENT_VERSION = 26;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -457,7 +457,8 @@
         paused: false,
         types: Object.fromEntries(SUPPORTED.map(t => [t, true])),
         skipped: [],
-        hidden: [],          // quest ids dismissed from the Skipped / Ready to claim groups (persisted)
+        hidden: [],          // quest ids dismissed from the Skipped group (persisted)
+        hiddenClaims: [],    // rewards dismissed from Ready to claim (persisted; kept apart so a skipped quest finished later still shows)
         seenVersion: null,   // tool version whose changelog the user has opened
         toastedVersion: null, // tool version the "updated" toast was shown for
         panelPos: null,      // { top, left } after the panel was dragged
@@ -486,7 +487,7 @@
             if (Number.isFinite(s.scanIntervalMs) && s.scanIntervalMs >= 30000) SETTINGS.scanIntervalMs = s.scanIntervalMs;
             if (s.types && typeof s.types === "object") for (const t of SUPPORTED) if (typeof s.types[t] === "boolean") SETTINGS.types[t] = s.types[t];
             if (Array.isArray(s.skipped)) SETTINGS.skipped = s.skipped.filter(x => typeof x === "string").slice(0, 500);
-            if (Array.isArray(s.hidden)) SETTINGS.hidden = s.hidden.filter(x => typeof x === "string").slice(0, 500);
+            for (const k of ["hidden", "hiddenClaims"]) if (Array.isArray(s[k])) SETTINGS[k] = s[k].filter(x => typeof x === "string").slice(-500);
             if (s.panelPos && Number.isFinite(s.panelPos.top) && Number.isFinite(s.panelPos.left)) SETTINGS.panelPos = { top: s.panelPos.top, left: s.panelPos.left };
             if (Array.isArray(s.reminded)) SETTINGS.reminded = s.reminded.filter(x => typeof x === "string").slice(-200);
             if (Number.isFinite(s.goal) && s.goal >= 0) SETTINGS.goal = Math.min(1e7, Math.round(s.goal));
@@ -495,6 +496,7 @@
     function saveSettings() {
         SETTINGS.skipped = [...state.skipped];
         SETTINGS.hidden = [...state.hidden];
+        SETTINGS.hiddenClaims = [...state.hiddenClaims];
         if (!storage) return;
         try { storage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS)); } catch (e) { /* quota / sandbox */ }
     }
@@ -638,7 +640,7 @@
         const now = Date.now(), done = new Set(SETTINGS.reminded), due = [];
         for (const q of allQuests()) {
             const by = claimByOf(q);
-            if (!q.userStatus?.completedAt || q.userStatus?.claimedAt || !by || by <= now || by - now > 48 * 3600e3 || done.has(q.id) || state.hidden.has(q.id)) continue;
+            if (!q.userStatus?.completedAt || q.userStatus?.claimedAt || !by || by <= now || by - now > 48 * 3600e3 || done.has(q.id) || state.hiddenClaims.has(q.id)) continue;
             due.push({ q, left: by - now });
         }
         if (!due.length) return;
@@ -656,7 +658,8 @@
         enrollFailed: new Set(), // quest ids that rejected every enroll location - not retried
         failCounts: new Map(),   // quest id -> failed task runs (capped by CONFIG.maxTaskAttempts)
         skipped: new Set(SETTINGS.skipped), // quest ids the user skipped/stopped (persisted)
-        hidden: new Set(SETTINGS.hidden),   // quest ids dismissed from the Skipped / Ready to claim groups (persisted)
+        hidden: new Set(SETTINGS.hidden),   // quest ids dismissed from the Skipped group (persisted)
+        hiddenClaims: new Set(SETTINGS.hiddenClaims), // rewards dismissed from Ready to claim (persisted)
         tasks: new Map(),        // quest id -> { quest, taskName, ctl, startedAt }
         enrollLocation: null,    // cached working enroll location
         spoofActive: false,      // only one game/stream spoof at a time
@@ -1138,8 +1141,9 @@
             scan();
         },
         /** Hide a quest from the Skipped or Ready to claim group (and the badge count); Settings brings it back. */
-        dismissQuest(id) { state.hidden.add(id); saveSettings(); refreshUI(); return true; },
-        clearHidden() { state.hidden.clear(); saveSettings(); refreshUI(); },
+        dismissQuest(id) { (questById(id)?.userStatus?.completedAt ? state.hiddenClaims : state.hidden).add(id); saveSettings(); refreshUI(); return true; },
+        // claimSeen reset: rewards brought back are not "new", so they don't flash.
+        clearHidden() { state.hidden.clear(); state.hiddenClaims.clear(); UI.claimSeen = null; saveSettings(); refreshUI(); },
         /** Show the install folder in Explorer, with Uninstall.bat selected. */
         openInstallFolder() {
             if (!INSTALL_ROOT) return false;
@@ -1305,7 +1309,7 @@
             if (q.userStatus?.completedAt) {
                 const by = claimByOf(q);
                 if (by && by < Date.now()) continue; // claim window closed: the reward is gone
-                if (!state.hidden.has(q.id)) { claimable.push(row(q)); orbsPending += orbsOf(q); }
+                if (!state.hiddenClaims.has(q.id)) { claimable.push(row(q)); orbsPending += orbsOf(q); }
                 continue;
             }
             if (!live(q)) continue;
@@ -1320,7 +1324,7 @@
             if (q.userStatus?.enrolledAt || SETTINGS.autoEnroll) queued.push(r);
             else available.push(r);
         }
-        // Dismissed quests leave Skipped (and Ready to claim, above); running or queued ones still show.
+        // Dismissed quests leave the Skipped group only (rewards have their own list, above).
         // The store forgets expired quests; the history doesn't, so "orbs won" never shrinks.
         orbsClaimed = Math.max(orbsClaimed, historyClaimedOrbs());
         return { claimable, running, queued, available, blocked: blocked.filter(r => !state.hidden.has(r.id)), orbsClaimed, orbsPending };
@@ -1810,7 +1814,7 @@
             <button class="qb-btn" data-cmd="retry">${svg(ICON.refresh, "", 13)}${esc(t("set.retryFailed"))}</button>
             <button class="qb-btn" data-cmd="clearskip">${svg(ICON.play, "", 13)}${esc(t("set.clearSkip", { n: state.skipped.size }))}</button>
           </div>
-          <div class="qb-btns"><button class="qb-btn" data-cmd="clearhidden">${svg(ICON.eyeoff, "", 13)}${esc(t("set.clearHidden", { n: state.hidden.size }))}</button></div>
+          <div class="qb-btns"><button class="qb-btn" data-cmd="clearhidden">${svg(ICON.eyeoff, "", 13)}${esc(t("set.clearHidden", { n: state.hidden.size + state.hiddenClaims.size }))}</button></div>
           <div class="qb-btns"><button class="qb-btn" data-cmd="diag">${svg(ICON.copy, "", 13)}<span>${esc(t("set.copyDiag"))}</span></button></div>`;
         renderFooter();
     }
