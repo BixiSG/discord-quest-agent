@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 24;
+    const AGENT_VERSION = 25;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -1237,6 +1237,8 @@
         <g class="qb-a-orb"><path class="qb-a7" d="M140 16l11 13-11 13-11-13z"/><path class="qb-a8" d="M140 21l6.5 8-6.5 8z"/></g>
         <text class="qb-az" x="152" y="15">z</text><text class="qb-az qb-az2" x="159" y="8">z</text>
       </svg>`;
+    /** The panel header's backdrop: a starry blurple band with an orb rising behind the status line. */
+    const HEAD_ART = `<svg class="qb-hart" viewBox="0 0 400 54" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><radialGradient id="qb-hg-orb" cx=".34" cy=".28" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".1" stop-color="#e3dcff"/><stop offset=".38" stop-color="#a78bfa"/><stop offset=".72" stop-color="#6d28d9"/><stop offset="1" stop-color="#2e1065"/></radialGradient><radialGradient id="qb-hg-glow"><stop offset="0" stop-color="#ff73fa" stop-opacity=".5"/><stop offset="1" stop-color="#ff73fa" stop-opacity="0"/></radialGradient></defs><ellipse cx="350" cy="54" rx="150" ry="58" fill="url(#qb-hg-glow)"/><g fill="#fff"><circle cx="22" cy="9" r="0.9" opacity="0.8"/><circle cx="64" cy="40" r="0.7" opacity="0.6"/><circle cx="118" cy="13" r="1" opacity="0.8"/><circle cx="98" cy="31" r="0.6" opacity="0.5"/><circle cx="150" cy="45" r="0.7" opacity="0.6"/><circle cx="176" cy="22" r="0.6" opacity="0.5"/><circle cx="196" cy="7" r="0.9" opacity="0.8"/><circle cx="238" cy="34" r="0.6" opacity="0.5"/><circle cx="276" cy="11" r="1" opacity="0.9"/><circle cx="318" cy="45" r="0.7" opacity="0.6"/><circle cx="352" cy="8" r="0.9" opacity="0.8"/><circle cx="386" cy="31" r="0.7" opacity="0.6"/></g><path fill="#fff" d="M214 34l1.32 4.68 4.68 1.32-4.68 1.32-1.32 4.68-1.32-4.68-4.68-1.32 4.68-1.32z"/><path fill="#fee75c" d="M162 9.5l0.99 3.51 3.51 0.99-3.51 0.99-0.99 3.51-0.99-3.51-3.51-0.99 3.51-0.99z"/><path fill="#fff" d="M132 2.5l0.77 2.73 2.73 0.77-2.73 0.77-0.77 2.73-0.77-2.73-2.73-0.77 2.73-0.77z"/><g class="qb-horb"><circle cx="196" cy="50" r="19" fill="url(#qb-hg-orb)"/><circle cx="196" cy="50" r="14" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.5"/></g></svg>`;
     /** Sparks that fly off a reward's tile the moment it becomes claimable. */
     const BURST = `<span class="qb-burst" aria-hidden="true">${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<i style="--a:${a}deg"></i>`).join("")}</span>`;
     /** 380 -> "6:20", 3725 -> "1:02:05". */
@@ -1346,8 +1348,23 @@
 #qb-panel *{box-sizing:border-box}
 #qb-panel button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
 @keyframes qb-in{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
-#qb-panel .qb-head{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;cursor:grab;
- border-bottom:1px solid var(--qb-border);user-select:none}
+#qb-panel .qb-head{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:8px;padding:13px 10px 13px 14px;cursor:grab;
+ user-select:none;color:#fff;border-bottom:1px solid rgba(0,0,0,.28);
+ background:linear-gradient(112deg,#4752c4 0%,#5865f2 36%,#7650e8 70%,#a24bd8 100%)}
+#qb-panel .qb-head>*{position:relative;z-index:1}
+#qb-panel .qb-head .qb-hart{position:absolute;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}
+#qb-panel .qb-head .qb-horb{animation:qb-rise 6s ease-in-out infinite alternate}
+@keyframes qb-rise{from{transform:translateY(2px)}to{transform:translateY(-3px)}}
+#qb-panel .qb-head .qb-title{color:#fff;font-weight:700;font-size:15px;text-shadow:0 1px 2px rgba(20,10,80,.35)}
+#qb-panel .qb-head .qb-status{color:rgba(255,255,255,.82);text-shadow:0 1px 2px rgba(20,10,80,.45)}
+#qb-panel .qb-head .qb-status.qb-paused{color:#fee75c}
+#qb-panel .qb-head .qb-dot{background:rgba(255,255,255,.6);box-shadow:0 0 0 2px rgba(255,255,255,.22)}
+#qb-panel .qb-head .qb-act{color:rgba(255,255,255,.84)}
+#qb-panel .qb-head .qb-act:hover{color:#fff;background:rgba(255,255,255,.18)}
+#qb-panel .qb-head .qb-act.qb-on{color:#fff;background:rgba(255,255,255,.26)}
+#qb-panel .qb-head .qb-act.qb-warn{color:#fee75c}
+#qb-panel .qb-head .qb-nd{background:#fee75c;box-shadow:0 0 0 2px #6a57ec}
+#qb-panel .qb-head button:focus-visible{outline-color:#fff}
 #qb-panel .qb-head.qb-drag{cursor:grabbing}
 #qb-panel .qb-dot{position:relative;width:8px;height:8px;border-radius:50%;flex:none;background:var(--qb-muted)}
 /* pulse ring: transform + opacity only, so it never repaints the panel */
@@ -2066,7 +2083,7 @@
         p.setAttribute("aria-label", t("btn.label"));
         UI.lang = currentLang();
         p.innerHTML = `
-          <div class="qb-head">
+          <div class="qb-head">${HEAD_ART}
             <span class="qb-dot"></span><span class="qb-title">${esc(t("title.quests"))}</span>
             <span class="qb-status"></span>
             <button class="qb-act" id="qb-pauseall" title="${esc(t("head.pauseAll"))}">${svg(ICON.pause, "", 15)}</button>
