@@ -1,6 +1,16 @@
+<p align="center">
+  <img src="docs/banner.png" alt="Discord Quest Agent: finishes Discord quests on its own and shows a live HUD inside the client">
+</p>
+
 # Discord Quest Agent
 
 **English** · [Русский](README.ru.md)
+
+<p align="center">
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/BixiSG/discord-quest-agent?style=for-the-badge&color=ffd60a&labelColor=0e0e10"></a>
+  <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%2F%2011-2ee59d?style=for-the-badge&labelColor=0e0e10">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-ff4fa3?style=for-the-badge&labelColor=0e0e10"></a>
+</p>
 
 Finishes Discord quests on its own and puts a live HUD inside the client.
 
@@ -8,7 +18,9 @@ No Vencord, no plugin, no rebuilding anything, and nothing is patched on disk. I
 to the desktop client the same way DevTools does and runs a script inside it.
 
 <p align="center">
-  <img src="docs/panel.png" width="420" alt="The Auto Quests panel, showing quests grouped by state with progress bars">
+  <img src="docs/panel.png" width="300" alt="The quests panel, showing quests grouped by state with progress bars">
+  &nbsp;
+  <img src="docs/stats.png" width="300" alt="The Stats view: orbs per 30 days, 12 weeks of bars and a savings goal">
 </p>
 
 <p align="center"><sub>Placeholder quest names; the panel shows your real ones.</sub></p>
@@ -50,7 +62,7 @@ No warranty, see [LICENSE](LICENSE). You're running this on your own account, by
 A button shows up in the title bar, just left of the Inbox icon:
 
 <p align="center">
-  <img src="docs/button.png" width="180" alt="The quest button in Discord's title bar with an amber badge">
+  <img src="docs/button.png" width="152" alt="The quest button in Discord's title bar with a green badge">
 </p>
 
 The badge tells you what's going on without opening anything:
@@ -84,13 +96,15 @@ Hover a row for its buttons:
 
 | Row is... | Buttons |
 | --- | --- |
-| Ready to claim | **Claim** opens the Quests page |
+| Ready to claim | **Claim** opens the Quests page, **Dismiss** hides a reward you don't want (no badge count, no expiry reminder) |
 | Running | **Pause** / **Resume** the task, **Stop** (cancels it and skips the quest) |
 | Queued | **Run now** (takes over the one game/stream slot from whatever is using it; that one goes back to the queue), **Skip** |
 | Available | **Accept and run**, **Skip** |
 | Skipped by you | **Put back in the queue** |
 | Failed too often | **Try again** |
-| Any *Skipped* row | **Dismiss** hides it from the list (Settings > Maintenance brings them back) |
+| Any *Skipped* row | **Dismiss** hides it from the list |
+
+Dismissed quests come back with **Show dismissed quests** in Settings > Maintenance.
 
 The header has **Pause everything** (every running quest pauses, nothing new starts; the
 same button resumes), **Scan now** and **Settings**. While a play/stream quest is paused the
@@ -99,7 +113,7 @@ spoofed game is taken down, so Discord stops sending heartbeats for it until you
 ### Settings
 
 <p align="center">
-  <img src="docs/settings.png" width="380" alt="The settings view: toggles for auto-accept, notifications and each quest type, a rescan interval picker, and maintenance buttons">
+  <img src="docs/settings.png" width="340" alt="The settings view: toggles for auto-accept, notifications and each quest type, a rescan interval picker, and maintenance buttons">
 </p>
 
 The gear opens Discord-style toggles for **Auto-accept quests**, two kinds of
@@ -156,65 +170,6 @@ with whatever Discord still listed when the agent first ran, and days follow you
 clock. "Orbs won" on the main view comes from the same record, so it never drops when old
 quests expire. Discord doesn't hand the client a live orb balance, so none of this is your
 wallet.
-
-### Addons: Orbling, a pixel pet
-
-<p align="center">
-  <img src="docs/orbling-day.png" width="384" alt="Orbling by day: a grown-up Orbling with a crown chasing a ball in its room">
-  <img src="docs/orbling-night.png" width="384" alt="Orbling at night: a teen Orbling asleep on its bed under the lamp light">
-</p>
-
-Settings > **Addons** holds optional extras; each is off until you switch it on. The first
-one is **Orbling**, a tamagotchi-style pet that lives in a small window of its own (the paw
-button in the panel header opens it once it's on; drag it by its title bar, Esc closes it,
-and it reopens where you left it). It's fed by the agent's work: every orb quest the agent
-finishes drops a *star snack* (under 500 orbs) or an *orb feast* (500+) into its bag, and
-claiming rewards makes it celebrate.
-
-- Tap the egg to hatch it, then name it. It grows from baby to kid, teen and adult; how you
-  raise it decides the adult form (Gourmet, Sprinter, Dapper, Classic, or the rare Astral).
-- Four needs (food, fun, energy, clean) drain slowly by the clock, gently at night, when it
-  sleeps. It never dies and nothing is lost while you're away; a neglected Orbling just gets
-  sad and stops growing. Berries are free, quest food is the good stuff.
-- Play with a ball or a 20-second **Orb catch** game (best score kept), clean up after it,
-  put it down for a nap, and open the **daily gift** to build a streak.
-- Hats to collect (hatching, growing up, 3- and 7-day streaks, a high Orb catch score, a
-  seasonal one) and an **album**: after three days as an adult an Orbling can leave on an
-  adventure, and a new egg arrives in a colour you haven't collected yet.
-- A present appears in its room while quest rewards wait to be claimed (click it for the
-  Quests page). A pink dot on the title-bar button means it wants something; an optional
-  reminder (at most every 8 hours, never at night) says what.
-
-It's pixel art drawn in code, and it costs nothing while its window is closed: needs are
-worked out from timestamps when you look, and the room is only painted while it's on screen.
-Its state lives inside Discord next to the settings.
-
-### Addons: Hollowmarch, an idle action RPG
-
-<p align="center">
-  <img src="arpg/docs/shots/05-hero.png" width="640" alt="Hollowmarch: the battle strip over the character sheet">
-  <br>
-  <img src="arpg/docs/shots/12-market.png" width="316" alt="Hollowmarch's Wandering Market: a Pedlar and a Jeweller with rotating stock">
-  <img src="arpg/docs/shots/15-rekindling.png" width="316" alt="Hollowmarch's ending: three sun shards and the Rekindling">
-</p>
-
-**Hollowmarch** is a small action RPG that plays itself in a window of its own. You build
-the hero - gear with random affixes, a passive tree, skills and supports, an ascendancy, a
-companion at its side - and it clears the road through four acts into an endless map
-endgame. Nothing runs while the window is closed: the time away is replayed through the same
-simulation when you open it, with a "while you were away" report. Fold it into a mini strip
-to keep the fight in a corner, or give it its own button in Discord's title bar. Press F to
-step into the Fray and fight the current zone (or a map) yourself: walk and dodge-roll through hordes while the skill fires on its own, and pick boons as you gather motes.
-
-Traders with rotating stock, gear sockets and ember stones, companions (the ones not at the
-hero's side run errands), feats kept across every dawn, skills that grow with use, an omen
-each week that is the same for every player, and a story that ends with relighting the sun
-(a new dawn that keeps what you collected). Every October
-brings Hollow Night: monsters carrying lanterns, lantern-lit maps and two finds that exist
-only then. It follows the agent's language: English, Russian or Ukrainian.
-
-It has nothing to do with quests and never reads quest data or orbs. Details, controls and
-the design notes are in [`arpg/README.md`](arpg/README.md).
 
 ### Languages
 

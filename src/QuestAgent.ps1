@@ -338,38 +338,6 @@ function Get-AgentPayload {
     return "window.__questAgentConfig = $runtime;`nwindow.__questAgentLocales = $localesJson;`nwindow.__questAgentChangelog = $changelogJson;`n$js"
 }
 
-# Addons are evaluated one by one after the agent, so a broken addon can't take
-# the agent down with it. Each registers itself with the agent's addon hub, or
-# queues itself while the agent is still hooking Discord.
-#   src\addons\*.js     ship with the tool and are replaced by updates;
-#   <Root>\addons\*.js  are installed separately (e.g. Hollowmarch). They survive
-#                        updates and win over a shipped file with the same name.
-function Get-AddonFiles {
-    param([string]$ShippedDir = (Join-Path $PSScriptRoot "addons"), [string]$UserDir = (Join-Path $Root "addons"))
-    $byName = @{}
-    foreach ($dir in @($ShippedDir, $UserDir)) {
-        if (-not $dir -or -not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
-        foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter *.js -File -ErrorAction SilentlyContinue)) {
-            $byName[$f.Name.ToLowerInvariant()] = $f
-        }
-    }
-    return @($byName.Values | Sort-Object Name)
-}
-
-function Invoke-AddonInjection {
-    param([string]$WsUrl)
-    foreach ($f in @(Get-AddonFiles)) {
-        try {
-            $js = Get-Content -Raw -Path $f.FullName -Encoding UTF8
-            # The payload must reach Discord as pure ASCII; \uXXXX means the same
-            # character in JS strings, identifiers and comments alike.
-            $js = [regex]::Replace($js, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })
-            $resp = Invoke-CdpEval -WsUrl $WsUrl -Expression $js
-            if ($resp -match '"exceptionDetails"') { Write-Log "Addon $($f.Name) failed to load in Discord." "Yellow" }
-        } catch { Write-Log "Addon $($f.Name) could not be injected: $($_.Exception.Message)" "Yellow" }
-    }
-}
-
 # Returns: notarget | present | injected | error
 function Invoke-Injection {
     $t = Find-DiscordTarget
@@ -383,7 +351,6 @@ function Invoke-Injection {
             Write-Log $resp "DarkGray"
             return "error"
         }
-        Invoke-AddonInjection -WsUrl $t.webSocketDebuggerUrl
         return "injected"
     } catch { return "notarget" }
 }
@@ -553,6 +520,8 @@ function Start-UpdatedCopy {
     exit 0
 }
 
+# 1.12.0 dropped the addons; updates copy over src\ without deleting, so clear what older versions shipped.
+Remove-Item -LiteralPath (Join-Path $PSScriptRoot "addons") -Recurse -Force -ErrorAction SilentlyContinue
 if (Invoke-SelfUpdate) { Start-UpdatedCopy }
 
 $branchInfo = Resolve-Branch

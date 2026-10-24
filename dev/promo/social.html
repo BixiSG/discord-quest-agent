@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Social card</title>
+<!-- GitHub social preview, 1280 x 640 at 1x. Render: node dev/promo/shoot.mjs promo -->
+<link rel="stylesheet" href="promo.css">
+<style>
+  .left { position: absolute; left: 70px; top: 70px; width: 720px; }
+  h1 { font-size: 104px; margin: 28px 0 26px; }
+  .lede { font-size: 28px; max-width: 640px; margin-bottom: 32px; }
+  .chip { font-size: 17px; }
+  .shot.a { right: 70px; top: 64px; width: 380px; height: 640px; transform: rotate(3deg); }
+  .s1 { right: 420px; top: 452px; width: 140px; height: 140px; background: var(--pink); font-size: 24px; transform: rotate(-12deg); }
+</style>
+</head>
+<body>
+<div class="frame"></div>
+<div class="left">
+  <span class="tag"><i></i>Windows &middot; open source &middot; MIT</span>
+  <h1>Discord<br><span class="hl">Quest</span> Agent</h1>
+  <p class="lede">Finishes Discord quests <b>on its own</b>, with a live HUD inside the client.</p>
+  <div class="chips">
+    <span class="chip y">Auto-accept</span><span class="chip m">Orb stats</span><span class="chip p">No Vencord</span><span class="chip">EN &middot; RU &middot; UK</span>
+  </div>
+</div>
+<div class="shot a"><img src="../../docs/panel.png" alt=""></div>
+<div class="sticker round s1">Set &amp;<br>forget</div>
+</body>
+</html>

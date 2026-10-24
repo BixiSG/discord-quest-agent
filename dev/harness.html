@@ -19,9 +19,6 @@
     ?reset=1        clear saved settings and history first
     ?fast=1         the running video quest finishes in ~15 s (exercises completion)
     ?noglyph=1      no orb glyph to borrow (the HUD falls back to its own diamond)
-    ?pet=1          switch the Orbling addon on (view=addon:pet opens it); window.__orbling pokes its state
-    ?arpg=1         switch Hollowmarch on (view=addon:arpg opens its card); loads ../arpg/dist/arpg.js
-    ?shipped=1      load the minified src/addons/arpg.js that ships with the agent instead
 -->
 <style>
   :root { --background-base-lower: #1e1f22; }
@@ -49,13 +46,10 @@
 (() => {
   const qs = new URLSearchParams(location.search);
   if (qs.get("reset")) { localStorage.removeItem("questAgent.settings.v1"); localStorage.removeItem("questAgent.ledger.v1"); localStorage.removeItem("questAgent.orbs.v1"); }
-  if (qs.get("reset")) localStorage.removeItem("questAgent.addon.pet");
-  if (qs.get("lang") || qs.get("theme") || qs.get("pet") || qs.get("arpg")) {
+  if (qs.get("lang") || qs.get("theme")) {
     const s = JSON.parse(localStorage.getItem("questAgent.settings.v1") || "{}");
     if (qs.get("lang")) s.language = qs.get("lang");
     if (qs.get("theme")) s.theme = qs.get("theme");
-    if (qs.get("pet")) s.addons = { ...(s.addons || {}), pet: true };
-    if (qs.get("arpg")) s.addons = { ...(s.addons || {}), arpg: true };
     localStorage.setItem("questAgent.settings.v1", JSON.stringify(s));
   }
 
@@ -92,7 +86,7 @@
   const quests = [
     quest("Night Runners Trailer", "Night Runners", { task: "WATCH_VIDEO", target: qs.get("fast") ? 20 : 900, value: qs.get("fast") ? 6 : 380, orbs: 700, enrolled: now - 600e3, color: "#e0409a" }),
     quest("Play Starfall Tactics", "Starfall Tactics", { task: "PLAY_ON_DESKTOP", target: 900, orbs: 500, enrolled: now - 300e3, tile: "harness/missing-art.png" }),
-    quest("Stream Hollow Deep", "Hollow Deep", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 1.5 }),
+    quest("Stream Cinder Peak", "Cinder Peak", { task: "STREAM_ON_DESKTOP", target: 900, orbs: 400, expiresIn: 1.5 }),
     quest("Kingsroad Sneak Peek", "Kingsroad", { task: "WATCH_VIDEO_ON_MOBILE", target: 600, orbs: 300, completed: at(0, 9), claimIn: 3 }),
     quest("Aether Grid Launch", "Aether Grid", { task: "PLAY_ACTIVITY", target: 1200, reward: "Aether avatar decoration", completed: at(1, 20), claimIn: 0.6 }),
     quest("Moss & Metal", "Moss & Metal", { task: "WATCH_VIDEO", target: 600, orbs: 700, completed: at(1, 14), claimed: at(1, 15) }),
@@ -169,7 +163,7 @@
       }
     }
   };
-  window.__questAgentConfig = { toolVersion: "1.5.0", repo: "BixiSG/discord-quest-agent", installRoot: "C:\\Users\\you\\AppData\\Local\\DiscordQuestAgent" };
+  window.__questAgentConfig = { toolVersion: "1.12.0", repo: "BixiSG/discord-quest-agent", installRoot: "C:\\Users\\you\\AppData\\Local\\DiscordQuestAgent" };
   // What the launcher injects: shipped locales and the changelog, read from the repo.
   const text = url => fetch(url).then(r => r.ok ? r.text() : "").catch(() => "");
   Promise.all([text("../src/locales/ru.json"), text("../src/locales/uk.json"), text("../CHANGELOG.md")]).then(([ru, uk, log]) => {
@@ -180,21 +174,8 @@
     const s = document.createElement("script");
     s.src = "../src/quest-agent.js";
     s.onload = () => {
-      // Addons are injected after the agent, as the launcher does it.
-      const a = document.createElement("script");
-      a.src = "../src/addons/pet.js";
-      a.onload = () => {
-        // Hollowmarch: the readable build (arpg/dist), or with ?shipped=1 the minified copy in src/addons.
-        const g = document.createElement("script");
-        g.src = qs.get("shipped") ? "../src/addons/arpg.js" : "../arpg/dist/arpg.js";
-        const done = () => {
-          const view = qs.get("view");
-          if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);
-        };
-        g.onload = g.onerror = done;
-        document.body.appendChild(g);
-      };
-      document.body.appendChild(a);
+      const view = qs.get("view");
+      if (view) setTimeout(() => window.__questAgent?.ui?.show(view), 300);
     };
     document.body.appendChild(s);
   });

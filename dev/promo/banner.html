@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Banner</title>
+<!-- README hero, 1280 x 560 at 2x. Render: node dev/promo/shoot.mjs promo -->
+<link rel="stylesheet" href="promo.css">
+<style>
+  .left { position: absolute; left: 64px; top: 58px; width: 680px; }
+  h1 { font-size: 92px; margin: 24px 0 22px; }
+  .lede { font-size: 23px; max-width: 580px; margin-bottom: 26px; }
+  .shot.a { right: 70px; top: 46px; width: 380px; height: 600px; transform: rotate(3deg); }
+  .s1 { right: 400px; bottom: 40px; width: 128px; height: 128px; background: var(--pink); font-size: 20px; transform: rotate(-12deg); }
+  .s2 { right: 40px; bottom: 46px; padding: 14px 18px; background: var(--acid); font-size: 21px; transform: rotate(-4deg); }
+</style>
+</head>
+<body>
+<div class="frame"></div>
+<div class="left">
+  <span class="tag"><i></i>Windows &middot; open source &middot; MIT</span>
+  <h1>Discord<br><span class="hl">Quest</span> Agent</h1>
+  <p class="lede">Finishes Discord quests <b>on its own</b> and shows a live HUD inside the client. You only press <b>Claim</b>.</p>
+  <div class="chips">
+    <span class="chip y">Video</span><span class="chip m">Play</span><span class="chip p">Stream</span><span class="chip b">Activity</span><span class="chip">Mobile</span>
+  </div>
+</div>
+<div class="shot a"><img src="../../docs/panel.png" alt=""></div>
+<div class="sticker round s1">Set &amp;<br>forget</div>
+<div class="sticker s2">Nothing patched<br>on disk</div>
+</body>
+</html>
