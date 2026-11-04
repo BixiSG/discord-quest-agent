@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 27;
+    const AGENT_VERSION = 28;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -2433,7 +2433,7 @@
     const LAB = { enabled: CONFIG.badgeLab === true, run: null, log: [], badges: "", badgesAt: 0, undo: null, catalog: null, panel: null, timer: null, store: null, fetch: null };
     try {
         const s = JSON.parse(storage?.getItem(LAB_KEY) ?? "null");
-        if (s) { LAB.enabled ||= s.enabled === true; LAB.run = s.run ?? null; LAB.log = Array.isArray(s.log) ? s.log.slice(-300) : []; LAB.badges = s.badges ?? ""; }
+        if (s) { LAB.enabled ||= s.enabled === true; LAB.run = s.run?.games ? s.run : null; LAB.log = Array.isArray(s.log) ? s.log.slice(-300) : []; LAB.badges = s.badges ?? ""; }
     } catch (e) { /* fresh start */ }
     const labSave = () => { try { storage?.setItem(LAB_KEY, JSON.stringify({ enabled: LAB.enabled, run: LAB.run, log: LAB.log, badges: LAB.badges })); } catch (e) { /* quota */ } };
     function labLog(msg) {
@@ -2454,14 +2454,15 @@
         return LAB.catalog;
     }
 
+    const labGame = () => LAB.run?.games?.[LAB.run.idx];
     function labApply() {
-        const r = LAB.run;
-        if (!r || LAB.undo) return;
+        const r = LAB.run, g = labGame();
+        if (!g || LAB.undo) return;
         if (state.spoofActive) return; // a desktop quest owns the spoof; the tick retries once it is done
         state.spoofActive = true;
         const fake = {
-            cmdLine: `C:\\Program Files\\${r.name}\\${r.exe}`, exeName: r.exe, exePath: `c:/program files/${r.name.toLowerCase()}/${r.exe}`,
-            hidden: false, isLauncher: false, id: r.id, name: r.name, pid: r.pid, pidPath: [r.pid], processName: r.name, start: r.startedAt
+            cmdLine: `C:\\Program Files\\${g.name}\\${g.exe}`, exeName: g.exe, exePath: `c:/program files/${g.name.toLowerCase()}/${g.exe}`,
+            hidden: false, isLauncher: false, id: g.id, name: g.name, pid: r.pid, pidPath: [r.pid], processName: g.name, start: r.slotStart
         };
         // Real games keep running alongside the fake one, so their own playtime still counts.
         const realGames = RunningGameStore.getRunningGames, realForPid = RunningGameStore.getGameForPID;
@@ -2478,7 +2479,7 @@
             FluxDispatcher.dispatch({ type: "RUNNING_GAMES_CHANGE", removed: [fake], added: [], games: RunningGameStore.getRunningGames() });
             state.spoofActive = false;
         };
-        labLog(`spoof on: ${r.name}${r.presence ? " (with presence)" : ""}`);
+        labLog(`spoof on: ${g.name}${r.games.length > 1 ? ` (${r.idx + 1}/${r.games.length})` : ""}${r.presence ? ", with presence" : ""}`);
     }
     function labUnapply(why) {
         if (!LAB.undo) return;
@@ -2487,26 +2488,51 @@
         try { undo(); } catch (e) { state.spoofActive = false; }
         labLog("spoof off: " + why);
     }
-    async function labStart(name, hours, presence) {
-        hours = Number(hours);
-        if (!(hours >= 0.1 && hours <= 24)) throw new Error("hours must be 0.1-24");
-        if (LAB.run) throw new Error("already running " + LAB.run.name);
-        const want = String(name ?? "").trim().toLowerCase();
-        const app = (await labCatalog()).find(g => g.name.toLowerCase() === want);
-        if (!app) throw new Error(`"${name}" is not a detectable game (exact name)`);
+    const labPid = () => 1000 + Math.floor(Math.random() * 30000);
+    /**
+     * One game for `hours`, or several ("A, B, C" or an array) in turn, `minutes` each.
+     * Discord's tracker heartbeats every 5 minutes, so a slot under 10 minutes may not count.
+     */
+    async function labStart(names, hours, presence, minutes) {
+        if (LAB.run) throw new Error("already running " + labGame()?.name);
+        const list = (Array.isArray(names) ? names : String(names ?? "").split(",")).map(s => s.trim()).filter(Boolean);
+        if (!list.length) throw new Error("no game given");
+        const multi = list.length > 1;
+        const slotMs = multi ? Number(minutes) * 60000 : Number(hours) * 3600000;
+        if (multi ? !(minutes >= 10 && minutes <= 240) : !(hours >= 0.1 && hours <= 24)) throw new Error(multi ? "minutes per game must be 10-240" : "hours must be 0.1-24");
+        const catalog = await labCatalog();
+        const games = list.map(n => {
+            const app = catalog.find(g => g.name.toLowerCase() === n.toLowerCase());
+            if (!app) throw new Error(`"${n}" is not a detectable game (exact name)`);
+            return { id: app.id, name: app.name, exe: app.executables.find(x => x.os === "win32").name.replace(">", "") };
+        });
         const now = Date.now();
-        LAB.run = {
-            id: app.id, name: app.name, exe: app.executables.find(x => x.os === "win32").name.replace(">", ""),
-            pid: 1000 + Math.floor(Math.random() * 30000), startedAt: now, endsAt: now + hours * 3600000, presence: !!presence
-        };
-        labLog(`run: ${app.name} for ${hours} h${presence ? ", presence on" : ""}`);
+        LAB.run = { games, idx: 0, slotMs, slotStart: now, pid: labPid(), startedAt: now, presence: !!presence };
+        labLog(`run: ${games.map(g => g.name).join(", ")}, ${labHours(slotMs)} each${presence ? ", presence on" : ""}`);
         labApply();
         if (!LAB.undo) labLog("waiting: a desktop quest is using the game spoof");
     }
+    /** Up to n random detectable games the client has never seen running on this PC. */
+    async function labPickUnplayed(n) {
+        let seen = new Set();
+        try { seen = new Set((RunningGameStore.getGamesSeen?.() ?? []).map(g => String(g.name).toLowerCase())); } catch (e) { /* none known */ }
+        const pool = (await labCatalog()).filter(g => !seen.has(g.name.toLowerCase()) && !g.name.includes(","));
+        for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+        return pool.slice(0, n).map(g => g.name);
+    }
+    function labNext() {
+        const r = LAB.run;
+        labUnapply("slot done");
+        if (r.idx + 1 >= r.games.length) { labEnd("all games done"); return; }
+        r.idx++; r.slotStart = Date.now(); r.pid = labPid();
+        labSave();
+        labApply();
+    }
     function labEnd(why) {
-        if (!LAB.run) return;
+        const r = LAB.run;
+        if (!r) return;
         labUnapply(why);
-        labLog(`run ended (${why}): ${LAB.run.name}, ${((Date.now() - LAB.run.startedAt) / 3600000).toFixed(2)} h`);
+        labLog(`run ended (${why}): reached game ${r.idx + 1}/${r.games.length}, ${labHours(Date.now() - r.startedAt)}`);
         LAB.run = null;
         labSave();
         labBadges();
@@ -2538,7 +2564,8 @@
     }
 
     function labTick() {
-        if (LAB.run && Date.now() >= LAB.run.endsAt) labEnd("time is up");
+        // shortcut: time spent waiting for a desktop quest still counts toward the slot
+        if (LAB.run && Date.now() - LAB.run.slotStart >= LAB.run.slotMs) labNext();
         else labApply();
         if (Date.now() - LAB.badgesAt > 30 * 60000) labBadges();
         labRender();
@@ -2548,9 +2575,10 @@
     function labRender() {
         const p = LAB.panel;
         if (!p?.isConnected) return;
-        const r = LAB.run;
+        const r = LAB.run, g = labGame();
         p.querySelector("[data-l=status]").textContent = r
-            ? `${r.name}: ${labHours(Date.now() - r.startedAt)} of ${labHours(r.endsAt - r.startedAt)}, ${LAB.undo ? "spoofing" : "waiting for a quest"}${r.presence ? ", presence on" : ""}`
+            ? `${g.name}${r.games.length > 1 ? ` (${r.idx + 1}/${r.games.length})` : ""}: ${labHours(Date.now() - r.slotStart)} of ${labHours(r.slotMs)}, ` +
+              `${LAB.undo ? "spoofing" : "waiting for a quest"}${r.presence ? ", presence on" : ""}`
             : "Idle";
         p.querySelector("[data-l=badges]").textContent = LAB.badges || "Badges not read yet";
         p.querySelector("[data-l=log]").textContent = LAB.log.slice(-80).reverse().join("\n");
@@ -2572,10 +2600,12 @@
 <div style="display:flex;align-items:center;gap:6px"><b style="flex:1">Badge lab (debug)</b><button data-l="close" title="Close">x</button></div>
 <div data-l="status"></div>
 <div data-l="badges" style="color:#b5bac1"></div>
-<div style="display:flex;gap:4px"><input data-l="game" list="qb-lab-games" placeholder="Detectable game name" style="flex:1">
-<input data-l="hours" type="number" value="2" min="0.1" max="24" step="0.5" style="width:56px" title="Hours"></div>
+<input data-l="game" list="qb-lab-games" placeholder="Game name, or several: A, B, C">
+<div style="display:flex;gap:4px;align-items:center">One game: <input data-l="hours" type="number" value="2" min="0.1" max="24" step="0.5" style="width:52px"> h,
+several: <input data-l="minutes" type="number" value="15" min="10" max="240" step="5" style="width:52px"> min each</div>
 <label><input data-l="presence" type="checkbox"> Show "Playing" on my profile</label>
 <div style="display:flex;gap:4px;flex-wrap:wrap"><button data-l="start">Start</button><button data-l="stop">Stop</button>
+<button data-l="pick" title="Fill in 10 random detectable games this PC never ran">Pick 10 unplayed</button>
 <button data-l="refresh">Refresh badges</button><button data-l="copy">Copy log</button></div>
 <datalist id="qb-lab-games"></datalist>
 <pre data-l="log"></pre>`;
@@ -2584,7 +2614,8 @@
             const val = sel => p.querySelector(`[data-l=${sel}]`);
             try {
                 if (act === "close") labToggle(false);
-                else if (act === "start") await labStart(val("game").value, val("hours").value, val("presence").checked);
+                else if (act === "start") await labStart(val("game").value, Number(val("hours").value), val("presence").checked, Number(val("minutes").value));
+                else if (act === "pick") val("game").value = (await labPickUnplayed(10)).join(", ");
                 else if (act === "stop") labEnd("stopped by you");
                 else if (act === "refresh") await labBadges();
                 else if (act === "copy") labLog(await copyText(LAB.log.join("\n")) ? "log copied" : "copy failed");
@@ -2608,7 +2639,7 @@
         if (UI.open) { togglePanel(false); togglePanel(true); } // re-render the header with or without its button
     }
     if (LAB.enabled) {
-        if (LAB.run) labLog(`resumed after reload: ${LAB.run.name}`);
+        if (LAB.run) labLog(`resumed after reload: ${labGame()?.name}`);
         LAB.timer = setInterval(labTick, 60000);
         setTimeout(labTick, 2000);
     }
@@ -2661,7 +2692,7 @@
         diagnostics,
         lab: {
             enable: () => labEnable(true), disable: () => labEnable(false), open: () => labToggle(true),
-            start: labStart, stop: () => labEnd("stopped from console"), badges: labBadges,
+            start: labStart, stop: () => labEnd("stopped from console"), badges: labBadges, pickUnplayed: labPickUnplayed,
             log: () => LAB.log.slice(), get run() { return LAB.run && { ...LAB.run, spoofing: !!LAB.undo }; }
         },
         ui: { toggle: togglePanel, snapshot, reinstall: installButton, remove: removeUI, openQuests: openQuestsPage, refresh: refreshUI,
