@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.12.2 - 2026-11-04
+
+- A hidden debug window for testing Discord's new game badges. It stays off unless you turn it on from the console, and changes nothing otherwise.
+
 ## 1.12.1 - 2026-10-24
 
 - Dismissed rewards and dismissed skipped quests are kept apart: a skipped quest you hid and later finished by hand now shows up under Ready to claim instead of staying hidden. Rewards dismissed in 1.12.0 show once more; dismiss them again.
