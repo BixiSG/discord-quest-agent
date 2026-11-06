@@ -130,7 +130,7 @@
     4: { exports: { A: new Channels() } },
     5: { exports: { Ay: { getSFWDefaultChannel() {}, getAllGuilds: () => ({}) } } },
     6: { exports: { h: new Dispatcher() } },
-    7: { exports: { Bo: { get: async () => ({ body: [{ name: "Mock Game", executables: [{ os: "win32", name: "mock.exe" }] }] }), post: async () => ({ body: {} }) } } },
+    7: { exports: { Bo: { get: async () => ({ body: [{ name: "Mock Game", executables: [{ os: "win32", name: "mock.exe" }] }] }), post: async () => ({ body: {} }), put: async () => ({ body: {} }), patch: async () => ({ body: {} }), del: async () => ({ body: {} }) } } },
     8: { exports: { pX: function transitionTo(p) { console.log("transitionTo - Transitioning to", p); } } }
   };
   // Module factories: a stand-in for the component Discord hands to orbIconHook, so the

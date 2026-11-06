@@ -31,7 +31,7 @@
  */
 (async () => {
     "use strict";
-    const AGENT_VERSION = 28;
+    const AGENT_VERSION = 29;
 
     if (window.__questAgent && !window.__questAgentForce) {
         console.log(`[QuestAgent] Agent v${window.__questAgent.version} already running - skipping.`);
@@ -349,20 +349,29 @@
             webpackChunkdiscord_app.pop();
             WP = wpRequire;
 
-            const find = pred => {
+            // Match exports by their methods, never by export name: the names are
+            // minifier output and Discord reshuffles them (GuildChannelStore moved
+            // from Ay to A in 1.0.9267, which broke every agent up to v28).
+            const findExport = (...methods) => {
                 for (const m of Object.values(wpRequire.c)) {
-                    try { if (pred(m)) return m; } catch (e) { /* some modules throw on access */ }
+                    const exp = m?.exports;
+                    if (exp == null || typeof exp !== "object") continue;
+                    for (const k of Object.keys(exp)) {
+                        let v;
+                        try { v = exp[k]; } catch (e) { continue; } // some getters throw
+                        if (v != null && methods.every(f => typeof v[f] === "function")) return v;
+                    }
                 }
                 return undefined;
             };
 
-            ApplicationStreamingStore = find(x => x?.exports?.A?.__proto__?.getStreamerActiveStreamMetadata)?.exports?.A;
-            RunningGameStore = find(x => x?.exports?.Ay?.getRunningGames)?.exports?.Ay;
-            QuestsStore = find(x => x?.exports?.A?.__proto__?.getQuest)?.exports?.A;
-            ChannelStore = find(x => x?.exports?.A?.__proto__?.getAllThreadsForParent)?.exports?.A;
-            GuildChannelStore = find(x => x?.exports?.Ay?.getSFWDefaultChannel)?.exports?.Ay;
-            FluxDispatcher = find(x => x?.exports?.h?.__proto__?.flushWaitQueue)?.exports?.h;
-            api = find(x => x?.exports?.Bo?.get)?.exports?.Bo;
+            ApplicationStreamingStore = findExport("getStreamerActiveStreamMetadata");
+            RunningGameStore = findExport("getRunningGames");
+            QuestsStore = findExport("getQuest");
+            ChannelStore = findExport("getAllThreadsForParent");
+            GuildChannelStore = findExport("getSFWDefaultChannel");
+            FluxDispatcher = findExport("flushWaitQueue");
+            api = findExport("get", "post", "put", "patch", "del");
 
             // Optional module: Discord's transitionTo is a standalone export with
             // a mangled name (pX as of 1.0.9249), but its body logs the literal
