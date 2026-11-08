@@ -4,6 +4,10 @@ Newest first. The HUD shows this file under Settings > What's new, so keep every
 a short plain sentence: one `## <version> - <YYYY-MM-DD>` heading per release, `-` bullets
 below it, no nested lists. Markdown links and emphasis are stripped in the panel.
 
+## 1.12.5 - 2026-11-08
+
+- The hidden badge debug window from 1.12.2 is gone, along with what it kept in storage. Nothing changes for quests.
+
 ## 1.12.4 - 2026-11-06
 
 - Works again after Discord's November update (build 9267), which broke the agent with a "Quest agent needs updating" notification. The agent now finds Discord's internals by what they do instead of by their scrambled names, so the next reshuffle of those names won't break it.
